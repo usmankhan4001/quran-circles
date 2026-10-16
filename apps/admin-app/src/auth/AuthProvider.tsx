@@ -8,7 +8,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { ApiClientError, createApiClient, Tokens, type ApiClient, type Locale, type Me } from '@qc/contracts';
+import {
+  ApiClientError,
+  createApiClient,
+  Tokens,
+  type ApiClient,
+  type Locale,
+  type Me,
+} from '@qc/contracts';
 import { createAuthedFetch } from '../api/authedFetch';
 import type { KeyValueStore } from '../storage/storage';
 

@@ -1,5 +1,6 @@
 import { and, desc, eq, lt } from 'drizzle-orm';
-import type { CircleRequest, CircleRequestCreate } from '@qc/contracts';
+import type { CircleRequest } from '@qc/contracts';
+import type { CircleRequestCreate } from '../shared/types';
 import { schema, type Db } from '../../db';
 import { fail, invalid, isUniqueViolation } from '../shared/errors';
 import { MS_PER_DAY } from '../shared/time';
@@ -62,7 +63,7 @@ export async function createCircleRequest(
         .values({
           userId,
           areaId: input.areaId,
-          days: [...new Set(input.days)].sort((a, b) => a - b),
+          days: [...new Set<number>(input.days)].sort((a, b) => a - b),
           section: input.section ?? null,
           language: input.language ?? null,
           expiresAt: new Date(now.getTime() + ttlDays * MS_PER_DAY),

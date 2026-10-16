@@ -13,10 +13,21 @@ import { enqueueOutbox, type OutboxEntry } from '../shared/outbox';
 import { formatWhen } from '../shared/time';
 import { reachUserIds, type UpdateScopeRef } from './reach';
 
-const { updates, users, devices, registrations, follows, circles, consents, sessions, venues, occurrences } =
-  schema;
+const {
+  updates,
+  users,
+  devices,
+  registrations,
+  follows,
+  circles,
+  consents,
+  sessions,
+  venues,
+  occurrences,
+} = schema;
 
-const clip = (text: string, max: number): string => (text.length <= max ? text : text.slice(0, max));
+const clip = (text: string, max: number): string =>
+  text.length <= max ? text : text.slice(0, max);
 
 export interface Text {
   en: string;
@@ -276,9 +287,14 @@ export async function publishSessionEvent(
   const whenFor = (locale: Locale): string =>
     input.when ? formatWhen(input.when, session.timezone, locale) : '';
   const titleKey =
-    input.kind === 'time_change' ? 'notifications.timeChange.title' : 'notifications.cancelled.title';
+    input.kind === 'time_change'
+      ? 'notifications.timeChange.title'
+      : 'notifications.cancelled.title';
   const generatedTitle = (locale: Locale): string =>
-    messages[locale][titleKey].replace('{sessionTitle}', locale === 'ur' ? session.titleUr : session.titleEn);
+    messages[locale][titleKey].replace(
+      '{sessionTitle}',
+      locale === 'ur' ? session.titleUr : session.titleEn,
+    );
   const template = input.kind === 'time_change' ? 'session_changed' : 'session_cancelled';
   const generatedBody = (locale: Locale): string => {
     const sessionTitle = clip(locale === 'ur' ? session.titleUr : session.titleEn, 200);
@@ -326,7 +342,10 @@ export async function publishSessionEvent(
                 locale: a.locale,
                 variables: {
                   sessionTitle,
-                  venueName: clip(a.locale === 'ur' ? session.venueNameUr : session.venueNameEn, 200),
+                  venueName: clip(
+                    a.locale === 'ur' ? session.venueNameUr : session.venueNameEn,
+                    200,
+                  ),
                   newWhen: clip(whenFor(a.locale) || '-', 200),
                   link,
                 },
@@ -351,4 +370,3 @@ export async function publishSessionEvent(
   }
   return result;
 }
-

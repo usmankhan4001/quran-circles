@@ -29,7 +29,13 @@ export async function registerDevice(
     .values({ userId, ...input, lastSeenAt: now, createdAt: now })
     .onConflictDoUpdate({
       target: [devices.provider, devices.token],
-      set: { userId, platform: input.platform, locale: input.locale, lastSeenAt: now, revokedAt: null },
+      set: {
+        userId,
+        platform: input.platform,
+        locale: input.locale,
+        lastSeenAt: now,
+        revokedAt: null,
+      },
     })
     .returning();
   return toDevice(row!);

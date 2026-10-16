@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { and, asc, desc, eq, inArray, ilike, or, sql, type SQL } from 'drizzle-orm';
-import type { Venue, ScopeFilter, VenueCreate, VenueUpdate } from '@qc/contracts';
+import type { Venue, ScopeFilter, VenueCreate } from '@qc/contracts';
+import type { VenueUpdate } from '../shared/types';
 import { schema, type Db } from '../../db';
 import { writeAudit, venueScope } from '../shared/audit';
 import { fail, invalid } from '../shared/errors';
@@ -89,7 +90,12 @@ export function venueScopeCondition(filter: ScopeFilter): SQL | undefined {
 export async function listAdminVenues(
   db: Db,
   filter: ScopeFilter,
-  query: { cursor?: string | undefined; limit: number; cityId?: string | undefined; includeArchived?: boolean | undefined },
+  query: {
+    cursor?: string | undefined;
+    limit: number;
+    cityId?: string | undefined;
+    includeArchived?: boolean | undefined;
+  },
 ): Promise<Page<Venue>> {
   const conditions: (SQL | undefined)[] = [venueScopeCondition(filter)];
   if (query.cityId) conditions.push(eq(venues.cityId, query.cityId));
@@ -115,10 +121,7 @@ const slugify = (text: string): string => {
 };
 
 async function assertAreaInCity(db: Db, areaId: string, cityId: string): Promise<void> {
-  const [area] = await db
-    .select({ cityId: areas.cityId })
-    .from(areas)
-    .where(eq(areas.id, areaId));
+  const [area] = await db.select({ cityId: areas.cityId }).from(areas).where(eq(areas.id, areaId));
   if (!area || area.cityId !== cityId) invalid('areaId');
 }
 

@@ -1,7 +1,8 @@
-import type { MiddlewareHandler } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
 import {
   can,
   scopeFilter,
+  type ErrorCode,
   type Principal,
   type ResourceScope,
   type ScopeAction,
@@ -56,3 +57,12 @@ export function resourceMissing(principal: Principal | null, action: ScopeAction
   if (!f.national && f.cityIds.length === 0 && f.venueIds.length === 0) fail('forbidden');
   return fail('not_found');
 }
+
+/** The reasons a request can be refused before any rule runs. */
+export type AuthFailureCode = Extract<
+  ErrorCode,
+  'unauthenticated' | 'token_expired' | 'account_suspended'
+>;
+
+/** Reports why the request has no principal. Only called when there is none. */
+export type AuthFailureReader = (c: Context) => Promise<AuthFailureCode> | AuthFailureCode;

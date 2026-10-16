@@ -31,7 +31,14 @@ function localParts(instantMs: number, timeZone: string) {
   for (const p of formatter(timeZone).formatToParts(new Date(instantMs))) {
     if (p.type !== 'literal') out[p.type] = Number(p.value);
   }
-  return out as { year: number; month: number; day: number; hour: number; minute: number; second: number };
+  return out as {
+    year: number;
+    month: number;
+    day: number;
+    hour: number;
+    minute: number;
+    second: number;
+  };
 }
 
 /** Offset of the zone from UTC at an instant, in milliseconds. */

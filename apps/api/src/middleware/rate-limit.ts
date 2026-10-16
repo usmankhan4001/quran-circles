@@ -50,6 +50,12 @@ export class MemoryRateLimiter implements RateLimiter {
     return { allowed: true, retryAfterSeconds: 0 };
   }
 
+  /** Forget every counter. For tests. */
+  reset(): void {
+    this.counters.clear();
+    this.lastSweep = 0;
+  }
+
   private sweep(nowMs: number, windowMs: number): void {
     if (nowMs - this.lastSweep < 60_000) return;
     this.lastSweep = nowMs;

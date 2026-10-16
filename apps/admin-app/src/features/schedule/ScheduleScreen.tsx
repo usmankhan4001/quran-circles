@@ -11,7 +11,13 @@ import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { pickLocalized } from '../../lib/localized';
-import { formatLocalDate, formatLocalTime, pkDateOf, pkDayRange, weekdayName } from '../../lib/time';
+import {
+  formatLocalDate,
+  formatLocalTime,
+  pkDateOf,
+  pkDayRange,
+  weekdayName,
+} from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -45,11 +51,25 @@ export function ScheduleScreen({ sessionId, now = new Date() }: ScheduleScreenPr
   const sessionQuery = useSession(sessionId);
   return (
     <Screen title={t('admin.schedule.title')} onBack={nav.back} testID="schedule">
-      <QueryBoundary query={sessionQuery} testID="schedule">
-        {(session) => <ScheduleLoader session={session} now={now} />}
+      <QueryBoundary query={sessionQuery} testID="schedule-data">
+        {(session) => <ScheduleGate session={session} now={now} />}
       </QueryBoundary>
     </Screen>
   );
+}
+
+/** Checks the right before anything protected is requested, so a refusal never reaches the server. */
+function ScheduleGate({ session, now }: { session: Session; now: Date }) {
+  const { t } = useT();
+  const { principal } = useWorkingScope();
+  if (!sessionAbilities(principal, session).changeSchedule) {
+    return (
+      <Card variant="flat" testID="schedule-forbidden">
+        <Text>{t('errors.forbidden')}</Text>
+      </Card>
+    );
+  }
+  return <ScheduleLoader session={session} now={now} />;
 }
 
 function ScheduleLoader({ session, now }: { session: Session; now: Date }) {
@@ -68,7 +88,7 @@ function ScheduleLoader({ session, now }: { session: Session; now: Date }) {
     return { session, occurrences: occ.items, people: regs?.totals.people ?? null };
   }, [session.id]);
   return (
-    <QueryBoundary query={query} testID="schedule-data">
+    <QueryBoundary query={query} testID="schedule-details">
       {(loaded) => <ScheduleFlow loaded={loaded} now={now} />}
     </QueryBoundary>
   );
@@ -79,11 +99,14 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
   const api = useApi();
   const nav = useNavigation();
   const dir = useSessionDirectory();
-  const { principal } = useWorkingScope();
   const { session, occurrences, people } = loaded;
 
   const dates = useMemo(
-    () => [...new Set(occurrences.filter((o) => o.status !== 'cancelled').map((o) => pkDateOf(o.startsAt)))],
+    () => [
+      ...new Set(
+        occurrences.filter((o) => o.status !== 'cancelled').map((o) => pkDateOf(o.startsAt)),
+      ),
+    ],
     [occurrences],
   );
   const [form, setForm] = useState<ScheduleForm>(() =>
@@ -92,16 +115,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
   const [errors, setErrors] = useState<ScheduleErrors>({});
   const [confirming, setConfirming] = useState(false);
   const change = useMutation(api.adminSessions.changeSchedule);
-  const allowed = sessionAbilities(principal, session).changeSchedule;
   const patch = (p: Partial<ScheduleForm>) => setForm((f) => ({ ...f, ...p }));
-
-  if (!allowed) {
-    return (
-      <Card variant="flat" testID="schedule-forbidden">
-        <Text>{t('errors.forbidden')}</Text>
-      </Card>
-    );
-  }
 
   const checked = validateSchedule(form, session);
   const affected = occurrences.filter(
@@ -127,13 +141,13 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
         <Card variant="flat">
           <View style={{ gap: spacing.sm }}>
             <Text variant="title3" heading={2}>
-              {t('admin.schedule.savedTitle')}
+              {t('admin.schedule.success')}
             </Text>
-            <Text>{t.plural('admin.schedule.savedDates', res.occurrencesChanged)}</Text>
+            <Text>{t.plural('admin.schedule.saved.dates', res.occurrencesChanged)}</Text>
             <Text variant="caption" color="textSecondary">
               {res.updatePostedId
-                ? t('admin.schedule.savedNotified')
-                : t('admin.schedule.savedQuiet')}
+                ? t('admin.schedule.saved.notified')
+                : t('admin.schedule.saved.quiet')}
             </Text>
             <Text variant="caption" color="textSecondary">
               {t('admin.schedule.posterNote')}
@@ -153,14 +167,14 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
         </Text>
         <Text variant="label">
           {formatLocalTime(session.localStartTime, locale)} · {n(session.durationMinutes)}{' '}
-          {t('admin.schedule.minutesShort')}
+          {t('admin.schedule.minutes')}
         </Text>
       </Card>
 
       <TextField
         testID="schedule-time"
-        label={t('admin.schedule.timeLabel')}
-        helper={t('admin.schedule.timeHelper')}
+        label={t('admin.schedule.time.label')}
+        helper={t('admin.schedule.time.help')}
         value={form.time}
         onChangeText={(time) => patch({ time })}
         onBlur={() => patch({ time: tidyTime(form.time) })}
@@ -172,7 +186,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
       />
       <Stepper
         testID="schedule-duration"
-        label={t('admin.schedule.durationLabel')}
+        label={t('admin.schedule.duration.label')}
         value={form.durationMinutes}
         min={MIN_DURATION}
         max={MAX_DURATION}
@@ -187,7 +201,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
 
       {session.kind === 'recurring' ? (
         <View style={{ gap: spacing.sm }}>
-          <Text variant="label">{t('admin.schedule.daysLabel')}</Text>
+          <Text variant="label">{t('admin.schedule.days.label')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {[0, 1, 2, 3, 4, 5, 6].map((d) => (
               <Chip
@@ -197,7 +211,9 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
                 selected={form.days.includes(d)}
                 onPress={() =>
                   patch({
-                    days: form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d],
+                    days: form.days.includes(d)
+                      ? form.days.filter((x) => x !== d)
+                      : [...form.days, d],
                   })
                 }
               />
@@ -213,8 +229,8 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
 
       <Select
         testID="schedule-from"
-        label={t('admin.schedule.fromLabel')}
-        helper={t('admin.schedule.fromHelper')}
+        label={t('admin.schedule.from.label')}
+        helper={t('admin.schedule.from.help')}
         required
         value={form.effectiveFrom}
         onChange={(effectiveFrom) => patch({ effectiveFrom })}
@@ -227,8 +243,8 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
 
       <Switch
         testID="schedule-notify"
-        label={t('admin.schedule.notify')}
-        description={t('admin.schedule.notifyHelper')}
+        label={t('admin.schedule.notify.label')}
+        description={t('admin.schedule.notify.help')}
         value={form.notify}
         onValueChange={(notify) => patch({ notify })}
       />
@@ -249,8 +265,8 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
       <ConfirmSheet
         testID="schedule-confirm"
         visible={confirming}
-        title={t('admin.schedule.confirmTitle')}
-        confirmLabel={t('admin.schedule.save')}
+        title={t('admin.schedule.confirm.title')}
+        confirmLabel={t('admin.schedule.submit')}
         busy={change.status === 'running'}
         onCancel={() => {
           change.reset();

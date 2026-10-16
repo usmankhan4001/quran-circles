@@ -1,5 +1,10 @@
 import { PostUpdateBody, type Principal } from '@qc/contracts';
-import { emptyBilingual, isBilingualEmpty, toLocalizedOptional, type BilingualFields } from '../../lib/localized';
+import {
+  emptyBilingual,
+  isBilingualEmpty,
+  toLocalizedOptional,
+  type BilingualFields,
+} from '../../lib/localized';
 import type { MessageKey } from '../../i18n/translate';
 import { canPostTo, type ScopeChoice, type VenueChoice } from './scopes';
 import { fillTemplate, missingVariables, type TemplateChoice } from './templates';
@@ -17,11 +22,12 @@ export interface PostUpdateForm extends ScopeChoice {
   sessionId: string | null;
 }
 
-export type PostUpdateErrors = Partial<
-  Record<'scope' | 'title' | 'body' | 'template', MessageKey>
->;
+export type PostUpdateErrors = Partial<Record<'scope' | 'title' | 'body' | 'template', MessageKey>>;
 
-export const emptyPostUpdateForm = (choice: ScopeChoice, sessionId: string | null): PostUpdateForm => ({
+export const emptyPostUpdateForm = (
+  choice: ScopeChoice,
+  sessionId: string | null,
+): PostUpdateForm => ({
   ...choice,
   title: emptyBilingual(),
   body: emptyBilingual(),
@@ -60,7 +66,9 @@ export function validatePostUpdate(
 ): ValidatedPost {
   const errors: PostUpdateErrors = {};
 
-  const venueCity = form.venueId ? (venues.find((v) => v.id === form.venueId)?.cityId ?? null) : null;
+  const venueCity = form.venueId
+    ? (venues.find((v) => v.id === form.venueId)?.cityId ?? null)
+    : null;
   const cityForCheck = form.level === 'venue' ? venueCity : form.cityId;
   if (!canPostTo(principal, form.level, cityForCheck, form.venueId)) {
     errors.scope = 'admin.postUpdate.error.scope';
@@ -71,7 +79,7 @@ export function validatePostUpdate(
     errors.title = 'admin.postUpdate.error.titleLong';
   }
 
-  if (isBilingualEmpty(form.body)) errors.body = 'admin.postUpdate.error.bodyRequired';
+  if (isBilingualEmpty(form.body)) errors.body = 'admin.postUpdate.body.error';
   else if (form.body.en.length > BODY_MAX || form.body.ur.length > BODY_MAX) {
     errors.body = 'admin.postUpdate.error.bodyLong';
   }

@@ -14,7 +14,10 @@ const uniq = <T>(values: T[]): T[] => [...new Set(values)];
  * Who is connected to a venue: registered for one of its sessions, following it, or following one
  * of its circles. Cancelled registrations do not count.
  */
-export async function venueConnectedUserIds(db: Db, venueIds: readonly string[]): Promise<string[]> {
+export async function venueConnectedUserIds(
+  db: Db,
+  venueIds: readonly string[],
+): Promise<string[]> {
   if (venueIds.length === 0) return [];
   const ids = [...venueIds];
   const [registered, followedVenue, followedCircle] = await Promise.all([

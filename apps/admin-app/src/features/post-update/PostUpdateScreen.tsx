@@ -59,7 +59,10 @@ export function PostUpdateScreen({ sessionId }: PostUpdateScreenProps) {
       api.adminTemplates.list().catch(() => ({ items: [] })),
       sessionId ? api.sessions.get({ params: { sessionId } }) : Promise.resolve(null),
     ]);
-    const cityChoices = cities.items.map((c) => ({ id: c.id, label: pickLocalized(c.name, locale) }));
+    const cityChoices = cities.items.map((c) => ({
+      id: c.id,
+      label: pickLocalized(c.name, locale),
+    }));
     const venueChoices = venues.items.map((v) => ({
       id: v.id,
       cityId: v.cityId,
@@ -80,7 +83,7 @@ export function PostUpdateScreen({ sessionId }: PostUpdateScreenProps) {
       onBack={nav.back}
       testID="post-update"
     >
-      <QueryBoundary query={query} testID="post-update">
+      <QueryBoundary query={query} testID="post-update-data">
         {(loaded) => <PostUpdateFlow loaded={loaded} sessionId={sessionId ?? null} />}
       </QueryBoundary>
     </Screen>
@@ -158,7 +161,9 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
               {t.plural('admin.postUpdate.sentTo', post.data.recipients)}
             </Text>
             <Text variant="caption" color="textSecondary">
-              {form.notify ? t('admin.postUpdate.sentNotified') : t('admin.postUpdate.sentFeedOnly')}
+              {form.notify
+                ? t('admin.postUpdate.sentNotified')
+                : t('admin.postUpdate.sentFeedOnly')}
             </Text>
           </View>
         </Card>
@@ -181,9 +186,9 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
     const previewTitle = pickLocalizedPair(form.title, locale);
     const previewBody = pickLocalizedPair(form.body, locale);
     return (
-      <View style={{ gap: spacing.lg }} testID="post-update-preview">
+      <View style={{ gap: spacing.lg }} testID="post-update-preview-step">
         <Text variant="title3" heading={2}>
-          {t('admin.postUpdate.previewTitle')}
+          {t('admin.postUpdate.preview')}
         </Text>
         <Card variant="flat">
           <View style={{ gap: spacing.xs }}>
@@ -294,16 +299,18 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
         <View style={{ gap: spacing.md }}>
           <Select
             testID="post-update-template"
-            label={t('admin.postUpdate.template')}
-            helper={t('admin.postUpdate.templateHelper')}
+            label={t('admin.postUpdate.template.label')}
+            helper={t('admin.postUpdate.template.help')}
             value={form.templateKey ?? ''}
             onChange={(key) => {
               const next = templates.find((x) => x.key === key) ?? null;
-              const values = next ? suggestedValues(next, session, locale, form.templateValues) : {};
+              const values = next
+                ? suggestedValues(next, session, locale, form.templateValues)
+                : {};
               setForm((f) => applyTemplate({ ...f, templateValues: values }, next));
             }}
             options={[
-              { value: '', label: t('admin.postUpdate.templateNone') },
+              { value: '', label: t('admin.postUpdate.template.none') },
               ...templates.map((x) => ({ value: x.key, label: templateLabel(t, x.key) })),
             ]}
           />
@@ -317,7 +324,10 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
                   value={form.templateValues[name] ?? ''}
                   onChangeText={(value) =>
                     setForm((f) =>
-                      applyTemplate({ ...f, templateValues: { ...f.templateValues, [name]: value } }, template),
+                      applyTemplate(
+                        { ...f, templateValues: { ...f.templateValues, [name]: value } },
+                        template,
+                      ),
                     )
                   }
                   error={errors.template ? t(errors.template) : undefined}
@@ -329,7 +339,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
 
       <BilingualField
         testID="post-update-title"
-        label={t('admin.postUpdate.titleLabel')}
+        label={t('admin.postUpdate.title.label')}
         value={form.title}
         onChange={(title) => patch({ title })}
         required
@@ -337,7 +347,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
       />
       <BilingualField
         testID="post-update-body"
-        label={t('admin.postUpdate.bodyLabel')}
+        label={t('admin.postUpdate.body.label')}
         value={form.body}
         onChange={(body) => patch({ body })}
         multiline
@@ -345,12 +355,12 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
         error={errors.body ? t(errors.body) : undefined}
       />
       <Text variant="caption" color="textSecondary">
-        {t('admin.postUpdate.languageHelper')}
+        {t('admin.postUpdate.language.help')}
       </Text>
       <Switch
         testID="post-update-notify"
-        label={t('admin.postUpdate.notify')}
-        description={t('admin.postUpdate.notifyHelper')}
+        label={t('admin.postUpdate.notify.label')}
+        description={t('admin.postUpdate.notify.help')}
         value={form.notify}
         onValueChange={(notify) => patch({ notify })}
       />
@@ -376,7 +386,10 @@ function variableLabel(t: Translator, name: string): string {
 }
 
 /** Previews in the person's language when there is text in it, else in the other. */
-function pickLocalizedPair(v: { en: string; ur: string }, locale: Locale): { text: string; lang: 'en' | 'ur' } {
+function pickLocalizedPair(
+  v: { en: string; ur: string },
+  locale: Locale,
+): { text: string; lang: 'en' | 'ur' } {
   const preferred = locale === 'ur' ? v.ur.trim() : v.en.trim();
   if (preferred) return { text: preferred, lang: locale };
   const other: 'en' | 'ur' = locale === 'ur' ? 'en' : 'ur';

@@ -140,6 +140,7 @@ export async function loadSessions(
 
 /** The public shape: the same view without admin-only fields. */
 export const toPublicSession = (s: AdminSession): Session => {
-  const { circleStatus: _circleStatus, ...rest } = s;
-  return rest;
+  const copy: Omit<AdminSession, 'circleStatus'> & { circleStatus?: unknown } = { ...s };
+  delete copy.circleStatus;
+  return copy;
 };

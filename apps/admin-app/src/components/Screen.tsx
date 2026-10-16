@@ -45,11 +45,20 @@ export function Screen({
         actions={actions}
         variant={variant}
       />
-      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        style={styles.fill}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+      >
         {children}
       </ScrollView>
       {footer ? (
-        <View style={[styles.footer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.border, backgroundColor: colors.surface },
+          ]}
+        >
           {footer}
         </View>
       ) : null}

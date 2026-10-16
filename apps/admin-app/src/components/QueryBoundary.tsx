@@ -11,7 +11,11 @@ export interface QueryBoundaryProps<T> {
   testID?: string;
 }
 
-/** Shows the loading skeleton, the error with a retry, or the loaded content. */
+/**
+ * Shows the loading skeleton, the error with a retry, or the loaded content. With a `testID`,
+ * the loaded content sits in a view of that id and the other two states carry `-loading` and
+ * `-error` ids.
+ */
 export function QueryBoundary<T>({ query, children, testID }: QueryBoundaryProps<T>) {
   const { t } = useT();
   if (query.status === 'loading') {
@@ -36,5 +40,5 @@ export function QueryBoundary<T>({ query, children, testID }: QueryBoundaryProps
       />
     );
   }
-  return <>{children(query.data)}</>;
+  return <View testID={testID}>{children(query.data)}</View>;
 }

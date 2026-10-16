@@ -30,13 +30,10 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const dir = useSessionDirectory();
   const { active, filter, principal } = useWorkingScope();
 
-  const query = useQuery(
-    async () => {
-      const page = await api.adminSessions.list({ query: { ...filter, limit: 50 } });
-      return page.items;
-    },
-    [filter.cityId, filter.venueId, active?.id],
-  );
+  const query = useQuery(async () => {
+    const page = await api.adminSessions.list({ query: { ...filter, limit: 50 } });
+    return page.items;
+  }, [filter.cityId, filter.venueId, active?.id]);
 
   useEffect(() => {
     if (query.data) dir.remember(query.data);
@@ -48,7 +45,9 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
       testID={`session-${s.id}`}
       title={pickLocalized(s.title, locale)}
       subtitle={`${pickLocalized(s.venue.name, locale)} · ${
-        withDate ? (nextOccurrenceText(s, locale) ?? whenSummary(s, t, locale)) : whenSummary(s, t, locale)
+        withDate
+          ? (nextOccurrenceText(s, locale) ?? whenSummary(s, t, locale))
+          : whenSummary(s, t, locale)
       }`}
       trailing={
         s.status === 'draft' ? (
@@ -79,10 +78,15 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
           onPress={() => nav.push(routes.postUpdate())}
         />
       ) : null}
-      <QueryBoundary query={query} testID="today">
+      <QueryBoundary query={query} testID="today-data">
         {(sessions) => {
           if (sessions.length === 0) {
-            return <EmptyState title={t('admin.home.emptyTitle')} description={t('admin.home.emptyBody')} />;
+            return (
+              <EmptyState
+                title={t('admin.home.emptyTitle')}
+                description={t('admin.home.emptyBody')}
+              />
+            );
           }
           const todays = sessions.filter(
             (s) => s.nextOccurrence && isToday(s.nextOccurrence.startsAt, now),

@@ -90,7 +90,11 @@ export const formatInstantDate = (instant: string, locale: Locale): string =>
   formatLocalDate(pkDateOf(instant), locale);
 
 /** Weekday name for 0 (Sunday) to 6 (Saturday). */
-export function weekdayName(dow: number, locale: Locale, style: 'short' | 'long' = 'short'): string {
+export function weekdayName(
+  dow: number,
+  locale: Locale,
+  style: 'short' | 'long' = 'short',
+): string {
   try {
     // 2023-01-01 was a Sunday.
     return new Intl.DateTimeFormat(intlTag(locale), { weekday: style, timeZone: 'UTC' }).format(
@@ -102,7 +106,8 @@ export function weekdayName(dow: number, locale: Locale, style: 'short' | 'long'
 }
 
 /** True for `HH:MM` on a 24-hour clock. */
-export const isLocalTime = (value: string): boolean => /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+export const isLocalTime = (value: string): boolean =>
+  /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(value);
 
 /** True for a real calendar date written `YYYY-MM-DD`. */
 export function isLocalDate(value: string): boolean {

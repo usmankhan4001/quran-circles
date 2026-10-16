@@ -1,6 +1,5 @@
 /** Every address in the app, in one place, so screens never build paths by hand. */
 export const routes = {
-  signIn: () => '/sign-in',
   today: () => '/',
   updates: () => '/updates',
   places: () => '/places',

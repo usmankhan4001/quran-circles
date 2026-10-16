@@ -50,36 +50,40 @@ const intIn = (text: string, min: number, max: number): number | null => {
 };
 
 /** Builds the portion the form describes. Returns an error key when it is incomplete. */
-function buildPortion(f: OccurrenceForm): { portion: Portion | null; error?: [keyof OccurrenceErrors, MessageKey] } {
+function buildPortion(f: OccurrenceForm): {
+  portion: Portion | null;
+  error?: [keyof OccurrenceErrors, MessageKey];
+} {
   switch (f.portionKind) {
     case 'none':
       return { portion: null };
     case 'para': {
       const para = intIn(f.para, 1, 30);
       return para === null
-        ? { portion: null, error: ['para', 'admin.schedule.error.para'] }
+        ? { portion: null, error: ['para', 'admin.occurrence.error.para'] }
         : { portion: { kind: 'para', para } };
     }
     case 'surah': {
       const surah = intIn(f.surah, 1, 114);
       return surah === null
-        ? { portion: null, error: ['surah', 'admin.schedule.error.surah'] }
+        ? { portion: null, error: ['surah', 'admin.occurrence.error.surah'] }
         : { portion: { kind: 'surah', surah } };
     }
     case 'ayah_range': {
       const surah = intIn(f.surah, 1, 114);
-      if (surah === null) return { portion: null, error: ['surah', 'admin.schedule.error.surah'] };
+      if (surah === null)
+        return { portion: null, error: ['surah', 'admin.occurrence.error.surah'] };
       const fromAyah = intIn(f.fromAyah, 1, 286);
       const toAyah = intIn(f.toAyah, 1, 286);
       if (fromAyah === null || toAyah === null || fromAyah > toAyah) {
-        return { portion: null, error: ['ayahs', 'admin.schedule.error.ayahs'] };
+        return { portion: null, error: ['ayahs', 'admin.occurrence.error.ayahs'] };
       }
       return { portion: { kind: 'ayah_range', surah, fromAyah, toAyah } };
     }
     case 'lesson': {
       const title = f.lesson.trim();
       return title.length === 0 || title.length > LABEL_MAX
-        ? { portion: null, error: ['lesson', 'admin.schedule.error.lesson'] }
+        ? { portion: null, error: ['lesson', 'admin.occurrence.error.lesson'] }
         : { portion: { kind: 'lesson', title } };
     }
   }
@@ -94,18 +98,22 @@ export interface ValidatedOccurrence {
  * Checks the form and builds a request with only the fields that changed. Clearing a field sends
  * null, which removes the portion or the recap.
  */
-export function validateOccurrence(f: OccurrenceForm, original: AdminOccurrence): ValidatedOccurrence {
+export function validateOccurrence(
+  f: OccurrenceForm,
+  original: AdminOccurrence,
+): ValidatedOccurrence {
   const errors: OccurrenceErrors = {};
   const built = buildPortion(f);
   if (built.error) errors[built.error[0]] = built.error[1];
   const label = f.portionLabel.trim();
-  if (label.length > LABEL_MAX) errors.portionLabel = 'admin.schedule.error.label';
+  if (label.length > LABEL_MAX) errors.portionLabel = 'admin.occurrence.error.label';
   const recap = f.recapNote.trim();
-  if (recap.length > RECAP_MAX) errors.recap = 'admin.schedule.error.recap';
+  if (recap.length > RECAP_MAX) errors.recap = 'admin.occurrence.error.recap';
   if (Object.keys(errors).length > 0) return { errors };
 
   const patch: Record<string, unknown> = {};
-  if (JSON.stringify(built.portion) !== JSON.stringify(original.portion)) patch.portion = built.portion;
+  if (JSON.stringify(built.portion) !== JSON.stringify(original.portion))
+    patch.portion = built.portion;
   if ((label || null) !== original.portionLabel) patch.portionLabel = label || null;
   if ((recap || null) !== original.recapNote) {
     patch.recapNote = recap || null;
@@ -118,7 +126,8 @@ export function validateOccurrence(f: OccurrenceForm, original: AdminOccurrence)
     patch.status = f.cancelled ? 'cancelled' : 'scheduled';
     if (f.cancelled) patch.notify = f.notify;
   }
-  if (Object.keys(patch).length === 0) return { errors: { nothing: 'admin.schedule.error.nothing' } };
+  if (Object.keys(patch).length === 0)
+    return { errors: { nothing: 'admin.occurrence.error.nothing' } };
 
   const parsed = OccurrenceUpdate.safeParse(patch);
   if (!parsed.success) return { errors: { nothing: 'errors.validation_failed' } };
@@ -126,4 +135,5 @@ export function validateOccurrence(f: OccurrenceForm, original: AdminOccurrence)
 }
 
 /** Whether the date has passed, so it can be recapped but not cancelled. */
-export const isPast = (o: AdminOccurrence, now: Date): boolean => Date.parse(o.endsAt) < now.getTime();
+export const isPast = (o: AdminOccurrence, now: Date): boolean =>
+  Date.parse(o.endsAt) < now.getTime();

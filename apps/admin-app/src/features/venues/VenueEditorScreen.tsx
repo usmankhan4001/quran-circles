@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { can, type City, type Venue } from '@qc/contracts';
-import { Button, Card, Select, Switch, Text, TextField, spacing } from '@qc/ui';
+import { Button, Card, Checkbox, Select, Text, TextField, spacing } from '@qc/ui';
 import { isErrorCode } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
@@ -48,11 +48,11 @@ export function VenueEditorScreen({ venueId }: VenueEditorScreenProps) {
 
   return (
     <Screen
-      title={venueId ? t('admin.venueEditor.editTitle') : t('admin.venueEditor.newTitle')}
+      title={venueId ? t('admin.venueEditor.title.edit') : t('admin.venueEditor.title.new')}
       onBack={nav.back}
       testID="venue-editor"
     >
-      <QueryBoundary query={query} testID="venue-editor">
+      <QueryBoundary query={query} testID="venue-editor-data">
         {(loaded) => <VenueEditorFlow loaded={loaded} />}
       </QueryBoundary>
     </Screen>
@@ -65,7 +65,7 @@ async function loadVenue(api: ReturnType<typeof useApi>, venueId: string): Promi
     return await api.venues.get({ params: { venueId } });
   } catch (error) {
     if (!isErrorCode(error, 'not_found')) throw error;
-    const page = await api.adminVenues.list({ query: { includeArchived: true, limit: 100 } });
+    const page = await api.adminVenues.list({ query: { includeArchived: 'true', limit: 100 } });
     const found = page.items.find((v) => v.id === venueId);
     if (!found) throw error;
     return found;
@@ -79,7 +79,9 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
   const { principal } = useWorkingScope();
   const original = loaded.venue;
 
-  const creatableCities = loaded.cities.filter((c) => can(principal, 'venue.create', { cityId: c.id }));
+  const creatableCities = loaded.cities.filter((c) =>
+    can(principal, 'venue.create', { cityId: c.id }),
+  );
   const [form, setForm] = useState<VenueForm>(() =>
     original ? venueFormOf(original) : emptyVenueForm(creatableCities[0]?.id ?? null),
   );
@@ -89,7 +91,8 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
   const patch = (p: Partial<VenueForm>) => setForm((f) => ({ ...f, ...p }));
 
   const areas = useQuery(
-    async () => (form.cityId ? (await api.places.areas({ query: { cityId: form.cityId } })).items : []),
+    async () =>
+      form.cityId ? (await api.places.areas({ query: { cityId: form.cityId } })).items : [],
     [form.cityId],
   );
 
@@ -124,27 +127,33 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       {!original ? (
         <Select
           testID="venue-city"
-          label={t('admin.venueEditor.city')}
+          label={t('admin.venueEditor.city.label')}
           required
           value={form.cityId ?? undefined}
           onChange={(cityId) => patch({ cityId, areaId: null })}
-          options={creatableCities.map((c) => ({ value: c.id, label: pickLocalized(c.name, locale) }))}
+          options={creatableCities.map((c) => ({
+            value: c.id,
+            label: pickLocalized(c.name, locale),
+          }))}
           error={errors.city ? t(errors.city) : undefined}
         />
       ) : null}
       <Select
         testID="venue-area"
-        label={t('admin.venueEditor.area')}
+        label={t('admin.venueEditor.area.label')}
         required
         value={form.areaId ?? undefined}
         onChange={(areaId) => patch({ areaId })}
-        options={(areas.data ?? []).map((a) => ({ value: a.id, label: pickLocalized(a.name, locale) }))}
+        options={(areas.data ?? []).map((a) => ({
+          value: a.id,
+          label: pickLocalized(a.name, locale),
+        }))}
         error={errors.area ? t(errors.area) : undefined}
         disabled={areas.status === 'loading'}
       />
       <BilingualField
         testID="venue-name"
-        label={t('admin.venueEditor.name')}
+        label={t('admin.venueEditor.name.label')}
         value={form.name}
         onChange={(name) => patch({ name })}
         required
@@ -153,7 +162,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       />
       <BilingualField
         testID="venue-address"
-        label={t('admin.venueEditor.address')}
+        label={t('admin.venueEditor.address.label')}
         value={form.address}
         onChange={(address) => patch({ address })}
         multiline
@@ -163,8 +172,8 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       />
       <TextField
         testID="venue-lat"
-        label={t('admin.venueEditor.lat')}
-        helper={t('admin.venueEditor.coordsHelper')}
+        label={t('admin.venueEditor.lat.label')}
+        helper={t('admin.venueEditor.coords.help')}
         value={form.lat}
         onChangeText={(lat) => patch({ lat })}
         error={errors.lat ? t(errors.lat) : undefined}
@@ -175,7 +184,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       />
       <TextField
         testID="venue-lng"
-        label={t('admin.venueEditor.lng')}
+        label={t('admin.venueEditor.lng.label')}
         value={form.lng}
         onChangeText={(lng) => patch({ lng })}
         error={errors.lng ? t(errors.lng) : undefined}
@@ -186,8 +195,8 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       />
       <TextField
         testID="venue-phone"
-        label={t('admin.venueEditor.phone')}
-        helper={t('admin.venueEditor.phoneHelper')}
+        label={t('admin.venueEditor.phone.label')}
+        helper={t('admin.venueEditor.phone.help')}
         value={form.contactPhone}
         onChangeText={(contactPhone) => patch({ contactPhone })}
         error={errors.phone ? t(errors.phone) : undefined}
@@ -197,26 +206,26 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       />
 
       <Text variant="title3" heading={2}>
-        {t('admin.venueEditor.facilitiesTitle')}
+        {t('admin.venueEditor.facilities.title')}
       </Text>
       <Text variant="caption" color="textSecondary">
-        {t('admin.venueEditor.facilitiesHelper')}
+        {t('admin.venueEditor.facilities.help')}
       </Text>
       <Card>
         {FACILITY_KEYS.map((key) => (
-          <Switch
+          <Checkbox
             key={key}
             testID={`venue-facility-${key}`}
             label={t(`admin.venueEditor.facility.${key}`)}
-            value={form.facilities[key]}
-            onValueChange={(on) => patch({ facilities: { ...form.facilities, [key]: on } })}
+            checked={form.facilities[key]}
+            onChange={(on) => patch({ facilities: { ...form.facilities, [key]: on } })}
             disabled={busy}
           />
         ))}
       </Card>
       <BilingualField
         testID="venue-entrance"
-        label={t('admin.venueEditor.entranceNotes')}
+        label={t('admin.venueEditor.entrance.label')}
         value={form.entranceNotes}
         onChange={(entranceNotes) => patch({ entranceNotes })}
         multiline
@@ -231,7 +240,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       <ErrorNotice error={failure} onDismiss={original ? update.reset : create.reset} />
       <Button
         testID="venue-save"
-        label={original ? t('admin.common.save') : t('admin.venueEditor.create')}
+        label={original ? t('admin.common.save') : t('admin.venueEditor.submit')}
         size="large"
         fullWidth
         loading={busy}

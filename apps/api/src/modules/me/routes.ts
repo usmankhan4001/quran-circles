@@ -1,5 +1,12 @@
 import type { Handlers } from '../shared/route';
-import { listBookmarks, createBookmark, deleteBookmark, getReadingPosition, importBookmarks, putReadingPosition } from './bookmarks';
+import {
+  listBookmarks,
+  createBookmark,
+  deleteBookmark,
+  getReadingPosition,
+  importBookmarks,
+  putReadingPosition,
+} from './bookmarks';
 import { cancelCircleRequest, createCircleRequest, listCircleRequests } from './circle-requests';
 import { listConsents, setConsent } from './consents';
 import { registerDevice, removeDevice } from './devices';
@@ -40,13 +47,7 @@ export const meHandlers = (): Handlers => ({
 
   'circleRequests.list': (ctx) => listCircleRequests(ctx.db, ctx.uid(), ctx.now),
   'circleRequests.create': (ctx) =>
-    createCircleRequest(
-      ctx.db,
-      ctx.uid(),
-      ctx.now,
-      ctx.deps.config.circleRequestTtlDays,
-      ctx.body,
-    ),
+    createCircleRequest(ctx.db, ctx.uid(), ctx.now, ctx.deps.config.circleRequestTtlDays, ctx.body),
   'circleRequests.cancel': (ctx) =>
     cancelCircleRequest(ctx.db, ctx.uid(), ctx.now, ctx.params.requestId),
 });

@@ -46,7 +46,10 @@ export function workingScopesOf(me: Me): WorkingScope[] {
 }
 
 /** The scope to open with: the saved one if still held, else the narrowest (a venue), else the first. */
-export function pickWorkingScope(scopes: readonly WorkingScope[], savedId?: string | null): WorkingScope | null {
+export function pickWorkingScope(
+  scopes: readonly WorkingScope[],
+  savedId?: string | null,
+): WorkingScope | null {
   if (savedId) {
     const saved = scopes.find((s) => s.id === savedId);
     if (saved) return saved;
@@ -98,7 +101,10 @@ export function sessionAbilities(principal: Principal, s: SessionLike): SessionA
 }
 
 /** Whether the person may do an action on a resource. Thin alias that keeps imports short. */
-export const allowed = (principal: Principal, action: ScopeAction, resource?: ResourceScope): boolean =>
-  can(principal, action, resource);
+export const allowed = (
+  principal: Principal,
+  action: ScopeAction,
+  resource?: ResourceScope,
+): boolean => can(principal, action, resource);
 
 export { scopeFilter, updatePostAction };

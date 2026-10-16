@@ -3,10 +3,10 @@ import {
   type AdminOccurrence,
   type AdminSession,
   type ScopeFilter,
-  type ScheduleChangeResponse,
   type SessionCreate,
 } from '@qc/contracts';
 import type { Portion as PortionValue } from '@qc/contracts';
+import type { ScheduleChangeResponse } from '../shared/types';
 import { schema, type Db } from '../../db';
 import { venueScope, writeAudit } from '../shared/audit';
 import { fail, invalid, isUniqueViolation } from '../shared/errors';
@@ -173,7 +173,10 @@ export async function createSession(
     if (!row) throw new Error('session insert returned no row');
     const spec: ScheduleSpec = {
       ...specOf(row),
-      endsOn: seasonEnd && (!row.endsOn || compareDates(seasonEnd, row.endsOn) < 0) ? seasonEnd : row.endsOn,
+      endsOn:
+        seasonEnd && (!row.endsOn || compareDates(seasonEnd, row.endsOn) < 0)
+          ? seasonEnd
+          : row.endsOn,
     };
     await materializeSession(tx, row.id, spec, deps.now, deps.horizonDays);
     await writeAudit(tx, {
@@ -209,7 +212,11 @@ export async function updateSession(
   patch: SessionPatch,
 ): Promise<AdminSession> {
   await db.transaction(async (tx) => {
-    const [current] = await tx.select().from(sessions).where(eq(sessions.id, sessionId)).for('update');
+    const [current] = await tx
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .for('update');
     if (!current) return fail('not_found');
     const set: Partial<typeof sessions.$inferInsert> = {};
     const fields: string[] = [];
@@ -299,7 +306,11 @@ export async function changeSchedule(
   change: ScheduleChange,
 ): Promise<ScheduleChangeResponse> {
   const outcome = await db.transaction(async (tx) => {
-    const [current] = await tx.select().from(sessions).where(eq(sessions.id, sessionId)).for('update');
+    const [current] = await tx
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, sessionId))
+      .for('update');
     if (!current) return fail('not_found');
     if (current.status === 'cancelled') return fail('session_cancelled');
     const oneOff = current.kind === 'one_off';
@@ -312,7 +323,11 @@ export async function changeSchedule(
       : change.daysOfWeek
         ? [...new Set(change.daysOfWeek)].sort((a, b) => a - b)
         : current.daysOfWeek;
-    const endsOn = oneOff ? current.endsOn : change.endsOn !== undefined ? change.endsOn : current.endsOn;
+    const endsOn = oneOff
+      ? current.endsOn
+      : change.endsOn !== undefined
+        ? change.endsOn
+        : current.endsOn;
     if (!oneOff && endsOn && compareDates(endsOn, current.startsOn) < 0) invalid('endsOn');
 
     const localStartTime = change.localStartTime ?? current.localStartTime.slice(0, 5);
@@ -434,7 +449,10 @@ export async function updateOccurrence(
       const current = await findOccurrence(tx, occurrenceId);
       if (!current) return fail('not_found');
       const { occurrence } = current;
-      const [session] = await tx.select().from(sessions).where(eq(sessions.id, occurrence.sessionId));
+      const [session] = await tx
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, occurrence.sessionId));
       if (!session) return fail('not_found');
       if (session.status === 'cancelled') return fail('session_cancelled');
 
@@ -458,7 +476,8 @@ export async function updateOccurrence(
       }
       const startsAt = patch.startsAt ? new Date(patch.startsAt) : occurrence.startsAt;
       const endsAt = patch.endsAt ? new Date(patch.endsAt) : occurrence.endsAt;
-      const moved = !!(patch.startsAt || patch.endsAt) &&
+      const moved =
+        !!(patch.startsAt || patch.endsAt) &&
         (startsAt.getTime() !== occurrence.startsAt.getTime() ||
           endsAt.getTime() !== occurrence.endsAt.getTime());
       if (patch.startsAt || patch.endsAt) {
@@ -498,11 +517,10 @@ export async function updateOccurrence(
       });
     });
   } catch (error) {
-    if (isUniqueViolation(error)) return fail('conflict');
+    if (isUniqueViolation(error)) return invalid('startsAt', 'clash');
     throw error;
   }
   const row = await findOccurrence(db, occurrenceId);
   if (!row) return fail('not_found');
   return { occurrence: toAdminOccurrence(row.occurrence) };
 }
-

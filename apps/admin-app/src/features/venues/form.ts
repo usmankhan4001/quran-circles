@@ -127,7 +127,9 @@ export function validateVenue(form: VenueForm, original?: Venue): ValidatedVenue
       contactPhone: phone,
       facilities: { ...form.facilities, ...(notes ? { entranceNotes: notes } : {}) },
     });
-    return parsed.success ? { errors, create: parsed.data } : { errors: { name: 'errors.validation_failed' } };
+    return parsed.success
+      ? { errors, create: parsed.data }
+      : { errors: { name: 'errors.validation_failed' } };
   }
 
   const patch: Record<string, unknown> = {};
@@ -135,7 +137,9 @@ export function validateVenue(form: VenueForm, original?: Venue): ValidatedVenue
   if (!sameLocalized(toLocalizedInput(form.name), toLocalizedInput(bilingualOf(original.name)))) {
     patch.name = name;
   }
-  if (!sameLocalized(toLocalizedInput(form.address), toLocalizedInput(bilingualOf(original.address)))) {
+  if (
+    !sameLocalized(toLocalizedInput(form.address), toLocalizedInput(bilingualOf(original.address)))
+  ) {
     patch.address = address;
   }
   if (lat !== original.lat) patch.lat = lat;
@@ -147,7 +151,10 @@ export function validateVenue(form: VenueForm, original?: Venue): ValidatedVenue
   }
   if (!sameLocalized(notes, original.facilities.entranceNotes)) facilities.entranceNotes = notes;
   if (Object.keys(facilities).length > 0) patch.facilities = facilities;
-  if (Object.keys(patch).length === 0) return { errors: { nothing: 'admin.venueEditor.error.nothing' } };
+  if (Object.keys(patch).length === 0)
+    return { errors: { nothing: 'admin.venueEditor.error.nothing' } };
   const parsed = VenueUpdate.safeParse(patch);
-  return parsed.success ? { errors, update: parsed.data } : { errors: { name: 'errors.validation_failed' } };
+  return parsed.success
+    ? { errors, update: parsed.data }
+    : { errors: { name: 'errors.validation_failed' } };
 }

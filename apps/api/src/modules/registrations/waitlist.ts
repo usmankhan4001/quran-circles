@@ -8,7 +8,8 @@ import { nextStart, sessionFacts, whatsappConsented, type PublishDeps } from '..
 
 const { registrations, sessions, users, occurrences, devices } = schema;
 
-const clip = (text: string, max: number): string => (text.length <= max ? text : text.slice(0, max));
+const clip = (text: string, max: number): string =>
+  text.length <= max ? text : text.slice(0, max);
 
 /**
  * Moves waitlisted registrations to confirmed, in the order they joined, while seats are free. A
@@ -21,7 +22,11 @@ export async function promoteWaitlist(
   deps: PublishDeps,
   sessionId: string,
 ): Promise<string[]> {
-  const [session] = await db.select().from(sessions).where(eq(sessions.id, sessionId)).for('update');
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .for('update');
   if (!session) return [];
   const waiting = await db
     .select()

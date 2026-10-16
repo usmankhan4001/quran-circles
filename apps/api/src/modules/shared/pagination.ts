@@ -14,7 +14,8 @@ export function encodeOffsetCursor(offset: number): string {
 export function decodeOffsetCursor(cursor: string | undefined): number {
   if (!cursor) return 0;
   const m = /^o:(\d{1,9})$/.exec(decode(cursor));
-  if (!m) return fail('validation_failed', { issues: [{ path: 'cursor', code: 'invalid_cursor' }] });
+  if (!m)
+    return fail('validation_failed', { issues: [{ path: 'cursor', code: 'invalid_cursor' }] });
   return Number(m[1]);
 }
 

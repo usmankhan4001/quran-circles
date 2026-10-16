@@ -1,4 +1,7 @@
-import { AttendancePut, type Attendance } from '@qc/contracts';
+import { AttendancePut, type ApiClient } from '@qc/contracts';
+
+/** What the server holds for one occurrence (the contract exports the schema, not the type). */
+export type Attendance = Awaited<ReturnType<ApiClient['adminAttendance']['get']>>;
 import type { MessageKey } from '../../i18n/translate';
 
 export interface DropIn {
@@ -22,6 +25,8 @@ export type AttendanceAction =
   | { type: 'setHeadcount'; value: number }
   | { type: 'tick'; registrationId: string; count: number }
   | { type: 'untick'; registrationId: string }
+  | { type: 'tickAll'; people: readonly { registrationId: string; count: number }[] }
+  | { type: 'clearTicks' }
   | { type: 'addDropIn'; name: string | null; count: number }
   | { type: 'removeDropIn'; id: string }
   | { type: 'saved' };
@@ -75,8 +80,28 @@ export function attendanceReducer(s: AttendanceState, a: AttendanceAction): Atte
     case 'untick': {
       const count = s.ticked[a.registrationId];
       if (count === undefined) return s;
-      const { [a.registrationId]: _removed, ...rest } = s.ticked;
+      const rest = { ...s.ticked };
+      delete rest[a.registrationId];
       return { ...s, ticked: rest, headcount: clampHeadcount(s.headcount - count), dirty: true };
+    }
+    case 'tickAll': {
+      const ticked = { ...s.ticked };
+      let added = 0;
+      for (const p of a.people) {
+        if (p.registrationId in ticked) continue;
+        const count = Math.min(MAX_ENTRY_COUNT, Math.max(1, p.count));
+        ticked[p.registrationId] = count;
+        added += count;
+      }
+      return added === 0
+        ? s
+        : { ...s, ticked, headcount: clampHeadcount(s.headcount + added), dirty: true };
+    }
+    case 'clearTicks': {
+      const removed = Object.values(s.ticked).reduce((x, y) => x + y, 0);
+      return removed === 0 && Object.keys(s.ticked).length === 0
+        ? s
+        : { ...s, ticked: {}, headcount: clampHeadcount(s.headcount - removed), dirty: true };
     }
     case 'addDropIn': {
       const count = Math.min(MAX_ENTRY_COUNT, Math.max(1, a.count));

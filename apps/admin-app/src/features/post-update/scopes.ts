@@ -25,7 +25,11 @@ export function canPostAnywhere(principal: Principal): boolean {
   return principal.assignments.length > 0;
 }
 
-const resourceFor = (level: PostLevel, cityId: string | null, venueId: string | null): ResourceScope =>
+const resourceFor = (
+  level: PostLevel,
+  cityId: string | null,
+  venueId: string | null,
+): ResourceScope =>
   level === 'national' ? {} : level === 'city' ? { cityId } : { cityId, venueId };
 
 /** Whether the person may post at this level, to this city or venue. The server checks again. */
@@ -65,14 +69,18 @@ export interface ScopeChoice {
 }
 
 /** Opens on the level that matches the role the person is working as. */
-export function defaultScopeChoice(active: WorkingScope | null, options: ScopeOptions): ScopeChoice {
+export function defaultScopeChoice(
+  active: WorkingScope | null,
+  options: ScopeOptions,
+): ScopeChoice {
   const first = <T extends { id: string }>(list: readonly T[], id?: string | null) =>
     list.find((x) => x.id === id) ?? list[0];
   const fallbackLevel = options.levels[0] ?? 'venue';
   let level: PostLevel = fallbackLevel;
   if (active?.role === 'venue_coordinator' && options.levels.includes('venue')) level = 'venue';
   else if (active?.role === 'city_coordinator' && options.levels.includes('city')) level = 'city';
-  else if (active?.role === 'national_admin' && options.levels.includes('national')) level = 'national';
+  else if (active?.role === 'national_admin' && options.levels.includes('national'))
+    level = 'national';
   return {
     level,
     cityId: level === 'city' ? (first(options.cities, active?.cityId)?.id ?? null) : null,

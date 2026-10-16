@@ -1,5 +1,6 @@
 import type { Handlers } from '../shared/route';
 import { messagingDepsOf } from '../shared/context';
+import { invalid } from '../shared/errors';
 import { findVenue } from '../venues/service';
 import {
   changeSchedule,
@@ -37,8 +38,10 @@ export const sessionHandlers = (): Handlers => ({
     listAdminSessions(ctx.db, ctx.now, ctx.scope('session.list_admin'), ctx.query),
 
   'adminSessions.create': async (ctx) => {
+    // Only people who may create sessions somewhere learn that a venue id is unknown.
+    ctx.scope('session.list_admin');
     const venue = await findVenue(ctx.db, ctx.body.venueId);
-    if (!venue) return ctx.missing('session.create');
+    if (!venue) return invalid('venueId');
     ctx.authorize('session.create', { cityId: venue.cityId, venueId: venue.id });
     return createSession(
       ctx.db,

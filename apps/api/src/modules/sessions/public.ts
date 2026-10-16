@@ -19,12 +19,7 @@ import { fail } from '../shared/errors';
 import { likePattern, venueLat, venueLng } from '../shared/mappers';
 import { decodeOffsetCursor, offsetPage, type Page } from '../shared/pagination';
 import { topUpOccurrences, type ScheduleSpec } from './occurrences';
-import {
-  loadSessions,
-  selectSessionRecords,
-  toOccurrence,
-  toPublicSession,
-} from './views';
+import { loadSessions, selectSessionRecords, toOccurrence, toPublicSession } from './views';
 import { toLocalTime } from '../shared/time';
 
 const { sessions, venues, areas, programs, circles, occurrences } = schema;
@@ -107,7 +102,11 @@ export async function listPublicSessions(
   const offset = decodeOffsetCursor(query.cursor);
   const order =
     query.lat !== undefined && query.lng !== undefined
-      ? [asc(distanceKm(query.lat, query.lng)), sql`${nextStart(now)} asc nulls last`, asc(sessions.id)]
+      ? [
+          asc(distanceKm(query.lat, query.lng)),
+          sql`${nextStart(now)} asc nulls last`,
+          asc(sessions.id),
+        ]
       : [sql`${nextStart(now)} asc nulls last`, asc(sessions.id)];
   const ids = await db
     .select({ id: sessions.id })
@@ -222,7 +221,14 @@ export async function listPublicOccurrences(
     .limit(query.limit + 1)
     .offset(offset);
   const page = offsetPage(rows, query.limit, offset);
-  return { items: await withSessions(db, now, page.items.map((r) => r.occurrence)), nextCursor: page.nextCursor };
+  return {
+    items: await withSessions(
+      db,
+      now,
+      page.items.map((r) => r.occurrence),
+    ),
+    nextCursor: page.nextCursor,
+  };
 }
 
 async function withSessions(

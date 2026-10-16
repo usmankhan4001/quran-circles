@@ -1,5 +1,6 @@
 import { and, asc, desc, eq } from 'drizzle-orm';
-import type { Bookmark, BookmarkImport, ReadingPosition } from '@qc/contracts';
+import type { Bookmark } from '@qc/contracts';
+import type { BookmarkImport, ReadingPosition } from '../shared/types';
 import { schema, type Db } from '../../db';
 import { fail, invalid, isUniqueViolation } from '../shared/errors';
 
@@ -26,6 +27,8 @@ function shapeOk(b: Draft): boolean {
       return b.surah !== undefined && b.ayah === undefined && b.para === undefined;
     case 'para':
       return b.para !== undefined && b.surah === undefined && b.ayah === undefined;
+    default:
+      return false;
   }
 }
 
@@ -49,10 +52,18 @@ export async function listBookmarks(db: Db, userId: string): Promise<{ items: Bo
   return { items: rows.map(toBookmark) };
 }
 
-export async function createBookmark(db: Db, userId: string, now: Date, input: Draft): Promise<Bookmark> {
+export async function createBookmark(
+  db: Db,
+  userId: string,
+  now: Date,
+  input: Draft,
+): Promise<Bookmark> {
   if (!shapeOk(input)) invalid('kind', 'target_mismatch');
   try {
-    const [row] = await db.insert(bookmarks).values(values(userId, input, now)).returning();
+    const [row] = await db
+      .insert(bookmarks)
+      .values(values(userId, input, now))
+      .returning();
     return toBookmark(row!);
   } catch (error) {
     if (isUniqueViolation(error)) return fail('conflict');
@@ -97,7 +108,10 @@ export async function importBookmarks(
 export async function getReadingPosition(db: Db, userId: string): Promise<ReadingPosition> {
   const [row] = await db.select().from(readingPositions).where(eq(readingPositions.userId, userId));
   if (row) return { surah: row.surah, ayah: row.ayah, updatedAt: row.updatedAt.toISOString() };
-  const [user] = await db.select({ createdAt: users.createdAt }).from(users).where(eq(users.id, userId));
+  const [user] = await db
+    .select({ createdAt: users.createdAt })
+    .from(users)
+    .where(eq(users.id, userId));
   return { surah: 1, ayah: 1, updatedAt: (user?.createdAt ?? new Date(0)).toISOString() };
 }
 

@@ -105,7 +105,12 @@ export async function setConsent(
   db: Db,
   userId: string,
   now: Date,
-  input: { channel: ConsentChannel; purpose: ConsentPurpose; venueId?: string | null | undefined; granted: boolean },
+  input: {
+    channel: ConsentChannel;
+    purpose: ConsentPurpose;
+    venueId?: string | null | undefined;
+    granted: boolean;
+  },
 ): Promise<Consent> {
   const venueId = input.venueId ?? null;
   if (venueId) {

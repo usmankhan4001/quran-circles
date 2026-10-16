@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import type { Follow } from '@qc/contracts';
 import { schema, type Db } from '../../db';
-import { fail, isUniqueViolation } from '../shared/errors';
+import { fail, invalid, isUniqueViolation } from '../shared/errors';
 import { localized } from '../shared/mappers';
 import { applyConsent } from './consents';
 
@@ -18,7 +18,11 @@ async function toFollows(db: Db, rows: readonly FollowRow[]): Promise<Follow[]> 
   const venueName = new Map(venueRows.map((v) => [v.id, localized(v.nameEn, v.nameUr)]));
   const circleName = new Map(circleRows.map((c) => [c.id, localized(c.nameEn, c.nameUr)]));
   return rows.flatMap((r) => {
-    const name = r.venueId ? venueName.get(r.venueId) : r.circleId ? circleName.get(r.circleId) : null;
+    const name = r.venueId
+      ? venueName.get(r.venueId)
+      : r.circleId
+        ? circleName.get(r.circleId)
+        : null;
     if (!name) return [];
     return [
       {
@@ -51,7 +55,13 @@ async function setAlertConsent(
   granted: boolean,
 ): Promise<void> {
   for (const channel of ['push', 'whatsapp'] as const) {
-    await applyConsent(db, userId, now, { channel, purpose: 'venue_alerts', venueId, granted }, 'follow');
+    await applyConsent(
+      db,
+      userId,
+      now,
+      { channel, purpose: 'venue_alerts', venueId, granted },
+      'follow',
+    );
   }
 }
 
@@ -76,18 +86,20 @@ export async function createFollow(
   db: Db,
   userId: string,
   now: Date,
-  input: { target: 'venue'; venueId: string; alertsEnabled: boolean } | { target: 'circle'; circleId: string; alertsEnabled: boolean },
+  input:
+    | { target: 'venue'; venueId: string; alertsEnabled: boolean }
+    | { target: 'circle'; circleId: string; alertsEnabled: boolean },
 ): Promise<Follow> {
   try {
     const row = await db.transaction(async (tx) => {
       let venueId: string;
       if (input.target === 'venue') {
         const [venue] = await tx.select().from(venues).where(eq(venues.id, input.venueId));
-        if (!venue || venue.status !== 'active') return fail('not_found');
+        if (!venue || venue.status !== 'active') return invalid('venueId');
         venueId = venue.id;
       } else {
         const [circle] = await tx.select().from(circles).where(eq(circles.id, input.circleId));
-        if (!circle || circle.status !== 'published') return fail('not_found');
+        if (!circle || circle.status !== 'published') return invalid('circleId');
         venueId = circle.venueId;
       }
       const [created] = await tx
@@ -105,7 +117,7 @@ export async function createFollow(
       return created;
     });
     const [view] = await toFollows(db, [row]);
-    if (!view) return fail('not_found');
+    if (!view) throw new Error('follow vanished after insert');
     return view;
   } catch (error) {
     if (isUniqueViolation(error)) return fail('conflict');
@@ -155,7 +167,12 @@ export async function updateFollow(
   return view;
 }
 
-export async function deleteFollow(db: Db, userId: string, now: Date, followId: string): Promise<void> {
+export async function deleteFollow(
+  db: Db,
+  userId: string,
+  now: Date,
+  followId: string,
+): Promise<void> {
   await db.transaction(async (tx) => {
     const [current] = await tx
       .select()

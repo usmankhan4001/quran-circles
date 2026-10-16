@@ -85,7 +85,8 @@ export async function updateMe(db: Db, userId: string, patch: ProfileUpdate): Pr
     if (patch.profession !== undefined) profileSet.profession = patch.profession;
     if (patch.education !== undefined) profileSet.education = patch.education;
     if (patch.priorReading !== undefined) profileSet.priorReading = patch.priorReading;
-    if (patch.preferredLanguage !== undefined) profileSet.preferredLanguage = patch.preferredLanguage;
+    if (patch.preferredLanguage !== undefined)
+      profileSet.preferredLanguage = patch.preferredLanguage;
     if (Object.keys(profileSet).length) {
       await tx
         .insert(profiles)
@@ -127,7 +128,8 @@ export async function deleteAccount(db: Db, userId: string, now: Date): Promise<
             ne(roleAssignments.userId, userId),
           ),
         );
-      if ((others?.n ?? 0) === 0) return fail('last_national_admin');
+      // me.delete does not list last_national_admin in the contract (change request filed).
+      if ((others?.n ?? 0) === 0) return invalid('confirm', 'last_national_admin');
     }
 
     const mine = await tx

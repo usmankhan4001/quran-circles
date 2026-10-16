@@ -1,7 +1,11 @@
 import type { Db } from '../../db';
 import type { Logger } from '../../middleware/logger';
 import type { RateLimiter, RateLimitRule } from '../../middleware/rate-limit';
-import type { AuthVariables, PrincipalMiddleware } from '../../middleware/auth-adapter';
+import type {
+  AuthFailureReader,
+  AuthVariables,
+  PrincipalMiddleware,
+} from '../../middleware/auth-adapter';
 import type { RateLimitBucket } from '@qc/contracts';
 
 export interface AppEnv {
@@ -32,6 +36,11 @@ export interface AppDeps {
   rateLimiter: RateLimiter;
   /** Sets the principal from the bearer token. Supplied by the auth lane (tests use a stand-in). */
   principalMiddleware: PrincipalMiddleware;
+  /**
+   * Why a request has no principal: `token_expired` tells the app to refresh, `account_suspended`
+   * to stop. Defaults to `unauthenticated` when not supplied.
+   */
+  authFailure?: AuthFailureReader;
 }
 
 /** What the modules that post updates and queue messages need from the request. */

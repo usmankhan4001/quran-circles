@@ -29,16 +29,13 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
   const nav = useNavigation();
   const { principal } = useWorkingScope();
   const session = useSession(sessionId, reloadKey);
-  const occurrences = useQuery(
-    async () => {
-      const res = await api.adminSessions.occurrences({
-        params: { sessionId },
-        query: { from: pkDayRange(now).from, limit: 14 },
-      });
-      return res.items;
-    },
-    [sessionId, reloadKey],
-  );
+  const occurrences = useQuery(async () => {
+    const res = await api.adminSessions.occurrences({
+      params: { sessionId },
+      query: { from: pkDayRange(now).from, limit: 14 },
+    });
+    return res.items;
+  }, [sessionId, reloadKey]);
 
   return (
     <Screen
@@ -47,7 +44,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
       onBack={nav.back}
       testID="session"
     >
-      <QueryBoundary query={session} testID="session">
+      <QueryBoundary query={session} testID="session-data">
         {(s) => {
           const can = sessionAbilities(principal, s);
           const todayOccurrence = occurrences.data?.find((o) => isToday(o.startsAt, now));
@@ -57,7 +54,8 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                 <View style={{ gap: spacing.xs }}>
                   <Text variant="label">{whenSummary(s, t, locale)}</Text>
                   <Text variant="caption" color="textSecondary">
-                    {t(`admin.home.section.${s.section}`)} · {s.language === 'ur' ? 'اردو' : 'English'}
+                    {t(`admin.home.section.${s.section}`)} ·{' '}
+                    {s.language === 'ur' ? 'اردو' : 'English'}
                   </Text>
                   {s.registration.capacity !== null ? (
                     <Text variant="caption" color="textSecondary">

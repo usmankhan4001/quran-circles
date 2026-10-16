@@ -33,7 +33,11 @@ export interface OccurrenceScreenProps {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Set the portion and the recap of one date, or cancel just that date. */
-export function OccurrenceScreen({ sessionId, occurrenceId, now = new Date() }: OccurrenceScreenProps) {
+export function OccurrenceScreen({
+  sessionId,
+  occurrenceId,
+  now = new Date(),
+}: OccurrenceScreenProps) {
   const { t } = useT();
   const api = useApi();
   const nav = useNavigation();
@@ -53,13 +57,13 @@ export function OccurrenceScreen({ sessionId, occurrenceId, now = new Date() }: 
   const allowed = session.data ? sessionAbilities(principal, session.data).editOccurrence : true;
 
   return (
-    <Screen title={t('admin.schedule.occurrenceTitle')} onBack={nav.back} testID="occurrence">
+    <Screen title={t('admin.occurrence.title')} onBack={nav.back} testID="occurrence">
       {!allowed ? (
         <Card variant="flat" testID="occurrence-forbidden">
           <Text>{t('errors.forbidden')}</Text>
         </Card>
       ) : (
-        <QueryBoundary query={query} testID="occurrence">
+        <QueryBoundary query={query} testID="occurrence-data">
           {(occurrence) => <OccurrenceFlow occurrence={occurrence} now={now} />}
         </QueryBoundary>
       )}
@@ -93,18 +97,19 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
   };
 
   const kinds: { value: PortionChoice; label: string }[] = [
-    { value: 'none', label: t('admin.schedule.portion.none') },
-    { value: 'para', label: t('admin.schedule.portion.para') },
-    { value: 'surah', label: t('admin.schedule.portion.surah') },
-    { value: 'ayah_range', label: t('admin.schedule.portion.ayah_range') },
-    { value: 'lesson', label: t('admin.schedule.portion.lesson') },
+    { value: 'none', label: t('admin.occurrence.portion.none') },
+    { value: 'para', label: t('admin.occurrence.portion.para') },
+    { value: 'surah', label: t('admin.occurrence.portion.surah') },
+    { value: 'ayah_range', label: t('admin.occurrence.portion.ayah_range') },
+    { value: 'lesson', label: t('admin.occurrence.portion.lesson') },
   ];
 
   return (
     <View style={{ gap: spacing.lg }} testID="occurrence-form">
       <Card variant="flat">
         <Text variant="label">
-          {formatInstantDate(occurrence.startsAt, locale)} · {formatInstantTime(occurrence.startsAt, locale)}
+          {formatInstantDate(occurrence.startsAt, locale)} ·{' '}
+          {formatInstantTime(occurrence.startsAt, locale)}
         </Text>
         {occurrence.status === 'cancelled' ? (
           <Text variant="caption" color="textDanger">
@@ -114,11 +119,11 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       </Card>
 
       <Text variant="title3" heading={2}>
-        {t('admin.schedule.portionTitle')}
+        {t('admin.occurrence.portion.title')}
       </Text>
       <Select
         testID="occurrence-portion-kind"
-        label={t('admin.schedule.portionKind')}
+        label={t('admin.occurrence.portion.kind')}
         value={form.portionKind}
         onChange={(portionKind) => patch({ portionKind })}
         options={kinds}
@@ -126,8 +131,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       {form.portionKind === 'para' ? (
         <TextField
           testID="occurrence-para"
-          label={t('admin.schedule.paraLabel')}
-          helper={t('admin.schedule.paraHelper')}
+          label={t('admin.occurrence.para.label')}
+          helper={t('admin.occurrence.para.help')}
           value={form.para}
           onChangeText={(para) => patch({ para })}
           error={errors.para ? t(errors.para) : undefined}
@@ -139,8 +144,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       {form.portionKind === 'surah' || form.portionKind === 'ayah_range' ? (
         <TextField
           testID="occurrence-surah"
-          label={t('admin.schedule.surahLabel')}
-          helper={t('admin.schedule.surahHelper')}
+          label={t('admin.occurrence.surah.label')}
+          helper={t('admin.occurrence.surah.help')}
           value={form.surah}
           onChangeText={(surah) => patch({ surah })}
           error={errors.surah ? t(errors.surah) : undefined}
@@ -153,7 +158,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
         <View style={{ gap: spacing.md }}>
           <TextField
             testID="occurrence-from-ayah"
-            label={t('admin.schedule.fromAyah')}
+            label={t('admin.occurrence.fromAyah')}
             value={form.fromAyah}
             onChangeText={(fromAyah) => patch({ fromAyah })}
             keyboardType="number-pad"
@@ -162,7 +167,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
           />
           <TextField
             testID="occurrence-to-ayah"
-            label={t('admin.schedule.toAyah')}
+            label={t('admin.occurrence.toAyah')}
             value={form.toAyah}
             onChangeText={(toAyah) => patch({ toAyah })}
             error={errors.ayahs ? t(errors.ayahs) : undefined}
@@ -175,7 +180,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       {form.portionKind === 'lesson' ? (
         <TextField
           testID="occurrence-lesson"
-          label={t('admin.schedule.lessonLabel')}
+          label={t('admin.occurrence.lesson.label')}
           value={form.lesson}
           onChangeText={(lesson) => patch({ lesson })}
           error={errors.lesson ? t(errors.lesson) : undefined}
@@ -186,8 +191,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       {form.portionKind !== 'none' ? (
         <TextField
           testID="occurrence-portion-label"
-          label={t('admin.schedule.portionLabel')}
-          helper={t('admin.schedule.portionLabelHelper')}
+          label={t('admin.occurrence.portionLabel.label')}
+          helper={t('admin.occurrence.portionLabel.help')}
           value={form.portionLabel}
           onChangeText={(portionLabel) => patch({ portionLabel })}
           error={errors.portionLabel ? t(errors.portionLabel) : undefined}
@@ -196,12 +201,12 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       ) : null}
 
       <Text variant="title3" heading={2}>
-        {t('admin.schedule.recapTitle')}
+        {t('admin.occurrence.recap.title')}
       </Text>
       <TextField
         testID="occurrence-recap"
-        label={t('admin.schedule.recapLabel')}
-        helper={t('admin.schedule.recapHelper')}
+        label={t('admin.occurrence.recap.label')}
+        helper={t('admin.occurrence.recap.help')}
         value={form.recapNote}
         onChangeText={(recapNote) => patch({ recapNote })}
         error={errors.recap ? t(errors.recap) : undefined}
@@ -210,7 +215,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
         contentDirection={form.recapLocale === 'ur' ? 'rtl' : 'ltr'}
       />
       <SegmentedControl
-        accessibilityLabel={t('admin.schedule.recapLanguage')}
+        accessibilityLabel={t('admin.occurrence.recap.language')}
         value={form.recapLocale}
         onChange={(recapLocale) => patch({ recapLocale })}
         options={[
@@ -223,15 +228,15 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
         <View style={{ gap: spacing.sm }}>
           <Switch
             testID="occurrence-cancelled"
-            label={t('admin.schedule.cancelThis')}
-            description={t('admin.schedule.cancelHelper')}
+            label={t('admin.occurrence.cancel.this')}
+            description={t('admin.occurrence.cancel.help')}
             value={form.cancelled}
             onValueChange={(cancelled) => patch({ cancelled })}
           />
           {form.cancelled && occurrence.status !== 'cancelled' ? (
             <Switch
               testID="occurrence-notify"
-              label={t('admin.schedule.cancelNotify')}
+              label={t('admin.occurrence.cancel.notify')}
               value={form.notify}
               onValueChange={(notify) => patch({ notify })}
             />
@@ -257,8 +262,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       <ConfirmSheet
         testID="occurrence-cancel-confirm"
         visible={confirming}
-        title={t('admin.schedule.cancelConfirmTitle')}
-        confirmLabel={t('admin.schedule.cancelConfirm')}
+        title={t('admin.occurrence.cancel.title')}
+        confirmLabel={t('admin.occurrence.cancel.confirm')}
         danger
         busy={save.status === 'running'}
         onCancel={() => {
@@ -269,8 +274,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       >
         <Text>
           {form.notify
-            ? t('admin.schedule.cancelConfirmNotify')
-            : t('admin.schedule.cancelConfirmQuiet')}
+            ? t('admin.occurrence.cancel.confirmNotify')
+            : t('admin.occurrence.cancel.confirmQuiet')}
         </Text>
         <ErrorNotice error={save.error} onDismiss={save.reset} />
       </ConfirmSheet>

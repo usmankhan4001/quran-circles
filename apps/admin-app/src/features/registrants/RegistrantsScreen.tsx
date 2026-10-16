@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { AdminOccurrence, StaffRegistration } from '@qc/contracts';
-import { Button, Card, EmptyState, Select, SegmentedControl, Text, isolate, ltrRun, spacing } from '@qc/ui';
+import {
+  Button,
+  Card,
+  EmptyState,
+  Select,
+  SegmentedControl,
+  Text,
+  TextField,
+  isolate,
+  ltrRun,
+  spacing,
+} from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -47,17 +58,15 @@ export function RegistrantsScreen({
   const session = useSession(sessionId);
   const [occurrenceId, setOccurrenceId] = useState<string | undefined>(occurrenceParam);
   const [status, setStatus] = useState<'confirmed' | 'waitlisted'>('confirmed');
+  const [search, setSearch] = useState('');
 
-  const dates = useQuery<AdminOccurrence[]>(
-    async () => {
-      const res = await api.adminSessions.occurrences({
-        params: { sessionId },
-        query: { from: pkDayRange(now).from, limit: 14 },
-      });
-      return res.items;
-    },
-    [sessionId],
-  );
+  const dates = useQuery<AdminOccurrence[]>(async () => {
+    const res = await api.adminSessions.occurrences({
+      params: { sessionId },
+      query: { from: pkDayRange(now).from, limit: 14 },
+    });
+    return res.items;
+  }, [sessionId]);
 
   // Open on today's date when there is one, else the next.
   useEffect(() => {
@@ -66,14 +75,23 @@ export function RegistrantsScreen({
     if (pick) setOccurrenceId(pick.id);
   }, [dates.data, occurrenceId, now]);
 
+  const datesSettledEmpty =
+    dates.status === 'error' || (dates.status === 'success' && (dates.data?.length ?? 0) === 0);
   const allowed = session.data ? sessionAbilities(principal, session.data).seeRegistrants : true;
   const list = useRegistrants({
     sessionId,
     occurrenceId,
     status,
     pollMs,
-    enabled: allowed && (Boolean(occurrenceParam) || dates.status !== 'loading'),
+    // Wait for the date to be chosen, so the first request is already for one date.
+    enabled: allowed && (Boolean(occurrenceId) || datesSettledEmpty),
   });
+
+  // Search narrows the people already loaded; it never asks the server for another list.
+  const needle = search.trim().toLocaleLowerCase();
+  const shown = needle
+    ? list.items.filter((r) => (r.name ?? '').toLocaleLowerCase().includes(needle))
+    : list.items;
 
   return (
     <Screen
@@ -101,7 +119,7 @@ export function RegistrantsScreen({
             />
           ) : null}
           <SegmentedControl
-            accessibilityLabel={t('admin.registrants.statusFilter')}
+            accessibilityLabel={t('admin.registrants.status.label')}
             value={status}
             onChange={setStatus}
             options={[
@@ -113,13 +131,27 @@ export function RegistrantsScreen({
             {() => (
               <View style={{ gap: spacing.md }}>
                 {list.totals ? <Totals totals={list.totals} /> : null}
+                {list.items.length > 0 ? (
+                  <TextField
+                    testID="registrants-search"
+                    label={t('admin.registrants.search')}
+                    value={search}
+                    onChangeText={setSearch}
+                  />
+                ) : null}
                 {list.items.length === 0 ? (
                   <EmptyState
-                    title={t('admin.registrants.emptyTitle')}
-                    description={t('admin.registrants.emptyBody')}
+                    title={t('admin.registrants.empty.title')}
+                    description={t('admin.registrants.empty.body')}
                   />
+                ) : shown.length === 0 ? (
+                  <Text testID="registrants-no-match" color="textSecondary">
+                    {t('admin.registrants.noMatch')}
+                  </Text>
                 ) : (
-                  list.items.map((r) => <RegistrantCard key={r.id} registrant={r} onContact={onContact} />)
+                  shown.map((r) => (
+                    <RegistrantCard key={r.id} registrant={r} onContact={onContact} />
+                  ))
                 )}
                 <ErrorNotice error={list.moreError} />
                 {list.hasMore ? (
@@ -141,7 +173,11 @@ export function RegistrantsScreen({
   );
 }
 
-function Totals({ totals }: { totals: { registrations: number; people: number; waitlisted: number } }) {
+function Totals({
+  totals,
+}: {
+  totals: { registrations: number; people: number; waitlisted: number };
+}) {
   const { t, n } = useT();
   const stat = (label: string, value: number, id: string) => (
     <View style={{ flex: 1, alignItems: 'center' }} key={id}>
@@ -171,7 +207,7 @@ function RegistrantCard({
   registrant: StaffRegistration;
   onContact: ContactOpener;
 }) {
-  const { t } = useT();
+  const { t, n } = useT();
   const name = r.name ?? t('admin.registrants.noName');
   const contact = (kind: ContactKind) => {
     if (r.phone) onContact(kind, contactUrl(kind, r.phone));
@@ -181,7 +217,8 @@ function RegistrantCard({
       <View style={{ gap: spacing.sm }}>
         <Text variant="label">{r.name ? isolate(r.name) : name}</Text>
         <Text variant="caption" color="textSecondary">
-          {t.plural('admin.registrants.party', r.partySize)} · {t(`admin.registrants.section.${r.section}`)}
+          {t('admin.registrants.party', { count: n(r.partySize) })} ·{' '}
+          {t(`admin.registrants.section.${r.section}`)}
           {r.status === 'waitlisted' ? ` · ${t('admin.registrants.waitlisted')}` : ''}
         </Text>
         {r.phone ? (

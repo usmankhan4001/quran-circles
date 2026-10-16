@@ -1,0 +1,119 @@
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { describe, expect, it } from 'vitest';
+import { createBackend, ids, meFor } from '../../test/backend';
+import { combos, renderScreen } from '../../test/render';
+import { routes } from '../../navigation/routes';
+import { PlacesScreen } from './PlacesScreen';
+
+describe.each(combos)('PlacesScreen in $name', (combo) => {
+  it('lists the venues in scope', async () => {
+    const { container } = renderScreen(<PlacesScreen />, {
+      backend: createBackend({ me: meFor('city') }),
+      combo,
+    });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
+  });
+});
+
+describe('PlacesScreen venues', () => {
+  it('shows a venue coordinator only their venue and no add-venue button', async () => {
+    renderScreen(<PlacesScreen />, { backend: createBackend({ me: meFor('venue') }) });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(screen.queryByTestId(`venue-${ids.venueLahore}`)).toBeNull();
+    expect(screen.queryByTestId('places-new-venue')).toBeNull();
+  });
+
+  it('shows a city coordinator the venues of their city and an add-venue button', async () => {
+    const { nav } = renderScreen(<PlacesScreen />, {
+      backend: createBackend({ me: meFor('city') }),
+    });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(screen.queryByTestId(`venue-${ids.venueLahore}`)).toBeNull();
+    fireEvent.click(screen.getByTestId('places-new-venue'));
+    expect(nav.pushed).toEqual([routes.newVenue()]);
+  });
+
+  it('shows a national admin every venue and opens one for editing', async () => {
+    const { nav } = renderScreen(<PlacesScreen />, {
+      backend: createBackend({ me: meFor('admin') }),
+    });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(screen.getByTestId(`venue-${ids.venueLahore}`)).toBeTruthy();
+    expect(screen.getByTestId('places-new-venue')).toBeTruthy();
+    fireEvent.click(screen.getByTestId(`venue-${ids.venueLahore}`));
+    expect(nav.pushed).toEqual([routes.venue(ids.venueLahore)]);
+  });
+
+  it('marks an archived venue', async () => {
+    const backend = createBackend({ me: meFor('admin') });
+    backend.state.venues.find((v) => v.id === ids.venueAlNoor)!.status = 'archived';
+    renderScreen(<PlacesScreen />, { backend });
+    const row = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(within(row).getByText('Archived')).toBeTruthy();
+  });
+
+  it('shows the mapped message and a retry when the list cannot load', async () => {
+    const backend = createBackend({ me: meFor('city') });
+    backend.failWith('adminVenues.list', 'internal_error', { times: 1 });
+    renderScreen(<PlacesScreen />, { backend });
+    expect(await screen.findByText(/Something went wrong on our side/)).toBeTruthy();
+  });
+
+  it('follows the working role when a person has several', async () => {
+    const backend = createBackend({ me: meFor('multi') });
+    renderScreen(<PlacesScreen />, { backend });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(screen.queryByTestId(`venue-${ids.venueLahore}`)).toBeNull();
+    fireEvent.click(screen.getByTestId('scope-switcher'));
+    const options = await screen.findAllByTestId(/^scope-switcher-option-/);
+    expect(options).toHaveLength(2);
+    fireEvent.click(options[1]!);
+    await screen.findByTestId(`venue-${ids.venueLahore}`);
+    expect(screen.queryByTestId(`venue-${ids.venueAlNoor}`)).toBeNull();
+  });
+});
+
+describe('PlacesScreen circles', () => {
+  it('puts circles waiting for a decision first and counts them for a city coordinator', async () => {
+    const backend = createBackend({ me: meFor('admin') });
+    renderScreen(<PlacesScreen />, { backend });
+    fireEvent.click(await screen.findByText('Circles'));
+    await screen.findByTestId(`circle-${ids.circlePending}`);
+    const rows = screen.getAllByTestId(/^circle-0000/);
+    expect(rows[0]!.getAttribute('data-testid')).toBe(`circle-${ids.circlePending}`);
+    expect(screen.getByTestId('places-pending-count').textContent).toBe(
+      '1 circle is waiting for your decision',
+    );
+  });
+
+  it('does not count waiting circles for a venue coordinator, who cannot decide them', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const circle = backend.state.circles.find((c) => c.id === ids.circlePublished)!;
+    circle.status = 'pending_approval';
+    renderScreen(<PlacesScreen />, { backend });
+    fireEvent.click(await screen.findByText('Circles'));
+    const row = await screen.findByTestId(`circle-${ids.circlePublished}`);
+    expect(within(row).getByText(/Waiting for approval/)).toBeTruthy();
+    expect(screen.queryByTestId('places-pending-count')).toBeNull();
+    expect(screen.getByTestId('places-new-circle')).toBeTruthy();
+  });
+
+  it('opens a circle and starts a new one', async () => {
+    const { nav } = renderScreen(<PlacesScreen />, {
+      backend: createBackend({ me: meFor('city') }),
+    });
+    fireEvent.click(await screen.findByText('Circles'));
+    fireEvent.click(await screen.findByTestId(`circle-${ids.circlePublished}`));
+    fireEvent.click(screen.getByTestId('places-new-circle'));
+    expect(nav.pushed).toEqual([routes.circle(ids.circlePublished), routes.newCircle()]);
+  });
+
+  it('shows an empty state when there are no circles in scope', async () => {
+    const backend = createBackend({ me: meFor('city') });
+    backend.state.circles.length = 0;
+    renderScreen(<PlacesScreen />, { backend });
+    fireEvent.click(await screen.findByText('Circles'));
+    await waitFor(() => expect(screen.getByText('No circles yet')).toBeTruthy());
+  });
+});

@@ -17,11 +17,14 @@ export interface Logger {
 const PERSONAL_KEY =
   /(phone|name|token|authorization|cookie|password|secret|otp|body|message|address|email|^code$|^q$|note|title|label|text)/i;
 const PHONE_LIKE = /\+?[0-9][0-9 ()-]{7,}[0-9]/;
+const UUID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REDACTED = '[redacted]';
 
 export function redact(value: unknown, depth = 0): unknown {
   if (value === null || value === undefined) return value;
-  if (typeof value === 'string') return PHONE_LIKE.test(value) ? REDACTED : value;
+  // Ids are safe to log, and a run of digits inside one must not be mistaken for a phone number.
+  if (typeof value === 'string')
+    return !UUID_LIKE.test(value) && PHONE_LIKE.test(value) ? REDACTED : value;
   if (typeof value !== 'object') return value;
   if (depth > 4) return REDACTED;
   if (Array.isArray(value)) return value.slice(0, 20).map((v) => redact(v, depth + 1));

@@ -2,7 +2,9 @@ import { ApiClientError, ERROR_CODE_LIST, type ErrorCode } from '@qc/contracts';
 import type { MessageKey } from '../i18n/translate';
 
 /** The error code of a failed call, or null when the failure was not an API error. */
-export function errorCodeOf(error: unknown): ErrorCode | 'network_error' | 'invalid_response' | null {
+export function errorCodeOf(
+  error: unknown,
+): ErrorCode | 'network_error' | 'invalid_response' | null {
   return error instanceof ApiClientError ? error.code : null;
 }
 

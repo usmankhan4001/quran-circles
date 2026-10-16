@@ -75,7 +75,12 @@ export function useRegistrants(options: UseRegistrantsOptions): RegistrantsView 
     try {
       const page = await api.registrations.forSession({
         params: { sessionId },
-        query: { ...(occurrenceId ? { occurrenceId } : {}), status, limit: PAGE, cursor: nextCursor },
+        query: {
+          ...(occurrenceId ? { occurrenceId } : {}),
+          status,
+          limit: PAGE,
+          cursor: nextCursor,
+        },
       });
       if (!alive.current) return;
       setExtra((prev) => [...prev, ...page.items]);

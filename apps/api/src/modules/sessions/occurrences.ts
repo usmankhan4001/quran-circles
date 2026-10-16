@@ -147,7 +147,10 @@ export async function applyScheduleChange(
   const existing = rows
     .map((r) => ({ row: r, date: utcToLocalDate(r.startsAt, spec.timezone) }))
     .filter((e) => compareDates(e.date, from) >= 0);
-  const latestExisting = existing.reduce((m, e) => (compareDates(e.date, m) > 0 ? e.date : m), from);
+  const latestExisting = existing.reduce(
+    (m, e) => (compareDates(e.date, m) > 0 ? e.date : m),
+    from,
+  );
   const horizon = horizonDate(now, spec.timezone, horizonDays);
   const to = compareDates(latestExisting, horizon) > 0 ? latestExisting : horizon;
   const planned = planOccurrences(spec, from, to);
@@ -197,7 +200,11 @@ export async function applyScheduleChange(
 }
 
 /** Cancels every future scheduled occurrence of a session (used when the session is cancelled). */
-export async function cancelFutureOccurrences(db: Db, sessionId: string, now: Date): Promise<string[]> {
+export async function cancelFutureOccurrences(
+  db: Db,
+  sessionId: string,
+  now: Date,
+): Promise<string[]> {
   const rows = await db
     .update(occurrences)
     .set({ status: 'cancelled', updatedAt: now })
@@ -211,4 +218,3 @@ export async function cancelFutureOccurrences(db: Db, sessionId: string, now: Da
     .returning({ id: occurrences.id });
   return rows.map((r) => r.id);
 }
-

@@ -1,6 +1,12 @@
 import type { Locale, Session } from '@qc/contracts';
 import type { Translator } from '../../i18n/translate';
-import { formatInstantDate, formatInstantTime, formatLocalDate, formatLocalTime, weekdayName } from '../../lib/time';
+import {
+  formatInstantDate,
+  formatInstantTime,
+  formatLocalDate,
+  formatLocalTime,
+  weekdayName,
+} from '../../lib/time';
 
 /** "Every day", "Tue, Thu" or the date of a one-off lecture. */
 export function whenSummary(session: Session, t: Translator, locale: Locale): string {

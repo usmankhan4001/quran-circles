@@ -30,7 +30,6 @@ import { decodeOffsetCursor, offsetPage, type Page } from '../shared/pagination'
 import { formatWhen } from '../shared/time';
 import { applyConsent } from '../me/consents';
 import { loadSessions, toPublicSession } from '../sessions/views';
-import { publicSessionConditions } from '../sessions/public';
 import { sessionFacts, type PublishDeps } from '../updates/publish';
 import { promoteWaitlist } from './waitlist';
 
@@ -38,7 +37,8 @@ const { registrations, sessions, venues, circles, occurrences, users, areas, con
 
 type RegistrationRow = typeof registrations.$inferSelect;
 
-const clip = (text: string, max: number): string => (text.length <= max ? text : text.slice(0, max));
+const clip = (text: string, max: number): string =>
+  text.length <= max ? text : text.slice(0, max);
 
 /** Builds the contract's registration view, with the session nested, for each row. */
 export async function toRegistrations(
@@ -112,13 +112,13 @@ export async function createRegistration(
           or(isNull(sessions.circleId), eq(circles.status, 'published')),
         ),
       );
-    if (!visible) return fail('not_found');
+    if (!visible) return invalid('sessionId');
     const [session] = await tx
       .select()
       .from(sessions)
       .where(eq(sessions.id, input.sessionId))
       .for('update');
-    if (!session) return fail('not_found');
+    if (!session) return invalid('sessionId');
     if (session.status === 'cancelled') return fail('session_cancelled');
     if (!session.registrationEnabled) return fail('registration_closed');
 
@@ -144,7 +144,8 @@ export async function createRegistration(
           ),
         )
         .limit(1);
-      if (!upcoming) return fail(session.kind === 'one_off' ? 'occurrence_in_past' : 'registration_closed');
+      if (!upcoming)
+        return fail(session.kind === 'one_off' ? 'occurrence_in_past' : 'registration_closed');
     }
 
     const [area] = await tx.select({ id: areas.id }).from(areas).where(eq(areas.id, input.areaId));
@@ -177,13 +178,17 @@ export async function createRegistration(
     if (session.capacityEnabled && session.capacity !== null) {
       if (input.partySize > session.capacity) return fail('session_full');
       const [taken] = await tx
-        .select({ seats: sql<number>`coalesce(sum(${registrations.partySize}), 0)`.mapWith(Number) })
+        .select({
+          seats: sql<number>`coalesce(sum(${registrations.partySize}), 0)`.mapWith(Number),
+        })
         .from(registrations)
         .where(and(eq(registrations.sessionId, session.id), eq(registrations.status, 'confirmed')));
       const [waiting] = await tx
         .select({ n: count() })
         .from(registrations)
-        .where(and(eq(registrations.sessionId, session.id), eq(registrations.status, 'waitlisted')));
+        .where(
+          and(eq(registrations.sessionId, session.id), eq(registrations.status, 'waitlisted')),
+        );
       const fits = (taken?.seats ?? 0) + input.partySize <= session.capacity;
       status = fits && (waiting?.n ?? 0) === 0 ? 'confirmed' : 'waitlisted';
     }
@@ -218,7 +223,7 @@ export async function createRegistration(
       const facts = await sessionFacts(tx, session.id);
       if (facts) {
         const locale: Locale = user.locale;
-        let start: Date | null = null;
+        let start: Date | null;
         if (occurrenceId) {
           const [o] = await tx
             .select({ startsAt: occurrences.startsAt })
@@ -294,7 +299,10 @@ export async function listMyRegistrations(
           .where(
             and(
               eq(occurrences.sessionId, registrations.sessionId),
-              or(isNull(registrations.occurrenceId), eq(occurrences.id, registrations.occurrenceId)),
+              or(
+                isNull(registrations.occurrenceId),
+                eq(occurrences.id, registrations.occurrenceId),
+              ),
               eq(occurrences.status, 'scheduled'),
               gte(occurrences.endsAt, now),
             ),
@@ -327,7 +335,11 @@ export async function cancelRegistration(
     if (!reg) return fail('not_found');
     if (reg.status === 'cancelled') return;
     // Lock the session first so a cancellation and a new registration take turns.
-    await tx.select({ id: sessions.id }).from(sessions).where(eq(sessions.id, reg.sessionId)).for('update');
+    await tx
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(eq(sessions.id, reg.sessionId))
+      .for('update');
     await tx
       .update(registrations)
       .set({ status: 'cancelled', cancelledAt: deps.now })
@@ -364,7 +376,9 @@ async function staffRows(
       and(
         eq(registrations.sessionId, sessionId),
         filters.occurrenceId ? eq(registrations.occurrenceId, filters.occurrenceId) : undefined,
-        filters.status ? eq(registrations.status, filters.status) : ne(registrations.status, 'cancelled'),
+        filters.status
+          ? eq(registrations.status, filters.status)
+          : ne(registrations.status, 'cancelled'),
       ),
     )
     .orderBy(asc(registrations.createdAt), asc(registrations.id));
@@ -421,12 +435,12 @@ export async function listSessionRegistrations(
   const [totals] = await db
     .select({
       registrations: count(),
-      people: sql<number>`coalesce(sum(${registrations.partySize}) filter (where ${registrations.status} = 'confirmed'), 0)`.mapWith(
-        Number,
-      ),
-      waitlisted: sql<number>`count(*) filter (where ${registrations.status} = 'waitlisted')`.mapWith(
-        Number,
-      ),
+      people:
+        sql<number>`coalesce(sum(${registrations.partySize}) filter (where ${registrations.status} = 'confirmed'), 0)`.mapWith(
+          Number,
+        ),
+      waitlisted:
+        sql<number>`count(*) filter (where ${registrations.status} = 'waitlisted')`.mapWith(Number),
     })
     .from(registrations)
     .where(
@@ -479,5 +493,5 @@ export async function exportSessionRegistrations(db: Db, sessionId: string): Pro
     );
   }
   // The byte order mark lets Excel read Urdu names correctly.
-  return `﻿${lines.join('\r\n')}\r\n`;
+  return `\uFEFF${lines.join('\r\n')}\r\n`;
 }

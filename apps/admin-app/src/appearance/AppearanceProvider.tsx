@@ -37,6 +37,8 @@ const AppearanceContext = createContext<AppearanceContextValue | null>(null);
 export interface AppearanceProviderProps {
   store: KeyValueStore;
   initial?: Partial<Appearance>;
+  /** Skips animations. Tests set it: jsdom never finishes a CSS animation. */
+  reduceMotion?: boolean;
   children: ReactNode;
 }
 
@@ -62,7 +64,12 @@ function parseSaved(raw: string | null): Partial<Appearance> {
  * Language, text size and colour mode, saved on the device, wrapped around the kit's
  * ThemeProvider (which also sets the layout direction from the language).
  */
-export function AppearanceProvider({ store, initial, children }: AppearanceProviderProps) {
+export function AppearanceProvider({
+  store,
+  initial,
+  reduceMotion,
+  children,
+}: AppearanceProviderProps) {
   const [state, setState] = useState<Appearance>({
     locale: initial?.locale ?? 'en',
     textSize: initial?.textSize ?? 0,
@@ -115,6 +122,7 @@ export function AppearanceProvider({ store, initial, children }: AppearanceProvi
         mode={mode}
         locale={state.locale}
         textSize={state.textSize}
+        reduceMotion={reduceMotion}
         style={{ flex: 1 }}
       >
         {children}

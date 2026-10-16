@@ -15,7 +15,7 @@ import { authorize, authorizedScope, resourceMissing } from '../../middleware/au
 import { errorResponse } from '../../middleware/error-handler';
 import type { AppDeps, AppEnv } from './context';
 import type { Db } from '../../db';
-import { ApiException, fail } from './errors';
+import { ApiException, fail, invalid } from './errors';
 
 /**
  * Binds a handler to an endpoint of the contract registry. The method, path, input schemas, status
@@ -57,6 +57,11 @@ export interface HandlerCtx<K extends EndpointId> {
   scope(action: ScopeAction): ScopeFilter;
   /** The target was not found: `forbidden` for outsiders, `not_found` for people in scope. */
   missing(action: ScopeAction): never;
+  /**
+   * A body field points at nothing. Outsiders get `forbidden`; people in scope get
+   * `validation_failed` on the field, for endpoints that have no `not_found` in the contract.
+   */
+  unknownRef(action: ScopeAction, path: string): never;
   /** Whether the person may do an action on a resource, without failing. For branching on rank. */
   allowed(action: ScopeAction, resource?: ResourceScope): boolean;
   header(name: string, value: string): void;
@@ -83,12 +88,14 @@ function arrayKeys(def: EndpointDef): Set<string> {
     let s: z.ZodType | undefined = schema;
     // Unwrap optional/default/nullable wrappers to reach the array.
     for (let i = 0; i < 4 && s; i++) {
-      const def2 = (s as unknown as { def?: { type?: string; innerType?: z.ZodType } }).def;
-      if (def2?.type === 'array') {
+      const inner: { type?: string; innerType?: z.ZodType } | undefined = (
+        s as unknown as { def?: { type?: string; innerType?: z.ZodType } }
+      ).def;
+      if (inner?.type === 'array') {
         keys.add(key);
         break;
       }
-      s = def2?.innerType;
+      s = inner?.innerType;
     }
   }
   arrayKeyCache.set(def.query, keys);
@@ -145,10 +152,14 @@ function register<K extends EndpointId>(
     await enforceRateLimit(c, deps, def);
 
     const principal = c.get('principal') ?? null;
-    if (def.auth !== 'public' && !principal?.userId) fail('unauthenticated');
+    if (def.auth !== 'public' && !principal?.userId) {
+      fail(deps.authFailure ? await deps.authFailure(c) : 'unauthenticated');
+    }
 
     const params = def.params ? parseWith(def.params, c.req.param()) : undefined;
-    const query = def.query ? parseWith(def.query, queryObject(def, new URL(c.req.url))) : undefined;
+    const query = def.query
+      ? parseWith(def.query, queryObject(def, new URL(c.req.url)))
+      : undefined;
     let body: unknown;
     if (def.body) {
       let raw: unknown;
@@ -193,6 +204,15 @@ function register<K extends EndpointId>(
       missing(action) {
         decided = true;
         return resourceMissing(principal, action);
+      },
+      unknownRef(action, path) {
+        decided = true;
+        try {
+          return resourceMissing(principal, action);
+        } catch (error) {
+          if (error instanceof ApiException && error.code === 'not_found') return invalid(path);
+          throw error;
+        }
       },
       allowed(action, resource) {
         return can(principal, action, resource);

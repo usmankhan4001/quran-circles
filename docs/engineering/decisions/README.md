@@ -41,3 +41,5 @@ A decision that changes a contract also needs a contract change request.
 - [0007: Prayer times and Hijri](0007-prayer-times-and-hijri.md)
 - [0008: Quran source and cache](0008-quran-source-and-cache.md)
 - [0009: User app stack](0009-user-app-stack.md)
+- [0010: Admin app stack](0010-admin-app-stack.md)
+- [0011: API core route binder](0011-api-core-route-binder.md)

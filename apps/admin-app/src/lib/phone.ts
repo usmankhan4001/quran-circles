@@ -32,7 +32,9 @@ export function telUrl(e164: string): string {
 /** `wa.me` link that opens a WhatsApp chat with the number. The text is optional. */
 export function whatsappUrl(e164: string, text?: string): string {
   const digits = e164.replace(/^\+/, '');
-  return text ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}` : `https://wa.me/${digits}`;
+  return text
+    ? `https://wa.me/${digits}?text=${encodeURIComponent(text)}`
+    : `https://wa.me/${digits}`;
 }
 
 export type ContactKind = 'call' | 'whatsapp';

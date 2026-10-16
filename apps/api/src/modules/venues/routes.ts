@@ -13,8 +13,7 @@ export const venueHandlers = (): Handlers => ({
   'venues.list': (ctx) => listPublicVenues(ctx.db, ctx.query),
   'venues.get': (ctx) => getPublicVenue(ctx.db, ctx.params.venueId),
 
-  'adminVenues.list': (ctx) =>
-    listAdminVenues(ctx.db, ctx.scope('venue.list_admin'), ctx.query),
+  'adminVenues.list': (ctx) => listAdminVenues(ctx.db, ctx.scope('venue.list_admin'), ctx.query),
   'adminVenues.create': async (ctx) => {
     ctx.authorize('venue.create', { cityId: ctx.body.cityId });
     return createVenue(ctx.db, ctx.uid(), ctx.body);

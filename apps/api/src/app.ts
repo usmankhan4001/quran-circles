@@ -24,6 +24,8 @@ export const defaultConfig: ApiConfig = {
 export type AppOptions = Pick<AppDeps, 'db' | 'principalMiddleware'> &
   Partial<Omit<AppDeps, 'db' | 'principalMiddleware' | 'config'>> & {
     config?: Partial<ApiConfig>;
+    /** Route sets mounted at the root, after the shared middleware. The sign-in routes go here. */
+    mount?: readonly Hono<AppEnv>[];
   };
 
 const maxBodyBytes = 1024 * 1024;
@@ -45,6 +47,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
   const deps: AppDeps = {
     db: options.db,
     principalMiddleware: options.principalMiddleware,
+    ...(options.authFailure ? { authFailure: options.authFailure } : {}),
     now: options.now ?? (() => new Date()),
     logger: options.logger ?? createLogger(),
     rateLimiter: options.rateLimiter ?? new MemoryRateLimiter(),
@@ -56,11 +59,13 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     '*',
     bodyLimit({
       maxSize: maxBodyBytes,
-      onError: (c) => errorResponse(c, 'validation_failed', { issues: [{ path: '', code: 'too_large' }] }),
+      onError: (c) =>
+        errorResponse(c, 'validation_failed', { issues: [{ path: '', code: 'too_large' }] }),
     }),
   );
   app.use('*', deps.principalMiddleware);
-  registerHandlers(app, deps, allHandlers());
+  registerHandlers(app, deps, ...allHandlers());
+  for (const routes of options.mount ?? []) app.route('/', routes);
   return app;
 }
 
