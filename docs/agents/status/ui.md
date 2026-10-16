@@ -17,7 +17,7 @@ All eleven brief deliverables, in order.
 
 ## In progress
 
-- Nothing.
+- Redesign from scratch with the product owner, run as a design conversation. Decisions are recorded in `docs/design/redesign-decisions.md`. The kit and the apps are unchanged until the owner agrees the direction.
 
 ## Blocked
 
