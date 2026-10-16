@@ -72,7 +72,7 @@ export function Avatar({ name, imageUri, size = 'md', testID }: AvatarProps) {
           color={tint.fg}
           align="center"
           strong
-          style={{ lineHeight: undefined }}
+          style={{ lineHeight: Math.round(dim * 0.6) }}
         >
           {initials}
         </Text>

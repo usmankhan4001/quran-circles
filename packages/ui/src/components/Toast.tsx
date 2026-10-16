@@ -5,7 +5,7 @@ import { elevation, radii, spacing } from '../tokens';
 import { Button } from './Button';
 import { Icon, type IconName } from './Icon';
 import { IconButton } from './IconButton';
-import { Text } from './Text';
+import { Text, type TextColor } from './Text';
 
 export type ToastKind = 'info' | 'success' | 'warning' | 'danger';
 
@@ -28,6 +28,13 @@ const icons: Record<ToastKind, IconName> = {
   success: 'success',
   warning: 'warning',
   danger: 'error',
+};
+
+const textColors: Record<ToastKind, TextColor> = {
+  info: 'textOnAccentSubtle',
+  success: 'textOnSuccessSubtle',
+  warning: 'textOnWarningSubtle',
+  danger: 'textOnDangerSubtle',
 };
 
 const styles = StyleSheet.create({
@@ -69,12 +76,7 @@ export function Toast({
     warning: { bg: c.warningSubtle, fg: c.textOnWarningSubtle, border: c.warning },
     danger: { bg: c.dangerSubtle, fg: c.textOnDangerSubtle, border: c.danger },
   }[kind];
-  const textColor = {
-    info: 'textOnAccentSubtle',
-    success: 'textOnSuccessSubtle',
-    warning: 'textOnWarningSubtle',
-    danger: 'textOnDangerSubtle',
-  }[kind] as 'textOnAccentSubtle';
+  const textColor = textColors[kind];
   return (
     <View
       testID={testID}

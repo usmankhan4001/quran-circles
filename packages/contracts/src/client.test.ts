@@ -90,13 +90,12 @@ describe('typed API client', () => {
     const before = calls.length;
     const api = make();
     await expect(
-      // @ts-expect-error partySize must be a number
       api.registrations.create({
         body: {
           sessionId: fixtureId('session', 1),
           areaId: fixtureId('area', 1),
           section: 'women',
-          partySize: 'many',
+          partySize: 'many' as unknown as number,
           allowWhatsapp: true,
         },
       }),

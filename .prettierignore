@@ -4,3 +4,5 @@ dist
 build
 coverage
 .expo
+packages/contracts/openapi.json
+packages/contracts/SCOPES.md
