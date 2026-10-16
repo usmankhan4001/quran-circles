@@ -30,7 +30,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
     const [cities, venues] = await Promise.all([
       api.places.cities().then((r) => r.items),
       fetchAllPages((cursor) =>
-        api.adminVenues.list({ query: { limit: 100, cursor, includeArchived: false } }),
+        api.adminVenues.list({ query: { limit: 100, cursor, includeArchived: 'false' } }),
       ),
     ]);
     return { cities, venues };

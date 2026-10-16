@@ -73,8 +73,23 @@ const PATH_COLUMNS: Record<string, string> = {
 };
 
 const DAY_NAMES: Record<string, number> = {
-  sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2,
-  wed: 3, wednesday: 3, thu: 4, thur: 4, thurs: 4, thursday: 4, fri: 5, friday: 5, sat: 6, saturday: 6,
+  sun: 0,
+  sunday: 0,
+  mon: 1,
+  monday: 1,
+  tue: 2,
+  tues: 2,
+  tuesday: 2,
+  wed: 3,
+  wednesday: 3,
+  thu: 4,
+  thur: 4,
+  thurs: 4,
+  thursday: 4,
+  fri: 5,
+  friday: 5,
+  sat: 6,
+  saturday: 6,
 };
 
 /** `Mon|Wed`, `1;3` and `mon wed` all mean Monday and Wednesday. Sunday is 0. */
@@ -163,14 +178,22 @@ export function validateSessions(table: CsvTable, ctx: SessionContext): DryRunRe
   return buildReport('sessions', read.fileIssues, rows);
 }
 
-function buildSession(row: ReadRow, ctx: SessionContext, issues: ImportIssue[]): SessionBody | null {
+function buildSession(
+  row: ReadRow,
+  ctx: SessionContext,
+  issues: ImportIssue[],
+): SessionBody | null {
   const line = row.line;
   const need = (column: string): string => {
     const v = row.get(column);
     if (!v) issues.push(issue(line, column, 'required', { column }));
     return v;
   };
-  const oneOf = <T extends string>(column: string, allowed: readonly T[], fallback?: T): T | null => {
+  const oneOf = <T extends string>(
+    column: string,
+    allowed: readonly T[],
+    fallback?: T,
+  ): T | null => {
     const v = row.get(column).toLowerCase();
     if (!v) {
       if (fallback) return fallback;
@@ -190,7 +213,10 @@ function buildSession(row: ReadRow, ctx: SessionContext, issues: ImportIssue[]):
     const cityText = row.get('city');
     const city = cityText
       ? ctx.cities.find(
-          (c) => sameText(c.slug, cityText) || sameText(c.name.en, cityText) || (c.name.ur !== null && sameText(c.name.ur, cityText)),
+          (c) =>
+            sameText(c.slug, cityText) ||
+            sameText(c.name.en, cityText) ||
+            (c.name.ur !== null && sameText(c.name.ur, cityText)),
         )
       : undefined;
     if (cityText && !city) issues.push(issue(line, 'city', 'unknown_city', { column: 'city' }));
@@ -203,7 +229,8 @@ function buildSession(row: ReadRow, ctx: SessionContext, issues: ImportIssue[]):
           (v.name.ur !== null && sameText(v.name.ur, venueText))),
     );
     if (found.length === 0) issues.push(issue(line, 'venue', 'unknown_venue', { column: 'venue' }));
-    else if (found.length > 1) issues.push(issue(line, 'venue', 'ambiguous_venue', { column: 'venue' }));
+    else if (found.length > 1)
+      issues.push(issue(line, 'venue', 'ambiguous_venue', { column: 'venue' }));
     else venue = found[0];
   }
   if (venue && !can(ctx.principal, 'session.create', { cityId: venue.cityId, venueId: venue.id }))
@@ -217,20 +244,26 @@ function buildSession(row: ReadRow, ctx: SessionContext, issues: ImportIssue[]):
 
   const time = row.get('start_time');
   if (!time) issues.push(issue(line, 'start_time', 'required', { column: 'start_time' }));
-  else if (!TIME.test(time)) issues.push(issue(line, 'start_time', 'invalid_time', { column: 'start_time' }));
+  else if (!TIME.test(time))
+    issues.push(issue(line, 'start_time', 'invalid_time', { column: 'start_time' }));
   const localStartTime = TIME.test(time) ? time.padStart(5, '0') : '';
 
   const duration = parseNumber(row.get('duration_minutes'));
-  if (duration === null) issues.push(issue(line, 'duration_minutes', 'required', { column: 'duration_minutes' }));
+  if (duration === null)
+    issues.push(issue(line, 'duration_minutes', 'required', { column: 'duration_minutes' }));
   else if (duration === 'invalid' || !Number.isInteger(duration))
     issues.push(issue(line, 'duration_minutes', 'invalid_number', { column: 'duration_minutes' }));
 
   const capacityValue = parseNumber(row.get('capacity'));
-  if (capacityValue === 'invalid' || (typeof capacityValue === 'number' && !Number.isInteger(capacityValue)))
+  if (
+    capacityValue === 'invalid' ||
+    (typeof capacityValue === 'number' && !Number.isInteger(capacityValue))
+  )
     issues.push(issue(line, 'capacity', 'invalid_number', { column: 'capacity' }));
 
   const registration = parseBoolean(row.get('registration'));
-  if (registration === 'invalid') issues.push(issue(line, 'registration', 'invalid_boolean', { column: 'registration' }));
+  if (registration === 'invalid')
+    issues.push(issue(line, 'registration', 'invalid_boolean', { column: 'registration' }));
 
   const dateField = (column: string, required: boolean): string | null => {
     const v = row.get(column);
@@ -254,7 +287,8 @@ function buildSession(row: ReadRow, ctx: SessionContext, issues: ImportIssue[]):
   } else if (kind === 'recurring') {
     const parsedDays = parseDays(row.get('days'));
     if (!row.get('days')) issues.push(issue(line, 'days', 'required', { column: 'days' }));
-    else if (parsedDays === 'invalid') issues.push(issue(line, 'days', 'invalid_days', { column: 'days' }));
+    else if (parsedDays === 'invalid')
+      issues.push(issue(line, 'days', 'invalid_days', { column: 'days' }));
     else days = parsedDays;
     startsOn = dateField('starts_on', true);
     endsOn = dateField('ends_on', false);
@@ -262,7 +296,12 @@ function buildSession(row: ReadRow, ctx: SessionContext, issues: ImportIssue[]):
 
   if (
     issues.some((i) => i.severity === 'error') ||
-    !venue || !kind || !program || !section || !language || !status ||
+    !venue ||
+    !kind ||
+    !program ||
+    !section ||
+    !language ||
+    !status ||
     typeof duration !== 'number'
   )
     return null;

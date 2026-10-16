@@ -12,9 +12,10 @@ import {
   createApiClient,
   type ApiClient,
   type Me,
+  type OtpChannel,
   type Principal,
-  type RequestCodeBody,
 } from '@qc/contracts';
+import { errorKind } from '../lib/errors';
 import { principalFromMe } from '../lib/permissions';
 import { webStore, type KeyValueStore } from '../lib/storage';
 import { useI18n } from '../i18n';
@@ -35,10 +36,7 @@ export interface AuthContextValue {
   me: Me | null;
   principal: Principal | null;
   api: ApiClient;
-  requestCode(
-    phone: string,
-    channel?: RequestCodeBody['channel'],
-  ): ReturnType<ApiClient['auth']['requestCode']>;
+  requestCode(phone: string, channel?: OtpChannel): ReturnType<ApiClient['auth']['requestCode']>;
   verifyCode(challengeId: string, code: string): Promise<VerifyResult>;
   signOut(): Promise<void>;
 }
@@ -86,7 +84,9 @@ export function AuthProvider({ baseUrl, fetchImpl, tokenStore, children }: AuthP
           accessToken.current = tokens.accessToken;
           store.set(REFRESH_KEY, tokens.refreshToken);
           return tokens.accessToken;
-        } catch {
+        } catch (error) {
+          // A refused token will never work again, so forget it. A network error might.
+          if (errorKind(error) === 'refresh_token_invalid') store.remove(REFRESH_KEY);
           return null;
         } finally {
           refreshing.current = null;

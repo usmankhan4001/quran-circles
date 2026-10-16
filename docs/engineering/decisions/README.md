@@ -36,4 +36,5 @@ A decision that changes a contract also needs a contract change request.
 - [0002: Sign-in approach](0002-auth-approach.md)
 - [0004: V1 migration approach](0004-v1-migration-approach.md)
 - [0005: Messaging outbox and providers](0005-messaging-outbox-and-providers.md)
+- [0006: Console web tooling](0006-console-web-tooling.md)
 - [0003: UI tooling (styling, test renderer, catalog)](0003-ui-tooling.md)

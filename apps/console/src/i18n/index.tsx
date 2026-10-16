@@ -71,7 +71,8 @@ export function createI18n(locale: Locale, setLocale: (l: Locale) => void): I18n
     setLocale,
     t: (key, params) => translate(locale, key, params),
     tx: (key, params) => translate(locale, key, params),
-    tp: (baseKey, count, params) => translatePlural(locale, baseKey, count, params),
+    tp: (baseKey, count, params) =>
+      translatePlural(locale, baseKey, count, { count: nf.format(count), ...params }),
     number: (value) => nf.format(value),
     dateTime: (iso) => {
       const d = new Date(iso);

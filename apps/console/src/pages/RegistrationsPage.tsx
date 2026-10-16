@@ -50,9 +50,16 @@ export default function RegistrationsPage() {
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
 
   // The public endpoint knows published sessions; a draft may be missing, and the table still works.
-  const session = useAsync(() => api.sessions.get({ params: { sessionId } }).catch(() => null), [api, sessionId]);
+  const session = useAsync(
+    () => api.sessions.get({ params: { sessionId } }).catch(() => null),
+    [api, sessionId],
+  );
   const occurrences = useAsync(
-    () => api.adminSessions.occurrences({ params: { sessionId } }).then((r) => r.items).catch(() => []),
+    () =>
+      api.adminSessions
+        .occurrences({ params: { sessionId } })
+        .then((r) => r.items)
+        .catch(() => []),
     [api, sessionId],
   );
 
@@ -90,19 +97,29 @@ export default function RegistrationsPage() {
       cell: (r) => r.name ?? t('console.exports.noName'),
     },
     { id: 'phone', header: t('console.exports.col.phone'), cell: (r) => <Phone value={r.phone} /> },
-    { id: 'section', header: t('console.exports.col.section'), cell: (r) => t(SECTION_KEYS[r.section]) },
+    {
+      id: 'section',
+      header: t('console.exports.col.section'),
+      cell: (r) => t(SECTION_KEYS[r.section]),
+    },
     { id: 'party', header: t('console.exports.col.partySize'), cell: (r) => number(r.partySize) },
     {
       id: 'status',
       header: t('console.exports.col.status'),
-      cell: (r) => <Badge tone={STATUS_TONE[r.status]}>{t(REGISTRATION_STATUS_KEYS[r.status])}</Badge>,
+      cell: (r) => (
+        <Badge tone={STATUS_TONE[r.status]}>{t(REGISTRATION_STATUS_KEYS[r.status])}</Badge>
+      ),
     },
     {
       id: 'whatsapp',
       header: t('console.exports.col.whatsapp'),
       cell: (r) => (r.allowsWhatsapp ? t('ui.on') : t('ui.off')),
     },
-    { id: 'created', header: t('console.exports.col.registered'), cell: (r) => dateTime(r.createdAt) },
+    {
+      id: 'created',
+      header: t('console.exports.col.registered'),
+      cell: (r) => dateTime(r.createdAt),
+    },
   ];
 
   return (
@@ -113,7 +130,7 @@ export default function RegistrationsPage() {
             ? t('console.exports.registrations.titleFor', { session: localized(sessionData.title) })
             : t('console.exports.registrations.title')
         }
-        intro={t('console.exports.privacy')}
+        intro={`${t('console.exports.privacy')} ${t('console.exports.audited')}`}
         actions={<SessionExportButton sessionId={sessionId} disabled={!canExport} />}
       />
       <p>

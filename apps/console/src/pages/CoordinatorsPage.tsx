@@ -7,12 +7,12 @@ import {
   type Invite,
   type InviteStatus,
   type Role,
-  type StaffRoleAssignment,
 } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { fetchAllPages, usePaged, useAsync } from '../api/hooks';
+import type { StaffRoleAssignment } from '../api/types';
 import { roleLabelKey } from '../components/Shell';
 import { useScopeLabel } from '../components/scope';
 import {
@@ -36,7 +36,7 @@ import {
 } from '../components/ui';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf } from '../lib/errors';
-import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone } from '../lib/phone';
+import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, phoneTail } from '../lib/phone';
 import { canAssignRole, canSomewhere } from '../lib/permissions';
 
 const ROLES: readonly Role[] = ['national_admin', 'city_coordinator', 'venue_coordinator'];
@@ -73,7 +73,10 @@ export default function CoordinatorsPage() {
 
   const invites = useAsync(() => api.adminRoles.invites(), [api]);
   const people = usePaged(
-    (cursor) => api.adminRoles.list({ query: { limit: 50, cursor, includeRevoked: showPast } }),
+    (cursor) =>
+      api.adminRoles.list({
+        query: { limit: 50, cursor, includeRevoked: showPast ? 'true' : 'false' },
+      }),
     [api, showPast],
   );
 
@@ -98,7 +101,11 @@ export default function CoordinatorsPage() {
       rowHeader: true,
       cell: (i) => i.displayName ?? t('console.invites.unnamed'),
     },
-    { id: 'phone', header: t('console.invites.col.phone'), cell: (i) => <Phone value={i.phone} /> },
+    {
+      id: 'phone',
+      header: t('console.invites.col.phone'),
+      cell: (i) => <Phone value={i.phone} masked />,
+    },
     { id: 'role', header: t('console.invites.col.role'), cell: (i) => t(roleLabelKey(i.role)) },
     { id: 'scope', header: t('console.invites.col.scope'), cell: (i) => scopeLabel(i) },
     { id: 'expires', header: t('console.invites.col.expires'), cell: (i) => dateTime(i.expiresAt) },
@@ -112,7 +119,11 @@ export default function CoordinatorsPage() {
       header: t('console.invites.col.actions'),
       cell: (i) =>
         i.status === 'pending' && canAssignRole(principal, i.role, inviteScope(i)) ? (
-          <Button className="btn-small" onClick={() => setRevokingInvite(i)}>
+          <Button
+            className="btn-small"
+            aria-label={`${t('console.invites.revoke')} ${t('console.invites.revoke.for', { digits: phoneTail(i.phone) })}`}
+            onClick={() => setRevokingInvite(i)}
+          >
             {t('console.invites.revoke')}
           </Button>
         ) : null,
@@ -171,12 +182,12 @@ export default function CoordinatorsPage() {
   return (
     <div className="page">
       <PageHeader
-        title={t('console.invites.title')}
+        title={t('console.nav.coordinators')}
         intro={t('console.invites.intro')}
         actions={
           canInviteAny ? (
             <Button variant="primary" onClick={() => setInviting(true)}>
-              {t('console.invites.invite')}
+              {t('console.invites.new')}
             </Button>
           ) : null
         }
@@ -188,7 +199,7 @@ export default function CoordinatorsPage() {
       ) : null}
 
       <Section
-        title={t('console.invites.pending.title')}
+        title={t('console.invites.list.title')}
         actions={
           <CheckboxField
             label={t('console.invites.showPastInvites')}
@@ -202,14 +213,11 @@ export default function CoordinatorsPage() {
           <ErrorState error={invites.error} onRetry={invites.reload} />
         ) : null}
         {invites.status === 'ready' && visibleInvites.length === 0 ? (
-          <EmptyState
-            title={t('console.invites.pending.empty.title')}
-            body={t('console.invites.pending.empty.body')}
-          />
+          <EmptyState title={t('console.invites.empty')} />
         ) : null}
         {invites.status === 'ready' && visibleInvites.length > 0 ? (
           <DataTable
-            caption={t('console.invites.pending.title')}
+            caption={t('console.invites.list.title')}
             columns={inviteColumns}
             rows={visibleInvites}
             rowKey={(i) => i.id}
@@ -228,7 +236,9 @@ export default function CoordinatorsPage() {
         }
       >
         {people.status === 'loading' ? <Loading /> : null}
-        {people.status === 'error' ? <ErrorState error={people.error} onRetry={people.reload} /> : null}
+        {people.status === 'error' ? (
+          <ErrorState error={people.error} onRetry={people.reload} />
+        ) : null}
         {people.status === 'ready' && people.items.length === 0 ? (
           <EmptyState
             title={t('console.invites.active.empty.title')}
@@ -258,7 +268,7 @@ export default function CoordinatorsPage() {
           onClose={() => setInviting(false)}
           onDone={() => {
             setInviting(false);
-            done('console.invites.invited');
+            done('console.invites.sent');
           }}
         />
       ) : null}
@@ -269,7 +279,7 @@ export default function CoordinatorsPage() {
             name: revokingInvite.displayName ?? t('console.invites.unnamed'),
             role: tx(roleLabelKey(revokingInvite.role)),
           })}
-          confirmLabel={t('console.invites.revoke')}
+          confirmLabel={t('console.invites.revoke.confirm')}
           onClose={() => setRevokingInvite(null)}
           onConfirm={async () => {
             await api.adminRoles.revokeInvite({ params: { inviteId: revokingInvite.id } });
@@ -285,7 +295,7 @@ export default function CoordinatorsPage() {
             name: removing.userName ?? t('console.invites.unnamed'),
             scope: scopeLabel(removing),
           })}
-          confirmLabel={t('console.invites.remove')}
+          confirmLabel={t('console.invites.remove.confirm')}
           onClose={() => setRemoving(null)}
           onConfirm={async () => {
             await api.adminRoles.revoke({ params: { assignmentId: removing.id } });
@@ -345,7 +355,7 @@ export function ConfirmDialog({
       footer={
         <>
           <Button onClick={onClose} disabled={busy}>
-            {t('console.shell.cancel')}
+            {t('console.shell.keep')}
           </Button>
           <Button variant={danger ? 'danger' : 'primary'} busy={busy} onClick={() => void run()}>
             {confirmLabel}
@@ -368,7 +378,8 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
 
   const roles = ROLES.filter((r) => {
     if (r === 'national_admin') return canAssignRole(principal, r);
-    if (r === 'city_coordinator') return dir.cities.some((c) => canAssignRole(principal, r, { cityId: c.id }));
+    if (r === 'city_coordinator')
+      return dir.cities.some((c) => canAssignRole(principal, r, { cityId: c.id }));
     return dir.venues.some((v) => canAssignRole(principal, r, { cityId: v.cityId, venueId: v.id }));
   });
   const [role, setRole] = useState<Role | ''>(roles.length === 1 ? (roles[0] as Role) : '');
@@ -384,7 +395,9 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
     .filter((c) => canAssignRole(principal, 'city_coordinator', { cityId: c.id }))
     .map((c) => ({ value: c.id, label: dir.cityName(c.id) }));
   const venueOptions = dir.venues
-    .filter((v) => canAssignRole(principal, 'venue_coordinator', { cityId: v.cityId, venueId: v.id }))
+    .filter((v) =>
+      canAssignRole(principal, 'venue_coordinator', { cityId: v.cityId, venueId: v.id }),
+    )
     .map((v) => ({
       value: v.id,
       label: t('console.invites.form.venueOption', {
@@ -399,8 +412,10 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
     event.preventDefault();
     const next: Record<string, string> = {};
     if (!role) next.role = t('console.invites.form.role.required');
-    if (role === 'city_coordinator' && !cityId) next.scope = t('console.invites.form.scope.required');
-    if (role === 'venue_coordinator' && !venueId) next.scope = t('console.invites.form.scope.required');
+    if (role === 'city_coordinator' && !cityId)
+      next.scope = t('console.invites.form.scope.required');
+    if (role === 'venue_coordinator' && !venueId)
+      next.scope = t('console.invites.form.scope.required');
     const phoneResult = normalizePhone(phone, { mobileOnly: true });
     if (!phoneResult.ok) next.phone = t(PHONE_ISSUE_KEYS[phoneResult.issue]);
     const trimmed = name.trim();
@@ -433,7 +448,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
 
   return (
     <Modal
-      title={t('console.invites.form.title')}
+      title={t('console.invites.new')}
       onClose={onClose}
       footer={
         <>
@@ -441,7 +456,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
             {t('console.shell.cancel')}
           </Button>
           <Button variant="primary" type="submit" form="invite-form" busy={busy}>
-            {t('console.invites.form.submit')}
+            {t('console.invites.send')}
           </Button>
         </>
       }
@@ -451,7 +466,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         {errors.form ? <Banner tone="danger">{errors.form}</Banner> : null}
         <SelectField
           id="invite-role"
-          label={t('console.invites.form.role.label')}
+          label={t('console.invites.role.label')}
           value={role}
           error={errors.role}
           required
@@ -466,7 +481,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         {role === 'city_coordinator' ? (
           <SelectField
             id="invite-city"
-            label={t('console.invites.form.city.label')}
+            label={t('console.invites.scope.city')}
             value={cityId}
             error={errors.scope}
             required
@@ -478,7 +493,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
         {role === 'venue_coordinator' ? (
           <SelectField
             id="invite-venue"
-            label={t('console.invites.form.venue.label')}
+            label={t('console.invites.scope.venue')}
             value={venueId}
             error={errors.scope}
             required
@@ -493,7 +508,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           inputMode="tel"
           autoComplete="off"
           dir="ltr"
-          label={t('console.invites.form.phone.label')}
+          label={t('console.invites.phone.label')}
           hint={
             preview?.ok
               ? t('console.invites.form.phone.preview', { phone: formatPhone(preview.e164) })
@@ -565,8 +580,18 @@ function HandoverDialog({
     setError(null);
     const parsed = AssignRoleBody.safeParse(
       assignment.role === 'city_coordinator'
-        ? { role: 'city_coordinator', cityId: assignment.cityId, userId, replacesAssignmentId: assignment.id }
-        : { role: 'venue_coordinator', venueId: assignment.venueId, userId, replacesAssignmentId: assignment.id },
+        ? {
+            role: 'city_coordinator',
+            cityId: assignment.cityId,
+            userId,
+            replacesAssignmentId: assignment.id,
+          }
+        : {
+            role: 'venue_coordinator',
+            venueId: assignment.venueId,
+            userId,
+            replacesAssignmentId: assignment.id,
+          },
     );
     if (!parsed.success) {
       setError(t('errors.validation_failed'));

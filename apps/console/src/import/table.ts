@@ -13,10 +13,10 @@ export interface ColumnSpec {
 
 export const canonicalHeader = (raw: string): string =>
   raw
-    .replace(/^﻿/, '')
+    .replace(/^\uFEFF/, '')
     .trim()
     .toLowerCase()
-    .replace(/[\s\-]+/g, '_');
+    .replace(/[\s-]+/g, '_');
 
 export interface ReadRow {
   line: number;
@@ -60,7 +60,8 @@ export function readTable(table: CsvTable, specs: readonly ColumnSpec[]): ReadTa
     const key = canonicalHeader(raw);
     const wanted = known.get(key);
     if (!wanted) {
-      if (key !== '') fileIssues.push(issue(1, raw.trim(), 'unknown_column', { column: raw.trim() }, 'warning'));
+      if (key !== '')
+        fileIssues.push(issue(1, raw.trim(), 'unknown_column', { column: raw.trim() }, 'warning'));
       return;
     }
     if (seen.has(wanted)) {

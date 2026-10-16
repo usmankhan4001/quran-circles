@@ -1226,5 +1226,6 @@
   "prayer.cityName.abbottabad": "ایبٹ آباد",
   "prayer.cityName.gilgit": "گلگت",
   "prayer.calendar.weekTitle": "{from} سے {to} تک",
-  "prayer.calendar.rowLabel": "{date}۔ ہجری {hijri}۔"
+  "prayer.calendar.rowLabel": "{date}۔ ہجری {hijri}۔",
+  "console.invites.revoke.for": "اس نمبر کے لیے جس کے آخری ہندسے {digits} ہیں"
 }

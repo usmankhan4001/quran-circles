@@ -11,7 +11,7 @@ import {
 import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf, retryAfterOf } from '../lib/errors';
-import { formatPhone } from '../lib/phone';
+import { formatPhone, maskPhone } from '../lib/phone';
 
 /* Buttons ---------------------------------------------------------------------------------- */
 
@@ -264,7 +264,9 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
     <div className="state state-error" role="alert">
       <h2 className="state-title">{t('ui.errorTitle')}</h2>
       <p className="state-body">{t(errorMessageKeyOf(error))}</p>
-      {wait ? <p className="state-body">{t('console.shell.retryAfter', { seconds: number(wait) })}</p> : null}
+      {wait ? (
+        <p className="state-body">{t('console.shell.retryAfter', { seconds: number(wait) })}</p>
+      ) : null}
       {onRetry ? <Button onClick={onRetry}>{t('ui.retry')}</Button> : null}
     </div>
   );
@@ -277,11 +279,18 @@ export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; childr
 }
 
 /** Phone numbers always read left to right, even inside Urdu text. */
-export function Phone({ value }: { value: string | null | undefined }) {
+export function Phone({
+  value,
+  masked = false,
+}: {
+  value: string | null | undefined;
+  /** Hides the middle digits, for lists where the number only needs to identify a row. */
+  masked?: boolean;
+}) {
   if (!value) return <span aria-hidden="true">–</span>;
   return (
     <bdi dir="ltr" className="phone">
-      {formatPhone(value)}
+      {masked ? maskPhone(value) : formatPhone(value)}
     </bdi>
   );
 }

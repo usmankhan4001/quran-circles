@@ -3,7 +3,7 @@
  * names as UTF-8. The file never leaves the browser and its contents are never logged.
  */
 export function saveTextFile(filename: string, text: string, mime = 'text/csv'): void {
-  const body = text.startsWith('﻿') ? text : `﻿${text}`;
+  const body = text.startsWith('\uFEFF') ? text : `\uFEFF${text}`;
   const url = URL.createObjectURL(new Blob([body], { type: `${mime};charset=utf-8` }));
   const link = document.createElement('a');
   link.href = url;

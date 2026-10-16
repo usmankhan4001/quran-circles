@@ -34,9 +34,9 @@ const STATUS_TONE: Record<SessionStatus, BadgeTone> = {
 };
 
 export const SECTION_KEYS = {
-  women: 'console.sessions.section.women',
-  men: 'console.sessions.section.men',
-  family: 'console.sessions.section.family',
+  women: 'sections.women',
+  men: 'sections.men',
+  family: 'sections.family',
 } as const satisfies Record<AdminSession['section'], MessageKey>;
 
 export const LANGUAGE_KEYS = {
@@ -77,7 +77,12 @@ export default function SessionsPage() {
       : `${s.daysOfWeek.map((d) => weekday(d)).join(', ')} ${s.localStartTime}`;
 
   const columns: Column<AdminSession>[] = [
-    { id: 'title', header: t('console.sessions.col.title'), rowHeader: true, cell: (s) => localized(s.title) },
+    {
+      id: 'title',
+      header: t('console.sessions.col.title'),
+      rowHeader: true,
+      cell: (s) => localized(s.title),
+    },
     { id: 'venue', header: t('console.sessions.col.venue'), cell: (s) => localized(s.venue.name) },
     {
       id: 'city',
@@ -89,8 +94,16 @@ export default function SessionsPage() {
       header: t('console.sessions.col.when'),
       cell: (s) => <bdi dir="ltr">{when(s)}</bdi>,
     },
-    { id: 'section', header: t('console.sessions.col.section'), cell: (s) => t(SECTION_KEYS[s.section]) },
-    { id: 'language', header: t('console.sessions.col.language'), cell: (s) => t(LANGUAGE_KEYS[s.language]) },
+    {
+      id: 'section',
+      header: t('console.sessions.col.section'),
+      cell: (s) => t(SECTION_KEYS[s.section]),
+    },
+    {
+      id: 'language',
+      header: t('console.sessions.col.language'),
+      cell: (s) => t(LANGUAGE_KEYS[s.language]),
+    },
     {
       id: 'seats',
       header: t('console.sessions.col.seats'),
@@ -112,9 +125,11 @@ export default function SessionsPage() {
       header: t('console.sessions.col.actions'),
       cell: (s) =>
         can(principal, 'registration.list', { cityId: s.cityId, venueId: s.venueId }) ? (
-          <Link to={`/sessions/${s.id}/registrations`}>
+          <Link
+            to={`/sessions/${s.id}/registrations`}
+            aria-label={`${t('console.sessions.registrations')} ${localized(s.title)}`}
+          >
             {t('console.sessions.registrations')}
-            <span className="sr-only"> {localized(s.title)}</span>
           </Link>
         ) : null,
     },

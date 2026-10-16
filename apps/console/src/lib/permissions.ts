@@ -39,10 +39,25 @@ export interface NavItem {
 
 /** Every page of the console, in menu order, with the actions that unlock it. */
 export const NAV_ITEMS: readonly NavItem[] = [
-  { id: 'sessions', path: '/sessions', labelKey: 'console.nav.sessions', anyOf: ['session.list_admin'] },
+  {
+    id: 'sessions',
+    path: '/sessions',
+    labelKey: 'console.nav.sessions',
+    anyOf: ['session.list_admin'],
+  },
   { id: 'venues', path: '/venues', labelKey: 'console.nav.venues', anyOf: ['venue.list_admin'] },
-  { id: 'exports', path: '/exports', labelKey: 'console.nav.exports', anyOf: ['registration.export'] },
-  { id: 'coordinators', path: '/coordinators', labelKey: 'console.nav.coordinators', anyOf: ['role.list'] },
+  {
+    id: 'exports',
+    path: '/exports',
+    labelKey: 'console.nav.exports',
+    anyOf: ['registration.export'],
+  },
+  {
+    id: 'coordinators',
+    path: '/coordinators',
+    labelKey: 'console.nav.coordinators',
+    anyOf: ['role.list'],
+  },
   {
     id: 'import',
     path: '/import',

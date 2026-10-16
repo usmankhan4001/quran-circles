@@ -115,7 +115,8 @@ export function validateVenues(table: CsvTable, ctx: VenueContext): DryRunReport
         firstSeen.set(key, row.line);
         if (
           ctx.venues.some(
-            (v) => v.cityId === body.cityId && normalizeName(v.name.en) === normalizeName(body.name.en),
+            (v) =>
+              v.cityId === body.cityId && normalizeName(v.name.en) === normalizeName(body.name.en),
           )
         ) {
           issues.push(issue(row.line, 'name_en', 'already_exists', undefined, 'warning'));
@@ -188,7 +189,13 @@ function buildVenue(row: ReadRow, ctx: VenueContext, issues: ImportIssue[]): Ven
   const notesEn = row.get('entrance_notes_en');
   if (notesEn) facilities.entranceNotes = { en: notesEn, ur: row.get('entrance_notes_ur') || null };
 
-  if (issues.some((i) => i.severity === 'error') || !city || !area || typeof lat !== 'number' || typeof lng !== 'number')
+  if (
+    issues.some((i) => i.severity === 'error') ||
+    !city ||
+    !area ||
+    typeof lat !== 'number' ||
+    typeof lng !== 'number'
+  )
     return null;
 
   const parsed = VenueCreate.safeParse({

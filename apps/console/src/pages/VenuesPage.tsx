@@ -29,16 +29,30 @@ export default function VenuesPage() {
   const list = usePaged(
     (cursor) =>
       api.adminVenues.list({
-        query: { limit: 50, cursor, includeArchived, ...(cityId ? { cityId } : {}) },
+        query: {
+          limit: 50,
+          cursor,
+          includeArchived: includeArchived ? 'true' : 'false',
+          ...(cityId ? { cityId } : {}),
+        },
       }),
     [api, cityId, includeArchived],
   );
 
   const columns: Column<Venue>[] = [
-    { id: 'name', header: t('console.venues.col.name'), rowHeader: true, cell: (v) => localized(v.name) },
+    {
+      id: 'name',
+      header: t('console.venues.col.name'),
+      rowHeader: true,
+      cell: (v) => localized(v.name),
+    },
     { id: 'city', header: t('console.venues.col.city'), cell: (v) => dir.cityName(v.cityId) },
     { id: 'address', header: t('console.venues.col.address'), cell: (v) => localized(v.address) },
-    { id: 'phone', header: t('console.venues.col.phone'), cell: (v) => <Phone value={v.contactPhone} /> },
+    {
+      id: 'phone',
+      header: t('console.venues.col.phone'),
+      cell: (v) => <Phone value={v.contactPhone} />,
+    },
     {
       id: 'women',
       header: t('console.venues.col.womenSection'),

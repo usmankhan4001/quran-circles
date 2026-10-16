@@ -24,7 +24,7 @@ type Outcome =
  * every session exported, so a file is never silently incomplete.
  */
 export default function ExportsPage() {
-  const { t, localized, number } = useI18n();
+  const { t, tp, localized, number } = useI18n();
   const { api, principal } = useSignedIn();
   const dir = useDirectory();
   const [target, setTarget] = useState<Target>('session');
@@ -70,7 +70,11 @@ export default function ExportsPage() {
   const chosen = useMemo(
     () =>
       exportable.filter((s) =>
-        target === 'session' ? s.id === choice : target === 'venue' ? s.venueId === choice : s.cityId === choice,
+        target === 'session'
+          ? s.id === choice
+          : target === 'venue'
+            ? s.venueId === choice
+            : s.cityId === choice,
       ),
     [exportable, target, choice],
   );
@@ -108,19 +112,22 @@ export default function ExportsPage() {
 
   const targetLabel = {
     session: t('console.exports.target.session'),
-    venue: t('console.exports.target.venue'),
-    city: t('console.exports.target.city'),
+    venue: t('console.exports.filter.venue'),
+    city: t('console.exports.filter.city'),
   } as const;
 
   return (
     <div className="page">
       <PageHeader title={t('console.exports.title')} intro={t('console.exports.intro')} />
       <Banner tone="info" title={t('console.exports.privacy.title')}>
-        {t('console.exports.privacy')}
+        <p>{t('console.exports.privacy')}</p>
+        <p>{t('console.exports.audited')}</p>
       </Banner>
 
       {sessions.status === 'loading' ? <Loading /> : null}
-      {sessions.status === 'error' ? <ErrorState error={sessions.error} onRetry={sessions.reload} /> : null}
+      {sessions.status === 'error' ? (
+        <ErrorState error={sessions.error} onRetry={sessions.reload} />
+      ) : null}
       {sessions.status === 'ready' ? (
         <form
           className="form card"
@@ -156,13 +163,13 @@ export default function ExportsPage() {
             options={options}
             hint={
               choice
-                ? t('console.exports.willExport', { count: number(chosen.length) })
+                ? tp('console.exports.willExport', chosen.length)
                 : t('console.exports.chooseHint')
             }
           />
           <div className="form-actions">
             <Button type="submit" variant="primary" busy={busy} disabled={!choice}>
-              {busy ? t('console.exports.exporting') : t('console.exports.button')}
+              {busy ? t('console.exports.generating') : t('console.exports.generate')}
             </Button>
           </div>
           {progress ? (
@@ -177,9 +184,11 @@ export default function ExportsPage() {
       ) : null}
 
       {outcome?.kind === 'done' ? (
-        <Banner tone="success">{t('console.exports.done', { count: number(outcome.sessions) })}</Banner>
+        <Banner tone="success">{tp('console.exports.done', outcome.sessions)}</Banner>
       ) : null}
-      {outcome?.kind === 'empty' ? <Banner tone="warning">{t('console.exports.none')}</Banner> : null}
+      {outcome?.kind === 'empty' ? (
+        <Banner tone="warning">{t('console.exports.empty')}</Banner>
+      ) : null}
       {outcome?.kind === 'unreadable' ? (
         <Banner tone="danger" title={t('console.exports.failed')}>
           {t('console.exports.unreadable')}

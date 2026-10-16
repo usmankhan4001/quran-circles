@@ -43,7 +43,10 @@ export function AppProviders({
   tokenStore,
 }: AppProvidersProps) {
   return (
-    <I18nProvider {...(initialLocale ? { initialLocale } : {})} {...(displayStore ? { store: displayStore } : {})}>
+    <I18nProvider
+      {...(initialLocale ? { initialLocale } : {})}
+      {...(displayStore ? { store: displayStore } : {})}
+    >
       <ThemeProvider
         {...(initialTheme ? { initialChoice: initialTheme } : {})}
         {...(initialTextStep !== undefined ? { initialTextStep } : {})}
@@ -78,7 +81,10 @@ function Guard({ nav, children }: { nav: NavId; children: ReactNode }) {
   if (!isNavAllowed(principal, nav))
     return (
       <div className="page">
-        <EmptyState title={t('console.shell.forbidden.title')} body={t('console.shell.forbidden.body')} />
+        <EmptyState
+          title={t('console.shell.forbidden.title')}
+          body={t('console.shell.forbidden.body')}
+        />
       </div>
     );
   return <>{children}</>;
@@ -94,7 +100,10 @@ function NotFound() {
   const { t } = useI18n();
   return (
     <div className="page">
-      <EmptyState title={t('console.shell.notFound.title')} body={t('console.shell.notFound.body')} />
+      <EmptyState
+        title={t('console.shell.notFound.title')}
+        body={t('console.shell.notFound.body')}
+      />
     </div>
   );
 }
@@ -111,17 +120,70 @@ export function AppRoutes() {
         }
       >
         <Route index element={<Home />} />
-        <Route path="/sessions" element={<Guard nav="sessions"><SessionsPage /></Guard>} />
+        <Route
+          path="/sessions"
+          element={
+            <Guard nav="sessions">
+              <SessionsPage />
+            </Guard>
+          }
+        />
         <Route
           path="/sessions/:sessionId/registrations"
-          element={<Guard nav="sessions"><RegistrationsPage /></Guard>}
+          element={
+            <Guard nav="sessions">
+              <RegistrationsPage />
+            </Guard>
+          }
         />
-        <Route path="/venues" element={<Guard nav="venues"><VenuesPage /></Guard>} />
-        <Route path="/exports" element={<Guard nav="exports"><ExportsPage /></Guard>} />
-        <Route path="/coordinators" element={<Guard nav="coordinators"><CoordinatorsPage /></Guard>} />
-        <Route path="/import" element={<Guard nav="import"><ImportPage /></Guard>} />
-        <Route path="/audit" element={<Guard nav="audit"><AuditPage /></Guard>} />
-        <Route path="/settings" element={<Guard nav="settings"><SettingsPage /></Guard>} />
+        <Route
+          path="/venues"
+          element={
+            <Guard nav="venues">
+              <VenuesPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/exports"
+          element={
+            <Guard nav="exports">
+              <ExportsPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/coordinators"
+          element={
+            <Guard nav="coordinators">
+              <CoordinatorsPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/import"
+          element={
+            <Guard nav="import">
+              <ImportPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/audit"
+          element={
+            <Guard nav="audit">
+              <AuditPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <Guard nav="settings">
+              <SettingsPage />
+            </Guard>
+          }
+        />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

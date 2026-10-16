@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { canAssignRole, canSomewhere } from '../lib/permissions';
-import { can } from '@qc/contracts';
+import { canSomewhere } from '../lib/permissions';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { applyImport, type ApplyProgress, type ApplyReport } from '../import/apply';
@@ -32,6 +31,7 @@ import {
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf } from '../lib/errors';
 import { saveTextFile } from '../lib/download';
+import { DEFAULT_MAX_ROWS } from '../lib/csv';
 import type { MessageKey } from '@qc/i18n';
 
 const KIND_KEYS = {
@@ -57,18 +57,6 @@ const STATUS_TONE: Record<DryRunRow<unknown>['status'], BadgeTone> = {
   duplicate: 'warning',
   invalid: 'danger',
 };
-
-/** Plural keys, by kind, for the action button and the result line. */
-const APPLY_BASE = {
-  venues: 'console.import.apply.venues',
-  coordinators: 'console.import.apply.coordinators',
-  sessions: 'console.import.apply.sessions',
-} as const satisfies Record<ImportKind, string>;
-const DONE_BASE = {
-  venues: 'console.import.done.venues',
-  coordinators: 'console.import.done.coordinators',
-  sessions: 'console.import.done.sessions',
-} as const satisfies Record<ImportKind, string>;
 
 const SHOWN_AT_FIRST = 50;
 
@@ -140,13 +128,20 @@ export default function ImportPage() {
     if (fileInput.current) fileInput.current.value = '';
   };
 
-  const report = phase.name === 'reviewed' || phase.name === 'applying' || phase.name === 'applied' ? phase.report : null;
+  const report =
+    phase.name === 'reviewed' || phase.name === 'applying' || phase.name === 'applied'
+      ? phase.report
+      : null;
 
   const run = async () => {
     if (phase.name !== 'reviewed') return;
     const { report: current } = phase;
     setConfirming(false);
-    setPhase({ name: 'applying', report: current, progress: { done: 0, total: current.counts.valid } });
+    setPhase({
+      name: 'applying',
+      report: current,
+      progress: { done: 0, total: current.counts.valid },
+    });
     try {
       const result = await applyImport(current, api, (progress) =>
         setPhase({ name: 'applying', report: current, progress }),
@@ -177,10 +172,16 @@ export default function ImportPage() {
     return showAll ? report.rows : report.rows.filter((r) => r.issues.length > 0);
   }, [report, showAll]);
 
-  const message = (i: ImportIssue) => issueMessage(i, (key, params) => t(key as MessageKey, params));
+  const message = (i: ImportIssue) =>
+    issueMessage(i, (key, params) => t(key as MessageKey, params));
 
   const columns: Column<DryRunRow<unknown>>[] = [
-    { id: 'line', header: t('console.import.col.line'), rowHeader: true, cell: (r) => number(r.line) },
+    {
+      id: 'line',
+      header: t('console.import.col.line'),
+      rowHeader: true,
+      cell: (r) => number(r.line),
+    },
     { id: 'row', header: t('console.import.col.row'), cell: (r) => r.label },
     {
       id: 'status',
@@ -208,42 +209,38 @@ export default function ImportPage() {
   return (
     <div className="page">
       <PageHeader title={t('console.import.title')} intro={t('console.import.intro')} />
-      <Banner tone="info" title={t('console.import.safe.title')}>
-        {t('console.import.safe.body')}
+      <Banner tone="info" title={t('console.import.dryRun.title')}>
+        {t('console.import.dryRun.help')}
       </Banner>
 
-      <Section title={t('console.import.step1')}>
-        <div className="form card">
-          <SelectField
-            id="import-kind"
-            label={t('console.import.kind.label')}
-            hint={t(KIND_HINT_KEYS[kind])}
-            value={kind}
-            disabled={busy}
-            onChange={(e) => {
-              setKind(e.target.value as ImportKind);
-              reset();
-            }}
-            options={kinds.map((k) => ({ value: k, label: t(KIND_KEYS[k]) }))}
-          />
-          <div className="form-actions">
-            <Button
-              onClick={() => saveTextFile(`import-template-${kind}.csv`, templateCsv(kind))}
-            >
-              {t('console.import.template')}
-            </Button>
-          </div>
+      <div className="form card">
+        <SelectField
+          id="import-kind"
+          label={t('console.import.kind.label')}
+          hint={t(KIND_HINT_KEYS[kind])}
+          value={kind}
+          disabled={busy}
+          onChange={(e) => {
+            setKind(e.target.value as ImportKind);
+            reset();
+          }}
+          options={kinds.map((k) => ({ value: k, label: t(KIND_KEYS[k]) }))}
+        />
+        <div className="form-actions">
+          <Button onClick={() => saveTextFile(`import-template-${kind}.csv`, templateCsv(kind))}>
+            {t('console.import.template.download')}
+          </Button>
         </div>
-      </Section>
+      </div>
 
-      <Section title={t('console.import.step2')}>
+      <Section title={t('console.import.step.upload')}>
         <div className="form card">
           <div className="field">
             <label className="field-label" htmlFor="import-file">
-              {t('console.import.file.label')}
+              {t('console.import.file.choose')}
             </label>
             <p id="import-file-hint" className="field-hint">
-              {t('console.import.file.hint')}
+              {t('console.import.file.hint', { max: number(DEFAULT_MAX_ROWS) })}
             </p>
             <input
               ref={fileInput}
@@ -259,7 +256,8 @@ export default function ImportPage() {
         </div>
       </Section>
 
-      {phase.name === 'checking' ? <Loading label={t('console.import.checking')} /> : null}
+      {phase.name === 'choose' ? <p className="field-hint">{t('console.import.empty')}</p> : null}
+      {phase.name === 'checking' ? <Loading label={t('console.import.dryRun.running')} /> : null}
       {phase.name === 'failed' ? (
         <ErrorState
           error={phase.error}
@@ -268,7 +266,7 @@ export default function ImportPage() {
       ) : null}
 
       {report && phase.name !== 'applied' ? (
-        <Section title={t('console.import.step3')}>
+        <Section title={t('console.import.step.check')}>
           <Banner tone="warning">{t('console.import.nothingSaved')}</Banner>
           <dl className="stats" aria-label={t('console.import.summary')}>
             <div className="stat">
@@ -294,7 +292,11 @@ export default function ImportPage() {
               {report.fileIssues.map((i, n) => (
                 <li key={n}>
                   <Badge tone={i.severity === 'error' ? 'danger' : 'warning'}>
-                    {t(i.severity === 'error' ? 'console.import.severity.error' : 'console.import.severity.warning')}
+                    {t(
+                      i.severity === 'error'
+                        ? 'console.import.severity.error'
+                        : 'console.import.severity.warning',
+                    )}
                   </Badge>{' '}
                   {i.line > 0 ? `${t('console.import.atLine', { line: number(i.line) })} ` : ''}
                   {message(i)}
@@ -311,12 +313,21 @@ export default function ImportPage() {
           ) : null}
 
           {report.canApply ? (
-            <Banner tone="success">{t('console.import.ready')}</Banner>
+            <Banner tone="success">{tp('console.import.result.ready', report.counts.valid)}</Banner>
           ) : report.counts.total > 0 || report.fileIssues.length > 0 ? (
             <Banner tone="danger" title={t('console.import.blocked.title')}>
-              {report.counts.valid === 0 && report.counts.invalid === 0 && report.fileIssues.every((i) => i.severity !== 'error')
-                ? t('console.import.blocked.nothingNew')
-                : t('console.import.blocked.body')}
+              {report.counts.valid === 0 &&
+              report.counts.invalid === 0 &&
+              report.fileIssues.every((i) => i.severity !== 'error') ? (
+                t('console.import.blocked.nothingNew')
+              ) : (
+                <>
+                  {report.counts.invalid > 0 ? (
+                    <p>{tp('console.import.result.errors', report.counts.invalid)}</p>
+                  ) : null}
+                  <p>{t('console.import.blocked.body')}</p>
+                </>
+              )}
             </Banner>
           ) : null}
 
@@ -357,7 +368,7 @@ export default function ImportPage() {
               busy={phase.name === 'applying'}
               onClick={() => setConfirming(true)}
             >
-              {tp(APPLY_BASE[kind], report.counts.valid)}
+              {tp('console.import.apply', report.counts.valid)}
             </Button>
             <Button
               disabled={phase.name === 'applying' || fileText === null}
@@ -366,10 +377,10 @@ export default function ImportPage() {
               {t('console.import.checkAgain')}
             </Button>
             {report.fileIssues.length > 0 || report.rows.some((r) => r.issues.length > 0) ? (
-              <Button onClick={downloadReport}>{t('console.import.downloadReport')}</Button>
+              <Button onClick={downloadReport}>{t('console.import.errors.download')}</Button>
             ) : null}
             <Button variant="ghost" disabled={phase.name === 'applying'} onClick={reset}>
-              {t('console.import.startOver')}
+              {t('console.import.startAgain')}
             </Button>
           </div>
           {phase.name === 'applying' ? (
@@ -388,7 +399,7 @@ export default function ImportPage() {
         <Section title={t('console.import.result')}>
           {phase.result.status === 'done' ? (
             <Banner tone="success">
-              {tp(DONE_BASE[kind], phase.result.created)}
+              {t('console.import.done', { count: number(phase.result.created) })}
               {phase.result.skipped > 0
                 ? ` ${tp('console.import.skippedExisting', phase.result.skipped)}`
                 : ''}
@@ -425,12 +436,12 @@ export default function ImportPage() {
             <>
               <Button onClick={() => setConfirming(false)}>{t('console.shell.cancel')}</Button>
               <Button variant="primary" onClick={() => void run()}>
-                {tp(APPLY_BASE[kind], report.counts.valid)}
+                {tp('console.import.apply', report.counts.valid)}
               </Button>
             </>
           }
         >
-          <p>{tp(APPLY_BASE[kind], report.counts.valid)}</p>
+          <p>{tp('console.import.confirm.creating', report.counts.valid)}</p>
           {report.counts.duplicate > 0 ? (
             <p>{tp('console.import.confirm.skipped', report.counts.duplicate)}</p>
           ) : null}

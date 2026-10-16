@@ -3,7 +3,15 @@ import { SEASON_MODES, SettingsUpdate, type Settings } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useAsync } from '../api/hooks';
-import { Banner, Button, ErrorState, Loading, PageHeader, SelectField, TextField } from '../components/ui';
+import {
+  Banner,
+  Button,
+  ErrorState,
+  Loading,
+  PageHeader,
+  SelectField,
+  TextField,
+} from '../components/ui';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf } from '../lib/errors';
 
@@ -24,7 +32,9 @@ export default function SettingsPage() {
     <div className="page">
       <PageHeader title={t('console.settings.title')} intro={t('console.settings.intro')} />
       {loaded.status === 'loading' ? <Loading /> : null}
-      {loaded.status === 'error' ? <ErrorState error={loaded.error} onRetry={loaded.reload} /> : null}
+      {loaded.status === 'error' ? (
+        <ErrorState error={loaded.error} onRetry={loaded.reload} />
+      ) : null}
       {loaded.status === 'ready' ? <SettingsForm initial={loaded.data} /> : null}
     </div>
   );
@@ -50,7 +60,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
     circleRequestAlertThreshold: threshold.trim() === '' ? Number.NaN : Number(threshold),
   };
   const changed: Partial<Settings> = {};
-  if (draft.hijriOffsetDays !== saved.hijriOffsetDays) changed.hijriOffsetDays = draft.hijriOffsetDays;
+  if (draft.hijriOffsetDays !== saved.hijriOffsetDays)
+    changed.hijriOffsetDays = draft.hijriOffsetDays;
   if (draft.seasonMode !== saved.seasonMode) changed.seasonMode = draft.seasonMode;
   if (draft.whatsappDailyCapPerPerson !== saved.whatsappDailyCapPerPerson)
     changed.whatsappDailyCapPerPerson = draft.whatsappDailyCapPerPerson;

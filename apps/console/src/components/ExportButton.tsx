@@ -40,7 +40,7 @@ export function SessionExportButton({
   return (
     <div className="export-action">
       <Button variant="primary" busy={busy} disabled={disabled} onClick={() => void run()}>
-        {busy ? t('console.exports.exporting') : t('console.exports.button')}
+        {busy ? t('console.exports.generating') : t('console.exports.generate')}
       </Button>
       {failure ? (
         <Banner tone="danger" title={t('console.exports.failed')}>

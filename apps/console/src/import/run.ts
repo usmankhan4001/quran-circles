@@ -38,7 +38,7 @@ export async function dryRun({
       mentioned.map((c) =>
         fetchAllPages((cursor) =>
           api.adminVenues.list({
-            query: { cityId: c.id, includeArchived: true, limit: 100, cursor },
+            query: { cityId: c.id, includeArchived: 'true', limit: 100, cursor },
           }),
         ),
       ),

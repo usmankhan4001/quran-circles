@@ -34,14 +34,15 @@ export function normalizePhone(input: string, options: PhoneOptions = {}): Phone
 
   const plus = compact.startsWith('+');
   const digits = plus ? compact.slice(1) : compact;
-  let national: string | null = null;
+  let national: string;
 
   if (plus) {
-    if (digits.startsWith('92')) national = digits.slice(2);
-    else
+    if (!digits.startsWith('92')) {
       return E164_PATTERN.test(`+${digits}`)
         ? { ok: true, e164: `+${digits}`, kind: 'international' }
         : { ok: false, issue: 'invalid' };
+    }
+    national = digits.slice(2);
   } else if (digits.startsWith('0092')) national = digits.slice(4);
   else if (digits.startsWith('92') && digits.length >= 11) national = digits.slice(2);
   else if (digits.startsWith('0')) national = digits.slice(1);
@@ -56,6 +57,12 @@ export function normalizePhone(input: string, options: PhoneOptions = {}): Phone
   const e164 = `+92${national}`;
   return E164_PATTERN.test(e164) ? { ok: true, e164, kind } : { ok: false, issue: 'invalid' };
 }
+
+/** `+923001234567` becomes `+92••••567`: enough to tell two numbers apart, not enough to call. */
+export const maskPhone = (e164: string): string => `${e164.slice(0, 3)}••••${e164.slice(-3)}`;
+
+/** The last digits a screen reader can use to tell rows apart, such as `567`. */
+export const phoneTail = (e164: string): string => e164.slice(-3);
 
 /** `+923001234567` becomes `+92 300 1234567`. Anything else is returned unchanged. */
 export function formatPhone(e164: string): string {

@@ -69,8 +69,17 @@ export default function AuditPage() {
     .map((v) => ({ value: v.id, label: dir.venueName(v.id) }));
 
   const columns: Column<AuditEntry>[] = [
-    { id: 'when', header: t('console.audit.col.when'), rowHeader: true, cell: (e) => dateTime(e.createdAt) },
-    { id: 'who', header: t('console.audit.col.who'), cell: (e) => e.actorName ?? t('console.audit.system') },
+    {
+      id: 'when',
+      header: t('console.audit.col.when'),
+      rowHeader: true,
+      cell: (e) => dateTime(e.createdAt),
+    },
+    {
+      id: 'who',
+      header: t('console.audit.col.who'),
+      cell: (e) => e.actorName ?? t('console.audit.system'),
+    },
     { id: 'action', header: t('console.audit.col.action'), cell: (e) => <Code>{e.action}</Code> },
     {
       id: 'record',

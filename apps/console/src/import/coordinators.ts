@@ -1,14 +1,8 @@
-import {
-  InviteBody,
-  type City,
-  type Invite,
-  type Role,
-  type StaffRoleAssignment,
-  type Venue,
-} from '@qc/contracts';
+import { InviteBody, type City, type Invite, type Role, type Venue } from '@qc/contracts';
+import type { StaffRoleAssignment } from '../api/types';
 import type { CsvTable } from '../lib/csv';
 import { canAssignRole } from '../lib/permissions';
-import { normalizePhone } from '../lib/phone';
+import { maskPhone, normalizePhone } from '../lib/phone';
 import { columnForPath, normalizeName, readTable, type ColumnSpec, type ReadRow } from './table';
 import {
   buildReport,
@@ -61,7 +55,9 @@ export interface CoordinatorContext extends ImportActor {
 const sameText = (a: string, b: string): boolean => normalizeName(a) === normalizeName(b);
 
 const cityMatches = (c: City, text: string) =>
-  sameText(c.slug, text) || sameText(c.name.en, text) || (c.name.ur !== null && sameText(c.name.ur, text));
+  sameText(c.slug, text) ||
+  sameText(c.name.en, text) ||
+  (c.name.ur !== null && sameText(c.name.ur, text));
 
 const venueMatches = (v: Venue, text: string) =>
   v.id === text ||
@@ -70,10 +66,13 @@ const venueMatches = (v: Venue, text: string) =>
   (v.name.ur !== null && sameText(v.name.ur, text));
 
 /** A phone number shown as `+92 3•• •••• 567` in reports, so a shared report stays private. */
-export const maskPhone = (e164: string): string => `${e164.slice(0, 3)}••••${e164.slice(-3)}`;
 
 const scopeKey = (role: Role, cityId: string | null, venueId: string | null): string =>
-  role === 'national_admin' ? 'national' : role === 'city_coordinator' ? `city:${cityId}` : `venue:${venueId}`;
+  role === 'national_admin'
+    ? 'national'
+    : role === 'city_coordinator'
+      ? `city:${cityId}`
+      : `venue:${venueId}`;
 
 export function validateCoordinators(
   table: CsvTable,
@@ -155,7 +154,11 @@ interface BuiltInvite {
   venueId: string | null;
 }
 
-function buildInvite(row: ReadRow, ctx: CoordinatorContext, issues: ImportIssue[]): BuiltInvite | null {
+function buildInvite(
+  row: ReadRow,
+  ctx: CoordinatorContext,
+  issues: ImportIssue[],
+): BuiltInvite | null {
   const line = row.line;
   const phoneText = row.get('phone');
   const roleText = row.get('role');
@@ -176,7 +179,13 @@ function buildInvite(row: ReadRow, ctx: CoordinatorContext, issues: ImportIssue[
   let role: Role | null = null;
   if (!roleText) issues.push(issue(line, 'role', 'required', { column: 'role' }));
   else {
-    role = ROLE_WORDS[roleText.trim().toLowerCase().replace(/[\s\-]+/g, '_')] ?? null;
+    role =
+      ROLE_WORDS[
+        roleText
+          .trim()
+          .toLowerCase()
+          .replace(/[\s-]+/g, '_')
+      ] ?? null;
     if (!role) issues.push(issue(line, 'role', 'unknown_role', { column: 'role' }));
   }
 
@@ -201,7 +210,8 @@ function buildInvite(row: ReadRow, ctx: CoordinatorContext, issues: ImportIssue[
       const found = ctx.venues.filter(
         (v) => venueMatches(v, venueText) && (!city || v.cityId === city.id),
       );
-      if (found.length === 0) issues.push(issue(line, 'venue', 'unknown_venue', { column: 'venue' }));
+      if (found.length === 0)
+        issues.push(issue(line, 'venue', 'unknown_venue', { column: 'venue' }));
       else if (found.length > 1)
         issues.push(issue(line, 'venue', 'ambiguous_venue', { column: 'venue' }));
       else {
@@ -213,7 +223,11 @@ function buildInvite(row: ReadRow, ctx: CoordinatorContext, issues: ImportIssue[
 
   if (role && (role === 'national_admin' || cityId || venueId)) {
     const scope =
-      role === 'venue_coordinator' ? { cityId, venueId } : role === 'city_coordinator' ? { cityId } : {};
+      role === 'venue_coordinator'
+        ? { cityId, venueId }
+        : role === 'city_coordinator'
+          ? { cityId }
+          : {};
     if (!canAssignRole(ctx.principal, role, scope))
       issues.push(issue(line, 'role', 'out_of_scope', { column: 'role' }));
   }

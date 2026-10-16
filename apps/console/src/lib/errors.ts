@@ -49,7 +49,7 @@ export function errorMessageKeyOf(error: unknown): MessageKey {
 }
 
 export function isErrorCode(value: string): value is ErrorCode {
-  return value in ERROR_CODES;
+  return Object.hasOwn(ERROR_CODES, value);
 }
 
 /** Seconds to wait before retrying, when the server said so. */

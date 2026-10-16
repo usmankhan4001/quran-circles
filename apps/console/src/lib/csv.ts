@@ -3,11 +3,7 @@
  * parser reports problems with their line numbers instead of throwing, and never guesses.
  */
 export type CsvErrorCode =
-  | 'empty_file'
-  | 'file_too_large'
-  | 'too_many_rows'
-  | 'unterminated_quote'
-  | 'stray_quote';
+  'empty_file' | 'file_too_large' | 'too_many_rows' | 'unterminated_quote' | 'stray_quote';
 
 export interface CsvError {
   code: CsvErrorCode;
@@ -62,7 +58,12 @@ export function parseCsv(input: string, options: CsvParseOptions = {}): CsvTable
   const text = input.startsWith('﻿') ? input.slice(1) : input;
 
   if (text.length > maxChars) {
-    return { delimiter: ',', header: [], records: [], errors: [{ code: 'file_too_large', line: 0 }] };
+    return {
+      delimiter: ',',
+      header: [],
+      records: [],
+      errors: [{ code: 'file_too_large', line: 0 }],
+    };
   }
   if (text.trim() === '') {
     return { delimiter: ',', header: [], records: [], errors: [{ code: 'empty_file', line: 0 }] };

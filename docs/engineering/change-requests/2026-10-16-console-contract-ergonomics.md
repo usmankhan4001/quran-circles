@@ -1,0 +1,13 @@
+# Change request: small contract gaps the console works around
+
+Requested by: console
+Contract: `packages/contracts` exports
+What I need:
+
+1. Export types `StaffRoleAssignment` and `AuditEntry` (the schemas exist, the `z.infer` types are not exported). The console derives them from the client's return types in `apps/console/src/api/types.ts`.
+2. Keep `issues` on `ApiClientError` for `validation_failed`. The mock and the real API send `issues: { path, code }[]`, but the client drops them, so a form cannot point at the field the server rejected. The console validates with the same Zod schemas first, so this only matters for server-only rules.
+3. Say in the endpoint registry which `stringbool` query values the client accepts. The client types them as `'true' | 'false'` strings (`includeArchived`, `includeRevoked`); callers pass booleans by mistake until the compiler tells them.
+4. An explicit "resend invite" call, or confirm that Resend means a new `adminRoles.invite` for the same number. The ui spec has a `console.invites.resend` key; the console does not show a Resend action until this is answered.
+   Why: each one removes a local workaround or a guess.
+   Affected lanes: contracts, console, admin app (same types).
+   Workaround meanwhile: as described above.
