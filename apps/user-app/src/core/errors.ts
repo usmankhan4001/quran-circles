@@ -18,7 +18,9 @@ export function toAppError(error: unknown): AppError {
       code: error.code,
       status: error.status,
       requestId: error.requestId,
-      ...(error.retryAfterSeconds !== undefined ? { retryAfterSeconds: error.retryAfterSeconds } : {}),
+      ...(error.retryAfterSeconds !== undefined
+        ? { retryAfterSeconds: error.retryAfterSeconds }
+        : {}),
     };
   }
   return { code: 'unknown', status: 0, requestId: null };

@@ -3,7 +3,7 @@ import { Observable } from '../../core/observable';
 import { readJson, writeJson, type KeyValueStore } from '../../core/storage';
 import type { TFunction } from '../../i18n/translate';
 import { pickLocalized } from '../../i18n/localized';
-import { formatClockTime } from '../../core/format';
+import { formatDateTime } from '../../core/format';
 import { planReminders } from './plan';
 import type { PermissionResult, PushRegistrar, ReminderScheduler } from './types';
 
@@ -110,11 +110,11 @@ export class RemindersService {
           id: p.id,
           fireAt: p.fireAt,
           sessionId: p.sessionId,
-          title: input.t('notifications.sessionReminder.title'),
-          body: input.t('notifications.sessionReminder.body', {
-            title,
-            venue,
-            time: formatClockTime(p.startsAt, session?.timezone ?? 'Asia/Karachi', input.locale),
+          title: input.t('notifications.reminder.title'),
+          body: input.t('notifications.reminder.body', {
+            sessionTitle: title,
+            venueName: venue,
+            when: formatDateTime(p.startsAt, session?.timezone ?? 'Asia/Karachi', input.locale),
           }),
         };
       }),
@@ -124,7 +124,11 @@ export class RemindersService {
 }
 
 function isDeviceRecord(value: unknown): value is { deviceId: string } {
-  return typeof value === 'object' && value !== null && typeof (value as { deviceId?: unknown }).deviceId === 'string';
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { deviceId?: unknown }).deviceId === 'string'
+  );
 }
 
 /** Push registration with the contract's device endpoint. */

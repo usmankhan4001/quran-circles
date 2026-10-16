@@ -46,7 +46,8 @@ export function useSessionOccurrences(sessionId: string, from: string) {
   const { api } = useServices();
   return useQuery(
     `sessions:occurrences:${sessionId}`,
-    async () => (await api.sessions.occurrences({ params: { sessionId }, query: { from, limit: 8 } })).items,
+    async () =>
+      (await api.sessions.occurrences({ params: { sessionId }, query: { from, limit: 8 } })).items,
     { persist: true, staleMs: 60_000 },
   );
 }

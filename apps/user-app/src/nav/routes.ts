@@ -7,7 +7,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'nearby' }
   | { name: 'journey' }
-  | { name: 'quran' }
+  | { name: 'quran'; reader?: { surah: number; ayah: number; at?: number } }
   | { name: 'profile' }
   | { name: 'updates' }
   | { name: 'signIn'; returnTo?: Route }
@@ -30,7 +30,9 @@ export function routeToHref(route: Route): string {
     case 'journey':
       return '/journey';
     case 'quran':
-      return '/quran';
+      return route.reader
+        ? `/quran?surah=${route.reader.surah}&ayah=${route.reader.ayah}${route.reader.at ? `&at=${route.reader.at}` : ''}`
+        : '/quran';
     case 'profile':
       return '/profile';
     case 'updates':
@@ -66,9 +68,22 @@ export function hrefToRoute(href: string): Route | null {
     case undefined:
     case 'home':
       return { name: 'home' };
+    case 'quran': {
+      const surah = Number(url.searchParams.get('surah'));
+      const ayah = Number(url.searchParams.get('ayah') ?? 1);
+      const at = Number(url.searchParams.get('at'));
+      if (!Number.isInteger(surah) || surah < 1 || surah > 114) return { name: 'quran' };
+      return {
+        name: 'quran',
+        reader: {
+          surah,
+          ayah: Number.isInteger(ayah) && ayah >= 1 ? ayah : 1,
+          ...(Number.isInteger(at) && at > 0 ? { at } : {}),
+        },
+      };
+    }
     case 'nearby':
     case 'journey':
-    case 'quran':
     case 'profile':
     case 'updates':
       return { name: first };

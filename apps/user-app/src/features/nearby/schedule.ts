@@ -1,5 +1,11 @@
 import type { Locale, Occurrence, Session } from '@qc/contracts';
-import { formatDateTime, formatLocalDate, formatLocalTime, formatShortDate, DAY_KEYS } from '../../core/format';
+import {
+  formatDateTime,
+  formatLocalDate,
+  formatLocalTime,
+  formatShortDate,
+  DAY_KEYS,
+} from '../../core/format';
 import type { TFunction } from '../../i18n/translate';
 
 /**
@@ -18,7 +24,7 @@ export function describeSchedule(session: Session, t: TFunction, locale: Locale)
   if (session.daysOfWeek.length === 7) return t('session.schedule.everyDay', { time });
   const days = [...session.daysOfWeek]
     .sort((a, b) => a - b)
-    .map((d) => t(DAY_KEYS[d] ?? 'days.sunday'))
+    .map((d) => t(DAY_KEYS[d] ?? 'days.sun'))
     .join(t('schedule.separator'));
   return t('session.schedule.onDays', { days, time });
 }

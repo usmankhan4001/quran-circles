@@ -8,7 +8,10 @@ export type RegisterState =
   | { kind: 'waitlist' }
   | { kind: 'open' };
 
-export function registerState(session: Session, mine: readonly Registration[] | undefined): RegisterState {
+export function registerState(
+  session: Session,
+  mine: readonly Registration[] | undefined,
+): RegisterState {
   if (session.status === 'cancelled') return { kind: 'cancelled' };
   const existing = mine?.find((r) => r.sessionId === session.id && r.status !== 'cancelled');
   if (existing) return { kind: 'registered', registration: existing };

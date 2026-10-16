@@ -26,7 +26,13 @@ export function detectLocale(deviceLanguages: readonly string[]): Locale {
 }
 
 export function defaultPreferences(deviceLanguages: readonly string[] = []): Preferences {
-  return { locale: detectLocale(deviceLanguages), textSize: 0, color: 'system', cityId: null, areaId: null };
+  return {
+    locale: detectLocale(deviceLanguages),
+    textSize: 0,
+    color: 'system',
+    cityId: null,
+    areaId: null,
+  };
 }
 
 function isPreferencesPatch(value: unknown): value is Partial<Preferences> {
@@ -34,7 +40,10 @@ function isPreferencesPatch(value: unknown): value is Partial<Preferences> {
 }
 
 /** Keeps only valid values, so an old or damaged file never breaks the app. */
-export function sanitizePreferences(stored: Partial<Preferences>, fallback: Preferences): Preferences {
+export function sanitizePreferences(
+  stored: Partial<Preferences>,
+  fallback: Preferences,
+): Preferences {
   const locale = LOCALES.find((l) => l === stored.locale) ?? fallback.locale;
   const textSize = textSizeSteps.find((s) => s === stored.textSize) ?? fallback.textSize;
   const color = COLOR_PREFERENCES.find((c) => c === stored.color) ?? fallback.color;

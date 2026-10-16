@@ -17,9 +17,7 @@ export function useReminderSync(): void {
 
   useEffect(() => {
     if (status !== 'signedIn' || !data || !reminders.supported) return;
-    void reminders
-      .sync({ api, registrations: data, locale, t, now: now() })
-      .catch(() => undefined);
+    void reminders.sync({ api, registrations: data, locale, t, now: now() }).catch(() => undefined);
   }, [status, data, optedIn, reminders, api, locale, t, now]);
 }
 

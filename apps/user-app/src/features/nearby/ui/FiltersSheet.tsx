@@ -22,7 +22,12 @@ export interface FiltersSheetProps {
 export function FiltersSheet({ visible, onClose, filters, onChange }: FiltersSheetProps) {
   const { t } = useI18n();
   return (
-    <Sheet visible={visible} onClose={onClose} title={t('nearby.filters.title')} testID="filters-sheet">
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      title={t('nearby.filters.title')}
+      testID="filters-sheet"
+    >
       <View style={styles.group} role="group" aria-label={t('nearby.filters.day')}>
         <Text variant="label">{t('nearby.filters.day')}</Text>
         <View style={styles.chips}>
@@ -46,7 +51,9 @@ export function FiltersSheet({ visible, onClose, filters, onChange }: FiltersShe
               key={band}
               label={t(`nearby.time.${band}`)}
               selected={filters.timeBand === band}
-              onPress={() => onChange({ ...filters, timeBand: filters.timeBand === band ? null : band })}
+              onPress={() =>
+                onChange({ ...filters, timeBand: filters.timeBand === band ? null : band })
+              }
               testID={`filter-time-${band}`}
             />
           ))}
@@ -76,7 +83,7 @@ export function FiltersSheet({ visible, onClose, filters, onChange }: FiltersShe
           {LOCALES.map((language) => (
             <Chip
               key={language}
-              label={t(`languages.${language}`)}
+              label={t(`profile.language.${language}`)}
               selected={filters.language === language}
               onPress={() =>
                 onChange({ ...filters, language: filters.language === language ? null : language })
@@ -105,7 +112,12 @@ export function FiltersSheet({ visible, onClose, filters, onChange }: FiltersShe
       </View>
 
       <View style={styles.actions}>
-        <Button label={t('nearby.filters.apply')} fullWidth onPress={onClose} testID="filters-apply" />
+        <Button
+          label={t('nearby.filters.apply')}
+          fullWidth
+          onPress={onClose}
+          testID="filters-apply"
+        />
         <Button
           variant="tertiary"
           fullWidth

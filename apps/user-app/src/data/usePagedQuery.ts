@@ -7,7 +7,8 @@ export interface Page<T> {
   nextCursor: string | null;
 }
 
-export interface PagedResult<T> extends Omit<QueryResult<Page<T>>, 'data'> {
+/** `data` is the first page; `items` is every page loaded so far. */
+export interface PagedResult<T> extends QueryResult<Page<T>> {
   items: T[];
   hasMore: boolean;
   loadingMore: boolean;
@@ -55,7 +56,5 @@ export function usePagedQuery<T>(
     }
   }, [nextCursor, loadingMore, fetchPage, first.data]);
 
-  const { data: _data, ...rest } = first;
-  void _data;
-  return { ...rest, items, hasMore: nextCursor !== null, loadingMore, loadMoreError, loadMore };
+  return { ...first, items, hasMore: nextCursor !== null, loadingMore, loadMoreError, loadMore };
 }

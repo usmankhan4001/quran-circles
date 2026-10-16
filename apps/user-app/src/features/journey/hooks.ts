@@ -11,7 +11,8 @@ export function useMyRegistrations() {
   const { status } = useAuthState();
   return useQuery<Registration[]>(
     status === 'signedIn' ? 'me:registrations' : null,
-    async () => (await api.registrations.listMine({ query: { upcomingOnly: true, limit: 50 } })).items,
+    async () =>
+      (await api.registrations.listMine({ query: { upcomingOnly: 'true', limit: 50 } })).items,
     { staleMs: 15_000 },
   );
 }
@@ -60,7 +61,10 @@ export function useFollowActions() {
 }
 
 /** The follow for a venue, if the person has one. */
-export function findVenueFollow(follows: readonly Follow[] | undefined, venueId: string): Follow | undefined {
+export function findVenueFollow(
+  follows: readonly Follow[] | undefined,
+  venueId: string,
+): Follow | undefined {
   return follows?.find((f) => f.venueId === venueId);
 }
 

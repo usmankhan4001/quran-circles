@@ -33,7 +33,9 @@ export function wrapClient(
   },
 ): ApiClient {
   const wrapped: Record<string, Record<string, AnyCall>> = {};
-  for (const [group, operations] of Object.entries(api as unknown as Record<string, Record<string, AnyCall>>)) {
+  for (const [group, operations] of Object.entries(
+    api as unknown as Record<string, Record<string, AnyCall>>,
+  )) {
     const out: Record<string, AnyCall> = {};
     for (const [name, call] of Object.entries(operations)) {
       out[name] = async (...args) => {
@@ -54,15 +56,12 @@ export function wrapClient(
           return await attempt();
         } catch (error) {
           if (error instanceof ApiClientError && error.code === 'token_expired') {
-            let refreshed = false;
-            try {
-              refreshed = await hooks.session.refresh();
-            } catch (refreshError) {
+            const refreshed = await hooks.session.refresh().catch((refreshError: unknown) => {
               if (refreshError instanceof ApiClientError && refreshError.code === 'network_error') {
                 hooks.connectivity.markOffline();
               }
               throw refreshError;
-            }
+            });
             if (refreshed) return attempt();
           }
           throw error;

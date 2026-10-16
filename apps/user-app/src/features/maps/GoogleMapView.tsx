@@ -14,7 +14,10 @@ import { centerOf, type MapViewProps } from './types';
 type Json = Record<string, unknown>;
 interface GoogleMapsApi {
   maps: {
-    Map: new (el: HTMLElement, options: Json) => { setCenter(c: Json): void; fitBounds(b: unknown): void };
+    Map: new (
+      el: HTMLElement,
+      options: Json,
+    ) => { setCenter(c: Json): void; fitBounds(b: unknown): void };
     Marker: new (options: Json) => {
       addListener(event: string, handler: () => void): void;
       setMap(map: unknown): void;

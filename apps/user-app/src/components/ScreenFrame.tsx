@@ -15,6 +15,8 @@ export interface ScreenFrameProps {
   children: ReactNode;
   /** Content kept below the scrolling area, for the main action of a form. */
   footer?: ReactNode;
+  /** False when the content scrolls by itself (a long list such as the Quran reader). */
+  scroll?: boolean;
   testID?: string;
 }
 
@@ -40,6 +42,7 @@ export function ScreenFrame({
   variant = 'regular',
   children,
   footer,
+  scroll = true,
   testID,
 }: ScreenFrameProps) {
   const theme = useTheme();
@@ -67,18 +70,30 @@ export function ScreenFrame({
         >
           <Icon name="warning" size={20} color={c.textOnWarningSubtle} />
           <Text variant="caption" color="textOnWarningSubtle">
-            {t('offline.banner')}
+            {t('ui.offlineTitle')}
           </Text>
         </View>
       ) : null}
-      <ScrollView style={styles.root} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        {children}
-      </ScrollView>
+      {scroll ? (
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={styles.body}
+          keyboardShouldPersistTaps="handled"
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={styles.root}>{children}</View>
+      )}
       {footer ? (
         <View
           style={[
             styles.footer,
-            { borderTopColor: c.border, backgroundColor: c.surface, paddingBottom: screenGutter + insets.bottom },
+            {
+              borderTopColor: c.border,
+              backgroundColor: c.surface,
+              paddingBottom: screenGutter + insets.bottom,
+            },
           ]}
         >
           {footer}

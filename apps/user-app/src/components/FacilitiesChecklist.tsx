@@ -3,7 +3,7 @@ import { Icon, Text, spacing, useTheme } from '@qc/ui';
 import type { VenueFacilities } from '@qc/contracts';
 import { useI18n } from '../i18n/I18nProvider';
 
-const FACILITY_KEYS = [
+export const FACILITY_KEYS = [
   'womenSection',
   'parking',
   'wuduArea',
@@ -38,7 +38,11 @@ export function FacilitiesChecklist({ facilities }: { facilities: VenueFacilitie
             accessible
             aria-label={`${t(`facilities.${key}`)}: ${yes ? t('facilities.available') : t('facilities.notListed')}`}
           >
-            <Icon name={yes ? 'success' : 'close'} size={22} color={yes ? c.success : c.textSecondary} />
+            <Icon
+              name={yes ? 'success' : 'close'}
+              size={22}
+              color={yes ? c.success : c.textSecondary}
+            />
             <View style={styles.label}>
               <Text variant="body" decorative>
                 {t(`facilities.${key}`)}

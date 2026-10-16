@@ -21,7 +21,11 @@ export function usePreferences(): Preferences & {
 
 export function useOffline(): boolean {
   const { connectivity } = useServices();
-  return useSyncExternalStore(connectivity.subscribe, connectivity.isOffline, connectivity.isOffline);
+  return useSyncExternalStore(
+    connectivity.subscribe,
+    connectivity.isOffline,
+    connectivity.isOffline,
+  );
 }
 
 export function useReminderOptIns(): ReadonlySet<string> {

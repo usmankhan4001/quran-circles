@@ -13,7 +13,13 @@ export interface Navigator {
 
 const NavContext = createContext<Navigator | null>(null);
 
-export function NavProvider({ navigator, children }: { navigator: Navigator; children: ReactNode }) {
+export function NavProvider({
+  navigator,
+  children,
+}: {
+  navigator: Navigator;
+  children: ReactNode;
+}) {
   return <NavContext.Provider value={navigator}>{children}</NavContext.Provider>;
 }
 

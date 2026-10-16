@@ -30,11 +30,7 @@ function formatter(
 }
 
 /** "7:30 pm" for an instant, in the session's own time zone (Pakistan time by default). */
-export function formatClockTime(
-  instant: string,
-  timeZone: string,
-  locale: Locale,
-): string {
+export function formatClockTime(instant: string, timeZone: string, locale: Locale): string {
   return formatter(locale, timeZone, { hour: 'numeric', minute: '2-digit' }).format(
     new Date(instant),
   );
@@ -89,13 +85,13 @@ export function localDateOf(instant: Date, timeZone: string): string {
 }
 
 export const DAY_KEYS = [
-  'days.sunday',
-  'days.monday',
-  'days.tuesday',
-  'days.wednesday',
-  'days.thursday',
-  'days.friday',
-  'days.saturday',
+  'days.sun',
+  'days.mon',
+  'days.tue',
+  'days.wed',
+  'days.thu',
+  'days.fri',
+  'days.sat',
 ] as const;
 
 /** Formats a count such as a seat number the same way as the kit. */

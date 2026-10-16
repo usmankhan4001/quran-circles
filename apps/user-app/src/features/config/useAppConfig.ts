@@ -29,6 +29,7 @@ export function useAppConfig() {
   return {
     ...query,
     seasonMode: query.data?.seasonMode ?? FALLBACK_CONFIG.seasonMode,
+    hijriOffsetDays: query.data?.hijriOffsetDays ?? FALLBACK_CONFIG.hijriOffsetDays,
     featureFlags: query.data?.featureFlags ?? FALLBACK_CONFIG.featureFlags,
   };
 }

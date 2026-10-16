@@ -1,4 +1,10 @@
-import { PersonName, SECTIONS, type RegistrationCreate, type Section, type Session } from '@qc/contracts';
+import {
+  PersonName,
+  SECTIONS,
+  type RegistrationCreate,
+  type Section,
+  type Session,
+} from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 
 export const MAX_PARTY_SIZE = 20;
@@ -48,9 +54,9 @@ export function validateRegistration(
 ): RegistrationProblems {
   const problems: RegistrationProblems = {};
   if (options.needsName && !PersonName.safeParse(form.name).success) {
-    problems.name = 'registration.problem.name';
+    problems.name = 'registration.name.error';
   }
-  if (!form.areaId) problems.area = 'registration.problem.area';
+  if (!form.areaId) problems.area = 'registration.area.error';
   if (!form.section || !allowedSections(options.session).includes(form.section)) {
     problems.section = 'registration.problem.section';
   }
@@ -63,7 +69,12 @@ export function validateRegistration(
 /** The request body, or null while the form still has problems. */
 export function buildRegistration(
   form: RegistrationForm,
-  options: { sessionId: string; occurrenceId?: string; needsName: boolean; session: Pick<Session, 'section'> },
+  options: {
+    sessionId: string;
+    occurrenceId?: string;
+    needsName: boolean;
+    session: Pick<Session, 'section'>;
+  },
 ): RegistrationCreate | null {
   if (Object.keys(validateRegistration(form, options)).length > 0) return null;
   if (!form.areaId || !form.section) return null;

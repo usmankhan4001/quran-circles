@@ -38,3 +38,6 @@ A decision that changes a contract also needs a contract change request.
 - [0005: Messaging outbox and providers](0005-messaging-outbox-and-providers.md)
 - [0006: Console web tooling](0006-console-web-tooling.md)
 - [0003: UI tooling (styling, test renderer, catalog)](0003-ui-tooling.md)
+- [0007: Prayer times and Hijri](0007-prayer-times-and-hijri.md)
+- [0008: Quran source and cache](0008-quran-source-and-cache.md)
+- [0009: User app stack](0009-user-app-stack.md)

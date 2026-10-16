@@ -18,7 +18,13 @@ export interface SessionCardProps {
 const styles = StyleSheet.create({ stack: { gap: spacing.xs } });
 
 /** A session as a card: title, venue, when, and who it is for. Used on Nearby, Home and My Journey. */
-export function SessionCard({ session, onPress, footer, emphasis = 'schedule', testID }: SessionCardProps) {
+export function SessionCard({
+  session,
+  onPress,
+  footer,
+  emphasis = 'schedule',
+  testID,
+}: SessionCardProps) {
   const { t, l, locale } = useI18n();
   const title = l(session.title);
   const venue = l(session.venue.name);
@@ -27,7 +33,7 @@ export function SessionCard({ session, onPress, footer, emphasis = 'schedule', t
       ? describeOccurrence(session.nextOccurrence, session.timezone, locale)
       : describeSchedule(session, t, locale);
   const registration = session.registration;
-  const facts = [t(`sections.${session.section}`), t(`languages.${session.language}`)].join(
+  const facts = [t(`sections.${session.section}`), t(`profile.language.${session.language}`)].join(
     t('schedule.separator'),
   );
   return (

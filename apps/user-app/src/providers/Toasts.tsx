@@ -27,7 +27,10 @@ const styles = StyleSheet.create({
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const show = useCallback((message: string, kind: ToastKind = 'success') => {
-    setItems((current) => [...current.slice(-1), { id: Date.now() + Math.random(), message, kind }]);
+    setItems((current) => [
+      ...current.slice(-1),
+      { id: Date.now() + Math.random(), message, kind },
+    ]);
   }, []);
   const api = useMemo(() => ({ show }), [show]);
   return (

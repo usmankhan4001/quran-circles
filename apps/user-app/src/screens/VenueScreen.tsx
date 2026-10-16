@@ -13,7 +13,11 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useServices } from '../providers/services';
 
-const styles = StyleSheet.create({ stack: { gap: spacing.xl }, actions: { gap: spacing.sm }, list: { gap: spacing.md } });
+const styles = StyleSheet.create({
+  stack: { gap: spacing.xl },
+  actions: { gap: spacing.sm },
+  list: { gap: spacing.md },
+});
 
 export function VenueScreen({ venueId }: { venueId: string }) {
   const { t, l } = useI18n();
@@ -41,7 +45,7 @@ export function VenueScreen({ venueId }: { venueId: string }) {
               <View style={styles.actions}>
                 {v.contactPhone ? (
                   <Button
-                    label={t('venue.contact')}
+                    label={t('venue.call')}
                     fullWidth
                     onPress={() => void openUrl(venuePhoneUrl(v.contactPhone!))}
                     testID="venue-contact"
@@ -53,7 +57,7 @@ export function VenueScreen({ venueId }: { venueId: string }) {
                 )}
                 <Button
                   variant="secondary"
-                  label={t('venue.location')}
+                  label={t('venue.directions')}
                   fullWidth
                   onPress={() => void openUrl(venueMapUrl(v))}
                   testID="venue-location"
@@ -69,16 +73,16 @@ export function VenueScreen({ venueId }: { venueId: string }) {
                 />
               </View>
 
-              <Section title={t('venue.facilities')}>
+              <Section title={t('venue.facilities.title')}>
                 <FacilitiesChecklist facilities={v.facilities} />
               </Section>
 
-              <Section title={t('venue.sessions')}>
+              <Section title={t('venue.sessions.title')}>
                 <QueryBoundary query={sessions}>
                   {(items) =>
                     items.length === 0 ? (
                       <Text variant="body" color="textSecondary">
-                        {t('venue.noSessions')}
+                        {t('venue.sessions.empty')}
                       </Text>
                     ) : (
                       <View style={styles.list}>

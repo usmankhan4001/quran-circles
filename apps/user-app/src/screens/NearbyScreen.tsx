@@ -122,7 +122,9 @@ export function NearbyScreen() {
             <Button
               variant="secondary"
               fullWidth
-              label={count > 0 ? t('nearby.filters.buttonCount', { count }) : t('nearby.filters.button')}
+              label={
+                count > 0 ? t('nearby.filters.buttonCount', { count }) : t('nearby.filters.open')
+              }
               onPress={() => setShowFilters(true)}
               testID="nearby-filters-button"
             />
@@ -140,7 +142,7 @@ export function NearbyScreen() {
             {local.days.map((day) => (
               <Chip
                 key={`day-${day}`}
-                label={t(DAY_KEYS[day] ?? 'days.sunday')}
+                label={t(DAY_KEYS[day] ?? 'days.sun')}
                 onRemove={() => setLocal((f) => ({ ...f, days: f.days.filter((d) => d !== day) }))}
               />
             ))}
@@ -158,7 +160,7 @@ export function NearbyScreen() {
             ) : null}
             {local.language ? (
               <Chip
-                label={t(`languages.${local.language}`)}
+                label={t(`profile.language.${local.language}`)}
                 onRemove={() => setLocal((f) => ({ ...f, language: null }))}
               />
             ) : null}
@@ -182,6 +184,12 @@ export function NearbyScreen() {
           testID="nearby-view"
         />
 
+        {list.offline ? (
+          <Text variant="caption" color="textSecondary" testID="saved-copy-note">
+            {t('app.savedCopy')}
+          </Text>
+        ) : null}
+
         {list.status === 'loading' ? (
           <View testID="loading">
             <Skeleton shape="block" height={120} announce />
@@ -197,15 +205,17 @@ export function NearbyScreen() {
         ) : list.items.length === 0 ? (
           <EmptyState
             title={t('nearby.empty.title')}
-            description={hasAnyFilter(filters) ? t('nearby.empty.withFilters') : t('nearby.empty.body')}
+            description={
+              hasAnyFilter(filters) ? t('nearby.empty.withFilters') : t('nearby.empty.body')
+            }
             {...(hasAnyFilter(filters)
               ? { action: { label: t('nearby.filters.clear'), onPress: clearFilters } }
               : {})}
             {...(config.featureFlags.circle_requests
               ? {
                   secondaryAction: {
-                    label: t('nearby.requestCircle'),
-                    onPress: () => toast.show(t('nearby.requestCircle.soon'), 'info'),
+                    label: t('nearby.request.action'),
+                    onPress: () => toast.show(t('nearby.request.soon'), 'info'),
                   },
                 }
               : {})}

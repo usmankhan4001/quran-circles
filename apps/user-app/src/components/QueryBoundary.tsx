@@ -39,7 +39,7 @@ export function QueryBoundary<T>({ query, children, loading }: QueryBoundaryProp
       {query.offline ? (
         <View style={{ marginBottom: spacing.sm }}>
           <Text variant="caption" color="textSecondary" testID="saved-copy-note">
-            {t('offline.savedCopy')}
+            {t('app.savedCopy')}
           </Text>
         </View>
       ) : null}

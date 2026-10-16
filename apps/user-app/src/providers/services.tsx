@@ -22,6 +22,8 @@ export interface AppServices {
   /** Opens a link outside the app: `tel:`, a map address or a web page. */
   openUrl: (url: string) => Promise<void>;
   platform: DevicePlatform;
+  /** Shown in About. */
+  appVersion: string;
   /** The current time. Tests pass a fixed one. */
   now: () => Date;
 }

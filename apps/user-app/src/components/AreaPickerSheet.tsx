@@ -15,7 +15,14 @@ export interface AreaPickerSheetProps {
 }
 
 /** Area search over our own place list: type to narrow the areas of the city, then pick one. */
-export function AreaPickerSheet({ visible, onClose, cityId, value, onChange, allowAll }: AreaPickerSheetProps) {
+export function AreaPickerSheet({
+  visible,
+  onClose,
+  cityId,
+  value,
+  onChange,
+  allowAll,
+}: AreaPickerSheetProps) {
   const { t, l } = useI18n();
   const areas = useAreas(cityId);
   const [search, setSearch] = useState('');
@@ -28,24 +35,24 @@ export function AreaPickerSheet({ visible, onClose, cityId, value, onChange, all
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={t('places.area.title')} testID="area-sheet">
+    <Sheet visible={visible} onClose={onClose} title={t('nearby.area.title')} testID="area-sheet">
       {!cityId ? (
-        <EmptyState title={t('places.area.chooseCityFirst')} />
+        <EmptyState title={t('nearby.area.chooseCityFirst')} />
       ) : areas.status === 'loading' ? (
         <Skeleton shape="text" lines={4} announce />
       ) : (
         <View>
           <TextField
-            label={t('places.area.searchLabel')}
-            placeholder={t('places.area.searchPlaceholder')}
+            label={t('nearby.area.searchLabel')}
+            placeholder={t('nearby.area.searchPlaceholder')}
             value={search}
             onChangeText={setSearch}
             testID="area-search"
           />
-          <View role="radiogroup" aria-label={t('places.area.title')}>
+          <View role="radiogroup" aria-label={t('nearby.area.title')}>
             {allowAll ? (
               <ListItem
-                title={t('places.area.all')}
+                title={t('nearby.area.all')}
                 role="radio"
                 checked={value === null}
                 chevron={false}
@@ -69,7 +76,7 @@ export function AreaPickerSheet({ visible, onClose, cityId, value, onChange, all
               );
             })}
           </View>
-          {shown.length === 0 ? <EmptyState title={t('places.area.noMatch')} /> : null}
+          {shown.length === 0 ? <EmptyState title={t('nearby.area.noMatch')} /> : null}
         </View>
       )}
     </Sheet>

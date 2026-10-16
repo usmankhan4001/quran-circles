@@ -1,36 +1,28 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+
+/** A place in the Quran: a surah and an ayah in it. */
+export interface QuranPlace {
+  surah: number;
+  ayah: number;
+}
+
+/** A request to open the reader. `at` makes a second request for the same place count again. */
+export interface ReaderRequest extends QuranPlace {
+  at?: number;
+}
 
 /**
- * The mount points for the content lane's Quran and prayer modules (`@qc/content`). The app
- * does not import them directly: `loadContentModules` picks them up by name, so this lane
- * builds and tests before the package publishes them, and the Quran & Prayer tab shows a
- * clear "not available yet" state until it does.
+ * The mount points for the Quran and prayer modules of `@qc/content`. The screens use these and
+ * never import the package, so tests can stand in for it and the app still runs (with the Quran
+ * tab saying it is not available) if the package is left out.
  */
 export interface ContentModules {
-  /** The whole Quran & Prayer tab: reader entry points, bookmarks, prayer times. */
-  QuranPrayerScreen?: ComponentType;
+  /** Wraps the app so the modules below can find their services. */
+  Provider?: ComponentType<{ signedIn: boolean; hijriOffsetDays: number; children: ReactNode }>;
+  /** The whole Quran & Prayer tab: the reader, bookmarks and prayer times. */
+  QuranPrayerScreen?: ComponentType<{ reader?: ReaderRequest }>;
   /** Small Home card: the next prayer with a countdown. */
-  NextPrayerCard?: ComponentType;
+  NextPrayerCard?: ComponentType<{ onPress?: () => void }>;
   /** Small Home card: continue reading where the person stopped. */
-  ContinueReadingCard?: ComponentType;
-}
-
-export const CONTENT_EXPORT_NAMES = [
-  'QuranPrayerScreen',
-  'NextPrayerCard',
-  'ContinueReadingCard',
-] as const satisfies readonly (keyof ContentModules)[];
-
-function isComponent(value: unknown): value is ComponentType {
-  return typeof value === 'function' || (typeof value === 'object' && value !== null && '$$typeof' in value);
-}
-
-/** Picks the known component exports from the `@qc/content` module namespace. */
-export function pickContentModules(namespace: Record<string, unknown>): ContentModules {
-  const modules: ContentModules = {};
-  for (const name of CONTENT_EXPORT_NAMES) {
-    const value = namespace[name];
-    if (isComponent(value)) modules[name] = value;
-  }
-  return modules;
+  ContinueReadingCard?: ComponentType<{ onOpen: (place: QuranPlace) => void }>;
 }

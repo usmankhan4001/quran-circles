@@ -36,9 +36,7 @@ export function ListOnlyMapView({
         >
           <View style={styles.row}>
             <View style={styles.text}>
-              <Text variant="label">
-                {marker.title}
-              </Text>
+              <Text variant="label">{marker.title}</Text>
               {marker.subtitle ? (
                 <Text variant="caption" color="textSecondary">
                   {marker.subtitle}

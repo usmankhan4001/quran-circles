@@ -81,7 +81,8 @@ export class QueryCache {
   /** Marks entries whose key starts with `prefix` as out of date, so mounted queries reload. */
   invalidate(prefix = ''): void {
     for (const [key, entry] of this.memory) {
-      if (key.startsWith(prefix)) this.memory.set(key, { ...entry, updatedAt: 0 });
+      if (key.startsWith(prefix))
+        this.memory.set(key, { ...entry, updatedAt: Number.MIN_SAFE_INTEGER });
     }
     this.invalidations.update((n) => n + 1);
     this.version.update((n) => n + 1);

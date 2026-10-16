@@ -17,7 +17,7 @@ export function ReminderToggle({
   const { enabled, supported, toggle } = useReminderToggle(sessionId);
   return (
     <Switch
-      label={t('reminders.toggle.label')}
+      label={t('journey.reminder.label')}
       description={supported ? t('reminders.toggle.description') : t('reminders.unsupported')}
       value={enabled}
       disabled={!supported}

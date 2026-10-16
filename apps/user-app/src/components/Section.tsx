@@ -4,7 +4,12 @@ import { Text, spacing } from '@qc/ui';
 
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   title: { flex: 1 },
 });
 

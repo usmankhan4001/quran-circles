@@ -5,7 +5,12 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthState } from '../providers/hooks';
 
 const styles = StyleSheet.create({
-  button: { minWidth: minTouchTarget, minHeight: minTouchTarget, alignItems: 'center', justifyContent: 'center' },
+  button: {
+    minWidth: minTouchTarget,
+    minHeight: minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 /**

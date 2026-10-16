@@ -67,9 +67,11 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                     {t('session.duration', { count: s.durationMinutes })}
                   </Text>
                   <Text variant="body" color="textSecondary">
-                    {[t(`sections.${s.section}`), t(`languages.${s.language}`), t(`programs.${s.program}`)].join(
-                      t('schedule.separator'),
-                    )}
+                    {[
+                      t(`sections.${s.section}`),
+                      t(`profile.language.${s.language}`),
+                      t(`programs.${s.program}`),
+                    ].join(t('schedule.separator'))}
                   </Text>
                   {s.status === 'cancelled' ? (
                     <Text variant="body" color="textDanger" strong>
@@ -106,7 +108,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                     <Button
                       variant="secondary"
                       fullWidth
-                      label={t('session.onlineLink')}
+                      label={t('session.online')}
                       onPress={() => void openUrl(onlineUrl)}
                     />
                   ) : null}
@@ -120,7 +122,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                     : s.registration.capacity !== null && s.registration.seatsTaken !== null
                       ? s.registration.full
                         ? t('session.registration.fullWaitlist')
-                        : t('session.registration.seats', {
+                        : t('session.seatsLeft', {
                             count: Math.max(0, s.registration.capacity - s.registration.seatsTaken),
                           })
                       : t('session.registration.open')}
@@ -160,7 +162,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
               </Section>
 
               {venue.data ? (
-                <Section title={t('venue.facilities')}>
+                <Section title={t('venue.facilities.title')}>
                   <FacilitiesChecklist facilities={venue.data.facilities} />
                 </Section>
               ) : null}
@@ -170,7 +172,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                   <Button
                     variant="secondary"
                     fullWidth
-                    label={t('venue.contact')}
+                    label={t('venue.call')}
                     onPress={() => void openUrl(venuePhoneUrl(venue.data!.contactPhone!))}
                     testID="session-contact"
                   />
@@ -179,7 +181,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                   <Button
                     variant="secondary"
                     fullWidth
-                    label={t('venue.location')}
+                    label={t('venue.directions')}
                     onPress={() => void openUrl(venueMapUrl(venue.data!))}
                     testID="session-location"
                   />
@@ -208,7 +210,15 @@ function RegisterFooter({
   const state = registerState(session, mine);
   switch (state.kind) {
     case 'cancelled':
-      return <Button label={t('session.cancelled')} size="large" fullWidth disabled testID="register-button" />;
+      return (
+        <Button
+          label={t('session.cancelled')}
+          size="large"
+          fullWidth
+          disabled
+          testID="register-button"
+        />
+      );
     case 'notNeeded':
       return (
         <Text variant="body" color="textSecondary" align="center" testID="register-not-needed">
@@ -232,11 +242,23 @@ function RegisterFooter({
       );
     case 'waitlist':
       return (
-        <Button label={t('session.joinWaitlist')} size="large" fullWidth onPress={onRegister} testID="register-button" />
+        <Button
+          label={t('session.waitlist')}
+          size="large"
+          fullWidth
+          onPress={onRegister}
+          testID="register-button"
+        />
       );
     case 'open':
       return (
-        <Button label={t('session.register')} size="large" fullWidth onPress={onRegister} testID="register-button" />
+        <Button
+          label={t('session.register')}
+          size="large"
+          fullWidth
+          onPress={onRegister}
+          testID="register-button"
+        />
       );
   }
 }
