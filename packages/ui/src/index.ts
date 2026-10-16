@@ -46,3 +46,5 @@ export { Avatar, initialsOf } from './components/Avatar';
 export type { AvatarProps, AvatarSize } from './components/Avatar';
 export { Header } from './components/Header';
 export type { HeaderProps } from './components/Header';
+export { Checkbox } from './components/Checkbox';
+export type { CheckboxProps } from './components/Checkbox';

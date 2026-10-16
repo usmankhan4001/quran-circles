@@ -19,6 +19,8 @@ export interface TouchableProps {
   selected?: boolean;
   checked?: boolean;
   expanded?: boolean;
+  /** The control opens a dialog. Used by the web target only. */
+  opensDialog?: boolean;
   /** Style, or a function of the pressed and focused state. */
   style?: StyleProp<ViewStyle> | ((state: TouchableState) => StyleProp<ViewStyle>);
   children: ReactNode | ((state: TouchableState) => ReactNode);
@@ -44,6 +46,7 @@ export function Touchable({
   selected,
   checked,
   expanded,
+  opensDialog,
   style,
   children,
   testID,
@@ -53,8 +56,10 @@ export function Touchable({
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
   const inactive = Boolean(disabled || busy);
+  const web = opensDialog ? { 'aria-haspopup': 'dialog' } : undefined;
   return (
     <Pressable
+      {...web}
       testID={testID}
       role={role}
       aria-label={accessibilityLabel}

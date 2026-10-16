@@ -1,0 +1,3 @@
+# Real exports, mappings and reports live here on the owner's machine. Never commit them.
+out/
+*.local.*

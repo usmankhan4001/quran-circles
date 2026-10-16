@@ -1,8 +1,9 @@
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
 import {
   Avatar,
+  Checkbox,
   EmptyState,
   ErrorState,
   Header,
@@ -50,7 +51,7 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
     expect(px(getComputedStyle(input).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
   });
 
-  it('Select opens a sheet of radio options and reports the choice', () => {
+  it('Select opens a sheet of radio options and reports the choice', async () => {
     const onChange = vi.fn();
     renderThemed(
       <Select
@@ -64,7 +65,7 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
       />,
       combo,
     );
-    const trigger = screen.getByRole('combobox', { name: 'Section, Women' });
+    const trigger = screen.getByRole('button', { name: 'Section, Women' });
     expect(trigger.getAttribute('aria-expanded')).toBe('false');
     fireEvent.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'Section' });
@@ -74,7 +75,7 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
     expect(radios[1]?.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(radios[1] as HTMLElement);
     expect(onChange).toHaveBeenCalledWith('men');
-    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
   it('Switch reports its state in words and toggles', () => {
@@ -86,6 +87,17 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
     expect(px(getComputedStyle(sw).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
     fireEvent.click(sw);
     expect(onValueChange).toHaveBeenCalledWith(false);
+  });
+
+  it('Checkbox is a labelled checkbox with a 48 dp row and a tick when checked', () => {
+    const onChange = vi.fn();
+    renderThemed(<Checkbox label="Parking" checked onChange={onChange} />, combo);
+    const box = screen.getByRole('checkbox', { name: 'Parking' });
+    expect(box.getAttribute('aria-checked')).toBe('true');
+    expect(screen.getByTestId('icon-check')).toBeTruthy();
+    expect(px(getComputedStyle(box).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
+    fireEvent.click(box);
+    expect(onChange).toHaveBeenCalledWith(false);
   });
 
   it('SegmentedControl is a radio group with one checked segment', () => {
@@ -130,7 +142,6 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
     expect(screen.getByRole('progressbar', { name: ui(combo.locale, 'ui.loading') })).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('Saved');
     expect(screen.getByRole('img', { name: 'Amina Khan' })).toBeTruthy();
-    expect(screen.getByRole('banner')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Nearby', level: 1 })).toBeTruthy();
     expect(screen.getByRole('button', { name: ui(combo.locale, 'ui.back') })).toBeTruthy();
   });
@@ -200,22 +211,22 @@ describe('Select', () => {
 
   it('shows the placeholder, then the kit default, when nothing is chosen', () => {
     const { unmount } = renderThemed(<Select label="Area" options={options} value={undefined} onChange={() => undefined} placeholder="Pick an area" />);
-    expect(screen.getByRole('combobox', { name: 'Area, Pick an area' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Area, Pick an area' })).toBeTruthy();
     unmount();
     renderThemed(<Select label="Area" options={options} value={undefined} onChange={() => undefined} />);
-    expect(screen.getByRole('combobox', { name: 'Area, Choose one' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Area, Choose one' })).toBeTruthy();
   });
 
   it('does not open while disabled', () => {
     renderThemed(<Select label="Area" options={options} value="a" onChange={() => undefined} disabled />);
-    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('button'));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('does not choose a disabled option', () => {
     const onChange = vi.fn();
     renderThemed(<Select label="Area" options={options} value="a" onChange={onChange} />);
-    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('button'));
     fireEvent.click(screen.getByRole('radio', { name: 'Bravo' }));
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -225,12 +236,12 @@ describe('Select', () => {
     expect(screen.getByRole('alert').textContent).toBe('Choose your area');
   });
 
-  it('closes without choosing from the close button', () => {
+  it('closes without choosing from the close button', async () => {
     const onChange = vi.fn();
     renderThemed(<Select label="Area" options={options} value="a" onChange={onChange} />);
-    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('button'));
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(onChange).not.toHaveBeenCalled();
   });
 });
@@ -260,6 +271,26 @@ describe('Switch', () => {
     fireEvent.click(screen.getByRole('switch'));
     expect(onValueChange).not.toHaveBeenCalled();
     expect(screen.getByRole('switch').getAttribute('aria-disabled')).toBe('true');
+  });
+});
+
+describe('Checkbox', () => {
+  it('shows no tick when unchecked and checks on press', () => {
+    const onChange = vi.fn();
+    renderThemed(<Checkbox label="Wudu area" description="Near the entrance" checked={false} onChange={onChange} />);
+    const box = screen.getByRole('checkbox', { name: 'Wudu area. Near the entrance' });
+    expect(box.getAttribute('aria-checked')).toBe('false');
+    expect(screen.queryByTestId('icon-check')).toBeNull();
+    fireEvent.click(box);
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('ignores presses while disabled', () => {
+    const onChange = vi.fn();
+    renderThemed(<Checkbox label="Parking" checked={false} disabled onChange={onChange} />);
+    fireEvent.click(screen.getByRole('checkbox'));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByRole('checkbox').getAttribute('aria-disabled')).toBe('true');
   });
 });
 
@@ -418,15 +449,29 @@ describe('Avatar', () => {
     expect(initialsOf('')).toBe('');
   });
 
-  it('shows the initials when there is no picture and falls back when it fails', () => {
-    const { unmount } = renderThemed(<Avatar name="Amina Khan" />);
+  it('shows the initials when there is no picture', () => {
+    renderThemed(<Avatar name="Amina Khan" />);
     expect(screen.getByText('AK')).toBeTruthy();
-    unmount();
-    renderThemed(<Avatar name="Amina Khan" imageUri="https://example.invalid/a.png" />);
-    const img = document.querySelector('img');
-    expect(img).toBeTruthy();
-    fireEvent.error(img as HTMLImageElement);
-    expect(screen.getByText('AK')).toBeTruthy();
+  });
+
+  it('falls back to the initials when the picture fails to load', async () => {
+    class FailingImage {
+      onerror: (() => void) | null = null;
+      onload: (() => void) | null = null;
+      set src(_value: string) {
+        setTimeout(() => this.onerror?.(), 0);
+      }
+      decode() {
+        return Promise.reject(new Error('decode failed'));
+      }
+    }
+    vi.stubGlobal('Image', FailingImage);
+    try {
+      renderThemed(<Avatar name="Amina Khan" imageUri="https://example.invalid/a.png" />);
+      await waitFor(() => expect(screen.getByText('AK')).toBeTruthy());
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('is the same tint for the same name and sized by the size prop', () => {

@@ -3,8 +3,32 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./bookmarks": "./src/bookmarks.ts",
+    "./phone": "./src/phone.ts"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "export": "tsx src/bin.ts export",
+    "propose-mapping": "tsx src/bin.ts propose-mapping",
+    "migrate:dry-run": "tsx src/bin.ts migrate",
+    "migrate:apply": "tsx src/bin.ts migrate --apply",
+    "snapshot": "tsx src/bin.ts snapshot",
+    "verify": "tsx src/bin.ts verify"
+  },
+  "dependencies": {
+    "@qc/contracts": "workspace:*",
+    "@qc/db": "workspace:*",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15"
   }
 }

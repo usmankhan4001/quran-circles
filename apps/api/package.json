@@ -10,9 +10,17 @@
   "dependencies": {
     "@hono/node-server": "^2.1.5",
     "@qc/contracts": "workspace:*",
-    "hono": "^4.13.13"
+    "@qc/db": "workspace:*",
+    "@qc/i18n": "workspace:*",
+    "drizzle-orm": "0.45.4",
+    "hono": "^4.13.13",
+    "jose": "6.2.12",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
+    "@types/pg": "8.23.1",
     "tsx": "^4.23.15"
   }
 }

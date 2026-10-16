@@ -88,7 +88,7 @@ export function Button({
       ]}
     >
       {loading ? (
-        <View style={styles.gap}>
+        <View style={styles.gap} aria-hidden>
           <ActivityIndicator color={fg} />
         </View>
       ) : icon ? (

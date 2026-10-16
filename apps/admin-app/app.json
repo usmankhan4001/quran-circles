@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Quran Circles Admin",
+    "slug": "quran-circles-admin",
+    "scheme": "qcadmin",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "plugins": ["expo-router", "expo-secure-store"],
+    "web": { "bundler": "metro", "output": "single" }
+  }
+}

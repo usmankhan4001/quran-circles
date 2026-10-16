@@ -1,4 +1,4 @@
-import { ActivityIndicator, StyleSheet, type GestureResponderEvent } from 'react-native';
+import { ActivityIndicator, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useTheme } from '../theme';
 import { minTouchTarget, radii } from '../tokens';
 import { Icon, type IconName } from './Icon';
@@ -62,7 +62,13 @@ export function IconButton({
         },
       ]}
     >
-      {loading ? <ActivityIndicator color={fg} /> : <Icon name={icon} color={fg} />}
+      {loading ? (
+        <View aria-hidden>
+          <ActivityIndicator color={fg} />
+        </View>
+      ) : (
+        <Icon name={icon} color={fg} />
+      )}
     </Touchable>
   );
 }

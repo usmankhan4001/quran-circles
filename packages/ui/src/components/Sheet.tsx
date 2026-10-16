@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
 import { elevation, radii, spacing } from '../tokens';
 import { IconButton } from './IconButton';
@@ -36,22 +36,68 @@ const styles = StyleSheet.create({
 });
 
 /**
+ * The visible panel of a sheet, without the modal around it. `Sheet` uses it; the catalog uses
+ * it to show a sheet that is open.
+ */
+export function SheetPanel({
+  title,
+  children,
+  onClose,
+  closeLabel,
+  testID,
+  inModal,
+}: Omit<SheetProps, 'visible'> & { inModal?: boolean }) {
+  const theme = useTheme();
+  const c = theme.colors;
+  return (
+    <View
+      testID={testID}
+      // On the web the Modal itself is the named dialog, so the panel must not be a second one.
+      role={inModal && Platform.OS === 'web' ? undefined : 'dialog'}
+      aria-modal={inModal && Platform.OS === 'web' ? undefined : true}
+      aria-label={inModal && Platform.OS === 'web' ? undefined : title}
+      style={[
+        styles.sheet,
+        { backgroundColor: c.surfaceRaised, boxShadow: elevation.high },
+        theme.mode === 'highContrast' ? { borderTopWidth: 2, borderColor: c.borderStrong } : undefined,
+      ]}
+    >
+      <View style={[styles.handle, { backgroundColor: c.borderStrong }]} aria-hidden />
+      <View style={styles.header}>
+        <View style={styles.title}>
+          <Text variant="title3" heading={2}>
+            {title}
+          </Text>
+        </View>
+        <IconButton icon="close" accessibilityLabel={closeLabel ?? theme.t('ui.close')} onPress={onClose} />
+      </View>
+      <ScrollView contentContainerStyle={styles.body}>{children}</ScrollView>
+    </View>
+  );
+}
+
+/**
  * A bottom sheet. On web it is a dialog with a dimmed backdrop. Pressing the backdrop, the
  * close button or the system back action closes it.
  */
 export function Sheet({ visible, onClose, title, children, closeLabel, testID }: SheetProps) {
   const theme = useTheme();
-  const c = theme.colors;
   // Modal content is a separate tree on native, so the direction is set again inside it.
   const webDir = { dir: theme.direction };
+  // Props the native typings do not list; the web target passes them to the dialog element.
+  const webDialog = { 'aria-label': title };
   return (
     <Modal
+      {...webDialog}
       visible={visible}
       transparent
       animationType={theme.reduceMotion ? 'none' : 'slide'}
       onRequestClose={onClose}
     >
-      <View {...webDir} style={[styles.fill, { direction: theme.direction, backgroundColor: c.scrim }]}>
+      <View
+        {...webDir}
+        style={[styles.fill, { direction: theme.direction, backgroundColor: theme.colors.scrim }]}
+      >
         <Pressable
           testID={testID ? `${testID}-backdrop` : 'sheet-backdrop'}
           aria-hidden
@@ -59,28 +105,9 @@ export function Sheet({ visible, onClose, title, children, closeLabel, testID }:
           onPress={onClose}
           style={StyleSheet.absoluteFill}
         />
-        <View
-          testID={testID}
-          role="dialog"
-          aria-modal
-          aria-label={title}
-          style={[
-            styles.sheet,
-            { backgroundColor: c.surfaceRaised, boxShadow: elevation.high },
-            theme.mode === 'highContrast' ? { borderTopWidth: 2, borderColor: c.borderStrong } : undefined,
-          ]}
-        >
-          <View style={[styles.handle, { backgroundColor: c.borderStrong }]} aria-hidden />
-          <View style={styles.header}>
-            <View style={styles.title}>
-              <Text variant="title3" heading={2}>
-                {title}
-              </Text>
-            </View>
-            <IconButton icon="close" accessibilityLabel={closeLabel ?? theme.t('ui.close')} onPress={onClose} />
-          </View>
-          <ScrollView contentContainerStyle={styles.body}>{children}</ScrollView>
-        </View>
+        <SheetPanel title={title} onClose={onClose} closeLabel={closeLabel} testID={testID} inModal>
+          {children}
+        </SheetPanel>
       </View>
     </Modal>
   );

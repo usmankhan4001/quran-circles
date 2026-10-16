@@ -84,7 +84,6 @@ export function ListItem({
     return (
       <View
         testID={testID}
-        role="listitem"
         aria-label={accessibilityLabel}
         style={[styles.row, border, selected ? { backgroundColor: c.accentSubtle } : undefined]}
       >

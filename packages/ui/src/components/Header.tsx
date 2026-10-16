@@ -38,7 +38,6 @@ export function Header({ title, subtitle, onBack, backLabel, actions, variant = 
   return (
     <View
       testID={testID}
-      role="banner"
       style={[styles.bar, { backgroundColor: c.surface, borderBottomColor: c.border }]}
     >
       {onBack ? (

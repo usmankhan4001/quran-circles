@@ -258,9 +258,10 @@ describe('Card', () => {
 });
 
 describe('ListItem', () => {
-  it('is a static list item without onPress and has no chevron', () => {
+  it('is a static row without onPress and has no chevron', () => {
     renderThemed(<ListItem title="Static" />);
-    expect(screen.getByRole('listitem')).toBeTruthy();
+    expect(screen.getByText('Static')).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
     expect(screen.queryByTestId('icon-chevron-forward')).toBeNull();
   });
 

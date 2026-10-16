@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   text: { flex: 1, marginEnd: spacing.lg },
-  right: { alignItems: 'center' },
+  stateColumn: { alignItems: 'center' },
   track: {
     width: TRACK_W,
     height: TRACK_H,
@@ -69,7 +69,7 @@ export function Switch({ label, description, value, onValueChange, disabled, tes
           </Text>
         ) : null}
       </View>
-      <View style={styles.right} aria-hidden>
+      <View style={styles.stateColumn} aria-hidden>
         <View
           testID={testID ? `${testID}-track` : undefined}
           style={[

@@ -75,8 +75,9 @@ export function Select<T extends string>({
       </View>
       <Touchable
         testID={testID}
-        role="combobox"
+        role="button"
         expanded={open}
+        opensDialog
         disabled={disabled}
         accessibilityLabel={`${label}, ${shown}`}
         onPress={() => setOpen(true)}
