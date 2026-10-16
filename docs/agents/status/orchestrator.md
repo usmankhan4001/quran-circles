@@ -2,15 +2,15 @@
 
 ## Gate sign-offs
 
-| Gate | Wave                      | Signed off by | Date | Notes                                                                                                                                       |
-| ---- | ------------------------- | ------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Wave 0, scaffold          | pending       |      | Scaffold, CI and briefs are written. VPS and Meta need you                                                                                  |
-| 1    | Wave 1, contracts         | pending       |      | Built and pushed. Waiting on the human review of `packages/contracts/SCOPES.md`                                                             |
-| 2    | Wave 2, parallel build    | pending       |      | All lanes built and pushed, `pnpm check` passes. Open: UI catalog review (paused for the UI redesign), backups and restore on staging, seed |
-| 3    | Wave 3, integration       |               |      |                                                                                                                                             |
-| 4    | Wave 4, features          |               |      |                                                                                                                                             |
-| 5    | Wave 5, hardening         |               |      |                                                                                                                                             |
-| 6    | Wave 6, pilot and release |               |      |                                                                                                                                             |
+| Gate | Wave                      | Signed off by | Date       | Notes                                                                                                                                       |
+| ---- | ------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Wave 0, scaffold          | pending       |            | Scaffold, CI and briefs are written. VPS and Meta need you                                                                                  |
+| 1    | Wave 1, contracts         | Muhammad      | 2026-10-16 | Scope matrix reviewed and approved; contracts, db, mock server and message formats built                                                    |
+| 2    | Wave 2, parallel build    | pending       |            | All lanes built and pushed, `pnpm check` passes. Open: UI catalog review (paused for the UI redesign), backups and restore on staging, seed |
+| 3    | Wave 3, integration       |               |            |                                                                                                                                             |
+| 4    | Wave 4, features          |               |            |                                                                                                                                             |
+| 5    | Wave 5, hardening         |               |            |                                                                                                                                             |
+| 6    | Wave 6, pilot and release |               |            |                                                                                                                                             |
 
 ## Lanes
 
@@ -41,7 +41,6 @@ None. All work is on branch `claude/peaceful-archimedes-ain95k`.
 - Name the native Urdu reviewer, the pilot city and the first coordinators.
 - Decide how the work splits between the owner and the full developer.
 - Choose a reference low-end Android phone.
-- Review `packages/contracts/SCOPES.md` (Gate 1).
 - UI catalog review (Gate 2) is pending the UI and screens redesign the user has started.
 - Decide the open change requests (auth session grace, users display name, OTP locale, outbox venue/provider id, bulk import, export scope, handover lookup, contract gaps in api-core).
 - Meta template approval, native Urdu review, Google Maps key, VAPID keys, store accounts.

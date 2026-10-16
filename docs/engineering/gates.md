@@ -14,7 +14,7 @@ A wave counts as done only when every line of its gate is true and a human signs
 
 - [ ] The schema migrates up and back cleanly.
 - [ ] The API contract covers every P0 endpoint.
-- [ ] A human has reviewed the role-and-scope matrix.
+- [x] A human has reviewed the role-and-scope matrix.
 - [ ] The mock server serves every endpoint.
 - [ ] Error codes and message formats are agreed.
 
