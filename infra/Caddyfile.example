@@ -1,0 +1,16 @@
+# Template for the production reverse proxy. The platform lane (WP10) turns this into the real
+# Caddyfile. Caddy fetches and renews TLS certificates automatically for the domain below.
+{$DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		# The PWA and the admin console are static builds served from here.
+		root * /srv/www
+		try_files {path} /index.html
+		file_server
+	}
+}
