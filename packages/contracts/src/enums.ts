@@ -5,7 +5,6 @@ import { z } from 'zod';
  * Add a value here and every layer sees it. Changing one is a contract change.
  */
 
-
 export const LOCALES = ['en', 'ur'] as const;
 export const Locale = z.enum(LOCALES);
 export type Locale = z.infer<typeof Locale>;
@@ -42,7 +41,13 @@ export const VENUE_STATUSES = ['active', 'archived'] as const;
 export const VenueStatus = z.enum(VENUE_STATUSES);
 export type VenueStatus = z.infer<typeof VenueStatus>;
 
-export const CIRCLE_STATUSES = ['draft', 'pending_approval', 'published', 'rejected', 'archived'] as const;
+export const CIRCLE_STATUSES = [
+  'draft',
+  'pending_approval',
+  'published',
+  'rejected',
+  'archived',
+] as const;
 export const CircleStatus = z.enum(CIRCLE_STATUSES);
 export type CircleStatus = z.infer<typeof CircleStatus>;
 
@@ -50,7 +55,15 @@ export const REGISTRATION_STATUSES = ['confirmed', 'waitlisted', 'cancelled'] as
 export const RegistrationStatus = z.enum(REGISTRATION_STATUSES);
 export type RegistrationStatus = z.infer<typeof RegistrationStatus>;
 
-export const AGE_BANDS = ['under_18', '18_24', '25_34', '35_44', '45_54', '55_64', '65_plus'] as const;
+export const AGE_BANDS = [
+  'under_18',
+  '18_24',
+  '25_34',
+  '35_44',
+  '45_54',
+  '55_64',
+  '65_plus',
+] as const;
 export const AgeBand = z.enum(AGE_BANDS);
 export type AgeBand = z.infer<typeof AgeBand>;
 
@@ -79,7 +92,12 @@ export const DEVICE_PLATFORMS = ['ios', 'android', 'web'] as const;
 export const DevicePlatform = z.enum(DEVICE_PLATFORMS);
 export type DevicePlatform = z.infer<typeof DevicePlatform>;
 
-export const UPDATE_KINDS = ['announcement', 'time_change', 'cancellation', 'special_lecture'] as const;
+export const UPDATE_KINDS = [
+  'announcement',
+  'time_change',
+  'cancellation',
+  'special_lecture',
+] as const;
 export const UpdateKind = z.enum(UPDATE_KINDS);
 export type UpdateKind = z.infer<typeof UpdateKind>;
 
@@ -89,11 +107,24 @@ export const MESSAGE_CHANNELS = ['push', 'whatsapp', 'sms'] as const;
 export const MessageChannel = z.enum(MESSAGE_CHANNELS);
 export type MessageChannel = z.infer<typeof MessageChannel>;
 
-export const OUTBOX_STATUSES = ['queued', 'sending', 'sent', 'delivered', 'failed', 'dead'] as const;
+export const OUTBOX_STATUSES = [
+  'queued',
+  'sending',
+  'sent',
+  'delivered',
+  'failed',
+  'dead',
+] as const;
 export const OutboxStatus = z.enum(OUTBOX_STATUSES);
 export type OutboxStatus = z.infer<typeof OutboxStatus>;
 
-export const COST_CATEGORIES = ['free', 'authentication', 'utility', 'marketing', 'service'] as const;
+export const COST_CATEGORIES = [
+  'free',
+  'authentication',
+  'utility',
+  'marketing',
+  'service',
+] as const;
 export const CostCategory = z.enum(COST_CATEGORIES);
 export type CostCategory = z.infer<typeof CostCategory>;
 
@@ -140,4 +171,3 @@ export type AccountStatus = z.infer<typeof AccountStatus>;
 export const SEASON_MODES = ['dora', 'circles'] as const;
 export const SeasonMode = z.enum(SEASON_MODES);
 export type SeasonMode = z.infer<typeof SeasonMode>;
-

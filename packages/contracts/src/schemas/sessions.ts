@@ -54,18 +54,20 @@ export const CircleInfo = z.object({
 export type CircleInfo = z.infer<typeof CircleInfo>;
 
 /** An occurrence is one dated instance of a session. The public view leaves out headcount. */
-export const Occurrence = z.object({
-  id: Uuid,
-  sessionId: Uuid,
-  startsAt: InstantUtc,
-  endsAt: InstantUtc,
-  status: OccurrenceStatus,
-  portion: Portion.nullable(),
-  /** Free-text portion label shown when the portion is not a Para or Surah. */
-  portionLabel: z.string().nullable(),
-  recapNote: z.string().nullable(),
-  recapLocale: Locale.nullable(),
-});
+export const Occurrence = z
+  .object({
+    id: Uuid,
+    sessionId: Uuid,
+    startsAt: InstantUtc,
+    endsAt: InstantUtc,
+    status: OccurrenceStatus,
+    portion: Portion.nullable(),
+    /** Free-text portion label shown when the portion is not a Para or Surah. */
+    portionLabel: z.string().nullable(),
+    recapNote: z.string().nullable(),
+    recapLocale: Locale.nullable(),
+  })
+  .meta({ id: 'Occurrence' });
 export type Occurrence = z.infer<typeof Occurrence>;
 
 export const AdminOccurrence = Occurrence.extend({
@@ -73,32 +75,34 @@ export const AdminOccurrence = Occurrence.extend({
 });
 export type AdminOccurrence = z.infer<typeof AdminOccurrence>;
 
-export const Session = z.object({
-  id: Uuid,
-  program: Program,
-  seasonId: Uuid.nullable(),
-  venueId: Uuid,
-  cityId: Uuid,
-  areaId: Uuid,
-  venue: VenueSummary,
-  circle: CircleInfo.nullable(),
-  kind: SessionKind,
-  title: Localized,
-  description: Localized.nullable(),
-  section: Section,
-  language: Locale,
-  /** Local wall-clock time in `timezone` (Pakistan time by default). */
-  localStartTime: LocalTime,
-  durationMinutes: z.number().int().min(5).max(600),
-  /** 0 is Sunday. Empty for a one-off lecture. */
-  daysOfWeek: z.array(DayOfWeek),
-  startsOn: LocalDate,
-  endsOn: LocalDate.nullable(),
-  timezone: z.string(),
-  registration: SessionRegistrationInfo,
-  status: SessionStatus,
-  nextOccurrence: Occurrence.nullable(),
-});
+export const Session = z
+  .object({
+    id: Uuid,
+    program: Program,
+    seasonId: Uuid.nullable(),
+    venueId: Uuid,
+    cityId: Uuid,
+    areaId: Uuid,
+    venue: VenueSummary,
+    circle: CircleInfo.nullable(),
+    kind: SessionKind,
+    title: Localized,
+    description: Localized.nullable(),
+    section: Section,
+    language: Locale,
+    /** Local wall-clock time in `timezone` (Pakistan time by default). */
+    localStartTime: LocalTime,
+    durationMinutes: z.number().int().min(5).max(600),
+    /** 0 is Sunday. Empty for a one-off lecture. */
+    daysOfWeek: z.array(DayOfWeek),
+    startsOn: LocalDate,
+    endsOn: LocalDate.nullable(),
+    timezone: z.string(),
+    registration: SessionRegistrationInfo,
+    status: SessionStatus,
+    nextOccurrence: Occurrence.nullable(),
+  })
+  .meta({ id: 'Session' });
 export type Session = z.infer<typeof Session>;
 
 export const AdminSession = Session.extend({

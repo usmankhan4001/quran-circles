@@ -42,8 +42,14 @@ const roleTargetShapes = {
 /** Invite a person who may not have an account yet. Coordinators sign in with a phone code. */
 export const InviteBody = z.discriminatedUnion('role', [
   roleTargetShapes.national_admin.extend({ phone: PhoneE164, displayName: PersonName.optional() }),
-  roleTargetShapes.city_coordinator.extend({ phone: PhoneE164, displayName: PersonName.optional() }),
-  roleTargetShapes.venue_coordinator.extend({ phone: PhoneE164, displayName: PersonName.optional() }),
+  roleTargetShapes.city_coordinator.extend({
+    phone: PhoneE164,
+    displayName: PersonName.optional(),
+  }),
+  roleTargetShapes.venue_coordinator.extend({
+    phone: PhoneE164,
+    displayName: PersonName.optional(),
+  }),
 ]);
 export type InviteBody = z.infer<typeof InviteBody>;
 
@@ -68,7 +74,10 @@ export type Invite = z.infer<typeof Invite>;
 export const AssignRoleBody = z.discriminatedUnion('role', [
   roleTargetShapes.national_admin.extend({ userId: Uuid }),
   roleTargetShapes.city_coordinator.extend({ userId: Uuid, replacesAssignmentId: Uuid.optional() }),
-  roleTargetShapes.venue_coordinator.extend({ userId: Uuid, replacesAssignmentId: Uuid.optional() }),
+  roleTargetShapes.venue_coordinator.extend({
+    userId: Uuid,
+    replacesAssignmentId: Uuid.optional(),
+  }),
 ]);
 export type AssignRoleBody = z.infer<typeof AssignRoleBody>;
 

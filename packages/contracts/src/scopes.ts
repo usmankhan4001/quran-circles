@@ -66,7 +66,11 @@ export const ACTIONS = {
   'updates.read_feed': self('Read the Updates feed and mark items read'),
 
   // Registrations and attendance
-  'registration.list': staff('See registrants of a session, with their numbers', 'venue', ALL_STAFF),
+  'registration.list': staff(
+    'See registrants of a session, with their numbers',
+    'venue',
+    ALL_STAFF,
+  ),
   'registration.export': staff('Export the registrants of a session', 'venue', ALL_STAFF),
   'attendance.read': staff('Read attendance of an occurrence', 'venue', ALL_STAFF),
   'attendance.mark': staff('Mark attendance of an occurrence', 'venue', ALL_STAFF),
@@ -77,14 +81,22 @@ export const ACTIONS = {
   'venue.update': staff('Edit a venue, its contact number and facilities', 'venue', ALL_STAFF),
   'venue.archive': staff('Archive a venue', 'city', CITY_UP),
   'circle.list_admin': staff('List circles in scope, including pending ones', 'any', ALL_STAFF),
-  'circle.create': staff('Create a circle (venue coordinators create it pending)', 'venue', ALL_STAFF),
+  'circle.create': staff(
+    'Create a circle (venue coordinators create it pending)',
+    'venue',
+    ALL_STAFF,
+  ),
   'circle.update': staff('Edit a circle', 'venue', ALL_STAFF),
   'circle.approve': staff('Approve or reject a pending circle', 'city', CITY_UP),
   'session.list_admin': staff('List sessions in scope, including drafts', 'any', ALL_STAFF),
   'session.create': staff('Create a session at a venue', 'venue', ALL_STAFF),
   'session.update': staff('Edit session details', 'venue', ALL_STAFF),
   'session.change_schedule': staff('Change a session time or day', 'venue', ALL_STAFF),
-  'occurrence.update': staff('Set portion, recap, cancel or move one occurrence', 'venue', ALL_STAFF),
+  'occurrence.update': staff(
+    'Set portion, recap, cancel or move one occurrence',
+    'venue',
+    ALL_STAFF,
+  ),
 
   // Updates and messaging
   'update.post_national': staff('Post an update to everyone', 'national', NATIONAL),
@@ -97,12 +109,20 @@ export const ACTIONS = {
   'role.list': staff('List role assignments and invites in scope', 'any', CITY_UP),
   'role.assign_national_admin': staff('Invite or assign a national admin', 'national', NATIONAL),
   'role.assign_city_coordinator': staff('Invite or assign a city coordinator', 'city', NATIONAL),
-  'role.assign_venue_coordinator': staff('Invite, assign or hand over a venue coordinator', 'venue', CITY_UP),
+  'role.assign_venue_coordinator': staff(
+    'Invite, assign or hand over a venue coordinator',
+    'venue',
+    CITY_UP,
+  ),
 
   // Oversight
   'audit.read': staff('Read the audit log in scope', 'any', CITY_UP),
   'settings.read': staff('Read platform settings', 'national', NATIONAL),
-  'settings.update': staff('Change platform settings such as the Hijri offset', 'national', NATIONAL),
+  'settings.update': staff(
+    'Change platform settings such as the Hijri offset',
+    'national',
+    NATIONAL,
+  ),
 } as const satisfies Record<string, ActionDef>;
 
 export type ScopeAction = keyof typeof ACTIONS;
@@ -144,7 +164,11 @@ const assignmentCovers = (a: ScopedRole, level: ActionLevel, r: ResourceScope): 
  * The single authorisation decision. Handlers call this through the scope engine and never check
  * roles by hand. An action unknown to the matrix is denied.
  */
-export function can(principal: Principal | null, action: ScopeAction, resource: ResourceScope = {}): boolean {
+export function can(
+  principal: Principal | null,
+  action: ScopeAction,
+  resource: ResourceScope = {},
+): boolean {
   const def: ActionDef | undefined = ACTIONS[action];
   if (!def) return false;
   switch (def.level) {
@@ -158,7 +182,9 @@ export function can(principal: Principal | null, action: ScopeAction, resource: 
     default:
       return (
         !!principal &&
-        principal.assignments.some((a) => def.roles.includes(a.role) && assignmentCovers(a, def.level, resource))
+        principal.assignments.some(
+          (a) => def.roles.includes(a.role) && assignmentCovers(a, def.level, resource),
+        )
       );
   }
 }
@@ -193,7 +219,11 @@ export const roleAssignAction = (role: Role): ScopeAction =>
 
 /** Which action guards posting an update to a scope. */
 export const updatePostAction = (scopeType: 'national' | 'city' | 'venue'): ScopeAction =>
-  scopeType === 'national' ? 'update.post_national' : scopeType === 'city' ? 'update.post_city' : 'update.post_venue';
+  scopeType === 'national'
+    ? 'update.post_national'
+    : scopeType === 'city'
+      ? 'update.post_city'
+      : 'update.post_venue';
 
 const cell = (def: ActionDef, actor: Actor): string => {
   if (def.level === 'public') return 'yes';
@@ -208,7 +238,13 @@ const cell = (def: ActionDef, actor: Actor): string => {
 
 /** The matrix as a markdown table. `SCOPES.md` is this output and a test keeps it in sync. */
 export function scopeMatrixMarkdown(): string {
-  const actors: Actor[] = ['public', 'attendee', 'venue_coordinator', 'city_coordinator', 'national_admin'];
+  const actors: Actor[] = [
+    'public',
+    'attendee',
+    'venue_coordinator',
+    'city_coordinator',
+    'national_admin',
+  ];
   const header = ['Action', 'What it does', 'Checked against', ...actors];
   const lines = [
     '# Role and scope matrix',

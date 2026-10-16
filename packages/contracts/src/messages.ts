@@ -62,7 +62,8 @@ export function parseDeepLink(url: string): DeepLink | null {
   let path: string;
   try {
     const u = new URL(url);
-    path = u.protocol === `${APP_SCHEME}:` ? `/${u.host}${u.pathname}`.replace(/\/+$/, '') : u.pathname;
+    path =
+      u.protocol === `${APP_SCHEME}:` ? `/${u.host}${u.pathname}`.replace(/\/+$/, '') : u.pathname;
   } catch {
     return null;
   }
@@ -225,7 +226,11 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
 };
 
 /** Fills `{name}` placeholders. Throws on a missing variable so a bad send never goes out half-filled. */
-export function renderTemplate<K extends TemplateKey>(key: K, locale: Locale, vars: TemplateVariables<K>): string {
+export function renderTemplate<K extends TemplateKey>(
+  key: K,
+  locale: Locale,
+  vars: TemplateVariables<K>,
+): string {
   const parsed = TEMPLATE_VARIABLES[key].parse(vars) as Record<string, string>;
   return TEMPLATES[key].body[locale].replace(/\{(\w+)\}/g, (_m, name: string) => {
     const v = parsed[name];
@@ -244,7 +249,14 @@ export function templatePlaceholders(body: string): string[] {
 // ---------------------------------------------------------------------------------------------
 
 export const PushData = z.object({
-  type: z.enum(['update', 'reminder', 'session_changed', 'session_cancelled', 'waitlist_promoted', 'circle_opened']),
+  type: z.enum([
+    'update',
+    'reminder',
+    'session_changed',
+    'session_cancelled',
+    'waitlist_promoted',
+    'circle_opened',
+  ]),
   /** A deep link built by `buildDeepLink`. */
   deepLink: z.string(),
   updateId: Uuid.optional(),
@@ -259,7 +271,12 @@ export const PushPayload = z.object({
   data: PushData,
   /** Replaces an earlier notification with the same key, for example a reminder for one occurrence. */
   collapseKey: z.string().max(100).optional(),
-  ttlSeconds: z.number().int().min(60).max(7 * 24 * 3600).default(6 * 3600),
+  ttlSeconds: z
+    .number()
+    .int()
+    .min(60)
+    .max(7 * 24 * 3600)
+    .default(6 * 3600),
 });
 export type PushPayload = z.infer<typeof PushPayload>;
 
@@ -280,7 +297,14 @@ export const OutboxPayload = z.union([
 ] as unknown as [z.ZodType, z.ZodType, ...z.ZodType[]]);
 export type OutboxPayload =
   | { channel: 'push'; push: PushPayload }
-  | { [K in TemplateKey]: { channel: 'whatsapp' | 'sms'; template: K; locale: Locale; variables: TemplateVariables<K> } }[TemplateKey];
+  | {
+      [K in TemplateKey]: {
+        channel: 'whatsapp' | 'sms';
+        template: K;
+        locale: Locale;
+        variables: TemplateVariables<K>;
+      };
+    }[TemplateKey];
 
 /**
  * Idempotency keys make retries and reruns safe. The worker inserts with ON CONFLICT DO NOTHING.

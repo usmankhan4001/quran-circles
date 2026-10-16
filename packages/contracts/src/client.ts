@@ -6,11 +6,14 @@ import type { EndpointDef } from './define';
 type Group<K extends string> = K extends `${infer G}.${string}` ? G : never;
 type Op<K extends string, G extends string> = K extends `${G}.${infer O}` ? O : never;
 
-type Req<E> = (E extends { params: z.ZodType } ? { params: z.input<E['params']> } : unknown) &
-  (E extends { query: z.ZodType } ? { query: z.input<E['query']> } : unknown) &
-  (E extends { body: z.ZodType } ? { body: z.input<E['body']> } : unknown);
+type Part<K extends string, S extends z.ZodType> =
+  Record<never, never> extends z.input<S> ? { [P in K]?: z.input<S> } : { [P in K]: z.input<S> };
 
-type OptionalIfEmpty<R> = keyof R extends never ? [req?: Record<never, never>] : [req: R];
+type Req<E> = (E extends { params: infer S extends z.ZodType } ? Part<'params', S> : unknown) &
+  (E extends { query: infer S extends z.ZodType } ? Part<'query', S> : unknown) &
+  (E extends { body: infer S extends z.ZodType } ? Part<'body', S> : unknown);
+
+type OptionalIfEmpty<R> = Record<never, never> extends R ? [req?: R] : [req: R];
 
 type Res<E> = E extends { success: { schema: infer S extends z.ZodType } } ? z.output<S> : void;
 
@@ -71,13 +74,17 @@ export function createApiClient(options: ClientOptions): ApiClient {
 
   for (const def of Object.values(endpoints) as EndpointDef[]) {
     const [group, op] = def.id.split('.') as [string, string];
-    (root[group] ??= {})[op] = async (req: { params?: object; query?: object; body?: unknown } = {}) => {
+    (root[group] ??= {})[op] = async (
+      req: { params?: object; query?: object; body?: unknown } = {},
+    ) => {
       const parsed = {
         params: def.params ? def.params.parse(req.params) : undefined,
         query: def.query ? def.query.parse(req.query ?? {}) : undefined,
         body: def.body ? def.body.parse(req.body) : undefined,
       };
-      const headers: Record<string, string> = { accept: def.success.contentType ?? 'application/json' };
+      const headers: Record<string, string> = {
+        accept: def.success.contentType ?? 'application/json',
+      };
       if (def.body) headers['content-type'] = 'application/json';
       const token = def.auth === 'public' ? null : await options.getAccessToken?.();
       if (token) headers.authorization = `Bearer ${token}`;

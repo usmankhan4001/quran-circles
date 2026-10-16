@@ -52,15 +52,17 @@ export const RoleAssignmentView = z.object({
 export type RoleAssignmentView = z.infer<typeof RoleAssignmentView>;
 
 /** The signed-in person. The phone number is shown to them and to nobody else. */
-export const Me = z.object({
-  id: Uuid,
-  phone: PhoneE164,
-  displayName: z.string().nullable(),
-  locale: Locale,
-  createdAt: InstantUtc,
-  profile: Profile,
-  roles: z.array(RoleAssignmentView),
-});
+export const Me = z
+  .object({
+    id: Uuid,
+    phone: PhoneE164,
+    displayName: z.string().nullable(),
+    locale: Locale,
+    createdAt: InstantUtc,
+    profile: Profile,
+    roles: z.array(RoleAssignmentView),
+  })
+  .meta({ id: 'Me' });
 export type Me = z.infer<typeof Me>;
 
 export const DeleteAccountBody = z.object({ confirm: z.literal(true) });
@@ -81,20 +83,22 @@ export const RegistrationCreate = z.object({
 });
 export type RegistrationCreate = z.infer<typeof RegistrationCreate>;
 
-export const Registration = z.object({
-  id: Uuid,
-  sessionId: Uuid,
-  occurrenceId: Uuid.nullable(),
-  areaId: Uuid,
-  section: Section,
-  partySize: z.number().int().min(1),
-  status: RegistrationStatus,
-  /** 1 is next in line. Null unless waitlisted. */
-  waitlistPosition: z.number().int().positive().nullable(),
-  createdAt: InstantUtc,
-  cancelledAt: InstantUtc.nullable(),
-  session: Session,
-});
+export const Registration = z
+  .object({
+    id: Uuid,
+    sessionId: Uuid,
+    occurrenceId: Uuid.nullable(),
+    areaId: Uuid,
+    section: Section,
+    partySize: z.number().int().min(1),
+    status: RegistrationStatus,
+    /** 1 is next in line. Null unless waitlisted. */
+    waitlistPosition: z.number().int().positive().nullable(),
+    createdAt: InstantUtc,
+    cancelledAt: InstantUtc.nullable(),
+    session: Session,
+  })
+  .meta({ id: 'Registration' });
 export type Registration = z.infer<typeof Registration>;
 
 export const MyRegistrationsQuery = PageQuery.extend({
@@ -123,7 +127,11 @@ export const SessionRegistrationsQuery = PageQuery.extend({
   status: RegistrationStatus.optional(),
 });
 export const SessionRegistrationsResponse = pageOf(StaffRegistration).extend({
-  totals: z.object({ registrations: z.number().int(), people: z.number().int(), waitlisted: z.number().int() }),
+  totals: z.object({
+    registrations: z.number().int(),
+    people: z.number().int(),
+    waitlisted: z.number().int(),
+  }),
 });
 
 // Consents, follows, devices
@@ -158,7 +166,11 @@ export type Follow = z.infer<typeof Follow>;
 
 export const FollowCreate = z.discriminatedUnion('target', [
   z.object({ target: z.literal('venue'), venueId: Uuid, alertsEnabled: z.boolean().default(true) }),
-  z.object({ target: z.literal('circle'), circleId: Uuid, alertsEnabled: z.boolean().default(true) }),
+  z.object({
+    target: z.literal('circle'),
+    circleId: Uuid,
+    alertsEnabled: z.boolean().default(true),
+  }),
 ]);
 export const FollowUpdate = z.object({ alertsEnabled: z.boolean() });
 export const FollowsResponse = z.object({ items: z.array(Follow) });
@@ -204,7 +216,10 @@ export const BookmarkCreate = z.object({
 export const BookmarksResponse = z.object({ items: z.array(Bookmark) });
 /** One-time import of V1 browser bookmarks at first login. */
 export const BookmarkImport = z.object({ items: z.array(BookmarkCreate).max(500) });
-export const BookmarkImportResponse = z.object({ imported: z.number().int().min(0), skipped: z.number().int().min(0) });
+export const BookmarkImportResponse = z.object({
+  imported: z.number().int().min(0),
+  skipped: z.number().int().min(0),
+});
 
 export const ReadingPosition = z.object({
   surah: z.number().int().min(1).max(114),

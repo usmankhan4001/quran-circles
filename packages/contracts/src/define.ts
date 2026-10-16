@@ -43,7 +43,12 @@ export type EndpointInput = Omit<EndpointDef, 'rateLimit' | 'idempotent' | 'erro
 /** Fills in the defaults and keeps the literal types for the typed client. */
 export function endpoint<const T extends EndpointInput>(
   def: T,
-): T & { rateLimit: RateLimitBucket; idempotent: boolean; errors: readonly ErrorCode[]; actions: readonly ScopeAction[] } {
+): T & {
+  rateLimit: RateLimitBucket;
+  idempotent: boolean;
+  errors: readonly ErrorCode[];
+  actions: readonly ScopeAction[];
+} {
   return {
     errors: [],
     actions: [],

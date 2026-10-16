@@ -16,7 +16,11 @@ const clean = (node: unknown): unknown => {
     for (const [k, v] of Object.entries(obj)) {
       if (k === '$schema') continue;
       // Zod emits long regexes next to these formats; the format says it already.
-      if (k === 'pattern' && (obj.format === 'uuid' || obj.format === 'date-time' || obj.format === 'date')) continue;
+      if (
+        k === 'pattern' &&
+        (obj.format === 'uuid' || obj.format === 'date-time' || obj.format === 'date')
+      )
+        continue;
       out[k] = clean(v);
     }
     return out;
@@ -24,11 +28,38 @@ const clean = (node: unknown): unknown => {
   return node;
 };
 
-export const toSchema = (schema: z.ZodType, io: 'input' | 'output'): Json =>
-  clean(z.toJSONSchema(schema, { io, unrepresentable: 'any' })) as Json;
+/** Shared schemas (those with an `id`) are collected here and written once under components. */
+const shared: Record<string, Json> = {};
+
+const rewriteRefs = (node: unknown): unknown => {
+  if (Array.isArray(node)) return node.map(rewriteRefs);
+  if (node && typeof node === 'object') {
+    return Object.fromEntries(
+      Object.entries(node as Json).map(([k, v]) => [
+        k,
+        k === '$ref' && typeof v === 'string'
+          ? v.replace('#/$defs/', '#/components/schemas/')
+          : rewriteRefs(v),
+      ]),
+    );
+  }
+  return node;
+};
+
+export const toSchema = (schema: z.ZodType, io: 'input' | 'output'): Json => {
+  const { $defs, ...rest } = z.toJSONSchema(schema, { io, unrepresentable: 'any' }) as Json & {
+    $defs?: Record<string, Json>;
+  };
+  for (const [name, def] of Object.entries($defs ?? {}))
+    shared[`${name}${io === 'input' ? 'Input' : ''}`] ??= def;
+  return rewriteRefs(clean(rest)) as Json;
+};
 
 const parametersOf = (shape: z.ZodObject, where: 'path' | 'query'): Json[] => {
-  const json = toSchema(shape, 'input') as { properties?: Record<string, Json>; required?: string[] };
+  const json = toSchema(shape, 'input') as {
+    properties?: Record<string, Json>;
+    required?: string[];
+  };
   return Object.entries(json.properties ?? {}).map(([name, schema]) => {
     const { description, ...rest } = schema;
     const param: Json = {
@@ -53,7 +84,10 @@ const toOperation = (def: EndpointDef): Json => {
       ? undefined
       : {
           [def.success.contentType ?? 'application/json']: {
-            schema: def.success.contentType === 'text/csv' ? { type: 'string' } : toSchema(def.success.schema!, 'output'),
+            schema:
+              def.success.contentType === 'text/csv'
+                ? { type: 'string' }
+                : toSchema(def.success.schema!, 'output'),
           },
         };
   const responses: Json = {
@@ -79,7 +113,12 @@ const toOperation = (def: EndpointDef): Json => {
     tags: [def.tag],
     ...(parameters.length ? { parameters } : {}),
     ...(def.body
-      ? { requestBody: { required: true, content: { 'application/json': { schema: toSchema(def.body, 'input') } } } }
+      ? {
+          requestBody: {
+            required: true,
+            content: { 'application/json': { schema: toSchema(def.body, 'input') } },
+          },
+        }
       : {}),
     responses,
     'x-auth': def.auth,
@@ -91,8 +130,12 @@ const toOperation = (def: EndpointDef): Json => {
   return op;
 };
 
+const sortKeys = (o: Json): Json =>
+  Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
+
 /** The OpenAPI 3.1 document, generated from the endpoint registry. `openapi.json` is its output. */
 export function buildOpenApi(): Json {
+  for (const k of Object.keys(shared)) delete shared[k];
   const paths: Record<string, Json> = {};
   for (const id of Object.keys(endpoints) as EndpointId[]) {
     const def = endpoints[id] as EndpointDef;
@@ -111,7 +154,10 @@ export function buildOpenApi(): Json {
     paths,
     components: {
       securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } },
-      schemas: { ApiError: toSchema(ApiError, 'output') },
+      schemas: {
+        ApiError: toSchema(ApiError, 'output'),
+        ...(clean(rewriteRefs(sortKeys(shared))) as Json),
+      },
     },
   };
 }

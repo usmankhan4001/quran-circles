@@ -68,4 +68,8 @@ export const makeApiError = (
 });
 
 /** Errors every endpoint can return, so endpoints list only their own domain errors. */
-export const COMMON_ERRORS = ['rate_limited', 'internal_error', 'service_unavailable'] as const satisfies readonly ErrorCode[];
+export const COMMON_ERRORS = [
+  'rate_limited',
+  'internal_error',
+  'service_unavailable',
+] as const satisfies readonly ErrorCode[];

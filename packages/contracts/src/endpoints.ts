@@ -106,7 +106,8 @@ import {
 } from './schemas/admin';
 
 const id = <K extends string>(name: K) => z.object({ [name]: Uuid } as { [P in K]: typeof Uuid });
-const json = <T extends z.ZodType>(status: 200 | 201 | 202, schema: T) => ({ status, schema }) as const;
+const json = <T extends z.ZodType>(status: 200 | 201 | 202, schema: T) =>
+  ({ status, schema }) as const;
 const noContent = { status: 204 } as const;
 
 /**
@@ -557,7 +558,13 @@ export const endpoints = {
     actions: ['registration.create'],
     body: RegistrationCreate,
     success: json(201, Registration),
-    errors: ['already_registered', 'registration_closed', 'session_full', 'session_cancelled', 'occurrence_in_past'],
+    errors: [
+      'already_registered',
+      'registration_closed',
+      'session_full',
+      'session_cancelled',
+      'occurrence_in_past',
+    ],
     rateLimit: 'registration',
     idempotent: false,
   }),
@@ -687,7 +694,11 @@ export const endpoints = {
     summary: 'Invite a coordinator by phone number. Checked by the role in the body',
     tag: 'Admin',
     auth: 'staff',
-    actions: ['role.assign_national_admin', 'role.assign_city_coordinator', 'role.assign_venue_coordinator'],
+    actions: [
+      'role.assign_national_admin',
+      'role.assign_city_coordinator',
+      'role.assign_venue_coordinator',
+    ],
     body: InviteBody,
     success: json(201, Invite),
     errors: ['role_already_assigned', 'conflict'],
@@ -734,7 +745,11 @@ export const endpoints = {
     summary: 'Assign a role, or hand a venue or city over by replacing an assignment',
     tag: 'Admin',
     auth: 'staff',
-    actions: ['role.assign_national_admin', 'role.assign_city_coordinator', 'role.assign_venue_coordinator'],
+    actions: [
+      'role.assign_national_admin',
+      'role.assign_city_coordinator',
+      'role.assign_venue_coordinator',
+    ],
     body: AssignRoleBody,
     success: json(201, StaffRoleAssignment),
     errors: ['role_already_assigned'],
@@ -747,7 +762,11 @@ export const endpoints = {
     summary: 'Revoke a role at once. History stays',
     tag: 'Admin',
     auth: 'staff',
-    actions: ['role.assign_national_admin', 'role.assign_city_coordinator', 'role.assign_venue_coordinator'],
+    actions: [
+      'role.assign_national_admin',
+      'role.assign_city_coordinator',
+      'role.assign_venue_coordinator',
+    ],
     params: id('assignmentId'),
     success: noContent,
     errors: ['last_national_admin'],
@@ -996,4 +1015,3 @@ export const endpoints = {
 export type Endpoints = typeof endpoints;
 export type EndpointId = keyof Endpoints;
 export const ENDPOINT_IDS = Object.keys(endpoints) as EndpointId[];
-

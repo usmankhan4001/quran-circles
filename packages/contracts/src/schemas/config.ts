@@ -19,7 +19,12 @@ export const AppConfig = z.object({
   seasonMode: SeasonMode,
   hijriOffsetDays: z.number().int().min(-2).max(2),
   /** Resolved for the city in the query, or the platform default. */
-  featureFlags: z.object(Object.fromEntries(FEATURE_FLAGS.map((k) => [k, z.boolean()])) as Record<FeatureFlagKey, z.ZodBoolean>),
+  featureFlags: z.object(
+    Object.fromEntries(FEATURE_FLAGS.map((k) => [k, z.boolean()])) as Record<
+      FeatureFlagKey,
+      z.ZodBoolean
+    >,
+  ),
   supportedLocales: z.array(Locale),
   /** The apps show an update prompt below this version. */
   minimumAppVersion: z.object({ ios: z.string(), android: z.string() }),

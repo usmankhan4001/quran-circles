@@ -38,7 +38,11 @@ const loc = (en: string, ur: string) => ({ en, ur });
 
 export const provinces: Province[] = [
   { id: fixtureId('province', 1), code: 'PB', name: loc('Punjab', 'پنجاب') },
-  { id: fixtureId('province', 2), code: 'ICT', name: loc('Islamabad Capital Territory', 'وفاقی دارالحکومت اسلام آباد') },
+  {
+    id: fixtureId('province', 2),
+    code: 'ICT',
+    name: loc('Islamabad Capital Territory', 'وفاقی دارالحکومت اسلام آباد'),
+  },
   { id: fixtureId('province', 3), code: 'KP', name: loc('Khyber Pakhtunkhwa', 'خیبر پختونخوا') },
 ];
 
@@ -118,14 +122,102 @@ const venueRows: {
   phone: string | null;
   facilities: Partial<Venue['facilities']>;
 }[] = [
-  { city: 'rawalpindi', area: 'saddar', slug: 'sample-masjid-al-noor', en: 'Sample Masjid Al-Noor', ur: 'نمونہ مسجد النور', address: ['Street 4, Saddar (sample address)', 'گلی 4، صدر (نمونہ پتہ)'], lat: 33.5961, lng: 73.0483, phone: '+923000000001', facilities: { womenSection: true, parking: true, wuduArea: true, elderWheelchairAccess: true } },
-  { city: 'rawalpindi', area: 'satellite-town', slug: 'sample-markaz-iqra', en: 'Sample Markaz Iqra', ur: 'نمونہ مرکز اقرا', address: ['Block B, Satellite Town (sample address)', 'بلاک بی، سیٹلائٹ ٹاؤن (نمونہ پتہ)'], lat: 33.6361, lng: 73.0722, phone: '+923000000002', facilities: { womenSection: true, wuduArea: true, childFriendly: true } },
-  { city: 'islamabad', area: 'f-7', slug: 'sample-masjid-hira', en: 'Sample Masjid Hira', ur: 'نمونہ مسجد حرا', address: ['Jinnah Super, F-7 (sample address)', 'جناح سپر، ایف سیون (نمونہ پتہ)'], lat: 33.7218, lng: 73.0568, phone: '+923000000003', facilities: { womenSection: true, parking: true, wuduArea: true } },
-  { city: 'islamabad', area: 'g-9', slug: 'sample-darul-quran', en: 'Sample Darul Quran', ur: 'نمونہ دار القرآن', address: ['Markaz, G-9 (sample address)', 'مرکز، جی نائن (نمونہ پتہ)'], lat: 33.6924, lng: 73.0359, phone: null, facilities: { parking: true, elderWheelchairAccess: true } },
-  { city: 'lahore', area: 'johar-town', slug: 'sample-masjid-bilal', en: 'Sample Masjid Bilal', ur: 'نمونہ مسجد بلال', address: ['Block C, Johar Town (sample address)', 'بلاک سی، جوہر ٹاؤن (نمونہ پتہ)'], lat: 31.47, lng: 74.2731, phone: '+923000000005', facilities: { womenSection: true, parking: true, wuduArea: true, childFriendly: true } },
-  { city: 'lahore', area: 'gulberg', slug: 'sample-masjid-ayesha', en: 'Sample Masjid Ayesha', ur: 'نمونہ مسجد عائشہ', address: ['Main Boulevard, Gulberg (sample address)', 'مین بلیوارڈ، گلبرگ (نمونہ پتہ)'], lat: 31.5207, lng: 74.349, phone: '+923000000006', facilities: { womenSection: true, wuduArea: true, elderWheelchairAccess: true } },
-  { city: 'multan', area: 'cantt', slug: 'sample-masjid-usman', en: 'Sample Masjid Usman', ur: 'نمونہ مسجد عثمان', address: ['Cantt Road, Multan (sample address)', 'کینٹ روڈ، ملتان (نمونہ پتہ)'], lat: 30.1981, lng: 71.47, phone: '+923000000007', facilities: { parking: true, wuduArea: true } },
-  { city: 'abbottabad', area: 'city-centre', slug: 'sample-masjid-sidique', en: 'Sample Masjid Siddique', ur: 'نمونہ مسجد صدیق', address: ['Mall Road, Abbottabad (sample address)', 'مال روڈ، ایبٹ آباد (نمونہ پتہ)'], lat: 34.1691, lng: 73.2218, phone: null, facilities: { womenSection: true } },
+  {
+    city: 'rawalpindi',
+    area: 'saddar',
+    slug: 'sample-masjid-al-noor',
+    en: 'Sample Masjid Al-Noor',
+    ur: 'نمونہ مسجد النور',
+    address: ['Street 4, Saddar (sample address)', 'گلی 4، صدر (نمونہ پتہ)'],
+    lat: 33.5961,
+    lng: 73.0483,
+    phone: '+923000000001',
+    facilities: { womenSection: true, parking: true, wuduArea: true, elderWheelchairAccess: true },
+  },
+  {
+    city: 'rawalpindi',
+    area: 'satellite-town',
+    slug: 'sample-markaz-iqra',
+    en: 'Sample Markaz Iqra',
+    ur: 'نمونہ مرکز اقرا',
+    address: ['Block B, Satellite Town (sample address)', 'بلاک بی، سیٹلائٹ ٹاؤن (نمونہ پتہ)'],
+    lat: 33.6361,
+    lng: 73.0722,
+    phone: '+923000000002',
+    facilities: { womenSection: true, wuduArea: true, childFriendly: true },
+  },
+  {
+    city: 'islamabad',
+    area: 'f-7',
+    slug: 'sample-masjid-hira',
+    en: 'Sample Masjid Hira',
+    ur: 'نمونہ مسجد حرا',
+    address: ['Jinnah Super, F-7 (sample address)', 'جناح سپر، ایف سیون (نمونہ پتہ)'],
+    lat: 33.7218,
+    lng: 73.0568,
+    phone: '+923000000003',
+    facilities: { womenSection: true, parking: true, wuduArea: true },
+  },
+  {
+    city: 'islamabad',
+    area: 'g-9',
+    slug: 'sample-darul-quran',
+    en: 'Sample Darul Quran',
+    ur: 'نمونہ دار القرآن',
+    address: ['Markaz, G-9 (sample address)', 'مرکز، جی نائن (نمونہ پتہ)'],
+    lat: 33.6924,
+    lng: 73.0359,
+    phone: null,
+    facilities: { parking: true, elderWheelchairAccess: true },
+  },
+  {
+    city: 'lahore',
+    area: 'johar-town',
+    slug: 'sample-masjid-bilal',
+    en: 'Sample Masjid Bilal',
+    ur: 'نمونہ مسجد بلال',
+    address: ['Block C, Johar Town (sample address)', 'بلاک سی، جوہر ٹاؤن (نمونہ پتہ)'],
+    lat: 31.47,
+    lng: 74.2731,
+    phone: '+923000000005',
+    facilities: { womenSection: true, parking: true, wuduArea: true, childFriendly: true },
+  },
+  {
+    city: 'lahore',
+    area: 'gulberg',
+    slug: 'sample-masjid-ayesha',
+    en: 'Sample Masjid Ayesha',
+    ur: 'نمونہ مسجد عائشہ',
+    address: ['Main Boulevard, Gulberg (sample address)', 'مین بلیوارڈ، گلبرگ (نمونہ پتہ)'],
+    lat: 31.5207,
+    lng: 74.349,
+    phone: '+923000000006',
+    facilities: { womenSection: true, wuduArea: true, elderWheelchairAccess: true },
+  },
+  {
+    city: 'multan',
+    area: 'cantt',
+    slug: 'sample-masjid-usman',
+    en: 'Sample Masjid Usman',
+    ur: 'نمونہ مسجد عثمان',
+    address: ['Cantt Road, Multan (sample address)', 'کینٹ روڈ، ملتان (نمونہ پتہ)'],
+    lat: 30.1981,
+    lng: 71.47,
+    phone: '+923000000007',
+    facilities: { parking: true, wuduArea: true },
+  },
+  {
+    city: 'abbottabad',
+    area: 'city-centre',
+    slug: 'sample-masjid-sidique',
+    en: 'Sample Masjid Siddique',
+    ur: 'نمونہ مسجد صدیق',
+    address: ['Mall Road, Abbottabad (sample address)', 'مال روڈ، ایبٹ آباد (نمونہ پتہ)'],
+    lat: 34.1691,
+    lng: 73.2218,
+    phone: null,
+    facilities: { womenSection: true },
+  },
 ];
 
 export const venues: Venue[] = venueRows.map((v, i) => ({
@@ -141,7 +233,8 @@ export const venues: Venue[] = venueRows.map((v, i) => ({
   facilities: {
     ...noFacilities,
     ...v.facilities,
-    entranceNotes: i === 0 ? loc('Women enter from the side gate.', 'خواتین کے لیے ساتھ والا دروازہ ہے۔') : null,
+    entranceNotes:
+      i === 0 ? loc('Women enter from the side gate.', 'خواتین کے لیے ساتھ والا دروازہ ہے۔') : null,
   },
   status: 'active',
 }));
@@ -170,7 +263,10 @@ export const circles: AdminCircle[] = [
     cityId: cityId('rawalpindi'),
     name: loc('Tuesday Tajweed Circle (sample)', 'منگل تجوید سرکل (نمونہ)'),
     teacherName: 'Sample Teacher',
-    description: loc('A relaxed weekly class on reading with tajweed.', 'تجوید کے ساتھ پڑھنے کی ہلکی پھلکی ہفتہ وار کلاس۔'),
+    description: loc(
+      'A relaxed weekly class on reading with tajweed.',
+      'تجوید کے ساتھ پڑھنے کی ہلکی پھلکی ہفتہ وار کلاس۔',
+    ),
     language: 'ur',
     section: 'family',
     onlineLink: null,
@@ -217,12 +313,111 @@ interface SessionRow {
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 const sessionRows: SessionRow[] = [
-  { n: 1, venue: 1, circle: null, program: 'dora', kind: 'recurring', title: ['Taraweeh with Dora (sample)', 'تراویح مع دورہ (نمونہ)'], section: 'family', language: 'ur', time: '21:00', minutes: 150, days: ALL_DAYS, startsOn: '2027-02-08', endsOn: '2027-03-09', capacity: null, seatsTaken: null },
-  { n: 2, venue: 2, circle: null, program: 'dora', kind: 'recurring', title: ['Women Dora (sample)', 'خواتین دورہ (نمونہ)'], section: 'women', language: 'ur', time: '16:30', minutes: 90, days: ALL_DAYS, startsOn: '2027-02-08', endsOn: '2027-03-09', capacity: 40, seatsTaken: 40 },
-  { n: 3, venue: 3, circle: null, program: 'dora', kind: 'recurring', title: ['Dora in English (sample)', 'انگریزی میں دورہ (نمونہ)'], section: 'family', language: 'en', time: '20:30', minutes: 120, days: ALL_DAYS, startsOn: '2027-02-08', endsOn: '2027-03-09', capacity: null, seatsTaken: null },
-  { n: 4, venue: 1, circle: 1, program: 'circles', kind: 'recurring', title: ['Tuesday Tajweed Circle (sample)', 'منگل تجوید سرکل (نمونہ)'], section: 'family', language: 'ur', time: '19:30', minutes: 75, days: [2], startsOn: '2027-01-12', endsOn: null, capacity: null, seatsTaken: null },
-  { n: 5, venue: 5, circle: null, program: 'dora', kind: 'recurring', title: ['Johar Town Dora (sample)', 'جوہر ٹاؤن دورہ (نمونہ)'], section: 'men', language: 'ur', time: '21:15', minutes: 150, days: ALL_DAYS, startsOn: '2027-02-08', endsOn: '2027-03-09', capacity: null, seatsTaken: null },
-  { n: 6, venue: 7, circle: null, program: 'circles', kind: 'one_off', title: ['Special lecture: Lessons from Surah Al-Kahf (sample)', 'خصوصی خطاب: سورۃ الکہف کے اسباق (نمونہ)'], section: 'family', language: 'ur', time: '18:00', minutes: 60, days: [], startsOn: '2027-02-19', endsOn: '2027-02-19', capacity: 200, seatsTaken: 64 },
+  {
+    n: 1,
+    venue: 1,
+    circle: null,
+    program: 'dora',
+    kind: 'recurring',
+    title: ['Taraweeh with Dora (sample)', 'تراویح مع دورہ (نمونہ)'],
+    section: 'family',
+    language: 'ur',
+    time: '21:00',
+    minutes: 150,
+    days: ALL_DAYS,
+    startsOn: '2027-02-08',
+    endsOn: '2027-03-09',
+    capacity: null,
+    seatsTaken: null,
+  },
+  {
+    n: 2,
+    venue: 2,
+    circle: null,
+    program: 'dora',
+    kind: 'recurring',
+    title: ['Women Dora (sample)', 'خواتین دورہ (نمونہ)'],
+    section: 'women',
+    language: 'ur',
+    time: '16:30',
+    minutes: 90,
+    days: ALL_DAYS,
+    startsOn: '2027-02-08',
+    endsOn: '2027-03-09',
+    capacity: 40,
+    seatsTaken: 40,
+  },
+  {
+    n: 3,
+    venue: 3,
+    circle: null,
+    program: 'dora',
+    kind: 'recurring',
+    title: ['Dora in English (sample)', 'انگریزی میں دورہ (نمونہ)'],
+    section: 'family',
+    language: 'en',
+    time: '20:30',
+    minutes: 120,
+    days: ALL_DAYS,
+    startsOn: '2027-02-08',
+    endsOn: '2027-03-09',
+    capacity: null,
+    seatsTaken: null,
+  },
+  {
+    n: 4,
+    venue: 1,
+    circle: 1,
+    program: 'circles',
+    kind: 'recurring',
+    title: ['Tuesday Tajweed Circle (sample)', 'منگل تجوید سرکل (نمونہ)'],
+    section: 'family',
+    language: 'ur',
+    time: '19:30',
+    minutes: 75,
+    days: [2],
+    startsOn: '2027-01-12',
+    endsOn: null,
+    capacity: null,
+    seatsTaken: null,
+  },
+  {
+    n: 5,
+    venue: 5,
+    circle: null,
+    program: 'dora',
+    kind: 'recurring',
+    title: ['Johar Town Dora (sample)', 'جوہر ٹاؤن دورہ (نمونہ)'],
+    section: 'men',
+    language: 'ur',
+    time: '21:15',
+    minutes: 150,
+    days: ALL_DAYS,
+    startsOn: '2027-02-08',
+    endsOn: '2027-03-09',
+    capacity: null,
+    seatsTaken: null,
+  },
+  {
+    n: 6,
+    venue: 7,
+    circle: null,
+    program: 'circles',
+    kind: 'one_off',
+    title: [
+      'Special lecture: Lessons from Surah Al-Kahf (sample)',
+      'خصوصی خطاب: سورۃ الکہف کے اسباق (نمونہ)',
+    ],
+    section: 'family',
+    language: 'ur',
+    time: '18:00',
+    minutes: 60,
+    days: [],
+    startsOn: '2027-02-19',
+    endsOn: '2027-02-19',
+    capacity: 200,
+    seatsTaken: 64,
+  },
 ];
 
 const addDays = (isoDate: string, days: number): string => {
@@ -259,7 +454,7 @@ export const occurrences: AdminOccurrence[] = sessionRows.flatMap((s) => {
       startsAt: toUtc(date, s.time),
       endsAt: toUtc(date, s.time, s.minutes),
       status: 'scheduled',
-      portion: s.program === 'dora' ? { kind: 'para', para: ((i % 30) + 1) } : null,
+      portion: s.program === 'dora' ? { kind: 'para', para: (i % 30) + 1 } : null,
       portionLabel: null,
       recapNote: past && i === 0 ? 'Sample recap note.' : null,
       recapLocale: past && i === 0 ? 'en' : null,
@@ -269,11 +464,16 @@ export const occurrences: AdminOccurrence[] = sessionRows.flatMap((s) => {
   return out;
 });
 
-export const toPublicOccurrence = ({ headcount: _headcount, ...rest }: AdminOccurrence): Occurrence => rest;
+export const toPublicOccurrence = ({
+  headcount: _headcount,
+  ...rest
+}: AdminOccurrence): Occurrence => rest;
 
 const nextOccurrence = (sessionId: string): Occurrence | null => {
   const next = occurrences
-    .filter((o) => o.sessionId === sessionId && o.startsAt >= FIXTURE_NOW && o.status === 'scheduled')
+    .filter(
+      (o) => o.sessionId === sessionId && o.startsAt >= FIXTURE_NOW && o.status === 'scheduled',
+    )
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))[0];
   return next ? toPublicOccurrence(next) : null;
 };
@@ -288,9 +488,21 @@ export const sessions: Session[] = sessionRows.map((s) => {
     venueId: venue.id,
     cityId: venue.cityId,
     areaId: venue.areaId,
-    venue: { id: venue.id, cityId: venue.cityId, areaId: venue.areaId, name: venue.name, lat: venue.lat, lng: venue.lng },
+    venue: {
+      id: venue.id,
+      cityId: venue.cityId,
+      areaId: venue.areaId,
+      name: venue.name,
+      lat: venue.lat,
+      lng: venue.lng,
+    },
     circle: circle
-      ? { id: circle.id, name: circle.name, teacherName: circle.teacherName, onlineLink: circle.onlineLink }
+      ? {
+          id: circle.id,
+          name: circle.name,
+          teacherName: circle.teacherName,
+          onlineLink: circle.onlineLink,
+        }
       : null,
     kind: s.kind,
     title: loc(s.title[0], s.title[1]),
@@ -355,7 +567,10 @@ export const fixtureUpdates: Update[] = [
     kind: 'announcement',
     scope: { type: 'national', cityId: null, venueId: null },
     title: loc('Welcome to Quran Circles (sample)', 'قرآن سرکلز میں خوش آمدید (نمونہ)'),
-    body: loc('Find a session near you and register in a tap.', 'اپنے قریب نشست ڈھونڈیں اور ایک ٹیپ میں رجسٹر ہوں۔'),
+    body: loc(
+      'Find a session near you and register in a tap.',
+      'اپنے قریب نشست ڈھونڈیں اور ایک ٹیپ میں رجسٹر ہوں۔',
+    ),
     sessionId: null,
     publishedAt: '2027-02-10T04:00:00Z',
     isRead: false,
@@ -365,7 +580,10 @@ export const fixtureUpdates: Update[] = [
     kind: 'time_change',
     scope: { type: 'venue', cityId: venues[0]!.cityId, venueId: venues[0]!.id },
     title: loc('Tuesday circle moves to 8 pm (sample)', 'منگل کا سرکل رات 8 بجے ہو گا (نمونہ)'),
-    body: loc('From this week the Tuesday Tajweed Circle starts at 8 pm.', 'اس ہفتے سے منگل تجوید سرکل رات 8 بجے شروع ہو گا۔'),
+    body: loc(
+      'From this week the Tuesday Tajweed Circle starts at 8 pm.',
+      'اس ہفتے سے منگل تجوید سرکل رات 8 بجے شروع ہو گا۔',
+    ),
     sessionId: fixtureId('session', 4),
     publishedAt: '2027-02-12T09:00:00Z',
     isRead: true,

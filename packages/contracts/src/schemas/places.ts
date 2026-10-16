@@ -36,29 +36,33 @@ export const VenueFacilities = z.object({
 export type VenueFacilities = z.infer<typeof VenueFacilities>;
 
 /** Venues are public. The contact number is the venue's own public number, not a person's. */
-export const Venue = z.object({
-  id: Uuid,
-  cityId: Uuid,
-  areaId: Uuid,
-  slug: z.string(),
-  name: Localized,
-  address: Localized,
-  lat: Latitude,
-  lng: Longitude,
-  contactPhone: PhoneE164.nullable(),
-  facilities: VenueFacilities,
-  status: VenueStatus,
-});
+export const Venue = z
+  .object({
+    id: Uuid,
+    cityId: Uuid,
+    areaId: Uuid,
+    slug: z.string(),
+    name: Localized,
+    address: Localized,
+    lat: Latitude,
+    lng: Longitude,
+    contactPhone: PhoneE164.nullable(),
+    facilities: VenueFacilities,
+    status: VenueStatus,
+  })
+  .meta({ id: 'Venue' });
 export type Venue = z.infer<typeof Venue>;
 
-export const VenueSummary = z.object({
-  id: Uuid,
-  cityId: Uuid,
-  areaId: Uuid,
-  name: Localized,
-  lat: Latitude,
-  lng: Longitude,
-});
+export const VenueSummary = z
+  .object({
+    id: Uuid,
+    cityId: Uuid,
+    areaId: Uuid,
+    name: Localized,
+    lat: Latitude,
+    lng: Longitude,
+  })
+  .meta({ id: 'VenueSummary' });
 export type VenueSummary = z.infer<typeof VenueSummary>;
 
 export const ProvincesResponse = z.object({ items: z.array(Province) });

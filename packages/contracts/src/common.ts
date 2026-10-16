@@ -32,10 +32,12 @@ export type LocalTime = z.infer<typeof LocalTime>;
 export const DayOfWeek = z.number().int().min(0).max(6);
 
 /** English is always present. Urdu is null until someone writes it; clients fall back to English. */
-export const Localized = z.object({
-  en: z.string().min(1),
-  ur: z.string().min(1).nullable(),
-});
+export const Localized = z
+  .object({
+    en: z.string().min(1),
+    ur: z.string().min(1).nullable(),
+  })
+  .meta({ id: 'Localized' });
 export type Localized = z.infer<typeof Localized>;
 
 export const LocalizedInput = z.object({

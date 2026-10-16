@@ -1,5 +1,14 @@
 import { z } from 'zod';
-import { InstantUtc, LocalizedInput, LocalizedLong, LocalizedLongInput, Localized, PageQuery, Uuid, pageOf } from '../common';
+import {
+  InstantUtc,
+  LocalizedInput,
+  LocalizedLong,
+  LocalizedLongInput,
+  Localized,
+  PageQuery,
+  Uuid,
+  pageOf,
+} from '../common';
 import { ScopeType, UpdateKind } from '../enums';
 
 export const UpdateScope = z.object({
@@ -8,17 +17,19 @@ export const UpdateScope = z.object({
   venueId: Uuid.nullable(),
 });
 
-export const Update = z.object({
-  id: Uuid,
-  kind: UpdateKind,
-  scope: UpdateScope,
-  title: Localized,
-  body: LocalizedLong,
-  /** Set for time changes, cancellations and special lectures. Opens the session. */
-  sessionId: Uuid.nullable(),
-  publishedAt: InstantUtc,
-  isRead: z.boolean(),
-});
+export const Update = z
+  .object({
+    id: Uuid,
+    kind: UpdateKind,
+    scope: UpdateScope,
+    title: Localized,
+    body: LocalizedLong,
+    /** Set for time changes, cancellations and special lectures. Opens the session. */
+    sessionId: Uuid.nullable(),
+    publishedAt: InstantUtc,
+    isRead: z.boolean(),
+  })
+  .meta({ id: 'Update' });
 export type Update = z.infer<typeof Update>;
 
 export const FeedQuery = PageQuery.extend({
