@@ -7,7 +7,11 @@ export type UiMessageKey = Extract<MessageKey, `ui.${string}`>;
  * Looks up a built-in string of the kit (close, loading, retry and so on) and fills `{name}`
  * style placeholders. Screens use their own i18n; this is only for words the kit itself shows.
  */
-export function t(locale: Locale, key: UiMessageKey, params?: Record<string, string | number>): string {
+export function t(
+  locale: Locale,
+  key: UiMessageKey,
+  params?: Record<string, string | number>,
+): string {
   const table = messages[locale] as Record<string, string>;
   const fallback = messages.en as Record<string, string>;
   const template = table[key] ?? fallback[key] ?? key;

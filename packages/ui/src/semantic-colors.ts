@@ -269,7 +269,12 @@ export function contrastPairs(mode: ColorMode): ContrastPair[] {
   });
   // Non-text contrast (WCAG 1.4.11): outlines, focus ring and the filled accent shape.
   for (const g of ['background', 'surface'] as const) {
-    pairs.push({ name: `borderStrong on ${g}`, foreground: c.borderStrong, background: c[g], min: 3 });
+    pairs.push({
+      name: `borderStrong on ${g}`,
+      foreground: c.borderStrong,
+      background: c[g],
+      min: 3,
+    });
     pairs.push({ name: `focus on ${g}`, foreground: c.focus, background: c[g], min: 3 });
     pairs.push({ name: `accent on ${g}`, foreground: c.accent, background: c[g], min: 3 });
   }

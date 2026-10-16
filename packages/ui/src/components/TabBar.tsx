@@ -66,7 +66,11 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
               styles.tab,
               {
                 borderTopColor: selected ? c.accent : 'transparent',
-                backgroundColor: selected ? c.accentSubtle : pressed ? c.surfaceMuted : 'transparent',
+                backgroundColor: selected
+                  ? c.accentSubtle
+                  : pressed
+                    ? c.surfaceMuted
+                    : 'transparent',
               },
             ]}
           >

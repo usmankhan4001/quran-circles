@@ -66,10 +66,23 @@ const stories: Story[] = [
     title: 'Text',
     note: 'The only way to show text. Urdu uses Gulzar with a taller line height; Quran text uses AlMushaf and is always right to left.',
     cases: [
-      ...(['display', 'title1', 'title2', 'title3', 'bodyLarge', 'body', 'label', 'caption'] as TypeRole[]).map((role) => ({
+      ...(
+        [
+          'display',
+          'title1',
+          'title2',
+          'title3',
+          'bodyLarge',
+          'body',
+          'label',
+          'caption',
+        ] as TypeRole[]
+      ).map((role) => ({
         label: `Variant: ${role}`,
         render: (l: Locale) => (
-          <Text variant={role}>{pick(l, 'The next session is on Friday', 'اگلی نشست جمعہ کو ہے')}</Text>
+          <Text variant={role}>
+            {pick(l, 'The next session is on Friday', 'اگلی نشست جمعہ کو ہے')}
+          </Text>
         ),
       })),
       {
@@ -80,7 +93,11 @@ const stories: Story[] = [
         label: 'Mixed direction: an English venue name inside Urdu',
         render: (l) => (
           <Text>
-            {pick(l, `Join us at ${isolate('Al-Noor Masjid')} in Lahore`, `${isolate('Al-Noor Masjid')} لاہور میں ہمارے ساتھ شامل ہوں`)}
+            {pick(
+              l,
+              `Join us at ${isolate('Al-Noor Masjid')} in Lahore`,
+              `${isolate('Al-Noor Masjid')} لاہور میں ہمارے ساتھ شامل ہوں`,
+            )}
           </Text>
         ),
       },
@@ -103,15 +120,72 @@ const stories: Story[] = [
     id: 'button',
     title: 'Button',
     cases: [
-      { label: 'Primary', render: (l) => <Button label={pick(l, 'Register', 'رجسٹر کریں')} onPress={noop} /> },
-      { label: 'Secondary', render: (l) => <Button variant="secondary" label={pick(l, 'See details', 'تفصیل دیکھیں')} onPress={noop} /> },
-      { label: 'Tertiary', render: (l) => <Button variant="tertiary" label={pick(l, 'Not now', 'ابھی نہیں')} onPress={noop} /> },
-      { label: 'Danger', render: (l) => <Button variant="danger" label={pick(l, 'Delete account', 'اکاؤنٹ حذف کریں')} onPress={noop} /> },
-      { label: 'Large, full width (key action)', render: (l) => <Button size="large" fullWidth label={pick(l, 'Register for this session', 'اس نشست کے لیے رجسٹر کریں')} onPress={noop} /> },
-      { label: 'With icon', render: (l) => <Button icon="plus" label={pick(l, 'Add', 'شامل کریں')} onPress={noop} /> },
-      { label: 'Loading', render: (l) => <Button loading label={pick(l, 'Saving', 'محفوظ ہو رہا ہے')} onPress={noop} /> },
-      { label: 'Disabled', render: (l) => <Button disabled label={pick(l, 'Register', 'رجسٹر کریں')} onPress={noop} /> },
-      { label: 'Disabled secondary', render: (l) => <Button disabled variant="secondary" label={pick(l, 'See details', 'تفصیل دیکھیں')} onPress={noop} /> },
+      {
+        label: 'Primary',
+        render: (l) => <Button label={pick(l, 'Register', 'رجسٹر کریں')} onPress={noop} />,
+      },
+      {
+        label: 'Secondary',
+        render: (l) => (
+          <Button
+            variant="secondary"
+            label={pick(l, 'See details', 'تفصیل دیکھیں')}
+            onPress={noop}
+          />
+        ),
+      },
+      {
+        label: 'Tertiary',
+        render: (l) => (
+          <Button variant="tertiary" label={pick(l, 'Not now', 'ابھی نہیں')} onPress={noop} />
+        ),
+      },
+      {
+        label: 'Danger',
+        render: (l) => (
+          <Button
+            variant="danger"
+            label={pick(l, 'Delete account', 'اکاؤنٹ حذف کریں')}
+            onPress={noop}
+          />
+        ),
+      },
+      {
+        label: 'Large, full width (key action)',
+        render: (l) => (
+          <Button
+            size="large"
+            fullWidth
+            label={pick(l, 'Register for this session', 'اس نشست کے لیے رجسٹر کریں')}
+            onPress={noop}
+          />
+        ),
+      },
+      {
+        label: 'With icon',
+        render: (l) => <Button icon="plus" label={pick(l, 'Add', 'شامل کریں')} onPress={noop} />,
+      },
+      {
+        label: 'Loading',
+        render: (l) => (
+          <Button loading label={pick(l, 'Saving', 'محفوظ ہو رہا ہے')} onPress={noop} />
+        ),
+      },
+      {
+        label: 'Disabled',
+        render: (l) => <Button disabled label={pick(l, 'Register', 'رجسٹر کریں')} onPress={noop} />,
+      },
+      {
+        label: 'Disabled secondary',
+        render: (l) => (
+          <Button
+            disabled
+            variant="secondary"
+            label={pick(l, 'See details', 'تفصیل دیکھیں')}
+            onPress={noop}
+          />
+        ),
+      },
     ],
   },
   {
@@ -149,13 +223,82 @@ const stories: Story[] = [
     id: 'text-field',
     title: 'TextField',
     cases: [
-      { label: 'Empty with placeholder', render: (l) => <TextField label={pick(l, 'Full name', 'پورا نام')} placeholder={pick(l, 'As on your ID', 'جیسا شناختی کارڈ پر ہے')} value="" onChangeText={noop} required /> },
-      { label: 'Filled, optional', render: (l) => <TextField label={pick(l, 'Profession', 'پیشہ')} value={pick(l, 'Teacher', 'استاد')} onChangeText={noop} /> },
-      { label: 'Helper text', render: (l) => <TextField label={pick(l, 'WhatsApp number', 'واٹس ایپ نمبر')} helper={pick(l, 'We send a code to this number.', 'ہم اس نمبر پر کوڈ بھیجیں گے۔')} value="0300 0000000" contentDirection="ltr" keyboardType="phone-pad" onChangeText={noop} required /> },
-      { label: 'Error', render: (l) => <TextField label={pick(l, 'Full name', 'پورا نام')} error={pick(l, 'Enter your name.', 'اپنا نام لکھیں۔')} value="" onChangeText={noop} required /> },
-      { label: 'Disabled', render: (l) => <TextField label={pick(l, 'Area', 'علاقہ')} value={pick(l, 'Gulberg', 'گلبرگ')} disabled onChangeText={noop} /> },
-      { label: 'Loading (saving)', render: (l) => <TextField label={pick(l, 'Full name', 'پورا نام')} value={pick(l, 'Amina', 'آمنہ')} loading onChangeText={noop} /> },
-      { label: 'Several lines', render: (l) => <TextField label={pick(l, 'Update', 'اطلاع')} value="" multiline onChangeText={noop} /> },
+      {
+        label: 'Empty with placeholder',
+        render: (l) => (
+          <TextField
+            label={pick(l, 'Full name', 'پورا نام')}
+            placeholder={pick(l, 'As on your ID', 'جیسا شناختی کارڈ پر ہے')}
+            value=""
+            onChangeText={noop}
+            required
+          />
+        ),
+      },
+      {
+        label: 'Filled, optional',
+        render: (l) => (
+          <TextField
+            label={pick(l, 'Profession', 'پیشہ')}
+            value={pick(l, 'Teacher', 'استاد')}
+            onChangeText={noop}
+          />
+        ),
+      },
+      {
+        label: 'Helper text',
+        render: (l) => (
+          <TextField
+            label={pick(l, 'WhatsApp number', 'واٹس ایپ نمبر')}
+            helper={pick(l, 'We send a code to this number.', 'ہم اس نمبر پر کوڈ بھیجیں گے۔')}
+            value="0300 0000000"
+            contentDirection="ltr"
+            keyboardType="phone-pad"
+            onChangeText={noop}
+            required
+          />
+        ),
+      },
+      {
+        label: 'Error',
+        render: (l) => (
+          <TextField
+            label={pick(l, 'Full name', 'پورا نام')}
+            error={pick(l, 'Enter your name.', 'اپنا نام لکھیں۔')}
+            value=""
+            onChangeText={noop}
+            required
+          />
+        ),
+      },
+      {
+        label: 'Disabled',
+        render: (l) => (
+          <TextField
+            label={pick(l, 'Area', 'علاقہ')}
+            value={pick(l, 'Gulberg', 'گلبرگ')}
+            disabled
+            onChangeText={noop}
+          />
+        ),
+      },
+      {
+        label: 'Loading (saving)',
+        render: (l) => (
+          <TextField
+            label={pick(l, 'Full name', 'پورا نام')}
+            value={pick(l, 'Amina', 'آمنہ')}
+            loading
+            onChangeText={noop}
+          />
+        ),
+      },
+      {
+        label: 'Several lines',
+        render: (l) => (
+          <TextField label={pick(l, 'Update', 'اطلاع')} value="" multiline onChangeText={noop} />
+        ),
+      },
     ],
   },
   {
@@ -173,24 +316,61 @@ const stories: Story[] = [
           </Row>
         ),
       },
-      { label: 'Action chip', render: (l) => <Chip label={pick(l, 'Request a circle', 'سرکل کی درخواست')} onPress={noop} /> },
+      {
+        label: 'Action chip',
+        render: (l) => (
+          <Chip label={pick(l, 'Request a circle', 'سرکل کی درخواست')} onPress={noop} />
+        ),
+      },
     ],
   },
   {
     id: 'card',
     title: 'Card',
     cases: [
-      { label: 'Raised', render: (l) => <Card><Text variant="label">{pick(l, 'Al-Noor Masjid', 'النور مسجد')}</Text><Text color="textSecondary">{pick(l, 'Tonight 9:30 pm', 'آج رات 9:30 بجے')}</Text></Card> },
-      { label: 'Outlined', render: (l) => <Card variant="outlined"><Text>{pick(l, 'Outlined card', 'خاکے والا کارڈ')}</Text></Card> },
-      { label: 'Flat', render: (l) => <Card variant="flat"><Text>{pick(l, 'Flat card', 'سادہ کارڈ')}</Text></Card> },
-      { label: 'Pressable', render: (l) => <Card onPress={noop} accessibilityLabel={pick(l, 'Open venue', 'مقام کھولیں')}><Text>{pick(l, 'Tap to open', 'کھولنے کے لیے دبائیں')}</Text></Card> },
+      {
+        label: 'Raised',
+        render: (l) => (
+          <Card>
+            <Text variant="label">{pick(l, 'Al-Noor Masjid', 'النور مسجد')}</Text>
+            <Text color="textSecondary">{pick(l, 'Tonight 9:30 pm', 'آج رات 9:30 بجے')}</Text>
+          </Card>
+        ),
+      },
+      {
+        label: 'Outlined',
+        render: (l) => (
+          <Card variant="outlined">
+            <Text>{pick(l, 'Outlined card', 'خاکے والا کارڈ')}</Text>
+          </Card>
+        ),
+      },
+      {
+        label: 'Flat',
+        render: (l) => (
+          <Card variant="flat">
+            <Text>{pick(l, 'Flat card', 'سادہ کارڈ')}</Text>
+          </Card>
+        ),
+      },
+      {
+        label: 'Pressable',
+        render: (l) => (
+          <Card onPress={noop} accessibilityLabel={pick(l, 'Open venue', 'مقام کھولیں')}>
+            <Text>{pick(l, 'Tap to open', 'کھولنے کے لیے دبائیں')}</Text>
+          </Card>
+        ),
+      },
     ],
   },
   {
     id: 'list-item',
     title: 'ListItem',
     cases: [
-      { label: 'Static', render: (l) => <ListItem title={pick(l, 'Parking available', 'پارکنگ دستیاب ہے')} /> },
+      {
+        label: 'Static',
+        render: (l) => <ListItem title={pick(l, 'Parking available', 'پارکنگ دستیاب ہے')} />,
+      },
       {
         label: 'Pressable, with avatar and badge',
         render: (l) => (
@@ -203,9 +383,24 @@ const stories: Story[] = [
           />
         ),
       },
-      { label: 'Selected', render: (l) => <ListItem title={pick(l, 'English', 'انگریزی')} selected onPress={noop} chevron={false} /> },
-      { label: 'Disabled', render: (l) => <ListItem title={pick(l, 'Not available', 'دستیاب نہیں')} disabled onPress={noop} /> },
-      { label: 'With divider', render: (l) => <ListItem title={pick(l, 'With a line below', 'نیچے لکیر کے ساتھ')} divider /> },
+      {
+        label: 'Selected',
+        render: (l) => (
+          <ListItem title={pick(l, 'English', 'انگریزی')} selected onPress={noop} chevron={false} />
+        ),
+      },
+      {
+        label: 'Disabled',
+        render: (l) => (
+          <ListItem title={pick(l, 'Not available', 'دستیاب نہیں')} disabled onPress={noop} />
+        ),
+      },
+      {
+        label: 'With divider',
+        render: (l) => (
+          <ListItem title={pick(l, 'With a line below', 'نیچے لکیر کے ساتھ')} divider />
+        ),
+      },
     ],
   },
   {
@@ -237,10 +432,28 @@ const stories: Story[] = [
             activeKey="home"
             onChange={noop}
             items={[
-              { key: 'home', label: pick(l, 'Home', 'ہوم'), icon: ({ color }) => <Icon name="success" color={color} />, badge: { dot: true } },
-              { key: 'nearby', label: pick(l, 'Nearby', 'قریب'), icon: ({ color }) => <Icon name="info" color={color} /> },
-              { key: 'journey', label: pick(l, 'My Journey', 'میرا سفر'), icon: ({ color }) => <Icon name="check" color={color} />, badge: { count: 2 } },
-              { key: 'quran', label: pick(l, 'Quran & Prayer', 'قرآن و نماز'), icon: ({ color }) => <Icon name="plus" color={color} /> },
+              {
+                key: 'home',
+                label: pick(l, 'Home', 'ہوم'),
+                icon: ({ color }) => <Icon name="success" color={color} />,
+                badge: { dot: true },
+              },
+              {
+                key: 'nearby',
+                label: pick(l, 'Nearby', 'قریب'),
+                icon: ({ color }) => <Icon name="info" color={color} />,
+              },
+              {
+                key: 'journey',
+                label: pick(l, 'My Journey', 'میرا سفر'),
+                icon: ({ color }) => <Icon name="check" color={color} />,
+                badge: { count: 2 },
+              },
+              {
+                key: 'quran',
+                label: pick(l, 'Quran & Prayer', 'قرآن و نماز'),
+                icon: ({ color }) => <Icon name="plus" color={color} />,
+              },
             ]}
           />
         ),
@@ -267,34 +480,138 @@ const stories: Story[] = [
     id: 'select',
     title: 'Select',
     cases: [
-      { label: 'Empty', render: (l) => <Select label={pick(l, 'Section', 'حصہ')} value={undefined} onChange={noop} options={sections(l)} required /> },
-      { label: 'Chosen', render: (l) => <Select label={pick(l, 'Section', 'حصہ')} value="women" onChange={noop} options={sections(l)} /> },
-      { label: 'Error', render: (l) => <Select label={pick(l, 'Section', 'حصہ')} value={undefined} error={pick(l, 'Choose a section.', 'حصہ منتخب کریں۔')} onChange={noop} options={sections(l)} required /> },
-      { label: 'Disabled', render: (l) => <Select label={pick(l, 'Section', 'حصہ')} value="men" disabled onChange={noop} options={sections(l)} /> },
+      {
+        label: 'Empty',
+        render: (l) => (
+          <Select
+            label={pick(l, 'Section', 'حصہ')}
+            value={undefined}
+            onChange={noop}
+            options={sections(l)}
+            required
+          />
+        ),
+      },
+      {
+        label: 'Chosen',
+        render: (l) => (
+          <Select
+            label={pick(l, 'Section', 'حصہ')}
+            value="women"
+            onChange={noop}
+            options={sections(l)}
+          />
+        ),
+      },
+      {
+        label: 'Error',
+        render: (l) => (
+          <Select
+            label={pick(l, 'Section', 'حصہ')}
+            value={undefined}
+            error={pick(l, 'Choose a section.', 'حصہ منتخب کریں۔')}
+            onChange={noop}
+            options={sections(l)}
+            required
+          />
+        ),
+      },
+      {
+        label: 'Disabled',
+        render: (l) => (
+          <Select
+            label={pick(l, 'Section', 'حصہ')}
+            value="men"
+            disabled
+            onChange={noop}
+            options={sections(l)}
+          />
+        ),
+      },
     ],
   },
   {
     id: 'switch',
     title: 'Switch',
     cases: [
-      { label: 'On', render: (l) => <Switch label={pick(l, 'Dark mode', 'ڈارک موڈ')} value onValueChange={noop} /> },
-      { label: 'Off, with description', render: (l) => <Switch label={pick(l, 'Alerts for this venue', 'اس مقام کی اطلاعات')} description={pick(l, 'Reminders before each session', 'ہر نشست سے پہلے یاد دہانی')} value={false} onValueChange={noop} /> },
-      { label: 'Disabled', render: (l) => <Switch label={pick(l, 'Dark mode', 'ڈارک موڈ')} value disabled onValueChange={noop} /> },
+      {
+        label: 'On',
+        render: (l) => (
+          <Switch label={pick(l, 'Dark mode', 'ڈارک موڈ')} value onValueChange={noop} />
+        ),
+      },
+      {
+        label: 'Off, with description',
+        render: (l) => (
+          <Switch
+            label={pick(l, 'Alerts for this venue', 'اس مقام کی اطلاعات')}
+            description={pick(l, 'Reminders before each session', 'ہر نشست سے پہلے یاد دہانی')}
+            value={false}
+            onValueChange={noop}
+          />
+        ),
+      },
+      {
+        label: 'Disabled',
+        render: (l) => (
+          <Switch label={pick(l, 'Dark mode', 'ڈارک موڈ')} value disabled onValueChange={noop} />
+        ),
+      },
     ],
   },
   {
     id: 'checkbox',
     title: 'Checkbox',
     cases: [
-      { label: 'Checked, unchecked, disabled', render: (l) => (<><Checkbox label={pick(l, 'Parking', 'پارکنگ')} checked onChange={noop} /><Checkbox label={pick(l, 'Wudu area', 'وضو کی جگہ')} description={pick(l, 'Near the entrance', 'داخلے کے قریب')} checked={false} onChange={noop} /><Checkbox label={pick(l, 'Child friendly', 'بچوں کے لیے موزوں')} checked disabled onChange={noop} /></>) },
+      {
+        label: 'Checked, unchecked, disabled',
+        render: (l) => (
+          <>
+            <Checkbox label={pick(l, 'Parking', 'پارکنگ')} checked onChange={noop} />
+            <Checkbox
+              label={pick(l, 'Wudu area', 'وضو کی جگہ')}
+              description={pick(l, 'Near the entrance', 'داخلے کے قریب')}
+              checked={false}
+              onChange={noop}
+            />
+            <Checkbox
+              label={pick(l, 'Child friendly', 'بچوں کے لیے موزوں')}
+              checked
+              disabled
+              onChange={noop}
+            />
+          </>
+        ),
+      },
     ],
   },
   {
     id: 'segmented-control',
     title: 'SegmentedControl',
     cases: [
-      { label: 'Three segments', render: (l) => <SegmentedControl accessibilityLabel={pick(l, 'Section', 'حصہ')} value="men" onChange={noop} options={sections(l)} /> },
-      { label: 'Disabled', render: (l) => <SegmentedControl accessibilityLabel={pick(l, 'Section', 'حصہ')} value="men" disabled onChange={noop} options={sections(l)} /> },
+      {
+        label: 'Three segments',
+        render: (l) => (
+          <SegmentedControl
+            accessibilityLabel={pick(l, 'Section', 'حصہ')}
+            value="men"
+            onChange={noop}
+            options={sections(l)}
+          />
+        ),
+      },
+      {
+        label: 'Disabled',
+        render: (l) => (
+          <SegmentedControl
+            accessibilityLabel={pick(l, 'Section', 'حصہ')}
+            value="men"
+            disabled
+            onChange={noop}
+            options={sections(l)}
+          />
+        ),
+      },
     ],
   },
   {
@@ -307,8 +624,15 @@ const stories: Story[] = [
           <EmptyState
             icon="info"
             title={pick(l, 'No sessions near you yet', 'آپ کے قریب ابھی کوئی نشست نہیں')}
-            description={pick(l, 'You can ask for a circle in your area.', 'آپ اپنے علاقے میں سرکل کی درخواست کر سکتے ہیں۔')}
-            action={{ label: pick(l, 'Request a circle near me', 'میرے قریب سرکل کی درخواست'), onPress: noop }}
+            description={pick(
+              l,
+              'You can ask for a circle in your area.',
+              'آپ اپنے علاقے میں سرکل کی درخواست کر سکتے ہیں۔',
+            )}
+            action={{
+              label: pick(l, 'Request a circle near me', 'میرے قریب سرکل کی درخواست'),
+              onPress: noop,
+            }}
             secondaryAction={{ label: pick(l, 'Change area', 'علاقہ تبدیل کریں'), onPress: noop }}
           />
         ),
@@ -346,10 +670,50 @@ const stories: Story[] = [
     id: 'toast',
     title: 'Toast',
     cases: [
-      { label: 'Info', render: (l) => <Toast message={pick(l, 'Reminder set.', 'یاد دہانی لگا دی گئی۔')} onDismiss={noop} durationMs={0} /> },
-      { label: 'Success', render: (l) => <Toast kind="success" message={pick(l, 'You are registered.', 'آپ کا اندراج ہو گیا۔')} onDismiss={noop} durationMs={0} /> },
-      { label: 'Warning with action', render: (l) => <Toast kind="warning" message={pick(l, 'Session time changed.', 'نشست کا وقت بدل گیا۔')} actionLabel={pick(l, 'View', 'دیکھیں')} onAction={noop} onDismiss={noop} /> },
-      { label: 'Danger', render: (l) => <Toast kind="danger" message={pick(l, 'Could not save. Try again.', 'محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔')} onDismiss={noop} durationMs={0} /> },
+      {
+        label: 'Info',
+        render: (l) => (
+          <Toast
+            message={pick(l, 'Reminder set.', 'یاد دہانی لگا دی گئی۔')}
+            onDismiss={noop}
+            durationMs={0}
+          />
+        ),
+      },
+      {
+        label: 'Success',
+        render: (l) => (
+          <Toast
+            kind="success"
+            message={pick(l, 'You are registered.', 'آپ کا اندراج ہو گیا۔')}
+            onDismiss={noop}
+            durationMs={0}
+          />
+        ),
+      },
+      {
+        label: 'Warning with action',
+        render: (l) => (
+          <Toast
+            kind="warning"
+            message={pick(l, 'Session time changed.', 'نشست کا وقت بدل گیا۔')}
+            actionLabel={pick(l, 'View', 'دیکھیں')}
+            onAction={noop}
+            onDismiss={noop}
+          />
+        ),
+      },
+      {
+        label: 'Danger',
+        render: (l) => (
+          <Toast
+            kind="danger"
+            message={pick(l, 'Could not save. Try again.', 'محفوظ نہیں ہو سکا۔ دوبارہ کوشش کریں۔')}
+            onDismiss={noop}
+            durationMs={0}
+          />
+        ),
+      },
     ],
   },
   {
@@ -373,8 +737,32 @@ const stories: Story[] = [
     id: 'header',
     title: 'Header',
     cases: [
-      { label: 'Regular with back', render: (l) => <Header title={pick(l, 'Al-Noor Masjid', 'النور مسجد')} subtitle={pick(l, 'Gulberg, Lahore', 'گلبرگ، لاہور')} onBack={noop} /> },
-      { label: 'Large with actions', render: (l) => <Header variant="large" title={pick(l, 'Nearby', 'قریب')} actions={<IconButton icon="plus" accessibilityLabel={pick(l, 'Add', 'شامل کریں')} onPress={noop} />} /> },
+      {
+        label: 'Regular with back',
+        render: (l) => (
+          <Header
+            title={pick(l, 'Al-Noor Masjid', 'النور مسجد')}
+            subtitle={pick(l, 'Gulberg, Lahore', 'گلبرگ، لاہور')}
+            onBack={noop}
+          />
+        ),
+      },
+      {
+        label: 'Large with actions',
+        render: (l) => (
+          <Header
+            variant="large"
+            title={pick(l, 'Nearby', 'قریب')}
+            actions={
+              <IconButton
+                icon="plus"
+                accessibilityLabel={pick(l, 'Add', 'شامل کریں')}
+                onPress={noop}
+              />
+            }
+          />
+        ),
+      },
     ],
   },
 ];
@@ -388,20 +776,47 @@ function sections(l: Locale) {
 }
 
 function Row({ children }: { children: ReactNode }) {
-  return <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>{children}</div>;
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {children}
+    </div>
+  );
 }
 
-const modeNames: Record<ColorMode, string> = { light: 'Light', dark: 'Dark', highContrast: 'High contrast' };
-const localeNames: Record<Locale, string> = { en: 'English, left to right', ur: 'Urdu, right to left' };
+const modeNames: Record<ColorMode, string> = {
+  light: 'Light',
+  dark: 'Dark',
+  highContrast: 'High contrast',
+};
+const localeNames: Record<Locale, string> = {
+  en: 'English, left to right',
+  ur: 'Urdu, right to left',
+};
 
-function Cell({ mode, locale, size = 0, children }: { mode: ColorMode; locale: Locale; size?: TextSizeStep; children: ReactNode }) {
+function Cell({
+  mode,
+  locale,
+  size = 0,
+  children,
+}: {
+  mode: ColorMode;
+  locale: Locale;
+  size?: TextSizeStep;
+  children: ReactNode;
+}) {
   const c = semanticColors[mode];
   return (
     <div className="cell">
       <div className="tag">
         {modeNames[mode]} · {localeNames[locale]} · size {size + 1} of 4 ({textScale[size]}x)
       </div>
-      <ThemeProvider mode={mode} locale={locale} textSize={size} reduceMotion style={{ padding: 16, borderRadius: 12, borderWidth: 1, borderColor: c.border, gap: 12 }}>
+      <ThemeProvider
+        mode={mode}
+        locale={locale}
+        textSize={size}
+        reduceMotion
+        style={{ padding: 16, borderRadius: 12, borderWidth: 1, borderColor: c.border, gap: 12 }}
+      >
         {children}
       </ThemeProvider>
     </div>
@@ -433,10 +848,62 @@ function StorySection({ story }: { story: Story }) {
 
 function TextSizes() {
   const rows: { label: string; render: Fixture }[] = [
-    { label: 'Text and Button', render: (l) => (<><Text>{pick(l, 'The next session is on Friday evening.', 'اگلی نشست جمعہ کی شام کو ہے۔')}</Text><Button label={pick(l, 'Register', 'رجسٹر کریں')} onPress={noop} /></>) },
-    { label: 'TextField and Switch', render: (l) => (<><TextField label={pick(l, 'Full name', 'پورا نام')} value="" onChangeText={noop} required /><Switch label={pick(l, 'Dark mode', 'ڈارک موڈ')} value onValueChange={noop} /></>) },
-    { label: 'ListItem and Chips', render: (l) => (<><ListItem title={pick(l, 'Al-Noor Masjid', 'النور مسجد')} subtitle={pick(l, 'Tonight 9:30 pm', 'آج رات 9:30 بجے')} onPress={noop} /><Row><Chip label={pick(l, 'Women', 'خواتین')} selected onPress={noop} /><Chip label={pick(l, 'Family', 'فیملی')} selected={false} onPress={noop} /></Row></>) },
-    { label: 'TabBar', render: (l) => (<TabBar activeKey="nearby" onChange={noop} items={[{ key: 'home', label: pick(l, 'Home', 'ہوم') }, { key: 'nearby', label: pick(l, 'Nearby', 'قریب') }, { key: 'journey', label: pick(l, 'My Journey', 'میرا سفر') }, { key: 'quran', label: pick(l, 'Quran & Prayer', 'قرآن و نماز') }]} />) },
+    {
+      label: 'Text and Button',
+      render: (l) => (
+        <>
+          <Text>
+            {pick(l, 'The next session is on Friday evening.', 'اگلی نشست جمعہ کی شام کو ہے۔')}
+          </Text>
+          <Button label={pick(l, 'Register', 'رجسٹر کریں')} onPress={noop} />
+        </>
+      ),
+    },
+    {
+      label: 'TextField and Switch',
+      render: (l) => (
+        <>
+          <TextField
+            label={pick(l, 'Full name', 'پورا نام')}
+            value=""
+            onChangeText={noop}
+            required
+          />
+          <Switch label={pick(l, 'Dark mode', 'ڈارک موڈ')} value onValueChange={noop} />
+        </>
+      ),
+    },
+    {
+      label: 'ListItem and Chips',
+      render: (l) => (
+        <>
+          <ListItem
+            title={pick(l, 'Al-Noor Masjid', 'النور مسجد')}
+            subtitle={pick(l, 'Tonight 9:30 pm', 'آج رات 9:30 بجے')}
+            onPress={noop}
+          />
+          <Row>
+            <Chip label={pick(l, 'Women', 'خواتین')} selected onPress={noop} />
+            <Chip label={pick(l, 'Family', 'فیملی')} selected={false} onPress={noop} />
+          </Row>
+        </>
+      ),
+    },
+    {
+      label: 'TabBar',
+      render: (l) => (
+        <TabBar
+          activeKey="nearby"
+          onChange={noop}
+          items={[
+            { key: 'home', label: pick(l, 'Home', 'ہوم') },
+            { key: 'nearby', label: pick(l, 'Nearby', 'قریب') },
+            { key: 'journey', label: pick(l, 'My Journey', 'میرا سفر') },
+            { key: 'quran', label: pick(l, 'Quran & Prayer', 'قرآن و نماز') },
+          ]}
+        />
+      ),
+    },
   ];
   return (
     <section id="text-sizes">
@@ -466,7 +933,10 @@ function Tokens() {
     <section id="tokens">
       <h2>Tokens</h2>
       <h3>Colour, with the contrast of every text pair</h3>
-      <p className="note">Minimum 4.5:1 for text (7:1 in high contrast), 3:1 for outlines and the focus ring. Gold is decoration and is never used for text.</p>
+      <p className="note">
+        Minimum 4.5:1 for text (7:1 in high contrast), 3:1 for outlines and the focus ring. Gold is
+        decoration and is never used for text.
+      </p>
       <div className="grid">
         {colorModes.map((mode) => {
           const c = semanticColors[mode];
@@ -489,7 +959,9 @@ function Tokens() {
                       <tr key={p.name} className={ratio >= p.min ? '' : 'fail'}>
                         <td>{p.name}</td>
                         <td>{ratio.toFixed(2)}:1</td>
-                        <td>{ratio >= p.min ? 'pass' : 'FAIL'} (min {p.min})</td>
+                        <td>
+                          {ratio >= p.min ? 'pass' : 'FAIL'} (min {p.min})
+                        </td>
                       </tr>
                     );
                   })}
@@ -502,7 +974,13 @@ function Tokens() {
       <h3>Type scale, in the three scripts</h3>
       <table>
         <thead>
-          <tr><th>Role</th><th>Size (dp)</th><th>Latin line</th><th>Urdu size / line</th><th>Quran size / line</th></tr>
+          <tr>
+            <th>Role</th>
+            <th>Size (dp)</th>
+            <th>Latin line</th>
+            <th>Urdu size / line</th>
+            <th>Quran size / line</th>
+          </tr>
         </thead>
         <tbody>
           {roles.map((r) => {
@@ -512,15 +990,32 @@ function Tokens() {
               <tr key={r}>
                 <td>{r}</td>
                 <td>{typeRoles[r].size}</td>
-                <td>{typeStyle(r, 'latin', 0).lineHeight} ({lineHeightRatio.latin}x)</td>
-                <td>{u.fontSize} / {u.lineHeight} ({lineHeightRatio.urdu}x)</td>
-                <td>{q.fontSize} / {q.lineHeight} ({lineHeightRatio.quran}x)</td>
+                <td>
+                  {typeStyle(r, 'latin', 0).lineHeight} ({lineHeightRatio.latin}x)
+                </td>
+                <td>
+                  {u.fontSize} / {u.lineHeight} ({lineHeightRatio.urdu}x)
+                </td>
+                <td>
+                  {q.fontSize} / {q.lineHeight} ({lineHeightRatio.quran}x)
+                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-      <p className="note">Fonts: {fonts.sans} (English), {fonts.urdu} (Urdu), {fonts.quran} (Quran text only). Touch target {minTouchTarget} dp. Spacing: {Object.entries(spacing).map(([k, v]) => `${k} ${v}`).join(', ')}. Radii: {Object.entries(radii).map(([k, v]) => `${k} ${v}`).join(', ')}.</p>
+      <p className="note">
+        Fonts: {fonts.sans} (English), {fonts.urdu} (Urdu), {fonts.quran} (Quran text only). Touch
+        target {minTouchTarget} dp. Spacing:{' '}
+        {Object.entries(spacing)
+          .map(([k, v]) => `${k} ${v}`)
+          .join(', ')}
+        . Radii:{' '}
+        {Object.entries(radii)
+          .map(([k, v]) => `${k} ${v}`)
+          .join(', ')}
+        .
+      </p>
     </section>
   );
 }
@@ -530,13 +1025,16 @@ function Page() {
     <div className="page">
       <h1>Quran Circles component catalog</h1>
       <p className="note">
-        Every component in light, dark and high contrast, in English (left to right) and Urdu (right to left, draft wording).
-        Generated by <code>pnpm --filter @qc/ui catalog</code>. Fonts load from Google Fonts when online; AlMushaf falls back to a system font here.
+        Every component in light, dark and high contrast, in English (left to right) and Urdu (right
+        to left, draft wording). Generated by <code>pnpm --filter @qc/ui catalog</code>. Fonts load
+        from Google Fonts when online; AlMushaf falls back to a system font here.
       </p>
       <nav>
         <a href="#tokens">Tokens</a> <a href="#text-sizes">Text sizes</a>
         {stories.map((s) => (
-          <a key={s.id} href={`#${s.id}`}>{s.title}</a>
+          <a key={s.id} href={`#${s.id}`}>
+            {s.title}
+          </a>
         ))}
       </nav>
       <Tokens />

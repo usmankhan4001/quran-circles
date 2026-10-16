@@ -139,15 +139,7 @@ export const motion = {
 } as const;
 
 export type TypeRole =
-  | 'display'
-  | 'title1'
-  | 'title2'
-  | 'title3'
-  | 'bodyLarge'
-  | 'body'
-  | 'label'
-  | 'caption'
-  | 'quran';
+  'display' | 'title1' | 'title2' | 'title3' | 'bodyLarge' | 'body' | 'label' | 'caption' | 'quran';
 
 /** The script a piece of text is set in. It decides the font and the line height. */
 export type Script = 'latin' | 'urdu' | 'quran';

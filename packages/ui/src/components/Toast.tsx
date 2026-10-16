@@ -82,7 +82,10 @@ export function Toast({
       testID={testID}
       role={kind === 'danger' ? 'alert' : 'status'}
       aria-live={kind === 'danger' ? 'assertive' : 'polite'}
-      style={[styles.box, { backgroundColor: palette.bg, borderColor: palette.border, boxShadow: elevation.medium }]}
+      style={[
+        styles.box,
+        { backgroundColor: palette.bg, borderColor: palette.border, boxShadow: elevation.medium },
+      ]}
     >
       <View style={styles.icon}>
         <Icon name={icons[kind]} size={24} color={palette.fg} />
@@ -92,9 +95,15 @@ export function Toast({
           {message}
         </Text>
       </View>
-      {hasAction ? <Button label={actionLabel as string} onPress={onAction} variant="tertiary" /> : null}
+      {hasAction ? (
+        <Button label={actionLabel as string} onPress={onAction} variant="tertiary" />
+      ) : null}
       {onDismiss ? (
-        <IconButton icon="close" accessibilityLabel={dismissLabel ?? theme.t('ui.dismiss')} onPress={onDismiss} />
+        <IconButton
+          icon="close"
+          accessibilityLabel={dismissLabel ?? theme.t('ui.dismiss')}
+          onPress={onDismiss}
+        />
       ) : null}
     </View>
   );

@@ -34,7 +34,14 @@ const styles = StyleSheet.create({
  * A labelled tick box. The whole row is the touch target. A tick mark shows the checked state,
  * so it does not depend on colour. Used for the facilities checklist and the attendance list.
  */
-export function Checkbox({ label, description, checked, onChange, disabled, testID }: CheckboxProps) {
+export function Checkbox({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled,
+  testID,
+}: CheckboxProps) {
   const theme = useTheme();
   const c = theme.colors;
   return (
@@ -45,7 +52,10 @@ export function Checkbox({ label, description, checked, onChange, disabled, test
       disabled={disabled}
       accessibilityLabel={description ? `${label}. ${description}` : label}
       onPress={() => onChange(!checked)}
-      style={({ pressed }) => [styles.row, pressed ? { backgroundColor: c.surfaceMuted } : undefined]}
+      style={({ pressed }) => [
+        styles.row,
+        pressed ? { backgroundColor: c.surfaceMuted } : undefined,
+      ]}
     >
       <View
         aria-hidden
@@ -57,7 +67,9 @@ export function Checkbox({ label, description, checked, onChange, disabled, test
           },
         ]}
       >
-        {checked ? <Icon name="check" size={18} color={disabled ? c.disabledText : c.textOnAccent} /> : null}
+        {checked ? (
+          <Icon name="check" size={18} color={disabled ? c.disabledText : c.textOnAccent} />
+        ) : null}
       </View>
       <View style={styles.text}>
         <Text variant="body" color={disabled ? 'disabledText' : 'text'}>

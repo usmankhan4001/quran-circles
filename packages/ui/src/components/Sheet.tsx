@@ -59,7 +59,9 @@ export function SheetPanel({
       style={[
         styles.sheet,
         { backgroundColor: c.surfaceRaised, boxShadow: elevation.high },
-        theme.mode === 'highContrast' ? { borderTopWidth: 2, borderColor: c.borderStrong } : undefined,
+        theme.mode === 'highContrast'
+          ? { borderTopWidth: 2, borderColor: c.borderStrong }
+          : undefined,
       ]}
     >
       <View style={[styles.handle, { backgroundColor: c.borderStrong }]} aria-hidden />
@@ -69,7 +71,11 @@ export function SheetPanel({
             {title}
           </Text>
         </View>
-        <IconButton icon="close" accessibilityLabel={closeLabel ?? theme.t('ui.close')} onPress={onClose} />
+        <IconButton
+          icon="close"
+          accessibilityLabel={closeLabel ?? theme.t('ui.close')}
+          onPress={onClose}
+        />
       </View>
       <ScrollView contentContainerStyle={styles.body}>{children}</ScrollView>
     </View>

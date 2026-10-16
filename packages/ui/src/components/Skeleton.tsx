@@ -23,7 +23,14 @@ const styles = StyleSheet.create({
  * A grey placeholder shown while content loads. It is static (no shimmer), so it is calm and
  * needs no reduced-motion handling. The group is announced once as "Loading".
  */
-export function Skeleton({ shape = 'text', width = '100%', height, lines = 1, announce = true, testID }: SkeletonProps) {
+export function Skeleton({
+  shape = 'text',
+  width = '100%',
+  height,
+  lines = 1,
+  announce = true,
+  testID,
+}: SkeletonProps) {
   const theme = useTheme();
   const fill = theme.colors.skeleton;
   const a11y = announce
@@ -32,7 +39,11 @@ export function Skeleton({ shape = 'text', width = '100%', height, lines = 1, an
   if (shape === 'circle') {
     const size = height ?? 48;
     return (
-      <View testID={testID} {...a11y} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: fill }} />
+      <View
+        testID={testID}
+        {...a11y}
+        style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: fill }}
+      />
     );
   }
   if (shape === 'block') {
@@ -40,7 +51,10 @@ export function Skeleton({ shape = 'text', width = '100%', height, lines = 1, an
       <View
         testID={testID}
         {...a11y}
-        style={[styles.line, { width, height: height ?? 96, backgroundColor: fill, borderRadius: radii.md }]}
+        style={[
+          styles.line,
+          { width, height: height ?? 96, backgroundColor: fill, borderRadius: radii.md },
+        ]}
       />
     );
   }

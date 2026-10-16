@@ -32,7 +32,10 @@ describe('contrast helper', () => {
   });
 
   it('is symmetric', () => {
-    expect(contrastRatio('#064e3b', '#fdfcf6')).toBeCloseTo(contrastRatio('#fdfcf6', '#064e3b'), 10);
+    expect(contrastRatio('#064e3b', '#fdfcf6')).toBeCloseTo(
+      contrastRatio('#fdfcf6', '#064e3b'),
+      10,
+    );
   });
 
   it('rejects colours that are not #rrggbb', () => {
@@ -115,7 +118,10 @@ describe('semantic colours across modes', () => {
 
   it('makes high contrast stronger than light for primary text', () => {
     const light = contrastRatio(semanticColors.light.text, semanticColors.light.background);
-    const hc = contrastRatio(semanticColors.highContrast.text, semanticColors.highContrast.background);
+    const hc = contrastRatio(
+      semanticColors.highContrast.text,
+      semanticColors.highContrast.background,
+    );
     expect(hc).toBeGreaterThan(light);
     expect(hc).toBeGreaterThanOrEqual(7);
   });
@@ -164,18 +170,22 @@ describe('type scale', () => {
     expect(lineHeightRatio.quran).toBeGreaterThan(lineHeightRatio.urdu);
   });
 
-  it.each(roles)('%s: line height always clears the font size, for every script and size', (role) => {
-    for (const script of ['latin', 'urdu', 'quran'] as const) {
-      for (const step of textSizeSteps) {
-        const t = typeStyle(role, script, step);
-        expect(t.lineHeight, `${role} ${script} ${step}`).toBeGreaterThan(t.fontSize * 1.3);
+  it.each(roles)(
+    '%s: line height always clears the font size, for every script and size',
+    (role) => {
+      for (const script of ['latin', 'urdu', 'quran'] as const) {
+        for (const step of textSizeSteps) {
+          const t = typeStyle(role, script, step);
+          expect(t.lineHeight, `${role} ${script} ${step}`).toBeGreaterThan(t.fontSize * 1.3);
+        }
       }
-    }
-  });
+    },
+  );
 
   it.each(roles)('%s: grows with each text size step', (role) => {
     const sizes = textSizeSteps.map((s) => typeStyle(role, 'latin', s).fontSize);
-    for (let i = 1; i < sizes.length; i++) expect(sizes[i] as number).toBeGreaterThan(sizes[i - 1] as number);
+    for (let i = 1; i < sizes.length; i++)
+      expect(sizes[i] as number).toBeGreaterThan(sizes[i - 1] as number);
   });
 
   it('keeps body text at 16 dp or more at the default size', () => {
@@ -184,7 +194,9 @@ describe('type scale', () => {
   });
 
   it('sets Urdu a little larger than Latin at the same role', () => {
-    expect(typeStyle('body', 'urdu', 0).fontSize).toBeGreaterThan(typeStyle('body', 'latin', 0).fontSize);
+    expect(typeStyle('body', 'urdu', 0).fontSize).toBeGreaterThan(
+      typeStyle('body', 'latin', 0).fontSize,
+    );
   });
 
   it('never synthesises bold for Urdu or Quran text', () => {
@@ -198,18 +210,21 @@ describe('spacing, radii, elevation and motion', () => {
   it('keeps spacing on a 2 dp grid and increasing', () => {
     const values = Object.values(spacing);
     for (const v of values) expect(v % 2).toBe(0);
-    for (let i = 1; i < values.length; i++) expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
+    for (let i = 1; i < values.length; i++)
+      expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
   });
 
   it('has increasing radii ending in a pill', () => {
     const values = Object.values(radii);
-    for (let i = 1; i < values.length; i++) expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
+    for (let i = 1; i < values.length; i++)
+      expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
     expect(radii.pill).toBeGreaterThanOrEqual(999);
   });
 
   it('has no shadow at level none and a shadow string above it', () => {
     expect(elevation.none).toBeUndefined();
-    for (const level of ['low', 'medium', 'high'] as const) expect(elevation[level]).toMatch(/^0px \d+px \d+px rgba\(/);
+    for (const level of ['low', 'medium', 'high'] as const)
+      expect(elevation[level]).toMatch(/^0px \d+px \d+px rgba\(/);
   });
 
   it('has motion durations that grow, starting at zero', () => {

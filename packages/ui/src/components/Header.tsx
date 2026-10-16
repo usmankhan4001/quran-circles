@@ -32,7 +32,15 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', alignItems: 'center' },
 });
 
-export function Header({ title, subtitle, onBack, backLabel, actions, variant = 'regular', testID }: HeaderProps) {
+export function Header({
+  title,
+  subtitle,
+  onBack,
+  backLabel,
+  actions,
+  variant = 'regular',
+  testID,
+}: HeaderProps) {
   const theme = useTheme();
   const c = theme.colors;
   return (
@@ -41,12 +49,20 @@ export function Header({ title, subtitle, onBack, backLabel, actions, variant = 
       style={[styles.bar, { backgroundColor: c.surface, borderBottomColor: c.border }]}
     >
       {onBack ? (
-        <IconButton icon="chevron-back" accessibilityLabel={backLabel ?? theme.t('ui.back')} onPress={onBack} />
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel={backLabel ?? theme.t('ui.back')}
+          onPress={onBack}
+        />
       ) : (
         <View style={styles.spacer} />
       )}
       <View style={styles.titles}>
-        <Text variant={variant === 'large' ? 'title1' : 'title3'} heading={1} numberOfLines={variant === 'large' ? 2 : 1}>
+        <Text
+          variant={variant === 'large' ? 'title1' : 'title3'}
+          heading={1}
+          numberOfLines={variant === 'large' ? 2 : 1}
+        >
           {title}
         </Text>
         {subtitle ? (

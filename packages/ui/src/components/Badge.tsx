@@ -33,7 +33,10 @@ const styles = StyleSheet.create({
 });
 
 /** The words a screen reader says for a badge. Use it in the parent's label when `decorative`. */
-export function badgeLabel(theme: Theme, { count, dot }: Pick<BadgeProps, 'count' | 'dot'>): string | undefined {
+export function badgeLabel(
+  theme: Theme,
+  { count, dot }: Pick<BadgeProps, 'count' | 'dot'>,
+): string | undefined {
   if (count !== undefined && count > 0) {
     return theme.t('ui.unread', { count: formatNumber(count, theme.locale) });
   }
@@ -44,7 +47,9 @@ export function Badge({ count, dot, max = 99, decorative, testID }: BadgeProps) 
   const theme = useTheme();
   const label = badgeLabel(theme, { count, dot });
   if (!label) return null;
-  const a11y = decorative ? { 'aria-hidden': true as const } : { role: 'img' as const, 'aria-label': label };
+  const a11y = decorative
+    ? { 'aria-hidden': true as const }
+    : { role: 'img' as const, 'aria-label': label };
   if (count === undefined || count <= 0) {
     return (
       <View
@@ -54,21 +59,15 @@ export function Badge({ count, dot, max = 99, decorative, testID }: BadgeProps) 
       />
     );
   }
-  const shown = count > max ? `${formatNumber(max, theme.locale)}+` : formatNumber(count, theme.locale);
+  const shown =
+    count > max ? `${formatNumber(max, theme.locale)}+` : formatNumber(count, theme.locale);
   return (
     <View
       testID={testID ?? 'badge-count'}
       {...a11y}
       style={[styles.count, { backgroundColor: theme.colors.danger }]}
     >
-      <Text
-        variant="caption"
-        color="textOnDanger"
-        direction="ltr"
-        align="center"
-        decorative
-        strong
-      >
+      <Text variant="caption" color="textOnDanger" direction="ltr" align="center" decorative strong>
         {shown}
       </Text>
     </View>

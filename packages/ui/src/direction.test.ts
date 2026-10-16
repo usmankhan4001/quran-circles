@@ -44,7 +44,14 @@ describe('direction helpers', () => {
 
 describe('icon mirroring', () => {
   it('mirrors pointing icons in right-to-left only', () => {
-    for (const name of ['chevron-forward', 'chevron-back', 'arrow-forward', 'arrow-back', 'send', 'undo']) {
+    for (const name of [
+      'chevron-forward',
+      'chevron-back',
+      'arrow-forward',
+      'arrow-back',
+      'send',
+      'undo',
+    ]) {
       expect(shouldFlipIcon(name, 'rtl'), name).toBe(true);
       expect(shouldFlipIcon(name, 'ltr'), name).toBe(false);
       expect(iconFlipTransform(name, 'rtl')).toEqual({ transform: [{ scaleX: -1 }] });
@@ -53,7 +60,22 @@ describe('icon mirroring', () => {
   });
 
   it('never mirrors objects and fixed concepts', () => {
-    for (const name of ['check', 'close', 'plus', 'clock', 'search', 'phone', 'bell', 'play', 'chevron-down', 'chevron-up', 'info', 'warning', 'error', 'success']) {
+    for (const name of [
+      'check',
+      'close',
+      'plus',
+      'clock',
+      'search',
+      'phone',
+      'bell',
+      'play',
+      'chevron-down',
+      'chevron-up',
+      'info',
+      'warning',
+      'error',
+      'success',
+    ]) {
       expect(shouldFlipIcon(name, 'rtl'), name).toBe(false);
     }
   });

@@ -62,9 +62,16 @@ export function Text({
 }: TextProps) {
   const theme = useTheme();
   const isQuran = variant === 'quran' || lang === 'ar';
-  const script = isQuran ? 'quran' : lang === 'ur' ? 'urdu' : lang === 'en' ? 'latin' : theme.script;
+  const script = isQuran
+    ? 'quran'
+    : lang === 'ur'
+      ? 'urdu'
+      : lang === 'en'
+        ? 'latin'
+        : theme.script;
   const role: TypeRole = variant === 'quran' && lang !== 'ar' ? 'quran' : variant;
-  const resolvedDir: Direction | 'auto' = direction ?? (isQuran ? 'rtl' : dirOf(lang, theme.direction));
+  const resolvedDir: Direction | 'auto' =
+    direction ?? (isQuran ? 'rtl' : dirOf(lang, theme.direction));
   const type = theme.type(role, script);
   const alignStart: TextStyle['textAlign'] =
     resolvedDir === 'auto' ? undefined : textAlignStart(resolvedDir);

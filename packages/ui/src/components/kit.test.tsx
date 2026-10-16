@@ -20,7 +20,8 @@ import { semanticColors } from '../semantic-colors';
 import { minTouchTarget } from '../tokens';
 import { matrix, px, renderThemed, rgb } from '../test/utils';
 
-const ui = (locale: 'en' | 'ur', key: string) => (messages[locale] as Record<string, string>)[key] as string;
+const ui = (locale: 'en' | 'ur', key: string) =>
+  (messages[locale] as Record<string, string>)[key] as string;
 
 describe.each(matrix)('rest of the kit in $name', (combo) => {
   it('IconButton has a name and a 48 dp target', () => {
@@ -36,7 +37,13 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
   it('TextField has a visible label, an input and an announced error', () => {
     const onChangeText = vi.fn();
     renderThemed(
-      <TextField label="Full name" value="" onChangeText={onChangeText} required error="Enter your name" />,
+      <TextField
+        label="Full name"
+        value=""
+        onChangeText={onChangeText}
+        required
+        error="Enter your name"
+      />,
       combo,
     );
     const input = screen.getByLabelText('Full name');
@@ -118,7 +125,8 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
     expect(screen.getByRole('radiogroup', { name: 'Section' })).toBeTruthy();
     const radios = screen.getAllByRole('radio');
     expect(radios.map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'true', 'false']);
-    for (const r of radios) expect(px(getComputedStyle(r).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
+    for (const r of radios)
+      expect(px(getComputedStyle(r).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
     fireEvent.click(radios[2] as HTMLElement);
     expect(onChange).toHaveBeenCalledWith('family');
   });
@@ -126,7 +134,11 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
   it('EmptyState, ErrorState, Skeleton, Toast, Avatar and Header render with roles', () => {
     renderThemed(
       <>
-        <EmptyState title="Nothing yet" description="Register for a session." action={{ label: 'Find a session', onPress: () => undefined }} />
+        <EmptyState
+          title="Nothing yet"
+          description="Register for a session."
+          action={{ label: 'Find a session', onPress: () => undefined }}
+        />
         <ErrorState onRetry={() => undefined} />
         <Skeleton lines={3} />
         <Toast message="Saved" kind="success" onDismiss={() => undefined} durationMs={0} />
@@ -150,7 +162,9 @@ describe.each(matrix)('rest of the kit in $name', (combo) => {
 describe('IconButton', () => {
   it('ignores presses while disabled or loading', () => {
     const onPress = vi.fn();
-    const { unmount } = renderThemed(<IconButton icon="close" accessibilityLabel="Close" disabled onPress={onPress} />);
+    const { unmount } = renderThemed(
+      <IconButton icon="close" accessibilityLabel="Close" disabled onPress={onPress} />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     unmount();
     renderThemed(<IconButton icon="close" accessibilityLabel="Close" loading onPress={onPress} />);
@@ -161,7 +175,14 @@ describe('IconButton', () => {
 
 describe('TextField', () => {
   it('shows helper text without announcing it as an alert', () => {
-    renderThemed(<TextField label="WhatsApp number" value="" onChangeText={() => undefined} helper="We send a code here." />);
+    renderThemed(
+      <TextField
+        label="WhatsApp number"
+        value=""
+        onChangeText={() => undefined}
+        helper="We send a code here."
+      />,
+    );
     expect(screen.getByText('We send a code here.')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByLabelText('WhatsApp number').getAttribute('aria-invalid')).toBeNull();
@@ -174,7 +195,9 @@ describe('TextField', () => {
 
   it('is read only and does not take input while disabled or loading', () => {
     const onChangeText = vi.fn();
-    const { unmount } = renderThemed(<TextField label="Name" value="" onChangeText={onChangeText} disabled />);
+    const { unmount } = renderThemed(
+      <TextField label="Name" value="" onChangeText={onChangeText} disabled />,
+    );
     expect((screen.getByLabelText('Name') as HTMLInputElement).readOnly).toBe(true);
     unmount();
     renderThemed(<TextField label="Name" value="" onChangeText={onChangeText} loading />);
@@ -184,13 +207,24 @@ describe('TextField', () => {
   });
 
   it('draws the error border in the danger colour', () => {
-    renderThemed(<TextField label="Name" value="" onChangeText={() => undefined} error="Required" />, { mode: 'dark' });
-    expect(screen.getByLabelText('Name').style.borderTopColor).toBe(rgb(semanticColors.dark.danger));
+    renderThemed(
+      <TextField label="Name" value="" onChangeText={() => undefined} error="Required" />,
+      { mode: 'dark' },
+    );
+    expect(screen.getByLabelText('Name').style.borderTopColor).toBe(
+      rgb(semanticColors.dark.danger),
+    );
   });
 
   it('keeps a phone number left to right but aligned to the start on an Urdu screen', () => {
     renderThemed(
-      <TextField label="Number" value="0300" onChangeText={() => undefined} contentDirection="ltr" keyboardType="phone-pad" />,
+      <TextField
+        label="Number"
+        value="0300"
+        onChangeText={() => undefined}
+        contentDirection="ltr"
+        keyboardType="phone-pad"
+      />,
       { locale: 'ur' },
     );
     const input = screen.getByLabelText('Number');
@@ -210,15 +244,27 @@ describe('Select', () => {
   ] as const;
 
   it('shows the placeholder, then the kit default, when nothing is chosen', () => {
-    const { unmount } = renderThemed(<Select label="Area" options={options} value={undefined} onChange={() => undefined} placeholder="Pick an area" />);
+    const { unmount } = renderThemed(
+      <Select
+        label="Area"
+        options={options}
+        value={undefined}
+        onChange={() => undefined}
+        placeholder="Pick an area"
+      />,
+    );
     expect(screen.getByRole('button', { name: 'Area, Pick an area' })).toBeTruthy();
     unmount();
-    renderThemed(<Select label="Area" options={options} value={undefined} onChange={() => undefined} />);
+    renderThemed(
+      <Select label="Area" options={options} value={undefined} onChange={() => undefined} />,
+    );
     expect(screen.getByRole('button', { name: 'Area, Choose one' })).toBeTruthy();
   });
 
   it('does not open while disabled', () => {
-    renderThemed(<Select label="Area" options={options} value="a" onChange={() => undefined} disabled />);
+    renderThemed(
+      <Select label="Area" options={options} value="a" onChange={() => undefined} disabled />,
+    );
     fireEvent.click(screen.getByRole('button'));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -232,7 +278,15 @@ describe('Select', () => {
   });
 
   it('shows an error as an alert', () => {
-    renderThemed(<Select label="Area" options={options} value={undefined} onChange={() => undefined} error="Choose your area" />);
+    renderThemed(
+      <Select
+        label="Area"
+        options={options}
+        value={undefined}
+        onChange={() => undefined}
+        error="Choose your area"
+      />,
+    );
     expect(screen.getByRole('alert').textContent).toBe('Choose your area');
   });
 
@@ -249,7 +303,9 @@ describe('Select', () => {
 describe('Switch', () => {
   it('shows Off and toggles on', () => {
     const onValueChange = vi.fn();
-    renderThemed(<Switch label="Alerts" description="Per venue" value={false} onValueChange={onValueChange} />);
+    renderThemed(
+      <Switch label="Alerts" description="Per venue" value={false} onValueChange={onValueChange} />,
+    );
     expect(screen.getByText('Off')).toBeTruthy();
     const sw = screen.getByRole('switch', { name: 'Alerts. Per venue' });
     expect(sw.getAttribute('aria-checked')).toBe('false');
@@ -258,10 +314,15 @@ describe('Switch', () => {
   });
 
   it('puts the thumb at the end when on, whatever the direction', () => {
-    const { unmount } = renderThemed(<Switch label="A" value testID="s" onValueChange={() => undefined} />, { locale: 'ur' });
+    const { unmount } = renderThemed(
+      <Switch label="A" value testID="s" onValueChange={() => undefined} />,
+      { locale: 'ur' },
+    );
     expect(screen.getByTestId('s-track').style.justifyContent).toBe('flex-end');
     unmount();
-    renderThemed(<Switch label="A" value={false} testID="s" onValueChange={() => undefined} />, { locale: 'en' });
+    renderThemed(<Switch label="A" value={false} testID="s" onValueChange={() => undefined} />, {
+      locale: 'en',
+    });
     expect(screen.getByTestId('s-track').style.justifyContent).toBe('flex-start');
   });
 
@@ -277,7 +338,14 @@ describe('Switch', () => {
 describe('Checkbox', () => {
   it('shows no tick when unchecked and checks on press', () => {
     const onChange = vi.fn();
-    renderThemed(<Checkbox label="Wudu area" description="Near the entrance" checked={false} onChange={onChange} />);
+    renderThemed(
+      <Checkbox
+        label="Wudu area"
+        description="Near the entrance"
+        checked={false}
+        onChange={onChange}
+      />,
+    );
     const box = screen.getByRole('checkbox', { name: 'Wudu area. Near the entrance' });
     expect(box.getAttribute('aria-checked')).toBe('false');
     expect(screen.queryByTestId('icon-check')).toBeNull();
@@ -301,11 +369,29 @@ describe('SegmentedControl', () => {
       { value: 'a', label: 'A' },
       { value: 'b', label: 'B', disabled: true },
     ] as const;
-    const { unmount } = renderThemed(<SegmentedControl accessibilityLabel="Pick" value="a" onChange={onChange} options={options} />);
+    const { unmount } = renderThemed(
+      <SegmentedControl
+        accessibilityLabel="Pick"
+        value="a"
+        onChange={onChange}
+        options={options}
+      />,
+    );
     fireEvent.click(screen.getByRole('radio', { name: 'B' }));
     expect(onChange).not.toHaveBeenCalled();
     unmount();
-    renderThemed(<SegmentedControl accessibilityLabel="Pick" value="a" onChange={onChange} options={[{ value: 'a', label: 'A' }, { value: 'c', label: 'C' }]} disabled />);
+    renderThemed(
+      <SegmentedControl
+        accessibilityLabel="Pick"
+        value="a"
+        onChange={onChange}
+        options={[
+          { value: 'a', label: 'A' },
+          { value: 'c', label: 'C' },
+        ]}
+        disabled
+      />,
+    );
     fireEvent.click(screen.getByRole('radio', { name: 'C' }));
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -315,7 +401,13 @@ describe('EmptyState and ErrorState', () => {
   it('EmptyState runs its actions', () => {
     const a = vi.fn();
     const b = vi.fn();
-    renderThemed(<EmptyState title="No sessions" action={{ label: 'Browse', onPress: a }} secondaryAction={{ label: 'Request a circle', onPress: b }} />);
+    renderThemed(
+      <EmptyState
+        title="No sessions"
+        action={{ label: 'Browse', onPress: a }}
+        secondaryAction={{ label: 'Request a circle', onPress: b }}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Browse' }));
     fireEvent.click(screen.getByRole('button', { name: 'Request a circle' }));
     expect(a).toHaveBeenCalledTimes(1);
@@ -337,7 +429,15 @@ describe('EmptyState and ErrorState', () => {
 
   it('ErrorState shows a busy retry button while retrying and accepts custom text', () => {
     const onRetry = vi.fn();
-    renderThemed(<ErrorState title="No venues" description="Try later" retrying onRetry={onRetry} retryLabel="Reload" />);
+    renderThemed(
+      <ErrorState
+        title="No venues"
+        description="Try later"
+        retrying
+        onRetry={onRetry}
+        retryLabel="Reload"
+      />,
+    );
     const b = screen.getByRole('button', { name: 'Reload' });
     expect(b.getAttribute('aria-busy')).toBe('true');
     fireEvent.click(b);
@@ -392,7 +492,9 @@ describe('Toast', () => {
   it('stays while it has an action', () => {
     const onDismiss = vi.fn();
     const onAction = vi.fn();
-    renderThemed(<Toast message="Removed" actionLabel="Undo" onAction={onAction} onDismiss={onDismiss} />);
+    renderThemed(
+      <Toast message="Removed" actionLabel="Undo" onAction={onAction} onDismiss={onDismiss} />,
+    );
     act(() => {
       vi.advanceTimersByTime(60000);
     });
@@ -412,7 +514,9 @@ describe('Toast', () => {
 
   it('announces errors as alerts and dismisses on request', () => {
     const onDismiss = vi.fn();
-    renderThemed(<Toast kind="danger" message="Could not save" onDismiss={onDismiss} durationMs={0} />);
+    renderThemed(
+      <Toast kind="danger" message="Could not save" onDismiss={onDismiss} durationMs={0} />,
+    );
     expect(screen.getByRole('alert').textContent).toContain('Could not save');
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -420,7 +524,9 @@ describe('Toast', () => {
 
   it('clears its timer when it unmounts', () => {
     const onDismiss = vi.fn();
-    const { unmount } = renderThemed(<Toast message="Saved" onDismiss={onDismiss} durationMs={1000} />);
+    const { unmount } = renderThemed(
+      <Toast message="Saved" onDismiss={onDismiss} durationMs={1000} />,
+    );
     unmount();
     act(() => {
       vi.advanceTimersByTime(5000);
@@ -487,7 +593,13 @@ describe('Avatar', () => {
 
 describe('Header', () => {
   it('has no back button without onBack and shows actions and a subtitle', () => {
-    renderThemed(<Header title="Venue" subtitle="Lahore" actions={<IconButton icon="plus" accessibilityLabel="Add" />} />);
+    renderThemed(
+      <Header
+        title="Venue"
+        subtitle="Lahore"
+        actions={<IconButton icon="plus" accessibilityLabel="Add" />}
+      />,
+    );
     expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
     expect(screen.getByText('Lahore')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy();
@@ -505,7 +617,9 @@ describe('Header', () => {
   });
 
   it('accepts a custom back label and a large title', () => {
-    renderThemed(<Header title="My Journey" variant="large" onBack={() => undefined} backLabel="Go back" />);
+    renderThemed(
+      <Header title="My Journey" variant="large" onBack={() => undefined} backLabel="Go back" />,
+    );
     expect(screen.getByRole('button', { name: 'Go back' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'My Journey' })).toBeTruthy();
   });

@@ -35,7 +35,14 @@ const styles = StyleSheet.create({
 });
 
 /** Shown when a list or screen has nothing in it yet. It says what is missing and what to do. */
-export function EmptyState({ title, description, icon = 'info', action, secondaryAction, testID }: EmptyStateProps) {
+export function EmptyState({
+  title,
+  description,
+  icon = 'info',
+  action,
+  secondaryAction,
+  testID,
+}: EmptyStateProps) {
   const theme = useTheme();
   return (
     <View testID={testID} style={styles.box}>
@@ -57,7 +64,11 @@ export function EmptyState({ title, description, icon = 'info', action, secondar
           {action ? <Button label={action.label} onPress={action.onPress} /> : null}
           {secondaryAction ? (
             <View style={styles.actionGap}>
-              <Button label={secondaryAction.label} onPress={secondaryAction.onPress} variant="tertiary" />
+              <Button
+                label={secondaryAction.label}
+                onPress={secondaryAction.onPress}
+                variant="tertiary"
+              />
             </View>
           ) : null}
         </View>

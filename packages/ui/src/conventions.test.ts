@@ -28,25 +28,34 @@ describe('component source', () => {
   // Icon draws shapes physically on purpose and mirrors them as a whole.
   const logicalOnly = components.filter((f) => !f.endsWith('Icon.tsx'));
 
-  it.each(logicalOnly.map((f) => [rel(f), f]))('%s uses logical (start/end) layout, never left/right', (_name, file) => {
-    const src = readFileSync(file as string, 'utf8');
-    const physical =
-      /\b(margin|padding)(Left|Right)\b|\bborder(Left|Right)(Width|Color)\b|\bborder(Top|Bottom)(Left|Right)Radius\b|[{,]\s*(left|right)\s*:|textAlign:\s*['"](left|right)['"]|flexDirection:\s*['"]row-reverse['"]/;
-    expect(src.match(physical)?.[0]).toBeUndefined();
-  });
+  it.each(logicalOnly.map((f) => [rel(f), f]))(
+    '%s uses logical (start/end) layout, never left/right',
+    (_name, file) => {
+      const src = readFileSync(file as string, 'utf8');
+      const physical =
+        /\b(margin|padding)(Left|Right)\b|\bborder(Left|Right)(Width|Color)\b|\bborder(Top|Bottom)(Left|Right)Radius\b|[{,]\s*(left|right)\s*:|textAlign:\s*['"](left|right)['"]|flexDirection:\s*['"]row-reverse['"]/;
+      expect(src.match(physical)?.[0]).toBeUndefined();
+    },
+  );
 
-  it.each(components.map((f) => [rel(f), f]))('%s has no raw colours: it reads the theme', (_name, file) => {
-    const src = readFileSync(file as string, 'utf8');
-    expect(src.match(/#[0-9a-fA-F]{3,8}\b/)?.[0]).toBeUndefined();
-    expect(src.match(/\brgba?\(/)?.[0]).toBeUndefined();
-  });
+  it.each(components.map((f) => [rel(f), f]))(
+    '%s has no raw colours: it reads the theme',
+    (_name, file) => {
+      const src = readFileSync(file as string, 'utf8');
+      expect(src.match(/#[0-9a-fA-F]{3,8}\b/)?.[0]).toBeUndefined();
+      expect(src.match(/\brgba?\(/)?.[0]).toBeUndefined();
+    },
+  );
 
-  it.each(components.map((f) => [rel(f), f]))('%s has no `any` and no hard-coded sentences', (_name, file) => {
-    const src = readFileSync(file as string, 'utf8');
-    expect(src.match(/:\s*any\b|<any>|as any\b/)?.[0]).toBeUndefined();
-    // Text children must be props or theme.t() calls, not literal words.
-    expect(src.match(/>\s*[A-Z][a-z]+(?:\s+[a-z]+)+\s*</)?.[0]).toBeUndefined();
-  });
+  it.each(components.map((f) => [rel(f), f]))(
+    '%s has no `any` and no hard-coded sentences',
+    (_name, file) => {
+      const src = readFileSync(file as string, 'utf8');
+      expect(src.match(/:\s*any\b|<any>|as any\b/)?.[0]).toBeUndefined();
+      // Text children must be props or theme.t() calls, not literal words.
+      expect(src.match(/>\s*[A-Z][a-z]+(?:\s+[a-z]+)+\s*</)?.[0]).toBeUndefined();
+    },
+  );
 
   it('every built-in string key the kit uses exists in English and Urdu', () => {
     const used = new Set<string>();

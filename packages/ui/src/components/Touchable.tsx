@@ -1,5 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, type GestureResponderEvent, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  type GestureResponderEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import type { Role } from 'react-native';
 import { useTheme } from '../theme';
 import { minTouchTarget } from '../tokens';
@@ -91,7 +96,9 @@ export function Touchable({
         ];
       }}
     >
-      {({ pressed }) => (typeof children === 'function' ? children({ pressed, focused }) : children)}
+      {({ pressed }) =>
+        typeof children === 'function' ? children({ pressed, focused }) : children
+      }
     </Pressable>
   );
 }

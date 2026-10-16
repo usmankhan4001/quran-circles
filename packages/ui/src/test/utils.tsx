@@ -33,7 +33,11 @@ export type ThemedOptions = Partial<Omit<Combo, 'name'>> & { reduceMotion?: bool
  * animation events, so an animated Modal would never finish closing.
  */
 export function renderThemed(ui: ReactElement, options: ThemedOptions = {}): RenderResult {
-  return render(<ThemeProvider reduceMotion {...options}>{ui}</ThemeProvider>);
+  return render(
+    <ThemeProvider reduceMotion {...options}>
+      {ui}
+    </ThemeProvider>,
+  );
 }
 
 /** Converts #rrggbb to the `rgb(r, g, b)` string the DOM reports. */

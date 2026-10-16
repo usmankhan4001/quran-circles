@@ -51,10 +51,18 @@ export function Button({
   const theme = useTheme();
   const c = theme.colors;
   const off = Boolean(disabled);
-  const palette: Record<ButtonVariant, { bg: string; pressed: string; fg: TextColor; border: string }> = {
+  const palette: Record<
+    ButtonVariant,
+    { bg: string; pressed: string; fg: TextColor; border: string }
+  > = {
     primary: { bg: c.accent, pressed: c.accentPressed, fg: 'textOnAccent', border: c.accent },
     secondary: { bg: c.surface, pressed: c.accentSubtle, fg: 'textAccent', border: c.accent },
-    tertiary: { bg: 'transparent', pressed: c.accentSubtle, fg: 'textAccent', border: 'transparent' },
+    tertiary: {
+      bg: 'transparent',
+      pressed: c.accentSubtle,
+      fg: 'textAccent',
+      border: 'transparent',
+    },
     danger: { bg: c.danger, pressed: c.dangerPressed, fg: 'textOnDanger', border: c.danger },
   };
   const p = palette[variant];

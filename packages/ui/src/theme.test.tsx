@@ -17,7 +17,15 @@ function Probe() {
 describe('theme', () => {
   it('defaults to light, English, left-to-right, the default size, with motion on', () => {
     const theme = createTheme();
-    expect(theme).toMatchObject({ mode: 'light', locale: 'en', direction: 'ltr', textSize: 0, scale: 1, reduceMotion: false, script: 'latin' });
+    expect(theme).toMatchObject({
+      mode: 'light',
+      locale: 'en',
+      direction: 'ltr',
+      textSize: 0,
+      scale: 1,
+      reduceMotion: false,
+      script: 'latin',
+    });
   });
 
   it('works without a provider using those defaults', () => {

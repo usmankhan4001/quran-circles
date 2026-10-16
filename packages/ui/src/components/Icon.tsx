@@ -67,7 +67,17 @@ function Chevron({ size, color, rotate }: { size: number; color: string; rotate:
   );
 }
 
-function Bar({ size, color, rotate, vertical }: { size: number; color: string; rotate?: string; vertical?: boolean }) {
+function Bar({
+  size,
+  color,
+  rotate,
+  vertical,
+}: {
+  size: number;
+  color: string;
+  rotate?: string;
+  vertical?: boolean;
+}) {
   const stroke = Math.max(2, Math.round(size / 10));
   const style: ViewStyle = {
     position: 'absolute',

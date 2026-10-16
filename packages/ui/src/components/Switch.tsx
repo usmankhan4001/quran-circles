@@ -43,7 +43,14 @@ const styles = StyleSheet.create({
  * "On" or "Off" so it never depends on colour alone. The thumb sits at the start when off and
  * at the end when on, in either direction, because the track is a row.
  */
-export function Switch({ label, description, value, onValueChange, disabled, testID }: SwitchProps) {
+export function Switch({
+  label,
+  description,
+  value,
+  onValueChange,
+  disabled,
+  testID,
+}: SwitchProps) {
   const theme = useTheme();
   const c = theme.colors;
   const trackBg = disabled ? c.disabledBackground : value ? c.accent : c.surfaceMuted;
@@ -74,12 +81,20 @@ export function Switch({ label, description, value, onValueChange, disabled, tes
           testID={testID ? `${testID}-track` : undefined}
           style={[
             styles.track,
-            { backgroundColor: trackBg, borderColor: trackBorder, justifyContent: value ? 'flex-end' : 'flex-start' },
+            {
+              backgroundColor: trackBg,
+              borderColor: trackBorder,
+              justifyContent: value ? 'flex-end' : 'flex-start',
+            },
           ]}
         >
           <View style={[styles.thumb, { backgroundColor: thumb }]} />
         </View>
-        <Text variant="caption" color={disabled ? 'disabledText' : 'textSecondary'} style={styles.state}>
+        <Text
+          variant="caption"
+          color={disabled ? 'disabledText' : 'textSecondary'}
+          style={styles.state}
+        >
           {value ? theme.t('ui.on') : theme.t('ui.off')}
         </Text>
       </View>

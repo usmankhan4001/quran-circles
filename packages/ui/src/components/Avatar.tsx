@@ -54,7 +54,14 @@ export function Avatar({ name, imageUri, size = 'md', testID }: AvatarProps) {
       aria-label={name}
       style={[
         styles.circle,
-        { width: dim, height: dim, borderRadius: dim / 2, backgroundColor: tint.bg, borderWidth: 1, borderColor: c.border },
+        {
+          width: dim,
+          height: dim,
+          borderRadius: dim / 2,
+          backgroundColor: tint.bg,
+          borderWidth: 1,
+          borderColor: c.border,
+        },
       ]}
     >
       {showImage ? (

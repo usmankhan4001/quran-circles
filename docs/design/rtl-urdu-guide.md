@@ -12,20 +12,20 @@ For every lane that builds a screen. The kit already follows these rules; this p
 
 ## 2. Mirroring rules
 
-| Thing                                                  | Rule                                                                                         |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| Screen layout, rows, tab order, lists, form labels     | Mirrors. First item is at the right.                                                         |
-| Back button and the forward chevron in a list row      | Mirror. Back points right, forward points left.                                              |
-| Progress bars and sliders                              | Fill from the start side (right in Urdu).                                                    |
-| Switch thumb                                           | Off at the start, on at the end. In Urdu the thumb moves leftwards when turned on.           |
-| Text alignment                                         | Start of the line: right for Urdu, left for English. Use the `Text` component.               |
-| Numbers, phone numbers, times, codes                   | Stay left to right inside the line (see section 5).                                          |
-| Bottom tab bar                                         | Mirrors: Home is at the right in Urdu.                                                       |
-| Carousels and horizontal lists                         | Start at the right and scroll leftwards.                                                     |
-| Maps, clocks, the Quran page layout, media play/pause  | Never mirror. A map is a map; the play triangle points right in both.                      |
-| Quran text                                             | Always right to left, whatever the screen language.                                          |
-| Photos and illustrations                               | Do not mirror, unless they show direction or reading order.                                  |
-| Swipe gestures                                         | Swipe-to-go-back starts from the start edge (the right in Urdu). Platform handles it.        |
+| Thing                                                 | Rule                                                                                  |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Screen layout, rows, tab order, lists, form labels    | Mirrors. First item is at the right.                                                  |
+| Back button and the forward chevron in a list row     | Mirror. Back points right, forward points left.                                       |
+| Progress bars and sliders                             | Fill from the start side (right in Urdu).                                             |
+| Switch thumb                                          | Off at the start, on at the end. In Urdu the thumb moves leftwards when turned on.    |
+| Text alignment                                        | Start of the line: right for Urdu, left for English. Use the `Text` component.        |
+| Numbers, phone numbers, times, codes                  | Stay left to right inside the line (see section 5).                                   |
+| Bottom tab bar                                        | Mirrors: Home is at the right in Urdu.                                                |
+| Carousels and horizontal lists                        | Start at the right and scroll leftwards.                                              |
+| Maps, clocks, the Quran page layout, media play/pause | Never mirror. A map is a map; the play triangle points right in both.                 |
+| Quran text                                            | Always right to left, whatever the screen language.                                   |
+| Photos and illustrations                              | Do not mirror, unless they show direction or reading order.                           |
+| Swipe gestures                                        | Swipe-to-go-back starts from the start edge (the right in Urdu). Platform handles it. |
 
 ## 3. Which icons flip
 
@@ -38,11 +38,11 @@ Flip the icons that point somewhere or show reading order. Do not flip icons of 
 
 ## 4. Fonts, size and line height
 
-| Script | Font      | Size                          | Line height   | Weight                  |
-| ------ | --------- | ----------------------------- | ------------- | ----------------------- |
-| Latin  | DM Sans   | Role size (body 16 dp)        | 1.4 x size    | 400, 500, 700           |
-| Urdu   | Gulzar    | Role size x 1.1 (body 17.6)   | 1.95 x size   | 400 only                |
-| Quran  | AlMushaf  | Role `quran`, 28 dp           | 2.2 x size    | 400 only                |
+| Script | Font     | Size                        | Line height | Weight        |
+| ------ | -------- | --------------------------- | ----------- | ------------- |
+| Latin  | DM Sans  | Role size (body 16 dp)      | 1.4 x size  | 400, 500, 700 |
+| Urdu   | Gulzar   | Role size x 1.1 (body 17.6) | 1.95 x size | 400 only      |
+| Quran  | AlMushaf | Role `quran`, 28 dp         | 2.2 x size  | 400 only      |
 
 - Gulzar is a Nastaliq face with very tall ascenders and deep descenders that sit on a sloping baseline. At a normal line height they collide with the lines above and below. The kit uses 1.95 times the size. Do not tighten it.
 - Gulzar looks smaller than DM Sans at the same size, so Urdu is set 10% larger. Both numbers (1.1 and 1.95) are a proposal; a human checks them on a real phone against real Urdu paragraphs and adjusts the two constants in `tokens.ts`.
@@ -56,7 +56,7 @@ Flip the icons that point somewhere or show reading order. Do not flip icons of 
 
 **Recommendation: use Western digits (0 1 2 3 4 5 6 7 8 9) in Urdu screens.**
 
-Why: phone numbers, prices, times, SMS and WhatsApp in Pakistan use Western digits; mixing the two systems on one screen (a phone number next to a date) is confusing; Western digits are in every font including Gulzar. Eastern Arabic (extended, Urdu form: ۰ ۱ ۲ ۳ ۴ ۵ ۶ ۷ ۸ ۹) is common in print, and in the Quran page numbering. 
+Why: phone numbers, prices, times, SMS and WhatsApp in Pakistan use Western digits; mixing the two systems on one screen (a phone number next to a date) is confusing; Western digits are in every font including Gulzar. Eastern Arabic (extended, Urdu form: ۰ ۱ ۲ ۳ ۴ ۵ ۶ ۷ ۸ ۹) is common in print, and in the Quran page numbering.
 
 Rules:
 

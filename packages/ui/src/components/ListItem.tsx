@@ -74,7 +74,11 @@ export function ListItem({
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       {showChevron ? (
         <View style={styles.trailing}>
-          <Icon name="chevron-forward" size={20} color={disabled ? c.disabledText : c.textSecondary} />
+          <Icon
+            name="chevron-forward"
+            size={20}
+            color={disabled ? c.disabledText : c.textSecondary}
+          />
         </View>
       ) : null}
     </>

@@ -70,7 +70,9 @@ describe.each(matrix)('first release in $name', (combo) => {
     expect(screen.getByLabelText('Venue card')).toBeTruthy();
     const row = screen.getByRole('button', { name: /Row title/ });
     expect(px(getComputedStyle(row).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
-    expect(screen.getByRole('img', { name: combo.locale === 'ur' ? '3 نئے' : '3 unread' })).toBeTruthy();
+    expect(
+      screen.getByRole('img', { name: combo.locale === 'ur' ? '3 نئے' : '3 unread' }),
+    ).toBeTruthy();
     const tabs = screen.getAllByRole('tab');
     expect(tabs).toHaveLength(2);
     expect(tabs[0]?.getAttribute('aria-selected')).toBe('true');
@@ -151,7 +153,9 @@ describe('Text', () => {
 
   it('truncates when numberOfLines is set', () => {
     renderThemed(<Text numberOfLines={1}>One line</Text>);
-    expect(screen.getByText('One line').style.webkitLineClamp || screen.getByText('One line').className).toBeTruthy();
+    expect(
+      screen.getByText('One line').style.webkitLineClamp || screen.getByText('One line').className,
+    ).toBeTruthy();
   });
 });
 
@@ -196,7 +200,9 @@ describe('Button', () => {
 
   it('uses the disabled colours when disabled', () => {
     renderThemed(<Button label="Go" disabled />);
-    expect(screen.getByRole('button').style.backgroundColor).toBe(rgb(semanticColors.light.disabledBackground));
+    expect(screen.getByRole('button').style.backgroundColor).toBe(
+      rgb(semanticColors.light.disabledBackground),
+    );
     expect(screen.getByText('Go').style.color).toBe(rgb(semanticColors.light.disabledText));
   });
 });
@@ -235,25 +241,44 @@ describe('Chip', () => {
 
 describe('Card', () => {
   it('is a plain container without onPress and a button with it', () => {
-    const { unmount } = renderThemed(<Card testID="c"><Text>Hi</Text></Card>);
+    const { unmount } = renderThemed(
+      <Card testID="c">
+        <Text>Hi</Text>
+      </Card>,
+    );
     expect(screen.queryByRole('button')).toBeNull();
     unmount();
     const onPress = vi.fn();
-    renderThemed(<Card onPress={onPress} accessibilityLabel="Open venue"><Text>Hi</Text></Card>);
+    renderThemed(
+      <Card onPress={onPress} accessibilityLabel="Open venue">
+        <Text>Hi</Text>
+      </Card>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Open venue' }));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('does not fire while disabled', () => {
     const onPress = vi.fn();
-    renderThemed(<Card onPress={onPress} disabled accessibilityLabel="Open"><Text>Hi</Text></Card>);
+    renderThemed(
+      <Card onPress={onPress} disabled accessibilityLabel="Open">
+        <Text>Hi</Text>
+      </Card>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Open' }));
     expect(onPress).not.toHaveBeenCalled();
   });
 
   it('uses a strong border in high contrast', () => {
-    renderThemed(<Card testID="c" accessibilityLabel="c"><Text>Hi</Text></Card>, { mode: 'highContrast' });
-    expect(screen.getByLabelText('c').style.borderTopColor).toBe(rgb(semanticColors.highContrast.borderStrong));
+    renderThemed(
+      <Card testID="c" accessibilityLabel="c">
+        <Text>Hi</Text>
+      </Card>,
+      { mode: 'highContrast' },
+    );
+    expect(screen.getByLabelText('c').style.borderTopColor).toBe(
+      rgb(semanticColors.highContrast.borderStrong),
+    );
   });
 });
 
@@ -274,7 +299,9 @@ describe('ListItem', () => {
   });
 
   it('mirrors the chevron in right-to-left only', () => {
-    const { unmount } = renderThemed(<ListItem title="A" onPress={() => undefined} />, { locale: 'en' });
+    const { unmount } = renderThemed(<ListItem title="A" onPress={() => undefined} />, {
+      locale: 'en',
+    });
     expect(screen.getByTestId('icon-chevron-forward').style.transform).toBe('');
     unmount();
     renderThemed(<ListItem title="A" onPress={() => undefined} />, { locale: 'ur' });
@@ -292,7 +319,12 @@ describe('ListItem', () => {
 
 describe('Badge', () => {
   it('shows nothing for zero, no count and no dot', () => {
-    const { container } = renderThemed(<><Badge count={0} /><Badge /></>);
+    const { container } = renderThemed(
+      <>
+        <Badge count={0} />
+        <Badge />
+      </>,
+    );
     expect(container.querySelector('[data-testid^="badge"]')).toBeNull();
   });
 
@@ -334,34 +366,57 @@ describe('TabBar', () => {
   });
 
   it('renders an icon from a function with the selected state', () => {
-    const icon = vi.fn(({ selected }: { selected: boolean }) => <Text>{selected ? 'on' : 'off'}</Text>);
+    const icon = vi.fn(({ selected }: { selected: boolean }) => (
+      <Text>{selected ? 'on' : 'off'}</Text>
+    ));
     renderThemed(
-      <TabBar items={[{ key: 'a', label: 'A', icon }, { key: 'b', label: 'B', icon }]} activeKey="b" onChange={() => undefined} />,
+      <TabBar
+        items={[
+          { key: 'a', label: 'A', icon },
+          { key: 'b', label: 'B', icon },
+        ]}
+        activeKey="b"
+        onChange={() => undefined}
+      />,
     );
     expect(icon).toHaveBeenCalledWith(expect.objectContaining({ selected: true }));
     expect(icon).toHaveBeenCalledWith(expect.objectContaining({ selected: false }));
   });
 
   it('renders an empty bar without throwing', () => {
-    expect(() => renderThemed(<TabBar items={[]} activeKey="" onChange={() => undefined} />)).not.toThrow();
+    expect(() =>
+      renderThemed(<TabBar items={[]} activeKey="" onChange={() => undefined} />),
+    ).not.toThrow();
   });
 });
 
 describe('Sheet', () => {
   it('renders nothing when hidden', () => {
-    renderThemed(<Sheet visible={false} onClose={() => undefined} title="Hidden"><Text>Body</Text></Sheet>);
+    renderThemed(
+      <Sheet visible={false} onClose={() => undefined} title="Hidden">
+        <Text>Body</Text>
+      </Sheet>,
+    );
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   it('closes from the backdrop', () => {
     const onClose = vi.fn();
-    renderThemed(<Sheet visible onClose={onClose} title="T" testID="sheet"><Text>Body</Text></Sheet>);
+    renderThemed(
+      <Sheet visible onClose={onClose} title="T" testID="sheet">
+        <Text>Body</Text>
+      </Sheet>,
+    );
     fireEvent.click(screen.getByTestId('sheet-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('accepts a custom close label', () => {
-    renderThemed(<Sheet visible onClose={() => undefined} title="T" closeLabel="Done"><Text>Body</Text></Sheet>);
+    renderThemed(
+      <Sheet visible onClose={() => undefined} title="T" closeLabel="Done">
+        <Text>Body</Text>
+      </Sheet>,
+    );
     expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy();
   });
 });

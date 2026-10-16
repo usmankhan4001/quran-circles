@@ -28,7 +28,12 @@ export interface SelectProps<T extends string> {
 }
 
 const styles = StyleSheet.create({
-  labelRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', marginBottom: spacing.xs },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    marginBottom: spacing.xs,
+  },
   hint: { marginStart: spacing.sm },
   trigger: {
     flexDirection: 'row',
@@ -90,7 +95,10 @@ export function Select<T extends string>({
         ]}
       >
         <View style={styles.value}>
-          <Text variant="body" color={disabled ? 'disabledText' : selected ? 'text' : 'textSecondary'}>
+          <Text
+            variant="body"
+            color={disabled ? 'disabledText' : selected ? 'text' : 'textSecondary'}
+          >
             {shown}
           </Text>
         </View>
@@ -108,7 +116,12 @@ export function Select<T extends string>({
           </Text>
         </View>
       ) : null}
-      <Sheet visible={open} onClose={() => setOpen(false)} title={label} testID={testID ? `${testID}-sheet` : undefined}>
+      <Sheet
+        visible={open}
+        onClose={() => setOpen(false)}
+        title={label}
+        testID={testID ? `${testID}-sheet` : undefined}
+      >
         <View role="radiogroup" aria-label={label}>
           {options.map((option) => {
             const isSelected = option.value === value;
@@ -122,7 +135,9 @@ export function Select<T extends string>({
                 selected={isSelected}
                 disabled={option.disabled}
                 accessibilityLabel={option.label}
-                trailing={isSelected ? <Icon name="check" size={20} color={c.textAccent} /> : undefined}
+                trailing={
+                  isSelected ? <Icon name="check" size={20} color={c.textAccent} /> : undefined
+                }
                 onPress={() => {
                   onChange(option.value);
                   setOpen(false);

@@ -47,7 +47,10 @@ export function SegmentedControl<T extends string>({
       testID={testID}
       role="radiogroup"
       aria-label={accessibilityLabel}
-      style={[styles.group, { borderColor: disabled ? c.disabledText : c.accent, backgroundColor: c.surface }]}
+      style={[
+        styles.group,
+        { borderColor: disabled ? c.disabledText : c.accent, backgroundColor: c.surface },
+      ]}
     >
       {options.map((option) => {
         const selected = option.value === value;

@@ -1,5 +1,11 @@
 import { useId, useState } from 'react';
-import { StyleSheet, TextInput, View, type KeyboardTypeOptions, type TextInputProps } from 'react-native';
+import {
+  StyleSheet,
+  TextInput,
+  View,
+  type KeyboardTypeOptions,
+  type TextInputProps,
+} from 'react-native';
 import { textAlignStart, type Direction } from '../direction';
 import { useTheme } from '../theme';
 import { radii, spacing } from '../tokens';

@@ -35,13 +35,23 @@ const styles = StyleSheet.create({
  * Shown when something failed to load. It never blames the person, says what happened in plain
  * words and offers a retry. Announced to screen readers as an alert.
  */
-export function ErrorState({ kind = 'generic', title, description, onRetry, retrying, retryLabel, testID }: ErrorStateProps) {
+export function ErrorState({
+  kind = 'generic',
+  title,
+  description,
+  onRetry,
+  retrying,
+  retryLabel,
+  testID,
+}: ErrorStateProps) {
   const theme = useTheme();
   const c = theme.colors;
   const offline = kind === 'offline';
   return (
     <View testID={testID} role="alert" aria-live="assertive" style={styles.box}>
-      <View style={[styles.iconWrap, { backgroundColor: offline ? c.warningSubtle : c.dangerSubtle }]}>
+      <View
+        style={[styles.iconWrap, { backgroundColor: offline ? c.warningSubtle : c.dangerSubtle }]}
+      >
         <Icon
           name={offline ? 'warning' : 'error'}
           size={32}
