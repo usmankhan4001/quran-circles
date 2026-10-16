@@ -185,14 +185,21 @@ export async function applyDeliveryReport(
   if (report.status === 'sent') {
     const rows = await db
       .update(t)
-      .set({ status: 'sent', sentAt: sql`COALESCE(${t.sentAt}, ${report.at.toISOString()}::timestamptz)` })
+      .set({
+        status: 'sent',
+        sentAt: sql`COALESCE(${t.sentAt}, ${report.at.toISOString()}::timestamptz)`,
+      })
       .where(and(target, eq(t.status, 'sending')))
       .returning({ id: t.id });
     return rows.length > 0;
   }
   const rows = await db
     .update(t)
-    .set({ status: 'failed', lastErrorCode: report.errorCode ?? 'wa_failed', recipientPhoneE164: null })
+    .set({
+      status: 'failed',
+      lastErrorCode: report.errorCode ?? 'wa_failed',
+      recipientPhoneE164: null,
+    })
     .where(and(target, inArray(t.status, ['sending', 'sent'])))
     .returning({ id: t.id });
   return rows.length > 0;

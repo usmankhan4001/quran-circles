@@ -102,7 +102,10 @@ describe('webhook parsing', () => {
 
   it('reads the first error code of a failed status', () => {
     const events = parseWebhook(
-      statusBody({ status: 'failed', errors: [{ code: 131026, title: 'Undeliverable', message: 'x' }] }),
+      statusBody({
+        status: 'failed',
+        errors: [{ code: 131026, title: 'Undeliverable', message: 'x' }],
+      }),
     );
     expect(events[0]).toMatchObject({ kind: 'status', status: 'failed', errorCode: 'wa_131026' });
   });
@@ -115,10 +118,34 @@ describe('webhook parsing', () => {
             {
               value: {
                 messages: [
-                  { id: 'wamid.M1', from: '923000000001', timestamp: '1788000100', type: 'text', text: { body: 'STOP' } },
-                  { id: 'wamid.M2', from: '923000000002', timestamp: '1788000101', type: 'text', text: { body: 'Jazakallah, see you there' } },
-                  { id: 'wamid.M3', from: '923000000003', timestamp: '1788000102', type: 'button', button: { text: 'Start', payload: 'p' } },
-                  { id: 'wamid.M4', from: '923000000004', timestamp: '1788000103', type: 'image', image: { id: 'x' } },
+                  {
+                    id: 'wamid.M1',
+                    from: '923000000001',
+                    timestamp: '1788000100',
+                    type: 'text',
+                    text: { body: 'STOP' },
+                  },
+                  {
+                    id: 'wamid.M2',
+                    from: '923000000002',
+                    timestamp: '1788000101',
+                    type: 'text',
+                    text: { body: 'Jazakallah, see you there' },
+                  },
+                  {
+                    id: 'wamid.M3',
+                    from: '923000000003',
+                    timestamp: '1788000102',
+                    type: 'button',
+                    button: { text: 'Start', payload: 'p' },
+                  },
+                  {
+                    id: 'wamid.M4',
+                    from: '923000000004',
+                    timestamp: '1788000103',
+                    type: 'image',
+                    image: { id: 'x' },
+                  },
                 ],
               },
             },
@@ -127,7 +154,12 @@ describe('webhook parsing', () => {
       ],
     };
     const events = parseWebhook(body);
-    expect(events.map((e) => e.kind === 'inbound' && e.intent)).toEqual(['opt_out', 'other', 'opt_in', 'other']);
+    expect(events.map((e) => e.kind === 'inbound' && e.intent)).toEqual([
+      'opt_out',
+      'other',
+      'opt_in',
+      'other',
+    ]);
     expect(JSON.stringify(events)).not.toContain('Jazakallah');
     expect(JSON.stringify(events)).not.toContain('STOP');
   });

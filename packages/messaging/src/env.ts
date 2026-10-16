@@ -1,16 +1,18 @@
 import { z } from 'zod';
 import { ApnsPushProvider } from './providers/apns';
-import {
-  FcmPushProvider,
-  GoogleServiceAccountTokenSource,
-} from './providers/fcm';
+import { FcmPushProvider, GoogleServiceAccountTokenSource } from './providers/fcm';
 import { HttpSmsProvider } from './providers/http-sms';
 import { PushRouter, type PushProvider } from './providers/push';
 import type { SmsProvider } from './providers/sms';
 import { WebPushProvider } from './providers/webpush';
 import type { WhatsAppProvider } from './providers/whatsapp';
 import { WhatsAppCloudClient } from './providers/whatsapp-cloud';
-import { ProviderCodeSender, TestCodeSender, type CodeDeliveryReport, type CodeSender } from './code-sender';
+import {
+  ProviderCodeSender,
+  TestCodeSender,
+  type CodeDeliveryReport,
+  type CodeSender,
+} from './code-sender';
 import { FakePushProvider, FakeSmsProvider, FakeWhatsAppProvider } from './fakes';
 import { defaultFetch, type FetchLike } from './http';
 import { createHttp2Fetch } from './http2-fetch';
@@ -110,7 +112,9 @@ export function createMessaging(
 
   if (env.MESSAGING_MODE === 'fake') {
     if (env.APP_ENV === 'production') {
-      throw new MessagingConfigError('Fake messaging providers are not allowed when APP_ENV=production');
+      throw new MessagingConfigError(
+        'Fake messaging providers are not allowed when APP_ENV=production',
+      );
     }
     if (env.CODE_DELIVERY_MODE === 'live') {
       throw new MessagingConfigError('CODE_DELIVERY_MODE=live needs MESSAGING_MODE=live');
@@ -162,7 +166,8 @@ export function createMessaging(
     const account = z
       .object({ client_email: z.string(), private_key: z.string(), project_id: z.string() })
       .safeParse(safeJson(env.FCM_SERVICE_ACCOUNT_JSON));
-    if (!account.success) throw new MessagingConfigError('FCM_SERVICE_ACCOUNT_JSON is not a service account key');
+    if (!account.success)
+      throw new MessagingConfigError('FCM_SERVICE_ACCOUNT_JSON is not a service account key');
     transports.fcm = new FcmPushProvider({
       projectId: account.data.project_id,
       fetch: fetchImpl,
@@ -198,7 +203,9 @@ export function createMessaging(
 
   const codeMode = env.CODE_DELIVERY_MODE ?? 'live';
   if (codeMode === 'test' && env.APP_ENV === 'production') {
-    throw new MessagingConfigError('Test-mode code delivery is not allowed when APP_ENV=production');
+    throw new MessagingConfigError(
+      'Test-mode code delivery is not allowed when APP_ENV=production',
+    );
   }
   const codeSender: CodeSender =
     codeMode === 'test'

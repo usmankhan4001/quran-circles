@@ -33,9 +33,7 @@ export function pushDataStrings(payload: PushPayload): Record<string, string> {
 
 /** Sends each target through the provider that handles its transport. */
 export class PushRouter implements PushProvider {
-  constructor(
-    private readonly providers: Partial<Record<PushTransportKind, PushProvider>>,
-  ) {}
+  constructor(private readonly providers: Partial<Record<PushTransportKind, PushProvider>>) {}
 
   send(target: PushTarget, payload: PushPayload): Promise<PushSendResult> {
     const provider = this.providers[target.kind];

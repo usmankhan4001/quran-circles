@@ -6,14 +6,29 @@ import { FakePushProvider, FakeSmsProvider, FakeWhatsAppProvider } from './fakes
 describe('HTTP SMS provider', () => {
   const make = (respond: Parameters<typeof createFakeFetch>[0]) => {
     const fetch = createFakeFetch(respond);
-    return { fetch, provider: new HttpSmsProvider({ url: 'https://sms.test/send', apiKey: 'k', sender: 'QC', fetch }) };
+    return {
+      fetch,
+      provider: new HttpSmsProvider({
+        url: 'https://sms.test/send',
+        apiKey: 'k',
+        sender: 'QC',
+        fetch,
+      }),
+    };
   };
 
   it('posts JSON with a bearer key', async () => {
     const { provider, fetch } = make(() => ({ status: 200, body: { id: 'm-1' } }));
-    expect(await provider.send({ to: '+923000000001', body: 'hello' })).toEqual({ status: 'ok', providerMessageId: 'm-1' });
+    expect(await provider.send({ to: '+923000000001', body: 'hello' })).toEqual({
+      status: 'ok',
+      providerMessageId: 'm-1',
+    });
     expect(fetch.requests[0]!.init.headers!.authorization).toBe('Bearer k');
-    expect(bodyOf(fetch.requests[0]!)).toEqual({ to: '+923000000001', text: 'hello', sender: 'QC' });
+    expect(bodyOf(fetch.requests[0]!)).toEqual({
+      to: '+923000000001',
+      text: 'hello',
+      sender: 'QC',
+    });
   });
 
   it.each([
@@ -28,7 +43,10 @@ describe('HTTP SMS provider', () => {
 
   it('treats a network error as transient', async () => {
     const { provider } = make(() => new Error('down'));
-    expect(await provider.send({ to: '+923000000001', body: 'x' })).toEqual({ status: 'transient_failure', code: 'network_error' });
+    expect(await provider.send({ to: '+923000000001', body: 'x' })).toEqual({
+      status: 'transient_failure',
+      code: 'network_error',
+    });
   });
 });
 
@@ -45,7 +63,16 @@ describe('fake providers', () => {
     const wa = new FakeWhatsAppProvider();
     const sms = new FakeSmsProvider();
     expect((await push.send({ kind: 'fcm', token: 'a' }, payload)).status).toBe('ok');
-    expect((await wa.sendTemplate({ to: '+923000000001', templateName: 'x', language: 'en', bodyParams: [] })).status).toBe('ok');
+    expect(
+      (
+        await wa.sendTemplate({
+          to: '+923000000001',
+          templateName: 'x',
+          language: 'en',
+          bodyParams: [],
+        })
+      ).status,
+    ).toBe('ok');
     expect((await sms.send({ to: '+923000000001', body: 'x' })).status).toBe('ok');
     expect(push.sent).toHaveLength(1);
     expect(wa.sent).toHaveLength(1);
@@ -54,7 +81,11 @@ describe('fake providers', () => {
 
   it('simulate transient and permanent failures a set number of times', async () => {
     const wa = new FakeWhatsAppProvider();
-    wa.failNext({ status: 'transient_failure', code: 'a' }, 2).failNext({ status: 'permanent_failure', code: 'b', cause: 'other' });
+    wa.failNext({ status: 'transient_failure', code: 'a' }, 2).failNext({
+      status: 'permanent_failure',
+      code: 'b',
+      cause: 'other',
+    });
     const req = { to: '+923000000001', templateName: 'x', language: 'en', bodyParams: [] };
     expect((await wa.sendTemplate(req)).status).toBe('transient_failure');
     expect((await wa.sendTemplate(req)).status).toBe('transient_failure');
@@ -64,7 +95,9 @@ describe('fake providers', () => {
 
   it('report an invalid token until reset', async () => {
     const push = new FakePushProvider().invalidateToken('dead');
-    expect(await push.send({ kind: 'apns', token: 'dead' }, payload)).toMatchObject({ status: 'invalid_token' });
+    expect(await push.send({ kind: 'apns', token: 'dead' }, payload)).toMatchObject({
+      status: 'invalid_token',
+    });
     expect((await push.send({ kind: 'apns', token: 'alive' }, payload)).status).toBe('ok');
     expect(push.sent).toHaveLength(2);
   });
@@ -73,7 +106,9 @@ describe('fake providers', () => {
     const push = new FakePushProvider().respondWith((r) =>
       r.target.token === 'slow' ? { status: 'transient_failure', code: 'x' } : undefined,
     );
-    expect((await push.send({ kind: 'fcm', token: 'slow' }, payload)).status).toBe('transient_failure');
+    expect((await push.send({ kind: 'fcm', token: 'slow' }, payload)).status).toBe(
+      'transient_failure',
+    );
     expect((await push.send({ kind: 'fcm', token: 'fast' }, payload)).status).toBe('ok');
   });
 });

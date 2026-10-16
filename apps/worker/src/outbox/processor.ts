@@ -1,10 +1,5 @@
 import { eq } from 'drizzle-orm';
-import {
-  OutboxPayload,
-  renderTemplate,
-  type PushPayload,
-  type TemplateKey,
-} from '@qc/contracts';
+import { OutboxPayload, renderTemplate, type PushPayload, type TemplateKey } from '@qc/contracts';
 import {
   DEFAULT_RETRY_POLICY,
   buildWhatsAppRequest,
@@ -50,7 +45,12 @@ type Step =
   | { kind: 'retry'; errorCode: string; hintMs?: number | undefined }
   | { kind: 'fail'; errorCode: string };
 
-const log = (deps: ProcessorDeps, event: string, row: OutboxRow, extra: Record<string, string | number | boolean | undefined> = {}) =>
+const log = (
+  deps: ProcessorDeps,
+  event: string,
+  row: OutboxRow,
+  extra: Record<string, string | number | boolean | undefined> = {},
+) =>
   deps.logger.info(event, {
     outboxId: row.id,
     channel: row.channel,
@@ -65,7 +65,10 @@ const log = (deps: ProcessorDeps, event: string, row: OutboxRow, extra: Record<s
  * send problem: failures become row state. It throws only if the database itself fails, and the
  * queue then retries the job.
  */
-export async function processClaimedRow(deps: ProcessorDeps, row: OutboxRow): Promise<ProcessOutcome> {
+export async function processClaimedRow(
+  deps: ProcessorDeps,
+  row: OutboxRow,
+): Promise<ProcessOutcome> {
   const policy = deps.retry ?? DEFAULT_RETRY_POLICY;
   const step = await decide(deps, row);
   const now = deps.now();
@@ -110,7 +113,8 @@ async function decide(deps: ProcessorDeps, row: OutboxRow): Promise<Step> {
   const parsed = OutboxPayload.safeParse(row.payload);
   if (!parsed.success) return { kind: 'fail', errorCode: 'invalid_payload' };
   const payload = parsed.data as OutboxPayload;
-  if (payload.channel !== row.channel) return { kind: 'fail', errorCode: 'payload_channel_mismatch' };
+  if (payload.channel !== row.channel)
+    return { kind: 'fail', errorCode: 'payload_channel_mismatch' };
 
   const ctx = await loadRecipientContext(deps.db, row);
   const push = payload.channel === 'push' ? payload.push : null;
@@ -164,7 +168,8 @@ async function decide(deps: ProcessorDeps, row: OutboxRow): Promise<Step> {
         ...(deps.languageCodes ? { languageCodes: deps.languageCodes } : {}),
       }),
     );
-    if (result.status === 'ok') return { kind: 'sent', providerMessageId: result.providerMessageId };
+    if (result.status === 'ok')
+      return { kind: 'sent', providerMessageId: result.providerMessageId };
     if (result.status === 'transient_failure') {
       return { kind: 'retry', errorCode: result.code, hintMs: result.retryAfterMs };
     }
@@ -194,7 +199,11 @@ async function decide(deps: ProcessorDeps, row: OutboxRow): Promise<Step> {
   return { kind: 'fail', errorCode: result.code };
 }
 
-async function sendPush(deps: ProcessorDeps, ctx: RecipientContext, payload: PushPayload): Promise<Step> {
+async function sendPush(
+  deps: ProcessorDeps,
+  ctx: RecipientContext,
+  payload: PushPayload,
+): Promise<Step> {
   let delivered = 0;
   let invalid = 0;
   let permanent: string | undefined;
@@ -213,7 +222,11 @@ async function sendPush(deps: ProcessorDeps, ctx: RecipientContext, payload: Pus
         .update(tables.devices)
         .set({ revokedAt: deps.now() })
         .where(eq(tables.devices.id, device.id));
-      deps.logger.info('push.token_revoked', { deviceId: device.id, provider: device.provider, errorCode: result.code });
+      deps.logger.info('push.token_revoked', {
+        deviceId: device.id,
+        provider: device.provider,
+        errorCode: result.code,
+      });
     } else if (result.status === 'transient_failure') {
       const hint = Math.max(transient?.hintMs ?? 0, result.retryAfterMs ?? 0) || undefined;
       transient = { code: result.code, hintMs: hint };
@@ -253,4 +266,3 @@ export async function processJob(
   }
   return processClaimedRow(deps, row);
 }
-

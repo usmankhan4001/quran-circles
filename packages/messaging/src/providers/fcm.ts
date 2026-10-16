@@ -1,11 +1,5 @@
 import type { PushPayload } from '@qc/contracts';
-import {
-  fetchWithTimeout,
-  isRecord,
-  parseRetryAfter,
-  readJson,
-  type FetchLike,
-} from '../http';
+import { fetchWithTimeout, isRecord, parseRetryAfter, readJson, type FetchLike } from '../http';
 import { signJwtRs256 } from './jwt';
 import { pushDataStrings, type PushProvider, type PushSendResult, type PushTarget } from './push';
 
@@ -108,7 +102,9 @@ export class FcmPushProvider implements PushProvider {
         apns: {
           headers: {
             'apns-expiration': String(Math.floor(Date.now() / 1000) + payload.ttlSeconds),
-            ...(payload.collapseKey ? { 'apns-collapse-id': payload.collapseKey.slice(0, 64) } : {}),
+            ...(payload.collapseKey
+              ? { 'apns-collapse-id': payload.collapseKey.slice(0, 64) }
+              : {}),
           },
         },
       },
@@ -131,7 +127,11 @@ export class FcmPushProvider implements PushProvider {
     } catch {
       return { status: 'transient_failure', code: 'network_error' };
     }
-    return this.interpret(response.status, await readJson(response), response.headers.get('retry-after'));
+    return this.interpret(
+      response.status,
+      await readJson(response),
+      response.headers.get('retry-after'),
+    );
   }
 
   private interpret(status: number, json: unknown, retryAfter: string | null): PushSendResult {
@@ -150,7 +150,8 @@ export class FcmPushProvider implements PushProvider {
     if (errorCode === 'UNREGISTERED' || status === 404) {
       return { status: 'invalid_token', code: 'fcm_unregistered' };
     }
-    if (errorCode === 'SENDER_ID_MISMATCH') return { status: 'invalid_token', code: 'fcm_sender_mismatch' };
+    if (errorCode === 'SENDER_ID_MISMATCH')
+      return { status: 'invalid_token', code: 'fcm_sender_mismatch' };
     if (status === 400 && /registration token/i.test(message)) {
       return { status: 'invalid_token', code: 'fcm_bad_token' };
     }

@@ -1,11 +1,5 @@
 import type { PushPayload } from '@qc/contracts';
-import {
-  fetchWithTimeout,
-  isRecord,
-  parseRetryAfter,
-  readJson,
-  type FetchLike,
-} from '../http';
+import { fetchWithTimeout, isRecord, parseRetryAfter, readJson, type FetchLike } from '../http';
 import { signJwtEs256 } from './jwt';
 import { pushDataStrings, type PushProvider, type PushSendResult, type PushTarget } from './push';
 

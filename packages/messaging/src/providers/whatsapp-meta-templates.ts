@@ -1,9 +1,4 @@
-import {
-  TEMPLATES,
-  TEMPLATE_VARIABLES,
-  type Locale,
-  type TemplateKey,
-} from '@qc/contracts';
+import { TEMPLATES, TEMPLATE_VARIABLES, type Locale, type TemplateKey } from '@qc/contracts';
 import { positionalNames } from './whatsapp';
 
 /**

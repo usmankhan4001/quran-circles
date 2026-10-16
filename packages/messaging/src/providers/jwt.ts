@@ -1,7 +1,6 @@
 import { createPrivateKey, createSign } from 'node:crypto';
 
-const b64url = (input: Buffer | string): string =>
-  Buffer.from(input).toString('base64url');
+const b64url = (input: Buffer | string): string => Buffer.from(input).toString('base64url');
 
 /** Signs a compact JWT with RS256 (Google service accounts). */
 export function signJwtRs256(
@@ -27,6 +26,9 @@ export function signJwtEs256(
   const body = b64url(JSON.stringify(claims));
   const signer = createSign('SHA256');
   signer.update(`${head}.${body}`);
-  const signature = signer.sign({ key: createPrivateKey(privateKeyPem), dsaEncoding: 'ieee-p1363' });
+  const signature = signer.sign({
+    key: createPrivateKey(privateKeyPem),
+    dsaEncoding: 'ieee-p1363',
+  });
   return `${head}.${body}.${b64url(signature)}`;
 }

@@ -39,7 +39,10 @@ export function createDispatcher(options: DispatcherOptions): Dispatcher {
       const now = options.now();
       const reclaimed = await reclaimStale(options.db, { now, maxAttempts });
       if (reclaimed.requeued + reclaimed.dead > 0) {
-        options.logger.warn('outbox.reclaimed', { requeued: reclaimed.requeued, dead: reclaimed.dead });
+        options.logger.warn('outbox.reclaimed', {
+          requeued: reclaimed.requeued,
+          dead: reclaimed.dead,
+        });
       }
       const rows = await claimDue(options.db, { now, limit: batchSize, leaseMs });
       for (const row of rows) {

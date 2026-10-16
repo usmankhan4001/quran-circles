@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CodeDeliveryError, ProviderCodeSender, TestCodeSender, type CodeDeliveryReport, type CodeSender } from './code-sender';
+import {
+  CodeDeliveryError,
+  ProviderCodeSender,
+  TestCodeSender,
+  type CodeDeliveryReport,
+  type CodeSender,
+} from './code-sender';
 import { FakeSmsProvider, FakeWhatsAppProvider } from './fakes';
 import { createMemoryLogger } from './logger';
 
@@ -39,21 +45,33 @@ describe('provider code sender', () => {
       buttonParam: CODE,
     });
     expect(sms.sent).toHaveLength(0);
-    expect(reports).toEqual([{ channel: 'whatsapp', outcome: 'sent', fellBack: false, costCategory: 'authentication' }]);
+    expect(reports).toEqual([
+      { channel: 'whatsapp', outcome: 'sent', fellBack: false, costCategory: 'authentication' },
+    ]);
   });
 
   it.each([
     ['transient failure', { status: 'transient_failure', code: 'wa_130429' } as const],
-    ['recipient not on WhatsApp', { status: 'permanent_failure', code: 'wa_131026', cause: 'recipient' } as const],
-    ['template problem', { status: 'permanent_failure', code: 'wa_132001', cause: 'template' } as const],
+    [
+      'recipient not on WhatsApp',
+      { status: 'permanent_failure', code: 'wa_131026', cause: 'recipient' } as const,
+    ],
+    [
+      'template problem',
+      { status: 'permanent_failure', code: 'wa_132001', cause: 'template' } as const,
+    ],
   ])('falls back to SMS after a WhatsApp %s', async (_n, failure) => {
     const { sender, whatsapp, sms, reports } = setup();
     whatsapp.failNext(failure);
     await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' });
     expect(sms.sent).toHaveLength(1);
     expect(sms.sent[0]!.to).toBe(PHONE);
-    expect(sms.sent[0]!.body).toBe(`${CODE} is your Quran Circles code. It works for 10 minutes. Do not share it.`);
-    expect(reports).toEqual([{ channel: 'sms', outcome: 'sent', fellBack: true, costCategory: 'authentication' }]);
+    expect(sms.sent[0]!.body).toBe(
+      `${CODE} is your Quran Circles code. It works for 10 minutes. Do not share it.`,
+    );
+    expect(reports).toEqual([
+      { channel: 'sms', outcome: 'sent', fellBack: true, costCategory: 'authentication' },
+    ]);
   });
 
   it('renders the SMS in Urdu and uses the caller-supplied validity', async () => {
@@ -74,7 +92,9 @@ describe('provider code sender', () => {
   it('throws when WhatsApp fails and the fallback is off', async () => {
     const { sender, whatsapp, sms, reports } = setup({ smsFallback: false });
     whatsapp.failNext({ status: 'transient_failure', code: 'wa_1' });
-    await expect(sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' })).rejects.toMatchObject({
+    await expect(
+      sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' }),
+    ).rejects.toMatchObject({
       name: 'CodeDeliveryError',
       code: 'whatsapp_failed',
     });
@@ -86,14 +106,18 @@ describe('provider code sender', () => {
     const { sender, whatsapp, sms } = setup();
     whatsapp.failNext({ status: 'transient_failure', code: 'wa_1' });
     sms.failNext({ status: 'transient_failure', code: 'sms_http_503' });
-    const error = await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' }).catch((e: unknown) => e);
+    const error = await sender
+      .send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' })
+      .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(CodeDeliveryError);
     expect((error as CodeDeliveryError).code).toBe('all_channels_failed');
   });
 
   it('throws when nothing is configured for the channel', async () => {
     const { sender } = setup({ noSms: true, noWhatsApp: true });
-    await expect(sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' })).rejects.toMatchObject({
+    await expect(
+      sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' }),
+    ).rejects.toMatchObject({
       code: 'no_channel_configured',
     });
   });
@@ -103,7 +127,9 @@ describe('provider code sender', () => {
     whatsapp.failNext({ status: 'permanent_failure', code: 'wa_131026', cause: 'recipient' });
     await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' });
     sms.failNext({ status: 'transient_failure', code: 'sms_http_500' });
-    await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' }).catch(() => undefined);
+    await sender
+      .send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' })
+      .catch(() => undefined);
     const dump = logger.dump();
     expect(dump).not.toContain('923000000001');
     expect(dump).not.toContain(CODE);

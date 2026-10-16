@@ -26,12 +26,20 @@ export async function seedWorld(
   opts: { program?: 'dora' | 'circles'; circle?: boolean } = {},
 ): Promise<World> {
   const province = await first(
-    db.insert(tables.provinces).values({ code: slug('P'), nameEn: 'Test Province', nameUr: 'ٹیسٹ صوبہ' }).returning(),
+    db
+      .insert(tables.provinces)
+      .values({ code: slug('P'), nameEn: 'Test Province', nameUr: 'ٹیسٹ صوبہ' })
+      .returning(),
   );
   const city = await first(
     db
       .insert(tables.cities)
-      .values({ provinceId: province.id, slug: slug('city'), nameEn: 'Test City', nameUr: 'ٹیسٹ شہر' })
+      .values({
+        provinceId: province.id,
+        slug: slug('city'),
+        nameEn: 'Test City',
+        nameUr: 'ٹیسٹ شہر',
+      })
       .returning(),
   );
   const area = await first(

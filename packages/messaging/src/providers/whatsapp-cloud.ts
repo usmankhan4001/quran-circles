@@ -1,10 +1,4 @@
-import {
-  fetchWithTimeout,
-  isRecord,
-  parseRetryAfter,
-  readJson,
-  type FetchLike,
-} from '../http';
+import { fetchWithTimeout, isRecord, parseRetryAfter, readJson, type FetchLike } from '../http';
 import type {
   WhatsAppFailureCause,
   WhatsAppProvider,

@@ -80,17 +80,28 @@ const rows: Row[] = [
   // Templates that need no consent: sign-in codes and coordinator invites
   {
     name: 'auth code over WhatsApp needs no consent',
-    input: base({ template: 'auth_code', recipient: { userId: null, hasPhone: true, accountActive: true } }),
+    input: base({
+      template: 'auth_code',
+      recipient: { userId: null, hasPhone: true, accountActive: true },
+    }),
     expected: 'allow',
   },
   {
     name: 'auth code over SMS needs no consent',
-    input: base({ channel: 'sms', template: 'auth_code', recipient: { userId: null, hasPhone: true, accountActive: true } }),
+    input: base({
+      channel: 'sms',
+      template: 'auth_code',
+      recipient: { userId: null, hasPhone: true, accountActive: true },
+    }),
     expected: 'allow',
   },
   {
     name: 'coordinator invite over SMS needs no consent',
-    input: base({ channel: 'sms', template: 'coordinator_invite', recipient: { userId: null, hasPhone: true, accountActive: true } }),
+    input: base({
+      channel: 'sms',
+      template: 'coordinator_invite',
+      recipient: { userId: null, hasPhone: true, accountActive: true },
+    }),
     expected: 'allow',
   },
   // Channel order
@@ -125,17 +136,27 @@ const rows: Row[] = [
   // Channel and recipient shape
   {
     name: 'template that does not allow SMS',
-    input: base({ channel: 'sms', template: 'session_reminder', consents: [consent({ channel: 'sms' })] }),
+    input: base({
+      channel: 'sms',
+      template: 'session_reminder',
+      consents: [consent({ channel: 'sms' })],
+    }),
     expected: 'channel_not_allowed',
   },
   {
     name: 'WhatsApp row without a phone',
-    input: base({ recipient: { userId: USER, hasPhone: false, accountActive: true }, consents: [consent()] }),
+    input: base({
+      recipient: { userId: USER, hasPhone: false, accountActive: true },
+      consents: [consent()],
+    }),
     expected: 'no_recipient',
   },
   {
     name: 'suspended account',
-    input: base({ recipient: { userId: USER, hasPhone: true, accountActive: false }, consents: [consent()] }),
+    input: base({
+      recipient: { userId: USER, hasPhone: true, accountActive: false },
+      consents: [consent()],
+    }),
     expected: 'account_inactive',
   },
   // Push
@@ -168,7 +189,11 @@ const rows: Row[] = [
       pushType: 'reminder',
       workingPushDevices: 1,
       consents: [
-        consent({ channel: 'push', purpose: 'announcements', revokedAt: new Date('2026-10-10T00:00:00Z') }),
+        consent({
+          channel: 'push',
+          purpose: 'announcements',
+          revokedAt: new Date('2026-10-10T00:00:00Z'),
+        }),
       ],
     }),
     expected: 'allow',
@@ -200,7 +225,10 @@ const rows: Row[] = [
   },
   {
     name: 'no cap configured',
-    input: base({ consents: [consent()], limits: { whatsappDailyCap: null, whatsappSentToday: 9 } }),
+    input: base({
+      consents: [consent()],
+      limits: { whatsappDailyCap: null, whatsappSentToday: 9 },
+    }),
     expected: 'allow',
   },
   {
@@ -249,7 +277,11 @@ describe('send gate', () => {
       for (const channel of def.channels) {
         if (channel === 'push') continue;
         const decision = evaluateGate(
-          base({ channel, template: key, recipient: { userId: null, hasPhone: true, accountActive: true } }),
+          base({
+            channel,
+            template: key,
+            recipient: { userId: null, hasPhone: true, accountActive: true },
+          }),
         );
         expect(decision, `${key} over ${channel}`).toEqual({ allow: true });
       }

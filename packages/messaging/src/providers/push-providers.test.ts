@@ -1,8 +1,14 @@
-import { createPublicKey, createVerify, generateKeyPairSync, createECDH, randomBytes } from 'node:crypto';
+import {
+  createPublicKey,
+  createVerify,
+  generateKeyPairSync,
+  createECDH,
+  randomBytes,
+} from 'node:crypto';
 import webpush from 'web-push';
 import { describe, expect, it } from 'vitest';
 import type { PushPayload } from '@qc/contracts';
-import { bodyOf, createFakeFetch } from '../test/fake-fetch';
+import { bodyObject, createFakeFetch } from '../test/fake-fetch';
 import { HttpTimeoutError } from '../http';
 import { ApnsPushProvider } from './apns';
 import { FcmPushProvider, GoogleServiceAccountTokenSource, type AccessTokenSource } from './fcm';
@@ -51,19 +57,27 @@ describe('FCM provider', () => {
     return {
       auth,
       fetch,
-      provider: new FcmPushProvider({ projectId: 'demo-project', auth, fetch, baseUrl: 'https://fcm.test' }),
+      provider: new FcmPushProvider({
+        projectId: 'demo-project',
+        auth,
+        fetch,
+        baseUrl: 'https://fcm.test',
+      }),
     };
   };
   const target = { kind: 'fcm', token: 'fcm-token-1' } as const;
 
   it('posts the v1 message with data as strings and a collapse key', async () => {
-    const { provider, fetch } = make(() => ({ status: 200, body: { name: 'projects/demo/messages/1' } }));
+    const { provider, fetch } = make(() => ({
+      status: 200,
+      body: { name: 'projects/demo/messages/1' },
+    }));
     const result = await provider.send(target, payload);
     expect(result).toEqual({ status: 'ok', providerMessageId: 'projects/demo/messages/1' });
     const request = fetch.requests[0]!;
     expect(request.url).toBe('https://fcm.test/v1/projects/demo-project/messages:send');
     expect(request.init.headers?.authorization).toBe('Bearer fake-access-token');
-    const sent = bodyOf(request) as { message: Record<string, any> };
+    const sent = bodyObject(request);
     expect(sent.message.token).toBe('fcm-token-1');
     expect(sent.message.notification).toEqual({ title: 'Reminder', body: 'Weekly tafsir tonight' });
     expect(sent.message.data).toEqual({
@@ -77,11 +91,42 @@ describe('FCM provider', () => {
   });
 
   const failures: Array<[string, number, unknown, string, Record<string, string>?]> = [
-    ['unregistered', 404, { error: { status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } }, 'invalid_token'],
-    ['sender mismatch', 403, { error: { details: [{ errorCode: 'SENDER_ID_MISMATCH' }] } }, 'invalid_token'],
-    ['malformed token', 400, { error: { status: 'INVALID_ARGUMENT', message: 'The registration token is not a valid FCM registration token' } }, 'invalid_token'],
-    ['bad payload', 400, { error: { status: 'INVALID_ARGUMENT', message: 'Invalid JSON payload' } }, 'permanent_failure'],
-    ['quota', 429, { error: { status: 'RESOURCE_EXHAUSTED', details: [{ errorCode: 'QUOTA_EXCEEDED' }] } }, 'transient_failure', { 'retry-after': '120' }],
+    [
+      'unregistered',
+      404,
+      { error: { status: 'NOT_FOUND', details: [{ errorCode: 'UNREGISTERED' }] } },
+      'invalid_token',
+    ],
+    [
+      'sender mismatch',
+      403,
+      { error: { details: [{ errorCode: 'SENDER_ID_MISMATCH' }] } },
+      'invalid_token',
+    ],
+    [
+      'malformed token',
+      400,
+      {
+        error: {
+          status: 'INVALID_ARGUMENT',
+          message: 'The registration token is not a valid FCM registration token',
+        },
+      },
+      'invalid_token',
+    ],
+    [
+      'bad payload',
+      400,
+      { error: { status: 'INVALID_ARGUMENT', message: 'Invalid JSON payload' } },
+      'permanent_failure',
+    ],
+    [
+      'quota',
+      429,
+      { error: { status: 'RESOURCE_EXHAUSTED', details: [{ errorCode: 'QUOTA_EXCEEDED' }] } },
+      'transient_failure',
+      { 'retry-after': '120' },
+    ],
     ['unavailable', 503, { error: { status: 'UNAVAILABLE' } }, 'transient_failure'],
     ['expired access token', 401, { error: { status: 'UNAUTHENTICATED' } }, 'transient_failure'],
   ];
@@ -95,13 +140,22 @@ describe('FCM provider', () => {
 
   it('treats a network error as transient', async () => {
     const { provider } = make(() => new Error('socket hang up'));
-    expect(await provider.send(target, payload)).toEqual({ status: 'transient_failure', code: 'network_error' });
+    expect(await provider.send(target, payload)).toEqual({
+      status: 'transient_failure',
+      code: 'network_error',
+    });
   });
 
   it('treats a failed token fetch as transient', async () => {
-    const auth: AccessTokenSource = { getToken: () => Promise.reject(new Error('x')), invalidate: () => {} };
+    const auth: AccessTokenSource = {
+      getToken: () => Promise.reject(new Error('x')),
+      invalidate: () => {},
+    };
     const { provider, fetch } = make(() => ({ status: 200, body: {} }), auth as StaticToken);
-    expect(await provider.send(target, payload)).toEqual({ status: 'transient_failure', code: 'fcm_auth_unavailable' });
+    expect(await provider.send(target, payload)).toEqual({
+      status: 'transient_failure',
+      code: 'fcm_auth_unavailable',
+    });
     expect(fetch.requests).toHaveLength(0);
   });
 });
@@ -116,7 +170,10 @@ describe('Google service-account token source', () => {
 
   it('signs an RS256 assertion, exchanges it and caches the token', async () => {
     let now = new Date('2026-11-01T10:00:00Z');
-    const fetch = createFakeFetch(() => ({ status: 200, body: { access_token: 'tok-1', expires_in: 3600 } }));
+    const fetch = createFakeFetch(() => ({
+      status: 200,
+      body: { access_token: 'tok-1', expires_in: 3600 },
+    }));
     const source = new GoogleServiceAccountTokenSource(credentials, fetch, {
       tokenUrl: 'https://oauth.test/token',
       now: () => now,
@@ -175,22 +232,35 @@ describe('APNs provider', () => {
   const target = { kind: 'apns', token: 'abcdef0123456789' } as const;
 
   it('sends an alert with a signed provider token, topic, collapse id and expiry', async () => {
-    const { provider, fetch } = make(() => ({ status: 200, headers: { 'apns-id': 'apns-uuid-1' } }));
-    expect(await provider.send(target, payload)).toEqual({ status: 'ok', providerMessageId: 'apns-uuid-1' });
+    const { provider, fetch } = make(() => ({
+      status: 200,
+      headers: { 'apns-id': 'apns-uuid-1' },
+    }));
+    expect(await provider.send(target, payload)).toEqual({
+      status: 'ok',
+      providerMessageId: 'apns-uuid-1',
+    });
     const request = fetch.requests[0]!;
     expect(request.url).toBe('https://apns.test/3/device/abcdef0123456789');
     const headers = request.init.headers!;
     expect(headers['apns-topic']).toBe('org.example.qc');
     expect(headers['apns-push-type']).toBe('alert');
     expect(headers['apns-collapse-id']).toBe(`reminder:${OCCURRENCE}`);
-    expect(headers['apns-expiration']).toBe(String(Math.floor(Date.parse('2026-11-01T11:00:00Z') / 1000)));
+    expect(headers['apns-expiration']).toBe(
+      String(Math.floor(Date.parse('2026-11-01T11:00:00Z') / 1000)),
+    );
     const jwt = decodeJwt(headers.authorization!.replace(/^bearer /, ''));
     expect(jwt.header).toMatchObject({ alg: 'ES256', kid: 'KEY1234567' });
     expect(jwt.claims.iss).toBe('TEAM123456');
     const verifier = createVerify('SHA256');
     verifier.update(jwt.signingInput);
-    expect(verifier.verify({ key: createPublicKey(publicKey), dsaEncoding: 'ieee-p1363' }, jwt.signature)).toBe(true);
-    const body = bodyOf(request) as Record<string, any>;
+    expect(
+      verifier.verify(
+        { key: createPublicKey(publicKey), dsaEncoding: 'ieee-p1363' },
+        jwt.signature,
+      ),
+    ).toBe(true);
+    const body = bodyObject(request);
     expect(body.aps.alert).toEqual({ title: 'Reminder', body: 'Weekly tafsir tonight' });
     expect(body.deepLink).toBe(payload.data.deepLink);
   });
@@ -199,7 +269,9 @@ describe('APNs provider', () => {
     const { provider, fetch } = make(() => ({ status: 200 }));
     await provider.send(target, payload);
     await provider.send(target, payload);
-    expect(fetch.requests[0]!.init.headers!.authorization).toBe(fetch.requests[1]!.init.headers!.authorization);
+    expect(fetch.requests[0]!.init.headers!.authorization).toBe(
+      fetch.requests[1]!.init.headers!.authorization,
+    );
   });
 
   const failures: Array<[string, number, unknown, string]> = [
@@ -218,7 +290,10 @@ describe('APNs provider', () => {
 
   it('treats a timeout as transient', async () => {
     const { provider } = make(() => new HttpTimeoutError('slow'));
-    expect(await provider.send(target, payload)).toEqual({ status: 'transient_failure', code: 'network_error' });
+    expect(await provider.send(target, payload)).toEqual({
+      status: 'transient_failure',
+      code: 'network_error',
+    });
   });
 });
 
@@ -260,7 +335,9 @@ describe('web push provider', () => {
     expect(headers.Authorization).toMatch(/^vapid t=.+, k=.+$/);
     expect(request.init.body).toBeInstanceOf(Uint8Array);
     // Encrypted: the plain text must not appear in the body.
-    expect(Buffer.from(request.init.body as Uint8Array).toString('latin1')).not.toContain('Weekly tafsir');
+    expect(Buffer.from(request.init.body as Uint8Array).toString('latin1')).not.toContain(
+      'Weekly tafsir',
+    );
   });
 
   it.each([

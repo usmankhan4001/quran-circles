@@ -7,7 +7,7 @@ import {
   type TemplateKey,
   type TemplateVariables,
 } from '@qc/contracts';
-import { bodyOf, createFakeFetch } from '../test/fake-fetch';
+import { bodyObject, createFakeFetch } from '../test/fake-fetch';
 import { buildWhatsAppRequest, positionalNames } from './whatsapp';
 import { WhatsAppCloudClient, classifyGraphError } from './whatsapp-cloud';
 import { allMetaSubmissions, toMetaSubmission } from './whatsapp-meta-templates';
@@ -16,9 +16,25 @@ const PHONE = '+923000000001';
 
 const SAMPLE: { [K in TemplateKey]: TemplateVariables<K> } = {
   auth_code: { code: '123456', minutes: '10' },
-  registration_confirmation: { name: 'Aisha', sessionTitle: 'Tafsir', venueName: 'Masjid', when: 'Fri 7:30 pm', link: 'https://x.test/a' },
-  session_reminder: { sessionTitle: 'Tafsir', venueName: 'Masjid', when: 'Fri 7:30 pm', link: 'https://x.test/a' },
-  session_changed: { sessionTitle: 'Tafsir', venueName: 'Masjid', newWhen: 'Fri 8 pm', link: 'https://x.test/a' },
+  registration_confirmation: {
+    name: 'Aisha',
+    sessionTitle: 'Tafsir',
+    venueName: 'Masjid',
+    when: 'Fri 7:30 pm',
+    link: 'https://x.test/a',
+  },
+  session_reminder: {
+    sessionTitle: 'Tafsir',
+    venueName: 'Masjid',
+    when: 'Fri 7:30 pm',
+    link: 'https://x.test/a',
+  },
+  session_changed: {
+    sessionTitle: 'Tafsir',
+    venueName: 'Masjid',
+    newWhen: 'Fri 8 pm',
+    link: 'https://x.test/a',
+  },
   session_cancelled: { sessionTitle: 'Tafsir', when: 'Fri 7:30 pm', link: 'https://x.test/a' },
   waitlist_promoted: { sessionTitle: 'Tafsir', when: 'Fri 7:30 pm', link: 'https://x.test/a' },
   coordinator_invite: { inviterName: 'Ali', scopeName: 'Masjid', link: 'https://x.test/a' },
@@ -47,14 +63,24 @@ describe('positional variables', () => {
   });
 
   it('puts the code in the body and the copy-code button for the authentication template', () => {
-    const request = buildWhatsAppRequest({ key: 'auth_code', locale: 'en', variables: SAMPLE.auth_code, to: PHONE });
+    const request = buildWhatsAppRequest({
+      key: 'auth_code',
+      locale: 'en',
+      variables: SAMPLE.auth_code,
+      to: PHONE,
+    });
     expect(request.bodyParams).toEqual(['123456']);
     expect(request.buttonParam).toBe('123456');
   });
 
   it('rejects variables that do not match the catalog before anything is sent', () => {
     expect(() =>
-      buildWhatsAppRequest({ key: 'auth_code', locale: 'en', variables: { code: 'abc', minutes: '10' }, to: PHONE }),
+      buildWhatsAppRequest({
+        key: 'auth_code',
+        locale: 'en',
+        variables: { code: 'abc', minutes: '10' },
+        to: PHONE,
+      }),
     ).toThrow();
   });
 
@@ -67,7 +93,9 @@ describe('positional variables', () => {
           continue;
         }
         expect(new Set(names).size).toBe(names.length);
-        expect([...names].sort()).toEqual([...templatePlaceholders(TEMPLATES[key].body[locale])].sort());
+        expect([...names].sort()).toEqual(
+          [...templatePlaceholders(TEMPLATES[key].body[locale])].sort(),
+        );
         const request = buildWhatsAppRequest({
           key,
           locale,
@@ -87,10 +115,15 @@ describe('Meta template submissions', () => {
       const key = TEMPLATE_KEYS.find((k) => TEMPLATES[k].waTemplateName === submission.name)!;
       const locale = submission.language as 'en' | 'ur';
       expect(submission.variableOrder).toEqual(positionalNames(key, locale));
-      const body = submission.components[0] as { text?: string; example?: { body_text: string[][] } };
+      const body = submission.components[0] as {
+        text?: string;
+        example?: { body_text: string[][] };
+      };
       if (body.text !== undefined) {
         const numbers = [...body.text.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
-        expect([...new Set(numbers)].sort()).toEqual(submission.variableOrder.map((_n, i) => i + 1));
+        expect([...new Set(numbers)].sort()).toEqual(
+          submission.variableOrder.map((_n, i) => i + 1),
+        );
         expect(body.text).not.toMatch(/\{[a-zA-Z]/);
         expect(body.example?.body_text[0]).toHaveLength(submission.variableOrder.length);
       }
@@ -133,12 +166,18 @@ describe('WhatsApp Cloud client', () => {
   });
 
   it('posts a template message to the configurable Graph endpoint', async () => {
-    const { client, fetch } = make(() => ({ status: 200, body: { messages: [{ id: 'wamid.A1' }] } }));
-    expect(await client.sendTemplate(request)).toEqual({ status: 'ok', providerMessageId: 'wamid.A1' });
+    const { client, fetch } = make(() => ({
+      status: 200,
+      body: { messages: [{ id: 'wamid.A1' }] },
+    }));
+    expect(await client.sendTemplate(request)).toEqual({
+      status: 'ok',
+      providerMessageId: 'wamid.A1',
+    });
     const sent = fetch.requests[0]!;
     expect(sent.url).toBe('https://graph.test/v99.0/1000000001/messages');
     expect(sent.init.headers!.authorization).toBe('Bearer fake-token');
-    const body = bodyOf(sent) as Record<string, any>;
+    const body = bodyObject(sent);
     expect(body.messaging_product).toBe('whatsapp');
     expect(body.to).toBe('923000000001');
     expect(body.type).toBe('template');
@@ -154,11 +193,19 @@ describe('WhatsApp Cloud client', () => {
   });
 
   it('adds the copy-code button parameter for authentication templates', async () => {
-    const { client, fetch } = make(() => ({ status: 200, body: { messages: [{ id: 'wamid.A2' }] } }));
+    const { client, fetch } = make(() => ({
+      status: 200,
+      body: { messages: [{ id: 'wamid.A2' }] },
+    }));
     await client.sendTemplate(
-      buildWhatsAppRequest({ key: 'auth_code', locale: 'ur', variables: SAMPLE.auth_code, to: PHONE }),
+      buildWhatsAppRequest({
+        key: 'auth_code',
+        locale: 'ur',
+        variables: SAMPLE.auth_code,
+        to: PHONE,
+      }),
     );
-    const body = bodyOf(fetch.requests[0]!) as Record<string, any>;
+    const body = bodyObject(fetch.requests[0]!);
     expect(body.template.components[1]).toEqual({
       type: 'button',
       sub_type: 'url',
@@ -174,11 +221,16 @@ describe('WhatsApp Cloud client', () => {
     await client.sendTemplate(request);
     token = 'two';
     await client.sendTemplate(request);
-    expect(fetch.requests.map((r) => r.init.headers!.authorization)).toEqual(['Bearer one', 'Bearer two']);
+    expect(fetch.requests.map((r) => r.init.headers!.authorization)).toEqual([
+      'Bearer one',
+      'Bearer two',
+    ]);
     expect(fetch.requests[0]!.url.startsWith('https://graph.facebook.com/')).toBe(true);
   });
 
-  const errorRows: Array<[string, number, number | undefined, 'transient_failure' | 'permanent_failure', string?]> = [
+  const errorRows: Array<
+    [string, number, number | undefined, 'transient_failure' | 'permanent_failure', string?]
+  > = [
     ['recipient not on WhatsApp', 400, 131026, 'permanent_failure', 'recipient'],
     ['re-engagement window', 400, 131047, 'permanent_failure', 'recipient'],
     ['template does not exist', 404, 132001, 'permanent_failure', 'template'],
@@ -208,11 +260,20 @@ describe('WhatsApp Cloud client', () => {
 
   it('treats network failure as transient', async () => {
     const { client } = make(() => new Error('ECONNRESET'));
-    expect(await client.sendTemplate(request)).toEqual({ status: 'transient_failure', code: 'network_error' });
+    expect(await client.sendTemplate(request)).toEqual({
+      status: 'transient_failure',
+      code: 'network_error',
+    });
   });
 
   it('classifyGraphError falls back to the HTTP status', () => {
-    expect(classifyGraphError(undefined, 503)).toMatchObject({ transient: true, code: 'wa_http_503' });
-    expect(classifyGraphError(undefined, 401)).toMatchObject({ transient: false, cause: 'configuration' });
+    expect(classifyGraphError(undefined, 503)).toMatchObject({
+      transient: true,
+      code: 'wa_http_503',
+    });
+    expect(classifyGraphError(undefined, 401)).toMatchObject({
+      transient: false,
+      cause: 'configuration',
+    });
   });
 });

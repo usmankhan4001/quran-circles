@@ -43,3 +43,11 @@ export function createFakeFetch(
 
 export const bodyOf = (request: RecordedRequest): unknown =>
   JSON.parse(typeof request.init.body === 'string' ? request.init.body : '{}');
+
+/**
+ * A request body for tests that dig into nested provider payloads. Deliberately loose: the tests
+ * assert on the values, and the real shapes are validated where the bodies are built.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only convenience, see above
+export type LooseJson = any;
+export const bodyObject = (request: RecordedRequest): LooseJson => bodyOf(request);

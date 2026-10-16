@@ -32,7 +32,10 @@ describe('retry decisions', () => {
   });
 
   it('honours a longer retry-after hint from the provider', () => {
-    expect(decideRetry(1, noJitter, { hintMs: 600_000 })).toEqual({ kind: 'retry', delayMs: 600_000 });
+    expect(decideRetry(1, noJitter, { hintMs: 600_000 })).toEqual({
+      kind: 'retry',
+      delayMs: 600_000,
+    });
     expect(decideRetry(1, noJitter, { hintMs: 1_000 })).toEqual({ kind: 'retry', delayMs: 30_000 });
   });
 });

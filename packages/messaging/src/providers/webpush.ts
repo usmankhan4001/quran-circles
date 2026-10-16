@@ -70,7 +70,10 @@ export class WebPushProvider implements PushProvider {
         {
           method: details.method,
           headers: Object.fromEntries(
-            Object.entries(details.headers as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+            Object.entries(details.headers as Record<string, unknown>).map(([k, v]) => [
+              k,
+              String(v),
+            ]),
           ),
           body: details.body as Uint8Array,
         },

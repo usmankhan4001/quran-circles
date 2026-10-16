@@ -48,7 +48,10 @@ export interface RecordedPush {
   payload: PushPayload;
 }
 
-export class FakePushProvider extends Scriptable<RecordedPush, PushSendResult> implements PushProvider {
+export class FakePushProvider
+  extends Scriptable<RecordedPush, PushSendResult>
+  implements PushProvider
+{
   private counter = 0;
   private readonly invalid = new Set<string>();
 
@@ -105,7 +108,10 @@ export class FakeSmsProvider extends Scriptable<SmsMessage, SmsSendResult> imple
 
   send(message: SmsMessage): Promise<SmsSendResult> {
     return Promise.resolve(
-      this.answer(message, () => ({ status: 'ok', providerMessageId: `fake-sms-${++this.counter}` })),
+      this.answer(message, () => ({
+        status: 'ok',
+        providerMessageId: `fake-sms-${++this.counter}`,
+      })),
     );
   }
 }
