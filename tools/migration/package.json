@@ -18,7 +18,8 @@
     "migrate:dry-run": "tsx src/bin.ts migrate",
     "migrate:apply": "tsx src/bin.ts migrate --apply",
     "snapshot": "tsx src/bin.ts snapshot",
-    "verify": "tsx src/bin.ts verify"
+    "verify": "tsx src/bin.ts verify",
+    "fixtures:write": "tsx src/write-fixtures.ts"
   },
   "dependencies": {
     "@qc/contracts": "workspace:*",

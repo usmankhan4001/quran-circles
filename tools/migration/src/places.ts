@@ -6,7 +6,7 @@ import type { V1Venue } from './v1';
 export function slugify(input: string): string {
   const ascii = input
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, '-')
@@ -134,7 +134,10 @@ export function distanceKm(aLat: number, aLng: number, bLat: number, bLng: numbe
 export type CoordinateProblem = 'missing' | 'out_of_range' | 'swapped' | 'outside_pakistan';
 
 /** Validates a coordinate pair. Returns the problem, or null when usable. */
-export function coordinateProblem(lat: number | null, lng: number | null): CoordinateProblem | null {
+export function coordinateProblem(
+  lat: number | null,
+  lng: number | null,
+): CoordinateProblem | null {
   if (lat === null || lng === null) return 'missing';
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return 'out_of_range';
   if (lat === 0 && lng === 0) return 'missing';

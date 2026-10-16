@@ -34,4 +34,5 @@ A decision that changes a contract also needs a contract change request.
 
 - [0001: Target stack](0001-target-stack.md)
 - [0002: Sign-in approach](0002-auth-approach.md)
+- [0004: V1 migration approach](0004-v1-migration-approach.md)
 - [0003: UI tooling (styling, test renderer, catalog)](0003-ui-tooling.md)

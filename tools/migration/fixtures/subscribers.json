@@ -1,0 +1,32 @@
+[
+  {
+    "phone": "923000000201",
+    "venue": "Sample Masjid Al-Noor",
+    "name": "Sample Saddar"
+  },
+  {
+    "phone": "923000000202",
+    "venue": "Sample Masjid Hira",
+    "name": "Sample F-7"
+  },
+  {
+    "phone": "923000000203",
+    "venue": "Sample Masjid Ayesha",
+    "name": "Sample Gulberg"
+  },
+  {
+    "phone": "03000000201",
+    "venue": "Sample Masjid Al-Noor",
+    "name": "Sample Saddar"
+  },
+  {
+    "phone": "0300",
+    "venue": "Sample Masjid Al-Noor",
+    "name": "Sample Saddar"
+  },
+  {
+    "phone": "923000000204",
+    "venue": "Sample Hall Nowhere",
+    "name": "Sample Nowhere"
+  }
+]

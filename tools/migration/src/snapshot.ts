@@ -147,11 +147,7 @@ export function verifySnapshots(input: VerifyInput): VerifyResult {
     const b = before.cities[slug];
     const a = after.cities[slug];
     const planned = insertedByCity[slug];
-    check(
-      `${slug}: venues added`,
-      planned?.venues ?? 0,
-      (a?.venues ?? 0) - (b?.venues ?? 0),
-    );
+    check(`${slug}: venues added`, planned?.venues ?? 0, (a?.venues ?? 0) - (b?.venues ?? 0));
     check(
       `${slug}: legacy registrations added`,
       planned?.registrations ?? 0,

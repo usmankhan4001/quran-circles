@@ -12,7 +12,7 @@ import {
 } from './export';
 import { loadInputs, readRowsFile, writeFileSafe } from './files';
 import { proposeMapping, readMapping } from './places';
-import { ReportSchema, summaryLines } from './report';
+import { ReportSchema, categoryLines, summaryLines } from './report';
 import { planFingerprint, runMigration } from './run';
 import { SnapshotSchema, takeSnapshot, verifySnapshots } from './snapshot';
 import { V1VenueRow } from './v1';
@@ -161,7 +161,7 @@ function runProposeMapping(ctx: CliContext, values: Values): number {
   if (existsSync(outPath) && !values.force) {
     throw new MigrationToolError(
       'would_overwrite',
-      'The mapping file already exists and may hold a person\'s review; pass --force to replace it',
+      "The mapping file already exists and may hold a person's review; pass --force to replace it",
     );
   }
   const inputs = loadInputs(inDir);
@@ -175,7 +175,9 @@ function runProposeMapping(ctx: CliContext, values: Values): number {
   const rows = proposeMapping(venues);
   writeFileSafe(outPath, formatCsv(rows));
   ctx.out(`proposed mapping for ${rows.length - 1} venues (${inputs.venues.length} read)`);
-  ctx.out('Review the file, fix city_slug and area_slug, and set approved to yes for each good row.');
+  ctx.out(
+    'Review the file, fix city_slug and area_slug, and set approved to yes for each good row.',
+  );
   return 0;
 }
 
@@ -258,6 +260,8 @@ async function runMigrate(ctx: CliContext, values: Values): Promise<number> {
 
     ctx.out(`${mode}${offline ? ' (offline)' : ''}: per-city counts (new / already present)`);
     for (const line of summaryLines(result.report)) ctx.out(line);
+    ctx.out('by category (valid = toInsert + alreadyPresent):');
+    for (const line of categoryLines(result.report)) ctx.out(line);
     ctx.out(`rows needing a human decision or skipped: ${result.plan.flagged.length}`);
     ctx.out(`report: ${reportPath}`);
     ctx.out(`flagged rows (ids and reasons only): ${flaggedPath}`);
@@ -265,7 +269,9 @@ async function runMigrate(ctx: CliContext, values: Values): Promise<number> {
       ctx.out('applied in one transaction. Now run verify.');
     } else {
       ctx.out(`plan fingerprint: ${planFingerprint(result.report, digests)}`);
-      ctx.out('Review the report and the flagged rows. To apply, run migrate:apply with --confirm and this fingerprint.');
+      ctx.out(
+        'Review the report and the flagged rows. To apply, run migrate:apply with --confirm and this fingerprint.',
+      );
     }
     return 0;
   } finally {
@@ -292,7 +298,10 @@ async function runVerify(ctx: CliContext, values: Values): Promise<number> {
     throw new MigrationToolError('usage', 'verify needs --report <apply report> (and --before)');
   }
   const reportPath = resolve(ctx.cwd, values.report);
-  const beforePath = resolve(ctx.cwd, values.before ?? reportPath.replace(/\.json$/, '.before.json'));
+  const beforePath = resolve(
+    ctx.cwd,
+    values.before ?? reportPath.replace(/\.json$/, '.before.json'),
+  );
   const report = ReportSchema.parse(JSON.parse(readText(reportPath)));
   if (report.mode !== 'apply' || !report.applied) {
     throw new MigrationToolError('usage', 'verify needs the report of an apply, not a dry run');
@@ -356,7 +365,11 @@ export async function runCli(argv: readonly string[], ctx: CliContext): Promise<
         return 2;
     }
   } catch (error) {
-    if (error instanceof TypeError && 'code' in error && String(error.code).startsWith('ERR_PARSE_ARGS')) {
+    if (
+      error instanceof TypeError &&
+      'code' in error &&
+      String(error.code).startsWith('ERR_PARSE_ARGS')
+    ) {
       ctx.err('error: bad command line options (see --help)');
       return 2;
     }

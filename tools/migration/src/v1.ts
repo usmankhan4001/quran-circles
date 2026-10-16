@@ -45,11 +45,12 @@ export function toNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-const text = z.unknown().transform(toText);
+// Columns missing from an export (older V1 rows, a trimmed CSV) read as empty, not as an error.
+const text = z.unknown().optional().transform(toText);
 const limited = (max: number) =>
   text.refine((v) => v === null || v.length <= max, { message: 'too long' });
 const requiredId = text.refine((v): v is string => v !== null, { message: 'missing id' });
-const number = z.unknown().transform(toNumber);
+const number = z.unknown().optional().transform(toNumber);
 
 export const V1VenueRow = z.object({
   id: requiredId,

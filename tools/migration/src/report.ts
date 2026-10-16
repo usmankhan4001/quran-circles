@@ -176,7 +176,13 @@ export class Tally {
   }
 }
 
-/** Counts of rows by outcome for one dataset in one city bucket, for the console summary. */
+const WARNING_KEYS = new Set<string>([
+  ...VENUE_WARNINGS,
+  ...REGISTRATION_WARNINGS,
+  ...SUBSCRIBER_WARNINGS,
+]);
+
+/** Per-city table: rows that are new and rows already in V2, for each dataset. */
 export function summaryLines(report: Report): string[] {
   const lines: string[] = [];
   const cell = (counts: Counts, width: number) =>
@@ -185,5 +191,34 @@ export function summaryLines(report: Report): string[] {
     `${label.padEnd(14)} venues ${cell(c.venues, 4)} | registrations ${cell(c.registrations, 5)} | subscribers ${cell(c.subscribers, 5)}`;
   for (const [slug, counts] of Object.entries(report.cities)) lines.push(row(slug, counts));
   lines.push(row('TOTAL', report.totals));
+  return lines;
+}
+
+/**
+ * Per city and dataset, every non-zero category: valid, invalid phone, duplicate, unmapped and
+ * the rest, then the non-excluding notes. Words and numbers only.
+ */
+export function categoryLines(report: Report): string[] {
+  const lines: string[] = [];
+  const describe = (label: string, dataset: Dataset, counts: Counts) => {
+    if (!counts.read) return;
+    const outcomes = Object.entries(counts).filter(
+      ([k, n]) => k !== 'read' && !WARNING_KEYS.has(k) && n > 0,
+    );
+    const notes = Object.entries(counts).filter(([k, n]) => WARNING_KEYS.has(k) && n > 0);
+    const text = [`read ${counts.read}`, ...outcomes.map(([k, n]) => `${k} ${n}`)].join(', ');
+    const extra =
+      notes.length > 0 ? ` (notes: ${notes.map(([k, n]) => `${k} ${n}`).join(', ')})` : '';
+    lines.push(`${label.padEnd(14)} ${dataset}: ${text}${extra}`);
+  };
+  const entries: [string, CityCounts][] = [
+    ...Object.entries(report.cities),
+    ['TOTAL', report.totals],
+  ];
+  for (const [label, counts] of entries) {
+    for (const dataset of ['venues', 'registrations', 'subscribers'] as const) {
+      describe(label, dataset, counts[dataset]);
+    }
+  }
   return lines;
 }

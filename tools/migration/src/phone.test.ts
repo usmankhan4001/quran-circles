@@ -20,8 +20,8 @@ describe('normalisePhone: Pakistani mobile forms', () => {
     ['stray trunk zero after 92', `920${NAT}`],
     ['brackets and dots', `(+92) ${NAT.slice(0, 3)}.${NAT.slice(3)}`],
     ['surrounding whitespace', `  0${NAT}\n`],
-    ['no-break space', `0${NAT.slice(0, 3)} ${NAT.slice(3)}`],
-    ['directional marks around it', `‎+92${NAT}‏`],
+    ['no-break space', `0${NAT.slice(0, 3)}\u00a0${NAT.slice(3)}`],
+    ['directional marks around it', `\u200e+92${NAT}\u200f`],
   ];
   it.each(accepted)('%s', (_label, raw) => {
     expect(normalisePhone(raw)).toEqual({ ok: true, e164: E164, kind: 'mobile' });

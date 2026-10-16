@@ -145,7 +145,10 @@ export async function exportVenuesFromRest(options: RestOptions): Promise<unknow
     });
     if (!response.ok) {
       // The body is not read or shown: it could echo anything.
-      throw new MigrationToolError('venue_export_failed', `Supabase answered HTTP ${response.status}`);
+      throw new MigrationToolError(
+        'venue_export_failed',
+        `Supabase answered HTTP ${response.status}`,
+      );
     }
     const page: unknown = await response.json();
     if (!Array.isArray(page)) {

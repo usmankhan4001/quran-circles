@@ -37,7 +37,10 @@ export async function runMigration(options: RunOptions): Promise<RunResult> {
   const { db, apply } = options;
   const now = options.now ?? new Date();
   if (apply && db === null) {
-    throw new MigrationToolError('no_database', 'An apply needs a database; offline is dry run only');
+    throw new MigrationToolError(
+      'no_database',
+      'An apply needs a database; offline is dry run only',
+    );
   }
 
   const reportFor = (plan: Plan, target: TargetState, applied: Applied | null): Report =>

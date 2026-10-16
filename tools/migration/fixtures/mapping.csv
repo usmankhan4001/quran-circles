@@ -1,0 +1,15 @@
+v1_id,venue_name,address,v1_area_label,lat,lng,province_code,city_slug,area_slug,area_name_en,area_name_ur,confidence,reason,approved
+00000000-0000-4000-8000-000000000001,Sample Masjid Al-Noor,"Street 4, Saddar, Rawalpindi (sample address)",Sample Saddar,33.5961,73.0483,PB,rawalpindi,sample-saddar,Sample Saddar,,high,address_text coordinates_overlap,yes
+00000000-0000-4000-8000-000000000002,Sample Markaz Iqra,"Block B, Satellite Town, Rawalpindi (sample address)",Sample Satellite Town,33.6361,73.0722,PB,rawalpindi,sample-satellite-town,Sample Satellite Town,,low,address_text coordinates_overlap text_and_coordinates_disagree,yes
+00000000-0000-4000-8000-000000000003,Sample Masjid Hira,"Jinnah Super, F-7, Islamabad (sample address)",Sample F-7,33.7218,73.0568,ICT,islamabad,sample-f-7,Sample F-7,,high,address_text coordinates,yes
+00000000-0000-4000-8000-000000000004,Sample Darul Quran,"Markaz, G-9 (sample address)",Sample G-9,33.6924,73.0359,ICT,islamabad,sample-g-9,Sample G-9,,high,sector_pattern coordinates,yes
+00000000-0000-4000-8000-000000000005,Sample Masjid Bilal,"Block C, Johar Town, Lahore (sample address)",Sample Johar Town,31.47,74.2731,PB,lahore,sample-johar-town,Sample Johar Town,,high,address_text coordinates,yes
+00000000-0000-4000-8000-000000000006,Sample Masjid Ayesha,"Main Boulevard, Gulberg, Lahore (sample address)",Sample Gulberg,31.5207,74.349,PB,lahore,sample-gulberg,Sample Gulberg,,high,address_text coordinates,yes
+00000000-0000-4000-8000-000000000007,Sample Masjid Usman,"Street 2, Cantt, Multan (sample address)",Sample Multan Cantt,30.1981,71.4701,PB,multan,sample-multan-cantt,Sample Multan Cantt,,high,address_text coordinates,yes
+00000000-0000-4000-8000-000000000008,Sample Masjid Al-Noor,"Street 4, Saddar, Rawalpindi (sample address)",Sample Saddar,33.5961,73.0483,PB,rawalpindi,sample-saddar,Sample Saddar,,high,address_text coordinates_overlap,yes
+00000000-0000-4000-8000-000000000009,Sample Masjid Swapped,"Main Road, Faisalabad (sample address)",Sample Swapped,73.135,31.4504,PB,faisalabad,sample-swapped,Sample Swapped,,medium,address_text,yes
+00000000-0000-4000-8000-000000000010,Sample Masjid Pending,"Clock Tower, Faisalabad (sample address)",Sample City Centre,31.4181,73.0791,PB,faisalabad,sample-city-centre,Sample City Centre,,high,address_text coordinates,
+00000000-0000-4000-8000-000000000011,Sample Masjid Elsewhere,"Main Road, Karachi (sample address)",Sample Elsewhere,24.8607,67.0011,SD,karachi,sample-elsewhere,Sample Elsewhere,,none,no_city_found,yes
+00000000-0000-4000-8000-000000000012,Sample Masjid Wah,"GT Road, Wah Cantt (sample address)",Sample Wah Town,33.7715,72.7511,PB,wah-cantt,sample-wah-town,Sample Wah Town,,high,address_text coordinates,yes
+00000000-0000-4000-8000-000000000013,Sample Masjid Bilal,"Block D, Gulgasht, Multan (sample address)",Sample Gulgasht,30.2109,71.4965,PB,multan,sample-gulgasht,Sample Gulgasht,,high,address_text coordinates,yes
+00000000-0000-4000-8000-000000000014,Sample Masjid Blank,,Sample No Address,31.5,74.3,PB,lahore,sample-no-address,Sample No Address,,medium,coordinates,yes

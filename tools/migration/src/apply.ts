@@ -43,7 +43,8 @@ export async function applyPlan(
 ): Promise<Inserted> {
   const cityId = (slug: string): string => {
     const id = target.cities.get(slug)?.id;
-    if (!id) throw new MigrationToolError('unknown_city', 'A planned row refers to an unknown city');
+    if (!id)
+      throw new MigrationToolError('unknown_city', 'A planned row refers to an unknown city');
     return id;
   };
 

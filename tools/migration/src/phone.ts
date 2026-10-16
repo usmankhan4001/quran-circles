@@ -29,8 +29,7 @@ export type PhoneRejection =
 export type PhoneKind = 'mobile' | 'landline' | 'international';
 
 export type PhoneResult =
-  | { ok: true; e164: string; kind: PhoneKind }
-  | { ok: false; reason: PhoneRejection };
+  { ok: true; e164: string; kind: PhoneKind } | { ok: false; reason: PhoneRejection };
 
 export interface PhoneOptions {
   /** Accept Pakistani landlines. Off by default: registrants and subscribers use WhatsApp. */

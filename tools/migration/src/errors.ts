@@ -37,6 +37,9 @@ export function describeFailure(error: unknown): string {
       if (typeof pg.constraint === 'string') parts.push(`constraint ${pg.constraint}`);
       return parts.join(', ');
     }
+    if (typeof pg.code === 'string' && /^E[A-Z0-9_]{2,30}$/.test(pg.code)) {
+      return `connection error ${pg.code}`;
+    }
     current = (current as { cause?: unknown }).cause;
   }
   const name = error instanceof Error ? error.name : typeof error;

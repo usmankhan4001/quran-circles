@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { UNASSIGNED } from './constants';
 import { normalisePhone } from './phone';
 import { coordinateProblem, distanceKm, proposeCity, slugify, type ParsedMapping } from './places';
@@ -121,7 +122,7 @@ function assignSlugs(venues: readonly ParsedVenue[]): Map<string, string> {
     groups.set(base(p), list);
   }
   const slugs = new Map<string, string>();
-  const shortId = (p: ParsedVenue) => p.v.id.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
+  const shortId = (p: ParsedVenue) => createHash('sha256').update(p.v.id).digest('hex').slice(0, 8);
   for (const [stem, members] of groups) {
     if (members.length === 1) {
       slugs.set(members[0]!.v.id, stem);
@@ -136,7 +137,7 @@ function assignSlugs(venues: readonly ParsedVenue[]): Map<string, string> {
     }
     for (const [slug, same] of withLabel) {
       for (const p of same) {
-        slugs.set(p.v.id, same.length === 1 ? slug : `${slug}-${shortId(p) || 'x'}`);
+        slugs.set(p.v.id, same.length === 1 ? slug : `${slug}-${shortId(p)}`);
       }
     }
   }
@@ -244,7 +245,10 @@ export function buildPlan(input: PlanInput): Plan {
             lng: p.v.lng,
           }).citySlug,
         );
-        return { decision: { outcome: 'unapproved' }, bucket: (mappedCity ?? proposed)?.slug ?? UNASSIGNED };
+        return {
+          decision: { outcome: 'unapproved' },
+          bucket: (mappedCity ?? proposed)?.slug ?? UNASSIGNED,
+        };
       }
       if (!mappedCity) return { decision: { outcome: 'unknownCity' }, bucket: UNASSIGNED };
       const city = mappedCity.slug;
