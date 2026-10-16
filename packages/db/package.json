@@ -12,6 +12,7 @@
     "generate": "drizzle-kit generate --config drizzle.config.ts",
     "migrate": "tsx src/cli/migrate.ts",
     "rollback": "tsx src/cli/rollback.ts",
+    "seed": "tsx src/cli/seed.ts",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests"
   },
