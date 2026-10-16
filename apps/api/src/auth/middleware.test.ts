@@ -85,7 +85,10 @@ describe('principal loading', () => {
     h.clock.advance(61);
     const { body } = await h.signIn(PHONE_A);
     const response = await h.get('/test/principal', { token: body.accessToken });
-    const principal = (await response.json()) as { userId: string; assignments: { role: string }[] };
+    const principal = (await response.json()) as {
+      userId: string;
+      assignments: { role: string }[];
+    };
     expect(principal.userId).toBe(user.id);
     expect(principal.assignments).toEqual([
       { role: 'venue_coordinator', cityId: null, venueId: h.world.venueA1 },
@@ -93,8 +96,16 @@ describe('principal loading', () => {
   });
 
   it('asks for sign-in on a malformed Authorization header', async () => {
-    for (const header of ['Basic abc', 'Bearer', 'Bearer a b', 'token abc', 'Bearer ' + 'x'.repeat(10) + '!!']) {
-      const response = await h.app.request('/test/principal', { headers: { authorization: header } });
+    for (const header of [
+      'Basic abc',
+      'Bearer',
+      'Bearer a b',
+      'token abc',
+      'Bearer ' + 'x'.repeat(10) + '!!',
+    ]) {
+      const response = await h.app.request('/test/principal', {
+        headers: { authorization: header },
+      });
       expect((await errorOf(response)).code).toBe('unauthenticated');
     }
   });
@@ -124,7 +135,9 @@ describe('principal loading', () => {
       await signed(new Uint8Array(32).fill(7), 'someone-else'),
     ];
     for (const token of tokens) {
-      expect((await errorOf(await h.get('/test/principal', { token }))).code).toBe('unauthenticated');
+      expect((await errorOf(await h.get('/test/principal', { token }))).code).toBe(
+        'unauthenticated',
+      );
     }
   });
 
@@ -158,7 +171,9 @@ describe('principal loading', () => {
       .update(schema.users)
       .set({ status: 'suspended' })
       .where(eq(schema.users.id, body.me.id));
-    expect(await errorOf(await h.get('/test/principal', { token: body.accessToken }))).toMatchObject({
+    expect(
+      await errorOf(await h.get('/test/principal', { token: body.accessToken })),
+    ).toMatchObject({
       status: 403,
       code: 'account_suspended',
     });
@@ -183,7 +198,9 @@ describe('principal loading', () => {
       reached = true;
       return c.json({ principal: c.get('principal') });
     });
-    const response = await broken.request('/x', { headers: { authorization: `Bearer ${body.accessToken}` } });
+    const response = await broken.request('/x', {
+      headers: { authorization: `Bearer ${body.accessToken}` },
+    });
     expect(response.status).toBe(500);
     expect(ApiError.parse(await response.json()).error.code).toBe('internal_error');
     expect(reached).toBe(false);
@@ -202,8 +219,12 @@ describe('principal loading', () => {
 
 describe('role changes take effect at once', () => {
   it('a revoked assignment stops working on the very next request, with the same token', async () => {
-    const coordinator = await staffToken(PHONE_A, 'venue_coordinator', { venueId: h.world.venueA1 });
-    expect((await updateVenue(coordinator.token, h.world.venueA1, h.world.cityA.id)).status).toBe(200);
+    const coordinator = await staffToken(PHONE_A, 'venue_coordinator', {
+      venueId: h.world.venueA1,
+    });
+    expect((await updateVenue(coordinator.token, h.world.venueA1, h.world.cityA.id)).status).toBe(
+      200,
+    );
 
     await h.db
       .update(schema.roleAssignments)
@@ -241,9 +262,13 @@ describe('role changes take effect at once', () => {
 
   it('a role granted after sign-in counts on the next request', async () => {
     const { body } = await h.signIn(PHONE_A);
-    expect((await updateVenue(body.accessToken, h.world.venueA1, h.world.cityA.id)).status).toBe(403);
+    expect((await updateVenue(body.accessToken, h.world.venueA1, h.world.cityA.id)).status).toBe(
+      403,
+    );
     await h.grantRole(body.me.id, 'venue_coordinator', { venueId: h.world.venueA1 });
-    expect((await updateVenue(body.accessToken, h.world.venueA1, h.world.cityA.id)).status).toBe(200);
+    expect((await updateVenue(body.accessToken, h.world.venueA1, h.world.cityA.id)).status).toBe(
+      200,
+    );
   });
 
   it('a city coordinator reaches venues in their city and nowhere else', async () => {
@@ -273,6 +298,10 @@ describe('role changes take effect at once', () => {
   it('an ordinary signed-in person gets forbidden, not unauthenticated', async () => {
     const { body } = await h.signIn(PHONE_A);
     const audit = await h.get('/test/audit', { token: body.accessToken });
-    expect(await errorOf(audit)).toMatchObject({ status: 403, code: 'forbidden', messageKey: 'errors.forbidden' });
+    expect(await errorOf(audit)).toMatchObject({
+      status: 403,
+      code: 'forbidden',
+      messageKey: 'errors.forbidden',
+    });
   });
 });

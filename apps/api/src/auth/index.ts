@@ -19,3 +19,5 @@ export type { CodeSender, CodeMessage } from './code-sender';
 export { InMemoryRateLimiter } from './rate-limiter';
 export type { RateLimiter, RateLimitResult } from './rate-limiter';
 export { loadMe, UNNAMED_DISPLAY_NAME } from '../modules/auth/me';
+export { purgeStaleAuthRows } from '../modules/auth/cleanup';
+export type { PurgeResult } from '../modules/auth/cleanup';

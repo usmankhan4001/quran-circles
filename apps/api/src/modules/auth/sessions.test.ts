@@ -4,7 +4,13 @@ import { ApiError, Tokens } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { requireAction } from '../../auth/middleware';
 import { hashRefreshToken } from '../../auth/crypto';
-import { PHONE_A, PHONE_B, createHarness, type Harness, type SignedIn } from '../../auth/testing/harness';
+import {
+  PHONE_A,
+  PHONE_B,
+  createHarness,
+  type Harness,
+  type SignedIn,
+} from '../../auth/testing/harness';
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
@@ -12,7 +18,9 @@ let h: Harness;
 beforeAll(async () => {
   h = await createHarness({
     extend: (app) => {
-      app.get('/test/me', requireAction('me.read'), (c) => c.json({ ok: true, principal: c.get('principal') }));
+      app.get('/test/me', requireAction('me.read'), (c) =>
+        c.json({ ok: true, principal: c.get('principal') }),
+      );
       app.get('/test/public', requireAction('config.read'), (c) => c.json({ ok: true }));
     },
   });
@@ -51,7 +59,7 @@ describe('auth.refresh', () => {
     expect(new Date(next.accessTokenExpiresAt).getTime()).toBe(h.clock.now().getTime() + 900_000);
 
     expect((await whoAmI(next.accessToken)).status).toBe(200);
-    expect((await sessions())).toHaveLength(1);
+    expect(await sessions()).toHaveLength(1);
   });
 
   it('keeps only a hash of the refresh token', async () => {
@@ -108,7 +116,9 @@ describe('auth.refresh', () => {
       const start = capped.clock.now().getTime();
       const first = await capped.signIn(PHONE_A);
       capped.clock.advance(20 * 86400);
-      const response = await capped.post('/v1/auth/refresh', { refreshToken: first.body.refreshToken });
+      const response = await capped.post('/v1/auth/refresh', {
+        refreshToken: first.body.refreshToken,
+      });
       const next = Tokens.parse(await response.json());
       // 20 + 30 days would be 50; the cap is 45 days from the first sign-in.
       expect(new Date(next.refreshTokenExpiresAt).getTime()).toBe(start + 45 * 86400_000);
@@ -233,7 +243,9 @@ describe('auth.signOut', () => {
 
   it('needs a valid access token', async () => {
     const result = await signedIn();
-    expect((await errorOf(await h.post('/v1/auth/sign-out', undefined))).code).toBe('unauthenticated');
+    expect((await errorOf(await h.post('/v1/auth/sign-out', undefined))).code).toBe(
+      'unauthenticated',
+    );
     expect(
       (await errorOf(await h.post('/v1/auth/sign-out', undefined, { token: 'garbage' }))).code,
     ).toBe('unauthenticated');
@@ -247,9 +259,12 @@ describe('auth.signOut', () => {
 
   it('can be repeated without harm', async () => {
     const result = await signedIn();
-    expect((await h.post('/v1/auth/sign-out', undefined, { token: result.accessToken })).status).toBe(204);
     expect(
-      (await errorOf(await h.post('/v1/auth/sign-out', undefined, { token: result.accessToken }))).code,
+      (await h.post('/v1/auth/sign-out', undefined, { token: result.accessToken })).status,
+    ).toBe(204);
+    expect(
+      (await errorOf(await h.post('/v1/auth/sign-out', undefined, { token: result.accessToken })))
+        .code,
     ).toBe('unauthenticated');
   });
 });

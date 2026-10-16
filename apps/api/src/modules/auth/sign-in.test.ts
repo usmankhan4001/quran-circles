@@ -32,8 +32,12 @@ async function startCode(phone = PHONE_A, ip?: string) {
   return { ...body, code };
 }
 
-const verify = (challengeId: string, code: string, extra: Record<string, unknown> = {}, ip?: string) =>
-  h.post('/v1/auth/verify', { challengeId, code, ...extra }, ip ? { ip } : {});
+const verify = (
+  challengeId: string,
+  code: string,
+  extra: Record<string, unknown> = {},
+  ip?: string,
+) => h.post('/v1/auth/verify', { challengeId, code, ...extra }, ip ? { ip } : {});
 
 describe('auth.requestCode', () => {
   it('sends a six digit code and answers with the contract shape', async () => {
@@ -50,7 +54,11 @@ describe('auth.requestCode', () => {
   });
 
   it('passes the chosen language and channel to the sender', async () => {
-    const response = await h.post('/v1/auth/code', { phone: PHONE_A, locale: 'en', channel: 'sms' });
+    const response = await h.post('/v1/auth/code', {
+      phone: PHONE_A,
+      locale: 'en',
+      channel: 'sms',
+    });
     expect(response.status).toBe(202);
     expect(h.sender.last).toMatchObject({ locale: 'en', channel: 'sms' });
     expect(RequestCodeResponse.parse(await response.json()).channel).toBe('sms');
@@ -164,9 +172,13 @@ describe('auth.requestCode', () => {
     });
     try {
       for (let n = 0; n < 3; n++) {
-        expect((await tight.requestCode(`+92300000010${n}`, { ip: '198.51.100.1' })).status).toBe(202);
+        expect((await tight.requestCode(`+92300000010${n}`, { ip: '198.51.100.1' })).status).toBe(
+          202,
+        );
       }
-      const blocked = await errorOf(await tight.requestCode('+923000000109', { ip: '198.51.100.1' }));
+      const blocked = await errorOf(
+        await tight.requestCode('+923000000109', { ip: '198.51.100.1' }),
+      );
       expect(blocked.code).toBe('rate_limited');
       expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
       // Another address is not affected.
@@ -210,7 +222,9 @@ describe('auth.verifyCode', () => {
     expect(body.me.displayName).toBeNull();
     expect(body.me.roles).toEqual([]);
     expect(body.me.locale).toBe('ur');
-    expect(new Date(body.accessTokenExpiresAt).getTime()).toBe(h.clock.now().getTime() + 15 * 60_000);
+    expect(new Date(body.accessTokenExpiresAt).getTime()).toBe(
+      h.clock.now().getTime() + 15 * 60_000,
+    );
     expect(new Date(body.refreshTokenExpiresAt).getTime()).toBe(
       h.clock.now().getTime() + 30 * 24 * 3600_000,
     );
@@ -260,8 +274,15 @@ describe('auth.verifyCode', () => {
     const { challengeId, code } = await startCode();
     const wrong = code === '000000' ? '000001' : '000000';
     const outcomes: string[] = [];
-    for (let n = 0; n < 5; n++) outcomes.push((await errorOf(await verify(challengeId, wrong))).code);
-    expect(outcomes).toEqual(['otp_invalid', 'otp_invalid', 'otp_invalid', 'otp_invalid', 'otp_too_many_attempts']);
+    for (let n = 0; n < 5; n++)
+      outcomes.push((await errorOf(await verify(challengeId, wrong))).code);
+    expect(outcomes).toEqual([
+      'otp_invalid',
+      'otp_invalid',
+      'otp_invalid',
+      'otp_invalid',
+      'otp_too_many_attempts',
+    ]);
 
     const locked = await errorOf(await verify(challengeId, code));
     expect(locked).toMatchObject({ status: 429, code: 'otp_too_many_attempts' });
@@ -274,7 +295,9 @@ describe('auth.verifyCode', () => {
   it('cannot be beaten by guessing in parallel', async () => {
     const { challengeId, code } = await startCode();
     const wrong = code === '000000' ? '000001' : '000000';
-    const responses = await Promise.all(Array.from({ length: 12 }, () => verify(challengeId, wrong)));
+    const responses = await Promise.all(
+      Array.from({ length: 12 }, () => verify(challengeId, wrong)),
+    );
     expect(responses.every((r) => r.status !== 200)).toBe(true);
     const [row] = await challengeRows();
     expect(row?.attempts).toBe(5);
@@ -304,9 +327,7 @@ describe('auth.verifyCode', () => {
   });
 
   it('answers an unknown challenge like a wrong code', async () => {
-    const error = await errorOf(
-      await verify('00000000-0000-4000-8000-000000000001', '123456'),
-    );
+    const error = await errorOf(await verify('00000000-0000-4000-8000-000000000001', '123456'));
     expect(error).toMatchObject({ status: 400, code: 'otp_invalid' });
   });
 

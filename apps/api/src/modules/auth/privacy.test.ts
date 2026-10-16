@@ -1,8 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { isNull } from 'drizzle-orm';
 import { schema } from '@qc/db';
 import { requireAction } from '../../auth/middleware';
-import { PHONE_A, PHONE_B, TEST_SECRET, createHarness, type Harness } from '../../auth/testing/harness';
+import {
+  PHONE_A,
+  PHONE_B,
+  TEST_SECRET,
+  createHarness,
+  type Harness,
+} from '../../auth/testing/harness';
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
@@ -47,9 +53,15 @@ async function exerciseEverything() {
   const { challengeId } = (await asked.json()) as { challengeId: string };
   const code = h.sender.last?.code ?? '';
   const wrong = code === '000000' ? '000001' : '000000';
-  await keep(await h.post('/v1/auth/verify', { challengeId, code: wrong }, { ip: REAL_LOOKING_IP }));
+  await keep(
+    await h.post('/v1/auth/verify', { challengeId, code: wrong }, { ip: REAL_LOOKING_IP }),
+  );
   const verified = await keep(
-    await h.post('/v1/auth/verify', { challengeId, code, deviceLabel: 'Bilal personal phone' }, { ip: REAL_LOOKING_IP }),
+    await h.post(
+      '/v1/auth/verify',
+      { challengeId, code, deviceLabel: 'Bilal personal phone' },
+      { ip: REAL_LOOKING_IP },
+    ),
   );
   const tokens = (await verified.json()) as { accessToken: string; refreshToken: string };
 
@@ -62,22 +74,31 @@ async function exerciseEverything() {
   await keep(await h.requestCode(PHONE_A, { ip: REAL_LOOKING_IP }));
   const staleCode = h.sender.last?.code ?? '';
   h.clock.advance(400);
-  const staleChallenge = (await h.db.select().from(schema.otpChallenges).where(eq(schema.otpChallenges.consumedAt, null as never)))[0];
-  if (staleChallenge) {
-    await keep(await h.post('/v1/auth/verify', { challengeId: staleChallenge.id, code: staleCode }));
-  }
-  const refreshed = await keep(await h.post('/v1/auth/refresh', { refreshToken: tokens.refreshToken }));
+  const [staleChallenge] = await h.db
+    .select()
+    .from(schema.otpChallenges)
+    .where(isNull(schema.otpChallenges.consumedAt));
+  expect(staleChallenge).toBeDefined();
+  await keep(await h.post('/v1/auth/verify', { challengeId: staleChallenge?.id, code: staleCode }));
+  const refreshed = await keep(
+    await h.post('/v1/auth/refresh', { refreshToken: tokens.refreshToken }),
+  );
   const next = (await refreshed.json()) as { accessToken: string; refreshToken: string };
-  await keep(await h.post('/v1/auth/refresh', { refreshToken: tokens.refreshToken })); // reuse
   await keep(await h.post('/v1/auth/sign-out', undefined, { token: next.accessToken }));
+
+  // A second sign-in whose refresh token is then replayed.
+  h.clock.advance(1000);
+  const second = await h.signIn(PHONE_A, { ip: REAL_LOOKING_IP });
+  await keep(await h.post('/v1/auth/refresh', { refreshToken: second.body.refreshToken }));
+  await keep(await h.post('/v1/auth/refresh', { refreshToken: second.body.refreshToken }));
 
   // A delivery failure and a database failure.
   h.clock.advance(4000);
   h.sender.failWith = new Error(`provider rejected ${PHONE_B}`);
   await keep(await h.requestCode(PHONE_B));
   h.sender.failWith = null;
-  const second = await keep(await h.requestCode(PHONE_B));
-  const secondChallenge = ((await second.json()) as { challengeId: string }).challengeId;
+  const failing = await keep(await h.requestCode(PHONE_B));
+  const secondChallenge = ((await failing.json()) as { challengeId: string }).challengeId;
   const secondCode = h.sender.last?.code ?? '';
   await h.pg.exec(`
     CREATE FUNCTION fail_session() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'boom for %', NEW.user_id; END; $$ LANGUAGE plpgsql;
@@ -89,7 +110,17 @@ async function exerciseEverything() {
     await h.pg.exec('DROP TRIGGER fail_session ON auth_sessions; DROP FUNCTION fail_session();');
   }
 
-  return { bodies, tokens: [tokens.accessToken, tokens.refreshToken, next.accessToken, next.refreshToken] };
+  return {
+    bodies,
+    tokens: [
+      tokens.accessToken,
+      tokens.refreshToken,
+      next.accessToken,
+      next.refreshToken,
+      second.body.accessToken,
+      second.body.refreshToken,
+    ],
+  };
 }
 
 describe('personal data stays out of logs and error bodies', () => {
@@ -139,11 +170,24 @@ describe('personal data stays out of logs and error bodies', () => {
     const errors = bodies.filter((b) => b.includes('"error"'));
     expect(errors.length).toBeGreaterThan(5);
     for (const body of errors) {
-      for (const secret of [PHONE_A, PHONE_A.slice(1), PHONE_B, '03001234567', ...tokens, ...h.sender.sent.map((m) => m.code)]) {
+      for (const secret of [
+        PHONE_A,
+        PHONE_A.slice(1),
+        PHONE_B,
+        '03001234567',
+        ...tokens,
+        ...h.sender.sent.map((m) => m.code),
+      ]) {
         expect(body).not.toContain(secret);
       }
       const parsed = JSON.parse(body) as { error: Record<string, unknown> };
-      expect(Object.keys(parsed.error).sort().every((k) => ['code', 'messageKey', 'requestId', 'issues', 'retryAfterSeconds'].includes(k))).toBe(true);
+      expect(
+        Object.keys(parsed.error)
+          .sort()
+          .every((k) =>
+            ['code', 'messageKey', 'requestId', 'issues', 'retryAfterSeconds'].includes(k),
+          ),
+      ).toBe(true);
     }
   });
 
@@ -154,7 +198,12 @@ describe('personal data stays out of logs and error bodies', () => {
       await h.db.select().from(schema.authSessions),
       await h.db.select().from(schema.auditLog),
     ]);
-    for (const secret of [REAL_LOOKING_IP, '203.0.113.7', ...tokens, ...h.sender.sent.map((m) => m.code)]) {
+    for (const secret of [
+      REAL_LOOKING_IP,
+      '203.0.113.7',
+      ...tokens,
+      ...h.sender.sent.map((m) => m.code),
+    ]) {
       expect(dump).not.toContain(secret);
     }
     // Audit rows hold ids and roles, not numbers or names.

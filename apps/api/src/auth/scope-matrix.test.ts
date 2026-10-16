@@ -75,7 +75,10 @@ function expected(action: ScopeAction, actor: Actor, resource: ResourceScope): b
     case 'public':
       return true;
     case 'self':
-      return !!principal?.userId && (resource.ownerUserId == null || resource.ownerUserId === principal.userId);
+      return (
+        !!principal?.userId &&
+        (resource.ownerUserId == null || resource.ownerUserId === principal.userId)
+      );
     case 'any':
       return held.some((a) => mayRole(a.role));
     case 'national':
@@ -96,7 +99,9 @@ function expected(action: ScopeAction, actor: Actor, resource: ResourceScope): b
             (a.role === 'venue_coordinator' && !!a.venueId && a.venueId === resource.venueId)),
       );
     default:
-      throw new Error(`The matrix has a new level "${String(def.level)}" with no rule in this test`);
+      throw new Error(
+        `The matrix has a new level "${String(def.level)}" with no rule in this test`,
+      );
   }
 }
 
@@ -122,7 +127,9 @@ const app = buildApp();
 
 async function call(action: ScopeAction, actor: Actor, resource: ResourceScope) {
   const self = actor.principal?.userId ?? undefined;
-  const concrete = JSON.parse(JSON.stringify(resource).replaceAll('{self}', self ?? 'nobody')) as ResourceScope;
+  const concrete = JSON.parse(
+    JSON.stringify(resource).replaceAll('{self}', self ?? 'nobody'),
+  ) as ResourceScope;
   return app.request(`/guard/${action}`, {
     headers: {
       'x-resource': JSON.stringify(concrete),
@@ -135,7 +142,8 @@ describe('scope matrix (generated from ACTIONS)', () => {
   it('covers every action in the contract', () => {
     expect(SCOPE_ACTIONS.length).toBeGreaterThan(40);
     expect(new Set(SCOPE_ACTIONS)).toEqual(new Set(Object.keys(ACTIONS)));
-    for (const action of SCOPE_ACTIONS) expect(() => expected(action, ACTORS[0]!, {})).not.toThrow();
+    for (const action of SCOPE_ACTIONS)
+      expect(() => expected(action, ACTORS[0]!, {})).not.toThrow();
   });
 
   it('has an actor for every role, in scope and out of scope', () => {
@@ -154,7 +162,10 @@ describe('scope matrix (generated from ACTIONS)', () => {
           const response = await call(action, actor, resource);
           const want = expected(action, actor, {
             ...resource,
-            ownerUserId: resource.ownerUserId === '{self}' ? (actor.principal?.userId ?? 'nobody') : resource.ownerUserId,
+            ownerUserId:
+              resource.ownerUserId === '{self}'
+                ? (actor.principal?.userId ?? 'nobody')
+                : resource.ownerUserId,
           });
           const label = `${actor.name} on ${name}`;
           if (want) {
@@ -182,8 +193,12 @@ describe('scope matrix (generated from ACTIONS)', () => {
       it('is refused to a signed-in person with no role, and to the public with 401', async () => {
         const attendee = ACTORS.find((a) => a.name === 'attendee')!;
         const publicActor = ACTORS.find((a) => a.name === 'public')!;
-        expect((await call(action, attendee, { cityId: CITY_A, venueId: VENUE_A1 })).status).toBe(403);
-        expect((await call(action, publicActor, { cityId: CITY_A, venueId: VENUE_A1 })).status).toBe(401);
+        expect((await call(action, attendee, { cityId: CITY_A, venueId: VENUE_A1 })).status).toBe(
+          403,
+        );
+        expect(
+          (await call(action, publicActor, { cityId: CITY_A, venueId: VENUE_A1 })).status,
+        ).toBe(401);
       });
     }
   });
@@ -200,7 +215,8 @@ describe('scope matrix (generated from ACTIONS)', () => {
         const response = await call(action, actor, own);
         const reachesOwnScope = response.status === 200;
         if (!listed) expect(reachesOwnScope, `${role} on ${action}`).toBe(false);
-        if (listed && def.level === 'any') expect(reachesOwnScope, `${role} on ${action}`).toBe(true);
+        if (listed && def.level === 'any')
+          expect(reachesOwnScope, `${role} on ${action}`).toBe(true);
       }
     });
   });

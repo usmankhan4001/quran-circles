@@ -10,13 +10,16 @@ const appWith = (trustProxy: boolean) => {
 };
 
 const ipFor = async (trustProxy: boolean, headers: Record<string, string>) =>
-  ((await (await appWith(trustProxy).request('/ip', { headers })).json()) as { ip: string | null }).ip;
+  ((await (await appWith(trustProxy).request('/ip', { headers })).json()) as { ip: string | null })
+    .ip;
 
 describe('client address', () => {
   it('uses the entry our own proxy appended when proxy headers are trusted', async () => {
     expect(await ipFor(true, { 'x-forwarded-for': '198.51.100.9' })).toBe('198.51.100.9');
     // Anything the caller put in front of it is ignored.
-    expect(await ipFor(true, { 'x-forwarded-for': '1.2.3.4, 5.6.7.8, 198.51.100.9' })).toBe('198.51.100.9');
+    expect(await ipFor(true, { 'x-forwarded-for': '1.2.3.4, 5.6.7.8, 198.51.100.9' })).toBe(
+      '198.51.100.9',
+    );
     expect(await ipFor(true, { 'x-forwarded-for': ' , ' })).toBeNull();
   });
 

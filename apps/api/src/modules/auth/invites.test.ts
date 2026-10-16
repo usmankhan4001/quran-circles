@@ -35,7 +35,12 @@ async function invite(shape: InviteShape) {
       phoneE164: shape.phone ?? PHONE_A,
       displayName: shape.displayName ?? null,
       role: shape.role,
-      scopeType: shape.role === 'national_admin' ? 'national' : shape.role === 'city_coordinator' ? 'city' : 'venue',
+      scopeType:
+        shape.role === 'national_admin'
+          ? 'national'
+          : shape.role === 'city_coordinator'
+            ? 'city'
+            : 'venue',
       cityId: shape.cityId ?? null,
       venueId: shape.venueId ?? null,
       invitedBy: shape.invitedBy ?? null,
@@ -49,7 +54,10 @@ async function invite(shape: InviteShape) {
 }
 
 const inviteRow = async (id: string) => {
-  const [row] = await h.db.select().from(schema.coordinatorInvites).where(eq(schema.coordinatorInvites.id, id));
+  const [row] = await h.db
+    .select()
+    .from(schema.coordinatorInvites)
+    .where(eq(schema.coordinatorInvites.id, id));
   return row;
 };
 const assignments = () => h.db.select().from(schema.roleAssignments);
@@ -125,7 +133,11 @@ describe('coordinator invites at sign-in', () => {
 
   it('adds the role to an existing account and keeps its name', async () => {
     const user = await h.createUser({ phoneE164: PHONE_A, displayName: 'Amina Khan' });
-    await invite({ role: 'city_coordinator', cityId: h.world.cityA.id, displayName: 'Someone Else' });
+    await invite({
+      role: 'city_coordinator',
+      cityId: h.world.cityA.id,
+      displayName: 'Someone Else',
+    });
     const { body } = await h.signIn(PHONE_A);
     expect(body.isNewAccount).toBe(false);
     expect(body.me.id).toBe(user.id);
@@ -179,7 +191,11 @@ describe('coordinator invites at sign-in', () => {
   });
 
   it('tells the person when their invitation has lapsed, without losing the code', async () => {
-    const row = await invite({ role: 'venue_coordinator', venueId: h.world.venueA1, expiresInSeconds: 3600 });
+    const row = await invite({
+      role: 'venue_coordinator',
+      venueId: h.world.venueA1,
+      expiresInSeconds: 3600,
+    });
     h.clock.advance(7200);
     const asked = RequestCodeResponse.parse(await (await h.requestCode(PHONE_A)).json());
     const code = h.sender.last?.code ?? '';
@@ -199,7 +215,11 @@ describe('coordinator invites at sign-in', () => {
   });
 
   it('accepts a live invite and quietly drops a lapsed one for the same number', async () => {
-    const lapsed = await invite({ role: 'city_coordinator', cityId: h.world.cityB.id, expiresInSeconds: 60 });
+    const lapsed = await invite({
+      role: 'city_coordinator',
+      cityId: h.world.cityB.id,
+      expiresInSeconds: 60,
+    });
     h.clock.advance(120);
     const live = await invite({ role: 'venue_coordinator', venueId: h.world.venueA2 });
     const { status, body } = await h.signIn(PHONE_A);
