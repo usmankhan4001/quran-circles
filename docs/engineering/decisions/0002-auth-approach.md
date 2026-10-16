@@ -1,6 +1,6 @@
 # 0002: Sign-in approach
 
-Status: proposed (implemented in the auth-scopes lane; waiting for orchestrator and human approval)
+Status: accepted (approved by Muhammad on 2026-10-16)
 Date: 2026-10-16
 Lane: auth-scopes
 
