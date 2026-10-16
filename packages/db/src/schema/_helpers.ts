@@ -30,10 +30,7 @@ export const enumCheck = (table: string, column: string, values: readonly string
 
 /** Every element of an array column must belong to a closed vocabulary. */
 export const enumArrayCheck = (table: string, column: string, values: readonly string[]) =>
-  check(
-    `${table}_${column}_chk`,
-    sql.raw(`"${column}" <@ ARRAY[${sqlList(values)}]::text[]`),
-  );
+  check(`${table}_${column}_chk`, sql.raw(`"${column}" <@ ARRAY[${sqlList(values)}]::text[]`));
 
 /** Phone numbers are stored normalised as E.164. Nullable columns pass when NULL. */
 export const e164Check = (table: string, column: string) =>
@@ -41,10 +38,7 @@ export const e164Check = (table: string, column: string) =>
 
 /** Days of the week are 0 (Sunday) to 6 (Saturday). */
 export const daysOfWeekCheck = (table: string, column: string) =>
-  check(
-    `${table}_${column}_range_chk`,
-    sql.raw(`"${column}" <@ ARRAY[0,1,2,3,4,5,6]::smallint[]`),
-  );
+  check(`${table}_${column}_range_chk`, sql.raw(`"${column}" <@ ARRAY[0,1,2,3,4,5,6]::smallint[]`));
 
 /**
  * Scope shape shared by role assignments, invites, updates and the audit log.

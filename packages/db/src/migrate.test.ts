@@ -84,7 +84,9 @@ describe('migration files', () => {
   });
 
   it('rejects badly named and empty files', () => {
-    expect(() => listMigrations(writeMigrations({ 'init.sql': 'SELECT 1;' }))).toThrow(/must be named/);
+    expect(() => listMigrations(writeMigrations({ 'init.sql': 'SELECT 1;' }))).toThrow(
+      /must be named/,
+    );
     expect(() =>
       listMigrations(writeMigrations({ '0001_a.up.sql': '  \n', '0001_a.down.sql': 'SELECT 1;' })),
     ).toThrow(/empty/);
@@ -108,8 +110,14 @@ describe('migration files', () => {
   });
 
   it('gives the same checksum for LF and CRLF files', () => {
-    const lf = writeMigrations({ '0001_a.up.sql': 'SELECT 1;\nSELECT 2;\n', '0001_a.down.sql': 'SELECT 1;' });
-    const crlf = writeMigrations({ '0001_a.up.sql': 'SELECT 1;\r\nSELECT 2;\r\n', '0001_a.down.sql': 'SELECT 1;' });
+    const lf = writeMigrations({
+      '0001_a.up.sql': 'SELECT 1;\nSELECT 2;\n',
+      '0001_a.down.sql': 'SELECT 1;',
+    });
+    const crlf = writeMigrations({
+      '0001_a.up.sql': 'SELECT 1;\r\nSELECT 2;\r\n',
+      '0001_a.down.sql': 'SELECT 1;',
+    });
     expect(listMigrations(lf)[0]?.checksum).toBe(listMigrations(crlf)[0]?.checksum);
   });
 });
@@ -180,14 +188,18 @@ describe('migrate up and down', () => {
     await migrateUp(test.exec);
     expect(await migrateDown(test.exec)).toEqual([names.at(-1)]);
     expect(await migrateDown(test.exec, { steps: 2 })).toEqual(names.slice(-3, -1).reverse());
-    expect((await migrationStatus(test.exec)).filter((s) => s.applied)).toHaveLength(names.length - 3);
+    expect((await migrationStatus(test.exec)).filter((s) => s.applied)).toHaveLength(
+      names.length - 3,
+    );
     expect(await migrateDown(test.exec, { steps: 99 })).toHaveLength(names.length - 3);
     expect(await migrateDown(test.exec)).toEqual([]);
   });
 
   it('refuses invalid rollback options', async () => {
     const test = await freshDb();
-    await expect(migrateDown(test.exec, { all: true, steps: 1 })).rejects.toThrow(/either steps or all/);
+    await expect(migrateDown(test.exec, { all: true, steps: 1 })).rejects.toThrow(
+      /either steps or all/,
+    );
     await expect(migrateDown(test.exec, { steps: 0 })).rejects.toThrow(/at least 1/);
     await expect(migrateDown(test.exec, { steps: 1.5 })).rejects.toThrow(/whole number/);
   });
@@ -259,10 +271,13 @@ describe('migration safety', () => {
   it('rolls a failing migration back completely and records nothing for it', async () => {
     const dir = writeMigrations({
       ...twoTables,
-      '0002_b.up.sql': 'CREATE TABLE b (id int PRIMARY KEY);\nCREATE TABLE c (id int REFERENCES missing(id));',
+      '0002_b.up.sql':
+        'CREATE TABLE b (id int PRIMARY KEY);\nCREATE TABLE c (id int REFERENCES missing(id));',
     });
     const test = await freshDb();
-    await expect(migrateUp(test.exec, { dir })).rejects.toThrow(/0002_b failed and was rolled back/);
+    await expect(migrateUp(test.exec, { dir })).rejects.toThrow(
+      /0002_b failed and was rolled back/,
+    );
     expect(await publicTables(test)).toEqual(['a', MIGRATIONS_TABLE]);
     const applied = await test.exec.query(`SELECT name FROM ${MIGRATIONS_TABLE}`);
     expect(applied.rows).toEqual([{ name: '0001_a' }]);
@@ -275,7 +290,9 @@ describe('migration safety', () => {
     const dir = writeMigrations({ ...twoTables, '0002_b.down.sql': 'DROP TABLE does_not_exist;' });
     const test = await freshDb();
     await migrateUp(test.exec, { dir });
-    await expect(migrateDown(test.exec, { dir })).rejects.toThrow(/0002_b failed and was rolled back/);
+    await expect(migrateDown(test.exec, { dir })).rejects.toThrow(
+      /0002_b failed and was rolled back/,
+    );
     expect((await migrationStatus(test.exec, { dir })).map((s) => s.applied)).toEqual([true, true]);
     expect(await publicTables(test)).toEqual(['a', 'b', MIGRATIONS_TABLE]);
   });

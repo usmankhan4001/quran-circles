@@ -16,7 +16,9 @@ function loadDotEnv(): void {
 /** Runs `fn` on one connection to DATABASE_URL and always closes it. */
 export async function withDatabase<T>(fn: (db: SqlExecutor) => Promise<T>): Promise<T> {
   loadDotEnv();
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL });
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL,
+  });
   await client.connect();
   try {
     return await fn(pgExecutor(client));

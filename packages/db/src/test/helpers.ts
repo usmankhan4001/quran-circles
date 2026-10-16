@@ -1,5 +1,7 @@
 import { PGlite } from '@electric-sql/pglite';
+import { is } from 'drizzle-orm';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
+import { PgTable } from 'drizzle-orm/pg-core';
 import { migrateUp, pgliteExecutor, type SqlExecutor } from '../migrate';
 import * as schema from '../schema/index';
 
@@ -113,7 +115,13 @@ export function factory({ db }: Pick<TestDb, 'db'>) {
       first(
         db
           .insert(s.areas)
-          .values({ cityId, slug: nextSlug('area'), nameEn: 'Test Area', nameUr: 'ٹیسٹ علاقہ', ...v })
+          .values({
+            cityId,
+            slug: nextSlug('area'),
+            nameEn: 'Test Area',
+            nameUr: 'ٹیسٹ علاقہ',
+            ...v,
+          })
           .returning(),
       ),
     venue: (cityId: string, areaId: string, v: Partial<schema.NewVenueRow> = {}) =>
@@ -149,7 +157,10 @@ export function factory({ db }: Pick<TestDb, 'db'>) {
       const found = existing.find((p) => p.key === key);
       if (found) return found;
       return first(
-        db.insert(s.programs).values({ key, nameEn: `Program ${key}`, nameUr: `پروگرام ${key}` }).returning(),
+        db
+          .insert(s.programs)
+          .values({ key, nameEn: `Program ${key}`, nameUr: `پروگرام ${key}` })
+          .returning(),
       );
     },
     session: (venueId: string, programId: string, v: Partial<schema.NewSessionRow> = {}) =>
@@ -223,3 +234,8 @@ export async function buildWorld(test: Pick<TestDb, 'db'>) {
   const session = await make.session(venue.id, program.id);
   return { make, city, area, venue, program, session };
 }
+
+/** Every Drizzle table exported by the schema. */
+export const allTables: PgTable[] = (Object.values(schema) as unknown[]).filter(
+  (value): value is PgTable => is(value, PgTable),
+);

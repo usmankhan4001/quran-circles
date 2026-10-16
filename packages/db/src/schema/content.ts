@@ -1,15 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { boolean, index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { CONTENT_STATUSES, LOCALES, POSTER_FORMATS, POSTER_STATUSES } from '@qc/contracts';
-import {
-  createdAt,
-  enumArrayCheck,
-  enumCheck,
-  pk,
-  rawCheck,
-  tstz,
-  updatedAt,
-} from './_helpers';
+import { createdAt, enumArrayCheck, enumCheck, pk, rawCheck, tstz, updatedAt } from './_helpers';
 import { users } from './people';
 import { sessions } from './programs';
 

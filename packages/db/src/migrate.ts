@@ -104,7 +104,9 @@ export function listMigrations(dir: string = DEFAULT_MIGRATIONS_DIR): Migration[
     if (!file.endsWith('.sql')) continue;
     const match = FILE_PATTERN.exec(file);
     if (!match) {
-      throw new MigrationError(`Migration file "${file}" must be named NNNN_name.up.sql or .down.sql`);
+      throw new MigrationError(
+        `Migration file "${file}" must be named NNNN_name.up.sql or .down.sql`,
+      );
     }
     const [, number, slug, direction] = match as unknown as [string, string, string, 'up' | 'down'];
     const name = `${number}_${slug}`;
@@ -118,15 +120,23 @@ export function listMigrations(dir: string = DEFAULT_MIGRATIONS_DIR): Migration[
   names.forEach((name, index) => {
     const entry = pairs.get(name)!;
     if (entry.up === undefined) throw new MigrationError(`Migration ${name} has no .up.sql file`);
-    if (entry.down === undefined) throw new MigrationError(`Migration ${name} has no .down.sql file`);
+    if (entry.down === undefined)
+      throw new MigrationError(`Migration ${name} has no .down.sql file`);
     const expected = String(index + 1).padStart(4, '0');
     if (!name.startsWith(`${expected}_`)) {
-      throw new MigrationError(`Migration numbers must run ${expected}, ... without gaps or repeats (found ${name})`);
+      throw new MigrationError(
+        `Migration numbers must run ${expected}, ... without gaps or repeats (found ${name})`,
+      );
     }
-    for (const [label, sql] of [['up', entry.up], ['down', entry.down]] as const) {
+    for (const [label, sql] of [
+      ['up', entry.up],
+      ['down', entry.down],
+    ] as const) {
       if (sql.trim() === '') throw new MigrationError(`Migration ${name} ${label} file is empty`);
       if (TRANSACTION_STATEMENT.test(sql)) {
-        throw new MigrationError(`Migration ${name} ${label} file must not manage transactions; the runner does`);
+        throw new MigrationError(
+          `Migration ${name} ${label} file must not manage transactions; the runner does`,
+        );
       }
     }
     migrations.push({ name, upSql: entry.up, downSql: entry.down, checksum: checksumOf(entry.up) });
@@ -161,7 +171,9 @@ async function loadApplied(db: SqlExecutor, files: Migration[]): Promise<Applied
   rows.forEach((row, index) => {
     const file = files.find((m) => m.name === row.name);
     if (!file) {
-      throw new MigrationError(`Applied migration ${row.name} has no file. Was it deleted or renamed?`);
+      throw new MigrationError(
+        `Applied migration ${row.name} has no file. Was it deleted or renamed?`,
+      );
     }
     if (file.checksum !== row.checksum) {
       throw new MigrationError(
@@ -169,7 +181,9 @@ async function loadApplied(db: SqlExecutor, files: Migration[]): Promise<Applied
       );
     }
     if (files[index]?.name !== row.name) {
-      throw new MigrationError(`Applied migrations are not a continuous run from ${files[0]?.name ?? 'the first'}`);
+      throw new MigrationError(
+        `Applied migrations are not a continuous run from ${files[0]?.name ?? 'the first'}`,
+      );
     }
   });
   return rows;
@@ -184,7 +198,11 @@ async function withLock<T>(db: SqlExecutor, fn: () => Promise<T>): Promise<T> {
   }
 }
 
-async function inTransaction(db: SqlExecutor, name: string, work: () => Promise<void>): Promise<void> {
+async function inTransaction(
+  db: SqlExecutor,
+  name: string,
+  work: () => Promise<void>,
+): Promise<void> {
   await db.exec('BEGIN');
   try {
     await work();
@@ -255,7 +273,10 @@ export async function migrateDown(db: SqlExecutor, opts: RollbackOptions = {}): 
 }
 
 /** Every migration file with whether, and when, it was applied. */
-export async function migrationStatus(db: SqlExecutor, opts: MigrateOptions = {}): Promise<MigrationStatus[]> {
+export async function migrationStatus(
+  db: SqlExecutor,
+  opts: MigrateOptions = {},
+): Promise<MigrationStatus[]> {
   const files = listMigrations(opts.dir);
   return withLock(db, async () => {
     await ensureTrackingTable(db);

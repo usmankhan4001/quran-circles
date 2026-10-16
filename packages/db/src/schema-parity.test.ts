@@ -1,11 +1,10 @@
 import { getTableName, is } from 'drizzle-orm';
 import { PgTable, getTableConfig } from 'drizzle-orm/pg-core';
 import { beforeAll, describe, expect, it } from 'vitest';
-import * as schema from './schema/index';
 import { MIGRATIONS_TABLE } from './migrate';
-import { createMigratedDb, type TestDb } from './test/helpers';
+import { allTables, createMigratedDb, type TestDb } from './test/helpers';
 
-const tables = Object.values(schema).filter((value): value is PgTable => is(value, PgTable));
+const tables = allTables;
 
 let test: TestDb;
 beforeAll(async () => {
@@ -13,6 +12,13 @@ beforeAll(async () => {
 });
 
 const sorted = (values: Iterable<string>) => [...values].sort();
+
+/** Every unique constraint here is named explicitly or by Drizzle's convention; never blank. */
+const nameOf = (unique: { name?: string | undefined; getName(): string | undefined }): string => {
+  const name = unique.name ?? unique.getName();
+  if (!name) throw new Error('unique constraint without a name');
+  return name;
+};
 
 /** Drizzle's SQL type names mapped to what information_schema reports. */
 function expectedDataType(sqlType: string): string {
@@ -160,7 +166,7 @@ describe('schema parity: Drizzle definition against the migrated database', () =
       if (config.columns.some((c) => c.primary)) names.add(`${config.name}_pkey`);
       for (const pk of config.primaryKeys) names.add(pk.getName());
       for (const column of config.columns) if (column.isUnique) names.add(column.uniqueName!);
-      for (const unique of config.uniqueConstraints) names.add(unique.name ?? unique.getName());
+      for (const unique of config.uniqueConstraints) names.add(nameOf(unique));
       for (const index of config.indexes) names.add(index.config.name!);
       for (const check of config.checks) names.add(check.name);
       for (const fk of config.foreignKeys) names.add(fk.getName());
@@ -169,7 +175,10 @@ describe('schema parity: Drizzle definition against the migrated database', () =
 
     expect(sorted(actual.keys())).toEqual(sorted(expected.keys()));
     for (const [table, names] of expected) {
-      expect({ table, names: sorted(actual.get(table) ?? []) }).toEqual({ table, names: sorted(names) });
+      expect({ table, names: sorted(actual.get(table) ?? []) }).toEqual({
+        table,
+        names: sorted(names),
+      });
     }
   });
 
@@ -180,7 +189,7 @@ describe('schema parity: Drizzle definition against the migrated database', () =
         ...config.indexes.map((i) => i.config.name!),
         ...config.checks.map((c) => c.name),
         ...config.foreignKeys.map((f) => f.getName()),
-        ...config.uniqueConstraints.map((u) => u.name ?? u.getName()),
+        ...config.uniqueConstraints.map(nameOf),
       ];
       for (const name of names) expect(name.length, name).toBeLessThanOrEqual(63);
     }
@@ -197,7 +206,12 @@ describe('schema parity: Drizzle definition against the migrated database', () =
          FROM pg_constraint
         WHERE connamespace = 'public'::regnamespace AND contype = 'f'`,
     );
-    const actions: Record<string, string> = { a: 'no action', c: 'cascade', n: 'set null', r: 'restrict' };
+    const actions: Record<string, string> = {
+      a: 'no action',
+      c: 'cascade',
+      n: 'set null',
+      r: 'restrict',
+    };
     const actual = rows.map((r) => ({
       name: r.conname,
       table: r.tbl,
@@ -219,10 +233,12 @@ describe('schema parity: Drizzle definition against the migrated database', () =
 
   it('exports every table through the schema namespace and the package index', async () => {
     const index = await import('./index');
-    const exported = Object.values(index.schema).filter((v): v is PgTable => is(v, PgTable));
+    const exported = (Object.values(index.schema) as unknown[]).filter((v): v is PgTable =>
+      is(v, PgTable),
+    );
     expect(sorted(exported.map(getTableName))).toEqual(sorted(tables.map(getTableName)));
     for (const table of tables) {
-      expect(Object.values(index).includes(table), getTableName(table)).toBe(true);
+      expect((Object.values(index) as unknown[]).includes(table), getTableName(table)).toBe(true);
     }
   });
 });

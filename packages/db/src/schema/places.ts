@@ -1,12 +1,4 @@
-import {
-  boolean,
-  doublePrecision,
-  index,
-  pgTable,
-  text,
-  unique,
-  uuid,
-} from 'drizzle-orm/pg-core';
+import { boolean, doublePrecision, index, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
 import { VENUE_STATUSES } from '@qc/contracts';
 import { createdAt, e164Check, enumCheck, pk, rangeCheck, updatedAt } from './_helpers';
 
