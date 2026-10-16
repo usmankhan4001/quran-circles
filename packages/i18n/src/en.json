@@ -4,5 +4,22 @@
   "tabs.nearby": "Nearby",
   "tabs.myJourney": "My Journey",
   "tabs.quranPrayer": "Quran & Prayer",
-  "profile.title": "Profile"
+  "profile.title": "Profile",
+  "ui.close": "Close",
+  "ui.back": "Back",
+  "ui.loading": "Loading",
+  "ui.dismiss": "Dismiss",
+  "ui.retry": "Try again",
+  "ui.unread": "{count} unread",
+  "ui.newUpdates": "New updates",
+  "ui.selectPlaceholder": "Choose one",
+  "ui.required": "Required",
+  "ui.optional": "Optional",
+  "ui.on": "On",
+  "ui.off": "Off",
+  "ui.remove": "Remove {name}",
+  "ui.errorTitle": "Something went wrong",
+  "ui.errorBody": "We could not load this. Please try again.",
+  "ui.offlineTitle": "You are offline",
+  "ui.offlineBody": "Check your internet connection, then try again."
 }

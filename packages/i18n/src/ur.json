@@ -5,5 +5,22 @@
   "tabs.nearby": "قریب",
   "tabs.myJourney": "میرا سفر",
   "tabs.quranPrayer": "قرآن و نماز",
-  "profile.title": "پروفائل"
+  "profile.title": "پروفائل",
+  "ui.close": "بند کریں",
+  "ui.back": "واپس",
+  "ui.loading": "لوڈ ہو رہا ہے",
+  "ui.dismiss": "ہٹائیں",
+  "ui.retry": "دوبارہ کوشش کریں",
+  "ui.unread": "{count} نئے",
+  "ui.newUpdates": "نئی اپڈیٹس",
+  "ui.selectPlaceholder": "منتخب کریں",
+  "ui.required": "ضروری",
+  "ui.optional": "اختیاری",
+  "ui.on": "آن",
+  "ui.off": "آف",
+  "ui.remove": "{name} ہٹائیں",
+  "ui.errorTitle": "کچھ گڑبڑ ہو گئی",
+  "ui.errorBody": "یہ لوڈ نہیں ہو سکا۔ براہ کرم دوبارہ کوشش کریں۔",
+  "ui.offlineTitle": "آپ آف لائن ہیں",
+  "ui.offlineBody": "اپنا انٹرنیٹ کنکشن دیکھیں، پھر دوبارہ کوشش کریں۔"
 }
