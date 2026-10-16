@@ -1,11 +1,5 @@
 import { addDays, type CivilDate } from './civil';
-import {
-  computeDay,
-  FIVE_PRAYERS,
-  todayAt,
-  type FivePrayer,
-  type PrayerPlace,
-} from './calc';
+import { computeDay, FIVE_PRAYERS, todayAt, type FivePrayer, type PrayerPlace } from './calc';
 
 export interface NextPrayer {
   prayer: FivePrayer;
@@ -32,13 +26,27 @@ export function nextPrayer(place: PrayerPlace, now: Date): NextPrayer {
   for (const prayer of FIVE_PRAYERS) {
     const at = day.times[prayer];
     if (at.getTime() > now.getTime()) {
-      return { prayer, at, msUntil: at.getTime() - now.getTime(), date: today, tomorrow: false, current };
+      return {
+        prayer,
+        at,
+        msUntil: at.getTime() - now.getTime(),
+        date: today,
+        tomorrow: false,
+        current,
+      };
     }
     current = prayer;
   }
   const tomorrow = addDays(today, 1);
   const at = computeDay(place, tomorrow).times.fajr;
-  return { prayer: 'fajr', at, msUntil: at.getTime() - now.getTime(), date: tomorrow, tomorrow: true, current };
+  return {
+    prayer: 'fajr',
+    at,
+    msUntil: at.getTime() - now.getTime(),
+    date: tomorrow,
+    tomorrow: true,
+    current,
+  };
 }
 
 export interface Countdown {

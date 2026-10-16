@@ -19,7 +19,9 @@ describe('splitBismillah', () => {
   });
 
   it('leaves later ayahs alone', () => {
-    expect(splitBismillah({ surah: 2, ayah: 2, arabic: 'one two three four five six' }).bismillah).toBeNull();
+    expect(
+      splitBismillah({ surah: 2, ayah: 2, arabic: 'one two three four five six' }).bismillah,
+    ).toBeNull();
   });
 
   it('does not strip an ayah that is only four words or fewer', () => {

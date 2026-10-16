@@ -81,11 +81,7 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
   const baseUrl = (options.baseUrl ?? ALQURAN_CLOUD_BASE_URL).replace(/\/+$/, '');
   const editions = options.editions ?? DEFAULT_EDITIONS;
   const now = options.now ?? (() => new Date());
-  const passage = (
-    kind: 'surah' | 'juz',
-    id: number,
-    verses: QuranVerse[],
-  ): QuranPassage => ({
+  const passage = (kind: 'surah' | 'juz', id: number, verses: QuranVerse[]): QuranPassage => ({
     kind,
     id,
     verses,
@@ -108,7 +104,11 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
       if (!arabic || !urdu || arabic.ayahs.length === 0) {
         throw new QuranSourceError('invalid_response');
       }
-      return passage('surah', surah, join(arabic, urdu, () => surah));
+      return passage(
+        'surah',
+        surah,
+        join(arabic, urdu, () => surah),
+      );
     },
 
     async getJuz(juz, fetchOptions) {

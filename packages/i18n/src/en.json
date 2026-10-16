@@ -1225,5 +1225,6 @@
   "prayer.cityName.gilgit": "Gilgit",
   "prayer.calendar.weekTitle": "{from} to {to}",
   "prayer.calendar.rowLabel": "{date}. Hijri {hijri}.",
-  "console.invites.revoke.for": "for the number ending {digits}"
+  "console.invites.revoke.for": "for the number ending {digits}",
+  "admin.registrants.noMatch": "No one matches your search."
 }

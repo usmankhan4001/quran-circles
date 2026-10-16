@@ -23,9 +23,7 @@ export function parseVerseKey(key: unknown): AyahRef | null {
 }
 
 export function isValidAyah(surah: number, ayah: number): boolean {
-  return (
-    isSurahNumber(surah) && Number.isInteger(ayah) && ayah >= 1 && ayah <= ayahCountOf(surah)
-  );
+  return isSurahNumber(surah) && Number.isInteger(ayah) && ayah >= 1 && ayah <= ayahCountOf(surah);
 }
 
 /** Keeps an ayah number inside the surah. */

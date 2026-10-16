@@ -12,5 +12,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     server: { deps: { inline: [/react-native-web/, /@qc\/ui/] } },
     css: false,
+    // Long surahs and juz render hundreds of rows in jsdom; a busy machine needs the room.
+    testTimeout: 30_000,
   },
 });

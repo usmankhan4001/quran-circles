@@ -50,7 +50,22 @@ describe('ayah references', () => {
   });
 
   it('rejects keys that are not an ayah that exists', () => {
-    for (const bad of ['', '2', '2:', ':3', '0:1', '115:1', '1:8', '2:287', 'a:b', '2:255:1', 5, null, undefined, {}]) {
+    for (const bad of [
+      '',
+      '2',
+      '2:',
+      ':3',
+      '0:1',
+      '115:1',
+      '1:8',
+      '2:287',
+      'a:b',
+      '2:255:1',
+      5,
+      null,
+      undefined,
+      {},
+    ]) {
       expect(parseVerseKey(bad)).toBeNull();
     }
   });
@@ -106,7 +121,9 @@ describe('juz boundaries', () => {
       const first = segments[0];
       const last = segments[segments.length - 1];
       if (!first || !last) throw new Error('empty juz');
-      expect(absoluteAyahNumber({ surah: first.surah, ayah: first.fromAyah })).toBe(previousEnd + 1);
+      expect(absoluteAyahNumber({ surah: first.surah, ayah: first.fromAyah })).toBe(
+        previousEnd + 1,
+      );
       previousEnd = absoluteAyahNumber({ surah: last.surah, ayah: last.toAyah });
       total += segments.reduce((sum, s) => sum + (s.toAyah - s.fromAyah + 1), 0);
     }

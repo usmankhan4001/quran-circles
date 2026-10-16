@@ -88,7 +88,9 @@ describe('bookmarks while signed out', () => {
     await expect(service.add({ kind: 'ayah', surah: 115, ayah: 1 })).rejects.toBeDefined();
     await expect(service.add({ kind: 'ayah', surah: 2 })).rejects.toBeInstanceOf(RangeError);
     await expect(service.add({ kind: 'para' })).rejects.toBeInstanceOf(RangeError);
-    await expect(service.add({ kind: 'surah', note: 'x'.repeat(501), surah: 1 })).rejects.toBeDefined();
+    await expect(
+      service.add({ kind: 'surah', note: 'x'.repeat(501), surah: 1 }),
+    ).rejects.toBeDefined();
     expect(await service.list()).toEqual([]);
   });
 
@@ -202,7 +204,9 @@ describe('bookmarks while signed in', () => {
       createdAt: '2026-10-01T00:00:00.000Z',
     });
     expect(await service.sync()).toMatchObject({ ok: true });
-    expect((await service.list()).map((b) => [b.surah, b.ayah, b.synced])).toEqual([[112, 1, true]]);
+    expect((await service.list()).map((b) => [b.surah, b.ayah, b.synced])).toEqual([
+      [112, 1, true],
+    ]);
   });
 
   it('drops a bookmark that was deleted on another device', async () => {

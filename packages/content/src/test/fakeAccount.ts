@@ -28,8 +28,12 @@ export interface FakeAccountServer {
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 
-const keyOf = (b: { kind: string; surah?: number | null; ayah?: number | null; para?: number | null }) =>
-  `${b.kind}:${b.surah ?? ''}:${b.ayah ?? ''}:${b.para ?? ''}`;
+const keyOf = (b: {
+  kind: string;
+  surah?: number | null;
+  ayah?: number | null;
+  para?: number | null;
+}) => `${b.kind}:${b.surah ?? ''}:${b.ayah ?? ''}:${b.para ?? ''}`;
 
 /** An in-memory stand-in for the bookmark and reading-position endpoints. */
 export function createFakeAccountServer(now: () => Date = () => new Date()): FakeAccountServer {
@@ -52,7 +56,8 @@ export function createFakeAccountServer(now: () => Date = () => new Date()): Fak
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null;
       const path = url.pathname;
 
-      if (path === '/v1/me/bookmarks' && method === 'GET') return ok(200, { items: server.bookmarks });
+      if (path === '/v1/me/bookmarks' && method === 'GET')
+        return ok(200, { items: server.bookmarks });
       if (path === '/v1/me/bookmarks' && method === 'POST') {
         const input = body as Omit<ServerBookmark, 'id' | 'createdAt'>;
         const full = normalise(input);

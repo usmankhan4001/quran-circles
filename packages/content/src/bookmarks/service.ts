@@ -47,8 +47,7 @@ const STORAGE_KEY = 'qc.bookmarks.v1';
 const IMPORT_CHUNK = 500;
 
 export type SyncResult =
-  | { ok: true; imported: number }
-  | { ok: false; reason: 'signed_out' | 'offline' | 'failed' };
+  { ok: true; imported: number } | { ok: false; reason: 'signed_out' | 'offline' | 'failed' };
 
 export interface BookmarkService {
   /** What is on the device right now. Never touches the network. */
@@ -75,8 +74,12 @@ export interface BookmarkServiceOptions {
   newId?: () => string;
 }
 
-const keyOf = (b: { kind: string; surah: number | null; ayah: number | null; para: number | null }) =>
-  `${b.kind}:${b.surah ?? ''}:${b.ayah ?? ''}:${b.para ?? ''}`;
+const keyOf = (b: {
+  kind: string;
+  surah: number | null;
+  ayah: number | null;
+  para: number | null;
+}) => `${b.kind}:${b.surah ?? ''}:${b.ayah ?? ''}:${b.para ?? ''}`;
 
 const toEntry = (b: StoredBookmark): BookmarkEntry => ({
   id: b.id,

@@ -32,7 +32,8 @@ export function createIndexedDbStorage(options: IndexedDbStorageOptions): KeyVal
     opened ??= new Promise<IDBDatabase>((resolve, reject) => {
       const req = options.factory.open(databaseName, 1);
       req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains(storeName)) req.result.createObjectStore(storeName);
+        if (!req.result.objectStoreNames.contains(storeName))
+          req.result.createObjectStore(storeName);
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => {

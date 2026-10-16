@@ -110,7 +110,11 @@ describe('reading position while signed in', () => {
     await service.save(2, 1);
     server.offline = false;
     // Move the account position to a time after the device save.
-    server.position = { surah: 67, ayah: 1, updatedAt: new Date(clock.now().getTime() + 60_000).toISOString() };
+    server.position = {
+      surah: 67,
+      ayah: 1,
+      updatedAt: new Date(clock.now().getTime() + 60_000).toISOString(),
+    };
     // The device position was saved while offline, so it is "dirty"; the newer account one still wins.
     expect(await service.sync()).toMatchObject({ surah: 67, ayah: 1 });
   });

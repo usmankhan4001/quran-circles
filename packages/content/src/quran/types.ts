@@ -63,6 +63,8 @@ export interface QuranSource {
 /** A request that was cancelled on purpose. Not a failure to report. */
 export function isAbortError(error: unknown): boolean {
   return (
-    typeof error === 'object' && error !== null && (error as { name?: unknown }).name === 'AbortError'
+    typeof error === 'object' &&
+    error !== null &&
+    (error as { name?: unknown }).name === 'AbortError'
   );
 }

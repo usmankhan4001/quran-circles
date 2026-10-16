@@ -48,7 +48,10 @@ describe('mapV1Bookmarks', () => {
 
 describe('mapV1LastRead', () => {
   it('turns a surah into its first ayah', () => {
-    expect(mapV1LastRead('{"mode":"surah","id":18,"name":"x","detail":"y"}')).toEqual({ surah: 18, ayah: 1 });
+    expect(mapV1LastRead('{"mode":"surah","id":18,"name":"x","detail":"y"}')).toEqual({
+      surah: 18,
+      ayah: 1,
+    });
   });
 
   it('turns a juz into the ayah it starts at', () => {
@@ -77,8 +80,17 @@ describe('summariseV1 and readV1', () => {
       [V1_KEYS.showTranslation]: 'false',
     };
     const raw = await readV1((key) => Promise.resolve(data[key] ?? null));
-    expect(raw).toEqual({ bookmarks: '["1:1"]', lastRead: null, fontSize: '3.6', showTranslation: 'false' });
-    expect(summariseV1(raw)).toMatchObject({ fontSizeRem: 3.6, showTranslation: false, lastRead: null });
+    expect(raw).toEqual({
+      bookmarks: '["1:1"]',
+      lastRead: null,
+      fontSize: '3.6',
+      showTranslation: 'false',
+    });
+    expect(summariseV1(raw)).toMatchObject({
+      fontSizeRem: 3.6,
+      showTranslation: false,
+      lastRead: null,
+    });
   });
 
   it('survives a reader that throws', async () => {
@@ -93,7 +105,8 @@ describe('summariseV1 and readV1', () => {
       summariseV1({ bookmarks: null, lastRead: null, fontSize: 'big', showTranslation: '"yes"' }),
     ).toMatchObject({ fontSizeRem: null, showTranslation: null });
     expect(
-      summariseV1({ bookmarks: null, lastRead: null, fontSize: '-2', showTranslation: null }).fontSizeRem,
+      summariseV1({ bookmarks: null, lastRead: null, fontSize: '-2', showTranslation: null })
+        .fontSizeRem,
     ).toBeNull();
   });
 });
@@ -129,7 +142,7 @@ const setup = (v1: Record<string, string> = {}, signedIn = true) => {
   };
 };
 
-const v1Data = {
+const v1Data: Record<string, string> = {
   [V1_KEYS.bookmarks]: '["2:255","18:10","18:10","bad"]',
   [V1_KEYS.lastRead]: '{"mode":"surah","id":18,"name":"Al-Kahf","detail":"18 . 110 Ayahs"}',
   [V1_KEYS.fontSize]: '3.6',
@@ -162,7 +175,10 @@ describe('V1 importer', () => {
     const outcome = await importer.run();
     expect(outcome).toMatchObject({ ok: true, imported: 2, skipped: 2 }); // one duplicate, one bad
     expect(server.bookmarks.map((b) => `${b.surah}:${b.ayah}`).sort()).toEqual(['18:10', '2:255']);
-    expect((await bookmarks.list()).map((b) => `${b.surah}:${b.ayah}`).sort()).toEqual(['18:10', '2:255']);
+    expect((await bookmarks.list()).map((b) => `${b.surah}:${b.ayah}`).sort()).toEqual([
+      '18:10',
+      '2:255',
+    ]);
   });
 
   it('carries over the last read place and the reader settings', async () => {
@@ -208,8 +224,14 @@ describe('V1 importer', () => {
       readV1: (key) => v1Data[key] ?? null,
       storage: createMemoryStorage(),
       getApi: () => server.api,
-      bookmarks: createBookmarkService({ storage: createMemoryStorage(), getApi: () => server.api }),
-      readingPosition: createReadingPositionService({ storage: createMemoryStorage(), getApi: () => server.api }),
+      bookmarks: createBookmarkService({
+        storage: createMemoryStorage(),
+        getApi: () => server.api,
+      }),
+      readingPosition: createReadingPositionService({
+        storage: createMemoryStorage(),
+        getApi: () => server.api,
+      }),
     }).run();
     expect(again).toMatchObject({ ok: true, imported: 0, skipped: 4 });
     expect(server.bookmarks).toHaveLength(2);

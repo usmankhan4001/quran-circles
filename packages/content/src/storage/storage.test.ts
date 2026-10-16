@@ -1,11 +1,6 @@
 import { IDBFactory } from 'fake-indexeddb';
 import { describe, expect, it } from 'vitest';
-import {
-  createResilientStorage,
-  fromAsyncStorage,
-  fromWebStorage,
-  withPrefix,
-} from './adapters';
+import { createResilientStorage, fromAsyncStorage, fromWebStorage, withPrefix } from './adapters';
 import { createIndexedDbStorage } from './indexedDb';
 import { readJson, writeJson } from './json';
 import { createMemoryStorage } from './memory';
@@ -72,7 +67,9 @@ describe('IndexedDB adapter', () => {
   it('keeps data between two openings of the same database', async () => {
     const factory = new IDBFactory();
     await createIndexedDbStorage({ factory, databaseName: 'same' }).setItem('k', 'kept');
-    expect(await createIndexedDbStorage({ factory, databaseName: 'same' }).getItem('k')).toBe('kept');
+    expect(await createIndexedDbStorage({ factory, databaseName: 'same' }).getItem('k')).toBe(
+      'kept',
+    );
   });
 
   it('keeps separate databases separate', async () => {

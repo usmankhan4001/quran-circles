@@ -16,7 +16,9 @@ describe('createAlQuranCloudSource', () => {
   it('asks for the Arabic and Urdu editions of a surah in one request, like V1', async () => {
     const { api, source } = setup();
     await source.getSurah(112);
-    expect(api.calls).toEqual([`${ALQURAN_CLOUD_BASE_URL}/surah/112/editions/quran-uthmani,ur.maududi`]);
+    expect(api.calls).toEqual([
+      `${ALQURAN_CLOUD_BASE_URL}/surah/112/editions/quran-uthmani,ur.maududi`,
+    ]);
   });
 
   it('returns each ayah with its Arabic and Urdu text', async () => {
@@ -56,7 +58,9 @@ describe('createAlQuranCloudSource', () => {
     api.withoutTranslation = true;
     const passage = await source.getSurah(112);
     expect(passage.verses.every((v) => v.urdu === null)).toBe(true);
-    expect(passage.verses.map((v) => v.arabic)).toEqual([1, 2, 3, 4].map((a) => fakeArabic(112, a)));
+    expect(passage.verses.map((v) => v.arabic)).toEqual(
+      [1, 2, 3, 4].map((a) => fakeArabic(112, a)),
+    );
   });
 
   it('rejects surahs and juz that do not exist without a request', async () => {
@@ -70,7 +74,10 @@ describe('createAlQuranCloudSource', () => {
   it('reports a dropped connection as offline', async () => {
     const { api, source } = setup();
     api.offline = true;
-    await expect(source.getSurah(1)).rejects.toMatchObject({ name: 'QuranSourceError', code: 'offline' });
+    await expect(source.getSurah(1)).rejects.toMatchObject({
+      name: 'QuranSourceError',
+      code: 'offline',
+    });
   });
 
   it('reports an error status as unavailable and a 404 as not found', async () => {

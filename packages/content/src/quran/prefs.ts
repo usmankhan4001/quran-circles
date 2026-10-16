@@ -65,10 +65,16 @@ export function createReaderPrefsStore(storage: KeyValueStorage): ReaderPrefsSto
     async load() {
       const saved = await readJson(storage, KEY, PrefsSchema);
       if (!saved) return DEFAULT_READER_PREFS;
-      return { showTranslation: saved.showTranslation, arabicZoomIndex: clampZoomIndex(saved.arabicZoomIndex) };
+      return {
+        showTranslation: saved.showTranslation,
+        arabicZoomIndex: clampZoomIndex(saved.arabicZoomIndex),
+      };
     },
     async save(prefs) {
-      const clean = { showTranslation: prefs.showTranslation, arabicZoomIndex: clampZoomIndex(prefs.arabicZoomIndex) };
+      const clean = {
+        showTranslation: prefs.showTranslation,
+        arabicZoomIndex: clampZoomIndex(prefs.arabicZoomIndex),
+      };
       await writeJson(storage, KEY, clean);
       return clean;
     },

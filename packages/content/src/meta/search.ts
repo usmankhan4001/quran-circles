@@ -45,7 +45,7 @@ function nameKeys(name: string): string[] {
   if (whole) keys.add(whole);
   const withoutArticle = letters(name.replace(ARTICLE, ''));
   if (withoutArticle) keys.add(withoutArticle);
-  for (const word of name.split(/[\s\-]+/)) {
+  for (const word of name.split(/[\s-]+/)) {
     const key = letters(word);
     if (key.length >= 2) keys.add(key);
   }
@@ -133,7 +133,7 @@ export function searchSurahs(query: string): SurahSearchResult[] {
       .map((entry) => ({ surah: entry.surah, matchedBy: 'script' as const }));
   }
 
-  const needle = letters(raw.replace(/^(?:surah|surat|sura|soorah|soorat)[\s\-]+/i, ''));
+  const needle = letters(raw.replace(/^(?:surah|surat|sura|soorah|soorat)[\s-]+/i, ''));
   if (!needle) return [];
   const needleSound = soundKey(needle);
 

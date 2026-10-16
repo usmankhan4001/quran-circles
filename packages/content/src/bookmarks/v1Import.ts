@@ -200,7 +200,10 @@ export function createV1Importer(options: V1ImporterOptions): V1Importer {
         }
       } catch (error) {
         const kind = classifyFailure(error);
-        return { ok: false, reason: kind === 'signed_out' ? 'signed_out' : kind === 'offline' ? 'offline' : 'failed' };
+        return {
+          ok: false,
+          reason: kind === 'signed_out' ? 'signed_out' : kind === 'offline' ? 'offline' : 'failed',
+        };
       }
 
       // Bring the account's list onto the device. A failure here does not undo the import.

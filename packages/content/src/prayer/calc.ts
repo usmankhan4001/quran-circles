@@ -31,6 +31,19 @@ export function offsetOf(place: PrayerPlace): number {
 }
 
 /**
+ * The settings V1 sent to the Aladhan service: method 1 (University of Islamic Sciences,
+ * Karachi: Fajr and Isha at 18 degrees) and school 1 (Hanafi Asr). One difference needs undoing:
+ * `adhan` adds a one minute safety margin to Dhuhr for this method, and Aladhan does not, so the
+ * margin is set to zero to give the same minute as V1 showed.
+ */
+export function karachiHanafi() {
+  const params = CalculationMethod.Karachi();
+  params.madhab = Madhab.Hanafi;
+  params.methodAdjustments = { ...params.methodAdjustments, dhuhr: 0 };
+  return params;
+}
+
+/**
  * Prayer times for one calendar day at a place, worked out on the device.
  *
  * It is what V1 asked api.aladhan.com for: the University of Islamic Sciences, Karachi method
@@ -39,8 +52,7 @@ export function offsetOf(place: PrayerPlace): number {
  * See docs/engineering/decisions/ for the choice of library and how it was checked.
  */
 export function computeDay(place: PrayerPlace, date: CivilDate): DayTimes {
-  const params = CalculationMethod.Karachi();
-  params.madhab = Madhab.Hanafi;
+  const params = karachiHanafi();
   // adhan reads the year, month and day of the Date it is given and works out absolute
   // instants from them, so the phone's own time zone does not change the result.
   const times = new PrayerTimes(

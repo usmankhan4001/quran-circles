@@ -112,7 +112,10 @@ describe('createCachedQuranSource', () => {
   it('ignores a cache entry that was damaged and fetches again', async () => {
     const { api, storage, source } = setup();
     await source.getSurah(112);
-    await storage.setItem('qc.quran.cache.v1:surah:112', '{"kind":"surah","id":112,"verses":"oops"}');
+    await storage.setItem(
+      'qc.quran.cache.v1:surah:112',
+      '{"kind":"surah","id":112,"verses":"oops"}',
+    );
     const again = await source.getSurah(112);
     expect(again.fromCache).toBe(false);
     expect(api.calls).toHaveLength(2);
