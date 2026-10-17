@@ -2,6 +2,7 @@ import { fireEvent, within } from '@testing-library/react';
 import { FIXTURE_NOW, fixtures } from '@qc/contracts/fixtures';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
+import { pakistanDate, resolveDailyAyah } from '@qc/contracts';
 import {
   AREA_SADDAR,
   CITY_ISLAMABAD,
@@ -11,7 +12,6 @@ import {
   registrationFor,
 } from '../test/factories';
 import { act, createWorld, renderScreen, waitFor } from '../test/harness';
-import { ayahOfTheDay } from '../features/home/ayah';
 import { HomeScreen } from './HomeScreen';
 import { JourneyScreen } from './JourneyScreen';
 import { NearbyScreen } from './NearbyScreen';
@@ -87,9 +87,13 @@ describe('Home (H4)', () => {
   it('shows the ayah of the day and opens the reader at its place', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
-    const place = ayahOfTheDay(world.services.now());
+    // `ayah_of_the_day` is on in the mock: the server's pick for today.
+    const place = resolveDailyAyah({
+      date: pakistanDate(world.services.now()),
+      picks: fixtures.dailyAyahs,
+    });
     expect(
-      view.getByText(
+      await view.findByText(
         en['home.ayah.reference']
           .replace('{surah}', String(place.surah))
           .replace('{ayah}', String(place.ayah)),

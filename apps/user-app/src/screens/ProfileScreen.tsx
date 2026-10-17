@@ -6,6 +6,7 @@ import {
   Icon,
   ListItem,
   SegmentedControl,
+  Select,
   Switch,
   Text,
   TextField,
@@ -16,7 +17,7 @@ import {
   type IconName,
   type TextSizeStep,
 } from '@qc/ui';
-import type { Locale } from '@qc/contracts';
+import { MEMORISATION_REVISE_AFTER_DAYS_DEFAULT, type Locale } from '@qc/contracts';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { ScreenFrame } from '../components/ScreenFrame';
@@ -30,10 +31,21 @@ import { checkName } from '../features/auth/validation';
 import { useMyFollows } from '../features/journey/hooks';
 import {
   useAlertToggle,
+  useAyahNotification,
   useLocaleSync,
   useProfileName,
+  useProfileSettings,
   useWhatsappConsent,
 } from '../features/profile/hooks';
+import { useFeature } from '../features/reading/hooks';
+import {
+  GOAL_PRESETS,
+  REVISE_AFTER_PRESETS,
+  goalFromValue,
+  goalOptions,
+  goalValue,
+  reviseAfterOptions,
+} from '../features/profile/readingSettings';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useAuthState, usePreferences } from '../providers/hooks';
@@ -120,6 +132,7 @@ export function ProfileScreen() {
       <View style={styles.stack}>
         <AccountSection signedIn={status === 'signedIn'} />
         <PreferencesSections />
+        {status === 'signedIn' ? <ReadingSettingsSection /> : null}
         {status === 'signedIn' ? <AlertsSections /> : null}
         <SupportSection />
       </View>
@@ -298,6 +311,65 @@ function PreferencesSections() {
   );
 }
 
+/**
+ * Reading settings on the profile (rc.4): the optional daily goal (`reading_days`) and how long
+ * before a memorised surah shows in "revise this week" (`memorisation`). Both live on the
+ * profile, so they follow the account to a new phone.
+ */
+function ReadingSettingsSection() {
+  const { t } = useI18n();
+  const toast = useToast();
+  const { me } = useAuthState();
+  const goalFeature = useFeature('reading_days');
+  const memorisationFeature = useFeature('memorisation');
+  const save = useProfileSettings();
+  if (!goalFeature.on && !memorisationFeature.on) return null;
+  const goal = me?.profile.dailyGoal ?? null;
+  const reviseAfter = me?.profile.memorisationReviseAfterDays ?? null;
+
+  const apply = async (change: Parameters<typeof save.run>[0]) => {
+    if (await save.run(change)) toast.show(t('profile.saved'), 'success');
+  };
+
+  return (
+    <Section title={t('profile.reading.title')} testID="profile-reading" card>
+      {goalFeature.on ? (
+        <Select<string>
+          label={t('profile.goal.label')}
+          helper={t('profile.goal.helper')}
+          value={goalValue(goal)}
+          options={goalOptions(goal, GOAL_PRESETS, t)}
+          disabled={save.running || !me}
+          onChange={(value) => void apply({ dailyGoal: goalFromValue(value) })}
+          testID="profile-goal"
+        />
+      ) : null}
+      {memorisationFeature.on ? (
+        <Select<string>
+          label={t('profile.reviseAfter.label')}
+          helper={t('profile.reviseAfter.helper')}
+          value={`${reviseAfter ?? MEMORISATION_REVISE_AFTER_DAYS_DEFAULT}`}
+          options={reviseAfterOptions(reviseAfter, REVISE_AFTER_PRESETS, t)}
+          disabled={save.running || !me}
+          onChange={(value) => {
+            const days = Number(value);
+            void apply({
+              memorisationReviseAfterDays:
+                days === MEMORISATION_REVISE_AFTER_DAYS_DEFAULT ? null : days,
+            });
+          }}
+          testID="profile-revise-after"
+        />
+      ) : null}
+      {save.error ? (
+        <Text variant="caption" color="textDanger" testID="profile-reading-error">
+          {t(errorMessageKey(save.error.code))}
+        </Text>
+      ) : null}
+    </Section>
+  );
+}
+
 function AlertsSections() {
   const { t, l, locale } = useI18n();
   const { push, api } = useServices();
@@ -305,6 +377,8 @@ function AlertsSections() {
   const follows = useMyFollows();
   const alerts = useAlertToggle();
   const whatsapp = useWhatsappConsent();
+  const ayahFeature = useFeature('ayah_of_the_day');
+  const ayahPush = useAyahNotification();
   const [pushOn, setPushOn] = useState(false);
 
   useEffect(() => {
@@ -355,6 +429,21 @@ function AlertsSections() {
           onValueChange={(value) => void whatsapp.change.run(value)}
           testID="profile-whatsapp"
         />
+        {ayahFeature.on ? (
+          <Switch
+            label={t('profile.ayahPush.label')}
+            description={t('profile.ayahPush.description')}
+            value={ayahPush.enabled}
+            disabled={ayahPush.change.running || ayahPush.query.status !== 'success'}
+            onValueChange={(value) => void ayahPush.change.run(value)}
+            testID="profile-ayah-push"
+          />
+        ) : null}
+        {ayahPush.change.error ? (
+          <Text variant="caption" color="textDanger" testID="profile-ayah-push-error">
+            {t(errorMessageKey(ayahPush.change.error.code))}
+          </Text>
+        ) : null}
       </Section>
 
       <Section title={t('profile.alerts.title')} testID="profile-alerts" card>

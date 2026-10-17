@@ -12,7 +12,11 @@ import {
   useTheme,
   type IconName,
 } from '@qc/ui';
+import { AyahOfTheDayCard } from '../components/AyahOfTheDayCard';
+import { CommunityTodayCard } from '../components/CommunityTodayCard';
+import { DaysReadCard } from '../components/DaysReadCard';
 import { NextCircleCard } from '../components/NextCircleCard';
+import { ReadAlongCard } from '../components/ReadAlongCard';
 import { ProfileButton } from '../components/ProfileButton';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { ScreenFrame } from '../components/ScreenFrame';
@@ -20,7 +24,7 @@ import { Section } from '../components/Section';
 import { SessionCard } from '../components/SessionCard';
 import { distanceParts, haversineMetres, nearestMetres } from '../core/distance';
 import { useAppConfig } from '../features/config/useAppConfig';
-import { ayahOfTheDay } from '../features/home/ayah';
+import { useFeature } from '../features/reading/hooks';
 import { HIJRI_MONTH_KEYS, hijriToday } from '../features/home/hijri';
 import {
   nextRegisteredOccurrence,
@@ -58,8 +62,6 @@ const styles = StyleSheet.create({
   },
   carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rule: { height: 3, width: spacing.xxl, borderRadius: 2 },
-  ayah: { gap: spacing.md },
   shortcuts: { flexDirection: 'row', gap: spacing.sm },
 });
 
@@ -81,7 +83,7 @@ export function HomeScreen() {
   const cities = useCities();
   // The same "near me" point as Nearby: the chosen area's centre, no phone location needed.
   const origin = useOrigin();
-  const { PrayerStrip, AyahText } = content;
+  const { PrayerStrip } = content;
 
   const mine = registrations.data ? nextRegisteredOccurrence(registrations.data, now()) : undefined;
   const leadingProgram = config.seasonMode === 'dora' ? 'dora' : 'circles';
@@ -90,7 +92,8 @@ export function HomeScreen() {
   const items = next.data;
   const lead = items ? pickLeadOccurrence(items, leadingProgram) : undefined;
   const other = items?.find((o) => o.session.program === otherProgram && o.id !== lead?.id);
-  const ayah = ayahOfTheDay(now());
+  const daysRead = useFeature('reading_days');
+  const community = useFeature('community_today');
   const hijri = hijriToday(now(), config.hijriOffsetDays);
   const hijriText = hijri
     ? t('home.hijri.date', {
@@ -232,6 +235,8 @@ export function HomeScreen() {
           </Card>
         )}
 
+        <ReadAlongCard />
+
         <Section
           title={
             leadingProgram === 'dora' ? t('home.season.doraTitle') : t('home.season.circlesTitle')
@@ -335,32 +340,14 @@ export function HomeScreen() {
           />
         ) : null}
 
-        <Card testID="home-ayah">
-          <View style={styles.ayah}>
-            <View style={[styles.rule, { backgroundColor: c.decoration }]} aria-hidden />
-            <Text variant="eyebrow" color="textSecondary">
-              {t('home.ayah.title')}
-            </Text>
-            {AyahText ? <AyahText surah={ayah.surah} ayah={ayah.ayah} /> : null}
-            <Text variant="label" color="textSecondary">
-              {t('home.ayah.reference', {
-                surah: formatNumber(ayah.surah, locale),
-                ayah: formatNumber(ayah.ayah, locale),
-              })}
-            </Text>
-            <Button
-              variant="secondary"
-              label={t('home.ayah.read')}
-              onPress={() =>
-                nav.tab({
-                  name: 'quran',
-                  reader: { surah: ayah.surah, ayah: ayah.ayah, at: now().getTime() },
-                })
-              }
-              testID="home-ayah-read"
-            />
+        <AyahOfTheDayCard />
+
+        {daysRead.on || community.on ? (
+          <View style={styles.list} testID="home-reading">
+            {daysRead.on ? <DaysReadCard /> : null}
+            <CommunityTodayCard />
           </View>
-        </Card>
+        ) : null}
 
         <Section title={t('home.also.title')} testID="home-also">
           <View style={styles.shortcuts}>

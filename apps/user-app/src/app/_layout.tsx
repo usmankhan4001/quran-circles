@@ -13,6 +13,7 @@ import type { AppServices } from '../providers/services';
 import type { Navigator } from '../nav/NavProvider';
 import { routeToHref } from '../nav/routes';
 import { ReminderSync } from '../providers/ReminderSync';
+import { ReadingSync } from '../providers/ReadingSync';
 import { registerServiceWorker } from '../platform/serviceWorker';
 import { loadAppFonts } from '../fonts/appFonts';
 
@@ -84,6 +85,7 @@ function Shell({ app }: { app: AppServices }) {
     <AppProviders services={app} navigator={navigator}>
       <SafeInsets>
         <ReminderSync />
+        <ReadingSync />
         <Stack screenOptions={{ headerShown: false, animation: 'default' }}>
           {/* R2: registration is a sheet that rises over the session page. */}
           <Stack.Screen name="register/[sessionId]" options={{ presentation: 'modal' }} />

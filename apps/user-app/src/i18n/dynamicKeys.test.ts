@@ -1,4 +1,12 @@
-import { ERROR_CODE_LIST, LOCALES, PROGRAMS, SECTIONS, UPDATE_KINDS } from '@qc/contracts';
+import {
+  DAILY_GOAL_UNITS,
+  ERROR_CODE_LIST,
+  LOCALES,
+  MEMORISATION_STATUSES,
+  PROGRAMS,
+  SECTIONS,
+  UPDATE_KINDS,
+} from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { FACILITY_KEYS } from '../components/FacilitiesChecklist';
@@ -26,6 +34,11 @@ const dynamic: Record<string, readonly string[]> = {
   updateKinds: UPDATE_KINDS.map((k) => `updates.kind.${k}`),
   facilities: FACILITY_KEYS.map((k) => `facilities.${k}`),
   errors: ERROR_CODE_LIST.map((c) => `errors.${c}`),
+  memorisationStatuses: MEMORISATION_STATUSES.map((s) => `memorisation.status.${s}`),
+  goalUnits: DAILY_GOAL_UNITS.flatMap((u) => [
+    `daysRead.unit.${u}.one`,
+    `daysRead.unit.${u}.other`,
+  ]),
 };
 
 describe('keys built from values', () => {

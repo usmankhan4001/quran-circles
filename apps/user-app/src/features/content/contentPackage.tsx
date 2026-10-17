@@ -19,6 +19,7 @@ import {
   useContent,
   useNow,
   verseTranslation,
+  type ContentServices,
   type CreateContentServicesOptions,
   type QuranVerse,
   type ReaderTarget,
@@ -215,9 +216,10 @@ function readerTarget(request: ReaderRequest | undefined) {
  * cache and bookmark sync; this only gives it a device, a fetch and the signed-in API client,
  * and fits its components to the mount points the screens use.
  */
-export function createContentModules(options: CreateContentServicesOptions): ContentModules {
-  const services = createContentServices(options);
-
+export function createContentModules(
+  options: CreateContentServicesOptions,
+  services: ContentServices = createContentServices(options),
+): ContentModules {
   return {
     Provider: ({ signedIn, hijriOffsetDays, children }) => (
       <ContentProvider services={services} signedIn={signedIn} hijriOffsetDays={hijriOffsetDays}>
@@ -245,5 +247,14 @@ export function createContentModules(options: CreateContentServicesOptions): Con
     ),
     PrayerStrip: HomePrayerStrip,
     AyahText: HomeAyahText,
+    subscribeReading: (listener) =>
+      services.readingPosition.subscribe(() => {
+        services.readingPosition
+          .getLocal()
+          .then((value) => {
+            if (value) listener({ surah: value.surah, ayah: value.ayah, at: value.updatedAt });
+          })
+          .catch(() => undefined);
+      }),
   };
 }

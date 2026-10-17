@@ -148,8 +148,10 @@ describe('HomeScreen', () => {
 
   it('mounts the prayer strip and the ayah words when the content package provides them', async () => {
     const asked: { surah: number; ayah: number }[] = [];
+    // With `ayah_of_the_day` off the app picks the place itself, as before rc.4.
     const view = await renderScreen(<HomeScreen />, {
       cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: configFor('dora') },
       content: {
         PrayerStrip: ({ onPress }) => (
           <Pressable onPress={onPress} testID="prayer-strip">
@@ -167,13 +169,17 @@ describe('HomeScreen', () => {
     fireEvent.click(view.getByTestId('prayer-strip'));
     expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
     const ayah = view.getByTestId('home-ayah');
-    expect(within(ayah).getByTestId('ayah-words')).toBeTruthy();
+    expect(await within(ayah).findByTestId('ayah-words')).toBeTruthy();
     expect(asked.at(-1)).toEqual(ayahOfTheDay(NOW));
   });
 
   it('shows only the reference on the ayah card when there are no words to show', async () => {
-    const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
+    const view = await renderScreen(<HomeScreen />, {
+      cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: configFor('dora') },
+    });
     const ayah = await view.findByTestId('home-ayah');
+    await waitFor(() => expect(within(ayah).queryByTestId('home-ayah-read')).toBeTruthy());
     const place = ayahOfTheDay(NOW);
     expect(
       within(ayah).getByText(

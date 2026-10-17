@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { Consent, Follow } from '@qc/contracts';
+import { consentGranted, type Consent, type Follow, type ProfileUpdate } from '@qc/contracts';
 import { useAction } from '../../data/useAction';
 import { useQuery } from '../../data/useQuery';
 import { useAuthState } from '../../providers/hooks';
@@ -81,5 +81,40 @@ export function useLocaleSync() {
       await api.me.update({ body: { locale } }).catch(() => undefined);
     },
     [api, status],
+  );
+}
+
+/** The person's `ayah_daily` push rows (rc.4): push only, never per venue. */
+export function ayahConsentRows(consents: readonly Consent[] | undefined): Consent[] {
+  return (consents ?? []).filter(
+    (c) => c.channel === 'push' && c.purpose === 'ayah_daily' && c.venueId === null,
+  );
+}
+
+/**
+ * The morning ayah notification switch (feature 2). On by default: no row means on, a revoked
+ * row means off (`consentGranted`). Changing it writes one `consents.set` for push and
+ * `ayah_daily`, with no venue.
+ */
+export function useAyahNotification() {
+  const { api, cache } = useServices();
+  const consents = useConsents();
+  const enabled = consentGranted('push', 'ayah_daily', ayahConsentRows(consents.data));
+  const change = useAction(async (granted: boolean) => {
+    await api.consents.set({ body: { channel: 'push', purpose: 'ayah_daily', granted } });
+    cache.invalidate('me:consents');
+  });
+  return { query: consents, enabled, change };
+}
+
+/** Saves reading settings on the profile (daily goal, revise-after) and keeps `me` in step. */
+export function useProfileSettings() {
+  const { api, auth } = useServices();
+  return useAction(
+    async (change: Pick<ProfileUpdate, 'dailyGoal' | 'memorisationReviseAfterDays'>) => {
+      const me = await api.me.update({ body: change });
+      auth.setMe(me);
+      return me;
+    },
   );
 }

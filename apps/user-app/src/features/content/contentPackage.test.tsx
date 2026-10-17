@@ -1,16 +1,28 @@
-import { PAKISTAN_CITIES, createMemoryStorage, createViewStateStore } from '@qc/content';
+import {
+  PAKISTAN_CITIES,
+  createContentServices,
+  createMemoryStorage,
+  createViewStateStore,
+} from '@qc/content';
 import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { within } from '@testing-library/react';
 import { MATRIX, NOW, createWorld, directionOf, renderScreen, waitFor } from '../../test/harness';
-import { ayahOfTheDay } from '../home/ayah';
+import { pakistanDate, resolveDailyAyah } from '@qc/contracts';
+import { fixtures } from '@qc/contracts/fixtures';
 import { HomeScreen } from '../../screens/HomeScreen';
 import { QuranPrayerScreen } from '../../screens/QuranPrayerScreen';
 import { createContentModules } from './contentPackage';
+import type { ReadingMark } from './modules';
 
 const en = messages.en;
 const ur = messages.ur;
+
+/** The mock server's ayah of the day for a visitor who follows nothing (`ayah_of_the_day` is on). */
+function dailyAyah() {
+  return resolveDailyAyah({ date: pakistanDate(NOW), picks: fixtures.dailyAyahs });
+}
 
 /**
  * A made-up answer in the shape of the online source, with placeholder words: tests never hold
@@ -103,7 +115,7 @@ describe('the Quran & Prayer package inside the app', () => {
   it.each(['en', 'ur'] as const)(
     "shows the Arabic of the ayah of the day and the translation in the screen's language (%s)",
     async (locale) => {
-      const place = ayahOfTheDay(NOW);
+      const place = dailyAyah();
       const content = createContentModules({
         storage: createMemoryStorage(),
         // Home asks for the one ayah; the reader would ask for the whole surah.
@@ -129,7 +141,7 @@ describe('the Quran & Prayer package inside the app', () => {
   );
 
   it('shows the Arabic alone on an English screen when the source has no English', async () => {
-    const place = ayahOfTheDay(NOW);
+    const place = dailyAyah();
     const answer = ayahAnswer(place.surah, place.ayah);
     const content = createContentModules({
       storage: createMemoryStorage(),
@@ -189,5 +201,24 @@ describe('the Quran & Prayer package inside the app', () => {
         view.getAllByText((locale === 'ur' ? ur : en)['quran.tab.quran']).length,
       ).toBeGreaterThan(0);
     });
+  });
+
+  it('tells the app each time the reader saves the place reached, for days read', async () => {
+    const options = {
+      storage: createMemoryStorage(),
+      fetch: async () => new Response('{}', { status: 503 }),
+      getApi: () => null,
+      now: () => NOW,
+    };
+    const services = createContentServices(options);
+    const content = createContentModules(options, services);
+    const marks: ReadingMark[] = [];
+    const stop = content.subscribeReading!((mark) => marks.push(mark));
+    await services.readingPosition.save(18, 10);
+    await waitFor(() => expect(marks).toEqual([{ surah: 18, ayah: 10, at: NOW.toISOString() }]));
+    stop();
+    await services.readingPosition.save(18, 11);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(marks).toHaveLength(1);
   });
 });

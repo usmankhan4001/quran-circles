@@ -10,6 +10,7 @@ export type Route =
   | { name: 'quran'; reader?: { surah: number; ayah: number; at?: number } }
   | { name: 'profile' }
   | { name: 'credits' }
+  | { name: 'memorisation' }
   | { name: 'updates' }
   | { name: 'signIn'; returnTo?: Route }
   | { name: 'venue'; venueId: string }
@@ -39,6 +40,8 @@ export function routeToHref(route: Route): string {
       return '/profile';
     case 'credits':
       return '/credits';
+    case 'memorisation':
+      return '/memorisation';
     case 'updates':
       return '/updates';
     case 'signIn':
@@ -90,6 +93,7 @@ export function hrefToRoute(href: string): Route | null {
     case 'journey':
     case 'profile':
     case 'credits':
+    case 'memorisation':
     case 'updates':
       return { name: first };
     case 'venue':

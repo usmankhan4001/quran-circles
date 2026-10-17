@@ -6,6 +6,11 @@ export interface QuranPlace {
   ayah: number;
 }
 
+/** A place the reader saved as the person's reading position, and when (an ISO instant). */
+export interface ReadingMark extends QuranPlace {
+  at: string;
+}
+
 /** A request to open the reader. `at` makes a second request for the same place count again. */
 export interface ReaderRequest extends QuranPlace {
   at?: number;
@@ -36,4 +41,10 @@ export interface ContentModules {
    * is drawn while they load or when they cannot be had, so the card keeps just the reference.
    */
   AyahText?: ComponentType<QuranPlace>;
+  /**
+   * Calls back each time the reader saves the place the person reached (the reading position,
+   * on this phone or adopted from the account). Days read use it to count reading in the reader
+   * without the person doing anything (feature 1, source `reader`). Returns the unsubscribe.
+   */
+  subscribeReading?: (listener: (mark: ReadingMark) => void) => () => void;
 }

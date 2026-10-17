@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Button, EmptyState, ListItem, Text, formatNumber, radii, spacing, useTheme } from '@qc/ui';
 import type { Registration } from '@qc/contracts';
 import { ConfirmSheet } from '../components/ConfirmSheet';
+import { MemorisationEntryCard } from '../components/MemorisationEntryCard';
 import { ProfileButton } from '../components/ProfileButton';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { ReminderToggle } from '../components/ReminderToggle';
@@ -224,6 +225,8 @@ function JourneyContent() {
           }
         </QueryBoundary>
       </Section>
+
+      <MemorisationEntryCard />
 
       <ConfirmSheet
         visible={cancelling !== null}
