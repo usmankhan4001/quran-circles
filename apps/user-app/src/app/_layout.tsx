@@ -12,6 +12,7 @@ import { InsetsProvider } from '../providers/insets';
 import type { AppServices } from '../providers/services';
 import type { Navigator } from '../nav/NavProvider';
 import { routeToHref } from '../nav/routes';
+import { usePushTaps, type PushTapSource } from '../nav/pushTaps';
 import { ReminderSync } from '../providers/ReminderSync';
 import { ReadingSync } from '../providers/ReadingSync';
 import { registerServiceWorker } from '../platform/serviceWorker';
@@ -49,23 +50,17 @@ function useRouterNavigator(): Navigator {
   );
 }
 
-/** Opens the session a reminder is about when the notification is tapped. */
-function useNotificationTaps(navigator: Navigator) {
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const open = (data: unknown) => {
-      const sessionId =
-        typeof data === 'object' && data !== null
-          ? (data as { sessionId?: unknown }).sessionId
-          : undefined;
-      if (typeof sessionId === 'string') navigator.go({ name: 'session', sessionId });
-    };
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) =>
-      open(response.notification.request.content.data),
-    );
-    return () => subscription.remove();
-  }, [navigator]);
-}
+/**
+ * Tapped notifications on a phone: reminders open their session, the morning ayah opens the
+ * reader (`usePushTaps`). The web has no notification taps.
+ */
+const notificationTaps: PushTapSource | null =
+  Platform.OS === 'web'
+    ? null
+    : (onTap) =>
+        Notifications.addNotificationResponseReceivedListener((response) =>
+          onTap(response.notification.request.content.data),
+        );
 
 function SafeInsets({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -80,7 +75,7 @@ function SafeInsets({ children }: { children: ReactNode }) {
 
 function Shell({ app }: { app: AppServices }) {
   const navigator = useRouterNavigator();
-  useNotificationTaps(navigator);
+  usePushTaps(notificationTaps, navigator);
   return (
     <AppProviders services={app} navigator={navigator}>
       <SafeInsets>

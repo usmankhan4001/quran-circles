@@ -3,6 +3,13 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Ayah push taps (2026-10-17, follow-up)
+
+- Tapping an `ayah_of_the_day` push now opens the reader at `/quran?surah=…&ayah=…`. Tap handling moved out of `src/app/_layout.tsx` into `src/nav/pushTaps.ts`: `pushTapRoute(data)` reads a server push with `PushData` from `@qc/contracts` and an exhaustive switch on its `type` (a new contract type fails the typecheck until handled); `ayah_of_the_day` parses `deepLink` with the contract's `parseDeepLink` and opens the `quran` route only for a valid `quran` link (scheme or web origin). The other six types keep today's behaviour (open `sessionId` when present), and on-device reminders (`{ sessionId }` only) still open their session. Anything malformed is ignored, so a tap just opens the app. `usePushTaps(source, navigator)` subscribes; `_layout.tsx` passes the `expo-notifications` response listener (null on the web).
+- Feature flags are not read on a tap: the push only arrives when the server allowed it, so a tap opens the reader even with `ayah_of_the_day` off.
+- Tests: `src/nav/pushTaps.test.tsx`, 29 tests (worker-shaped payload checked through `PushPayload`, scheme and web links, 15 malformed payloads, unchanged session behaviour per type, hook subscribe/unsubscribe, web no-op, flag off still opening the reader end to end through the Quran tab's address read-back). Totals: 912 passing in 58 files. `typecheck`, `test`, `npx eslint apps/user-app` and `npx prettier --check apps/user-app` pass.
+- Not done (outside this follow-up): a tap that cold-starts the app is not read explicitly (`getLastNotificationResponseAsync`), so it depends on whether the listener sees the launch response on each platform; this was already true for reminders. Other push types do not yet follow their `deepLink` (for example `update` to `/updates/<id>`, which has no app route yet).
+
 ## Next features on contract 1.0.0-rc.4 (2026-10-17, late)
 
 Built against `docs/product/features-next.md` and the accepted change request `2026-10-17-next-features.md`, contract `1.0.0-rc.4` and its mock (all five flags on there). Each piece is behind its flag, read with `featureOn` (missing is off); while the first `config.get` is on its way a card waits rather than flashing. Only `apps/user-app/**`, user-app keys in `packages/i18n` and this file were edited.
@@ -22,7 +29,7 @@ Notes and questions:
 - Goal "met" is the person's own tap: the reader does not measure pages or minutes, so `reader` days send no `pages`/`ayahs` and add nothing to `pagesTogether`. If the community page count should grow from reading in the app, `@qc/content` would need to report pages read (content lane).
 - The mock answers every 204 endpoint itself, ignoring handlers, so the `memorisation.delete` failure test uses a forced error (`failNext`). Worth knowing for the contracts lane.
 - A registered session's card disappears once its next date moves on (after it ends), because registrations come with their next date only; a followed session stays until midnight.
-- Ayah push taps: the `ayah_of_the_day` push type is not in rc.4 (waits for messaging), so tapping that notification is not wired yet; the app already opens `/quran?surah&ayah` deep links.
+- Ayah push taps: wired in the follow-up above.
 
 ## Fonts and credits (2026-10-17, font bundling)
 
