@@ -1,4 +1,4 @@
-# Build context is v2/. Keep it small and free of local state and secrets.
+# Build context is the repository root. Keep it small and free of local state and secrets.
 **/node_modules
 **/dist
 **/build

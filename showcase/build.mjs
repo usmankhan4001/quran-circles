@@ -1,5 +1,5 @@
 // Builds the UI kit showcase: the @qc/ui catalog wrapped in a themed page with mode and language filters.
-//   pnpm --filter @qc/ui catalog && node showcase/build.mjs     (from v2/)
+//   pnpm --filter @qc/ui catalog && node showcase/build.mjs     (from the repository root)
 // Writes showcase/build/index.html, a page body ready to publish as an Artifact (no html/head/body tags).
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

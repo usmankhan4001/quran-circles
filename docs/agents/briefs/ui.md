@@ -20,7 +20,7 @@ Own the visual and interaction design for all three front ends: the design token
 
 ## Read first
 
-`docs/product/experience.md`, `docs/product/features.md`, `docs/product/decisions.md`, `packages/ui/src/tokens.ts` (the starting tokens from V1), and the screens in the V1 app at the repository root for reference.
+`docs/product/experience.md`, `docs/product/features.md`, `docs/product/decisions.md`, `packages/ui/src/tokens.ts` (the starting tokens from V1), and the screens in the V1 app (repository `usmankhan4001/nearby-dora-quran`) for reference.
 
 ## Deliverables
 

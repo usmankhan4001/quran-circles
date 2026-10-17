@@ -2,7 +2,7 @@ import { assertSeedAllowed, seedDatabase } from '../seed';
 import { fail, loadDotEnv, withDrizzle } from './connect';
 
 try {
-  // Load v2/.env first so APP_ENV from there counts, and refuse before connecting to anything.
+  // Load the repository's .env first so APP_ENV from there counts, and refuse before connecting to anything.
   loadDotEnv();
   assertSeedAllowed();
   const { tables } = await withDrizzle((db) => seedDatabase(db));

@@ -2,9 +2,9 @@ import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** `v2/tests/e2e`. */
+/** `tests/e2e`. */
 export const E2E_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-/** `v2/`. */
+/** The repository root. */
 export const REPO_DIR = resolve(E2E_DIR, '..', '..');
 
 /**

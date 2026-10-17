@@ -6,7 +6,7 @@ Each agent gets its own working copy and branch, so agents never overwrite each 
 # one worktree per lane, on a lane branch cut from the integration branch
 git fetch origin
 git worktree add ../qc-api-core -b lane/api-core/venues origin/<integration-branch>
-cd ../qc-api-core/v2
+cd ../qc-api-core
 pnpm install
 claude
 ```
@@ -16,7 +16,7 @@ Then give the agent the standard prompt from `docs/agents/README.md`.
 ## Rules
 
 - One worktree and one branch per agent. Never run two agents in the same worktree.
-- Work inside `v2/`. The repository root is V1 and is off limits to agents.
+- V1 lives in its own repository (`usmankhan4001/nearby-dora-quran`) and is off limits to agents.
 - `pnpm install` is fast after the first run because pnpm shares its store across worktrees.
 - Remove a worktree when its pull request merges:
 

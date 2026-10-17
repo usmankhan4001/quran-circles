@@ -6,7 +6,7 @@ lanes' code.
 
 ## How the suite runs
 
-`pnpm --filter @qc/e2e test` (from `v2/`) starts the real system once, runs every flow, and stops it:
+`pnpm --filter @qc/e2e test` (from the repository root) starts the real system once, runs every flow, and stops it:
 
 - **Postgres**: a private throwaway cluster from the local server binaries (`initdb`, `pg_ctl`;
   as root it runs as the `postgres` user), or a fresh database on `E2E_DATABASE_URL` (for example

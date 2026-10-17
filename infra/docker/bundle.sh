@@ -2,7 +2,7 @@
 # Bundles the api, the worker and the migration runners into single ESM files with esbuild.
 # Workspace packages export TypeScript source, so plain `tsc` output would not run on its own.
 #
-# Usage (from v2/, after `pnpm install`):  infra/docker/bundle.sh <out-dir>
+# Usage (from the repository root, after `pnpm install`):  infra/docker/bundle.sh <out-dir>
 # Result:
 #   <out-dir>/dist/api.mjs       the API server       (apps/api/src/index.ts)
 #   <out-dir>/dist/worker.mjs    the worker           (apps/worker/src/main.ts)

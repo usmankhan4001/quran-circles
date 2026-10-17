@@ -10,7 +10,7 @@
 ## Pull requests
 
 - Small: one work package or part of one.
-- Use `.github/PULL_REQUEST_TEMPLATE/v2.md`.
+- Use `.github/pull_request_template.md`.
 - CI must be green before a reviewer looks at it.
 - The author never approves their own change.
 

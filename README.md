@@ -1,6 +1,6 @@
 # Quran Circles V2
 
-Monorepo for the V2 platform: one Postgres database and one API, a user app, an admin app, a desktop console, and background workers. V1 (the current Nearby Dora Quran web app) stays at the repository root, unchanged and live, until Wave 6 retires it.
+Monorepo for the V2 platform: one Postgres database and one API, a user app, an admin app, a desktop console, and background workers. V1 (the current Nearby Dora Quran web app) lives in its own repository, `usmankhan4001/nearby-dora-quran`, unchanged and live, until Wave 6 retires it. This repository was split out of that one's `v2/` folder with its history kept.
 
 Status: **Wave 0 scaffold.** The workspace builds, tests run, and every lane has a written brief. No product code exists yet.
 

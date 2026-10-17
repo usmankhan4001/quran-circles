@@ -20,7 +20,7 @@ Everything else. You use `@qc/db` and `@qc/contracts` as they are.
 
 ## Read first
 
-`docs/product/decisions.md` (migration), `docs/product/data-model.md` (legacy tables, places), `docs/engineering/conventions.md`. For the V1 shapes: `services/programs.ts`, `supabase/seed.sql`, `src/data/staticPrograms.ts` and `components/ProgramDetail.tsx` at the repository root.
+`docs/product/decisions.md` (migration), `docs/product/data-model.md` (legacy tables, places), `docs/engineering/conventions.md`. For the V1 shapes: `services/programs.ts`, `supabase/seed.sql`, `src/data/staticPrograms.ts` and `components/ProgramDetail.tsx` in the V1 repository, `usmankhan4001/nearby-dora-quran`.
 
 ## Deliverables
 

@@ -1,0 +1,13 @@
+# Branch protection should require a code owner review. Paths below are the sensitive areas that
+# need a human approval; everything else is reviewed by reviewer agents plus a human spot check.
+# See docs/engineering/branches-and-review.md.
+
+/packages/contracts/        @usmankhan4001
+/packages/db/               @usmankhan4001
+/packages/messaging/        @usmankhan4001
+/apps/api/src/auth/         @usmankhan4001
+/apps/api/src/modules/auth/ @usmankhan4001
+/apps/worker/               @usmankhan4001
+/tools/migration/           @usmankhan4001
+/infra/                     @usmankhan4001
+/.github/                  @usmankhan4001

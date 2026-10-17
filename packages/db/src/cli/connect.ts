@@ -6,7 +6,7 @@ import * as schema from '../schema/index';
 /** Matches infra/docker-compose.dev.yml and .env.example. Development credentials only. */
 export const DEFAULT_DATABASE_URL = 'postgres://qc:qc@localhost:5432/qc';
 
-/** Loads v2/.env if there is one. Variables already set in the environment win. */
+/** Loads the repository's .env if there is one. Variables already set in the environment win. */
 export function loadDotEnv(): void {
   try {
     process.loadEnvFile(new URL('../../../../.env', import.meta.url));

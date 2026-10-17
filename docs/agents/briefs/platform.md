@@ -12,7 +12,7 @@ The repository, CI and infrastructure baseline. In Wave 0 that is the monorepo, 
 
 ## You own
 
-`infra/`, `.github/`, and the root configuration files in `v2/` (`package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc.json`).
+`infra/`, `.github/`, and the root configuration files (`package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc.json`).
 
 ## You must not touch
 
@@ -27,7 +27,7 @@ Anything in `apps/`, `packages/`, `tools/` or `tests/`, except to wire a build.
 Wave 0 (done in the scaffold):
 
 1. pnpm monorepo with typecheck, lint, test and format checks, and one `pnpm check` command.
-2. CI workflow `.github/workflows/v2-ci.yml`, plus the PR template and CODEOWNERS.
+2. CI workflow `.github/workflows/ci.yml`, plus the PR template and CODEOWNERS.
 3. Lint rules that block vendor data SDKs and cross-lane imports.
 4. Local development Postgres in `infra/docker-compose.dev.yml`.
 5. The agent operating guide and a brief for every lane.

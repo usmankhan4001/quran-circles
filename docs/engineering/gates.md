@@ -4,7 +4,7 @@ A wave counts as done only when every line of its gate is true and a human signs
 
 ## Gate 0: after Wave 0, scaffold
 
-- [x] The repository builds: `pnpm check` passes in `v2/`.
+- [x] The repository builds: `pnpm check` passes at the repository root.
 - [x] CI runs typecheck, lint, tests and the format check.
 - [x] Every lane has a written brief in `docs/agents/briefs/`.
 - [ ] The VPS is reachable (human).

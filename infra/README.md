@@ -64,7 +64,7 @@ All commands run on the server as the deploy user, with `sudo` where shown. Path
 sudo mkdir -p /srv/qc/{app,www/app,www/console,backups,state} /var/log/qc
 sudo chown -R "$USER" /srv/qc
 git clone <repository URL> /srv/qc/app
-cd /srv/qc/app/v2
+cd /srv/qc/app
 
 # 2. The env file (stays on the server, mode 600)
 install -m 600 infra/.env.example /srv/qc/prod.env
@@ -98,7 +98,7 @@ What `up` does: `postgres` starts and becomes healthy, `migrate` applies pending
 ## Deploy
 
 ```sh
-cd /srv/qc/app/v2
+cd /srv/qc/app
 git fetch && git checkout <commit or branch>      # a clean checkout
 QC_ENV_FILE=/srv/qc/prod.env infra/scripts/deploy.sh
 ```

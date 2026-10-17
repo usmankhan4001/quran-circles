@@ -48,11 +48,11 @@ How the multi-agent build works. Read this, then `CLAUDE.md`, then your lane's b
 
 See `worktrees.md`. In short: create a worktree on a lane branch, open a Claude session there, and give it this prompt:
 
-> Read `v2/CLAUDE.md`, `v2/docs/agents/README.md` and `v2/docs/agents/briefs/<lane>.md`. Do the next unfinished item in the brief's deliverables. Stay inside the directories you own. Run `pnpm check` before you finish and update `v2/docs/agents/status/<lane>.md`.
+> Read `CLAUDE.md`, `docs/agents/README.md` and `docs/agents/briefs/<lane>.md`. Do the next unfinished item in the brief's deliverables. Stay inside the directories you own. Run `pnpm check` before you finish and update `docs/agents/status/<lane>.md`.
 
 ## Handoffs
 
 - **Status files:** each agent updates `status/<lane>.md` at the end of every session (`status/README.md`).
 - **Contract change requests:** `docs/engineering/contracts-process.md`.
 - **Outside dependencies:** if you are blocked by something outside the repository, use the stand-in your brief lists and say so in your status file.
-- **Review:** open the pull request with `.github/PULL_REQUEST_TEMPLATE/v2.md`. A reviewer agent reviews it with `briefs/reviewer.md`.
+- **Review:** open the pull request with `.github/pull_request_template.md`. A reviewer agent reviews it with `briefs/reviewer.md`.

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# Images for the api and the worker. Build from v2/ (the workspace root):
+# Images for the api and the worker. Build from the repository root (the workspace root):
 #
 #   docker build -f infra/docker/Dockerfile --target api    -t qc/api:<tag>    .
 #   docker build -f infra/docker/Dockerfile --target worker -t qc/worker:<tag> .

@@ -24,6 +24,13 @@ Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (
 - `check.sh`: ok, then a stopped worker raises one alert, no repeat, then "recovered".
 - shellcheck 0.11 clean on all scripts; hadolint 2.12 clean; `caddy validate` and `caddy fmt` clean; `docker compose ... --env-file infra/.env.example config -q` passes.
 
+## Repository split (2026-10-17)
+
+- V2 now lives in its own repository, `usmankhan4001/quran-circles`, with `v2/` as the root. History was kept with `git subtree split --prefix=v2` from `nearby-dora-quran` branch `claude/peaceful-archimedes-ain95k` at `451b98f` (65 commits).
+- Path prefixes fixed for the new root in docs, lane `CLAUDE.md` files, briefs, infra comments, the cron file (`/srv/qc/app/infra/...`) and the deploy steps in `infra/README.md` (`cd /srv/qc/app`).
+- `.github/` moved over and adapted: `workflows/ci.yml` (was `v2-ci.yml`, no path filter or working directory), `pull_request_template.md` (was `PULL_REQUEST_TEMPLATE/v2.md`), `CODEOWNERS` without the `/v2` prefix.
+- `nearby-dora-quran` is unchanged; its `v2/` folder is no longer where work happens.
+
 ## Blocked (needs the owner)
 
 - VPS, SSH access, domain and DNS, ACME e-mail, second backup location (rclone remote), the backup age key pair, alert webhook and the named on-call human, external uptime monitor, provider credentials. Full list in `infra/README.md`, "What the owner must provide".

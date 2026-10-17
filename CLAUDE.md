@@ -1,10 +1,10 @@
-# Rules for every agent working in v2/
+# Rules for every agent working in this repository
 
 You are one agent in a multi-agent build. Read `docs/agents/README.md` and your lane's brief in `docs/agents/briefs/` before writing code. Product decisions are in `docs/product/decisions.md`. Do not re-decide them.
 
 ## Commands
 
-Run from `v2/`:
+Run from the repository root:
 
 - `pnpm install`
 - `pnpm check` runs typecheck, lint, tests and the format check. It must pass before you open a pull request.

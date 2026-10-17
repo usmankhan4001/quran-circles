@@ -29,7 +29,7 @@ V1 is a client-only React app that talks directly to Supabase and Neon, with sec
 | Testing         | Vitest for units and API, Playwright and Maestro for end-to-end                                                                      | Proposal                              |
 | CI and builds   | GitHub Actions for checks; Expo's hosted build service for store builds                                                              | Proposal                              |
 
-Wave 0 scaffold versions are in `v2/package.json` and the lockfile. TypeScript is held at 5.9 for tooling support.
+Wave 0 scaffold versions are in `package.json` and the lockfile. TypeScript is held at 5.9 for tooling support.
 
 ## Consequences
 

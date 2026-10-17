@@ -4,7 +4,7 @@ A single static page that shows every component in light, dark and high contrast
 
 ## Build and open it
 
-From `v2/`:
+From the repository root:
 
 ```sh
 pnpm install

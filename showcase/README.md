@@ -5,7 +5,7 @@ A browsable page of every `@qc/ui` component, rendered from the real kit code in
 It wraps the catalog the ui lane already generates; it adds no components and changes nothing in `packages/ui`.
 
 ```sh
-# from v2/
+# from the repository root
 pnpm --filter @qc/ui catalog   # writes packages/ui/build/catalog/index.html
 node showcase/build.mjs        # writes showcase/build/index.html
 ```

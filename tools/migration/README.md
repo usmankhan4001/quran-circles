@@ -31,7 +31,7 @@ pnpm --filter @qc/migration migrate:dry-run -- \
 
 ## Running it for real
 
-Run from `v2/`. Use a throwaway working folder: the exports contain personal data, so keep them out of git (`tools/migration/out/` is git-ignored) and delete them after use.
+Run from the repository root. Use a throwaway working folder: the exports contain personal data, so keep them out of git (`tools/migration/out/` is git-ignored) and delete them after use.
 
 1. **Export** V1 (read-only). Set the variables in your shell, never in a file in the repository.
 

@@ -20,7 +20,7 @@ The lean Quran and prayer modules for the Quran & Prayer tab, built as a package
 
 ## Read first
 
-`docs/product/decisions.md` (Quran and prayer), `docs/product/experience.md`, `docs/design/screens/` (Quran & Prayer), the V1 reader and prayer code at the repository root (`components/Quran/`, `components/PrayerTimes.tsx`, `services/quran.ts`, `src/services/aladhan.ts`), `@qc/ui`.
+`docs/product/decisions.md` (Quran and prayer), `docs/product/experience.md`, `docs/design/screens/` (Quran & Prayer), the V1 reader and prayer code in the V1 repository, `usmankhan4001/nearby-dora-quran` (`components/Quran/`, `components/PrayerTimes.tsx`, `services/quran.ts`, `src/services/aladhan.ts`), `@qc/ui`.
 
 ## Deliverables
 
