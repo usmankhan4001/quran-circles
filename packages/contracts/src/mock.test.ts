@@ -5,7 +5,9 @@ import { ENDPOINT_IDS, endpoints } from './endpoints';
 import { ApiError, ERROR_CODES } from './errors';
 import { fakeFromSchema, seeded } from './fake';
 import { createMockHandler } from './mock';
+import * as fx from './fixtures';
 import { fixtureId, importExamples } from './fixtures';
+import { SignInResponse } from './schemas/auth';
 import { REGISTRATION_EXPORT_COLUMNS, type ImportResult } from './schemas/admin';
 
 const mock = createMockHandler();
@@ -417,5 +419,386 @@ describe('mock server, endpoints added in 1.0.0-rc.2', () => {
     expect(
       (await attendee('/v1/admin/import/venues', 'POST', { dryRun: true, rows: [{}] })).status,
     ).toBe(403);
+  });
+});
+
+describe('mock server, staff sign-in and roles', () => {
+  const lahore = fx.cities.find((c) => c.slug === 'lahore')!;
+  const rawalpindi = fx.cities.find((c) => c.slug === 'rawalpindi')!;
+  const alNoor = fx.venues[0]!;
+  /** Taraweeh with Dora at Al-Noor (Rawalpindi). */
+  const sessionAlNoor = fixtureId('session', 1);
+  /** Women Dora at Markaz Iqra: Rawalpindi, another venue, full. */
+  const sessionIqra = fixtureId('session', 2);
+  /** Johar Town Dora, in Lahore. */
+  const sessionLahore = fixtureId('session', 5);
+  const occurrenceOf = (sessionId: string) =>
+    fx.occurrences.find((o) => o.sessionId === sessionId)!;
+  const TOKENS = { venue: 'mock-venue', city: 'mock-city', national: 'mock-staff' } as const;
+
+  /** Calls the mock and, on success, checks the body against the endpoint's schema. */
+  const call = async (
+    id: keyof typeof endpoints,
+    token: string,
+    path: string,
+    init: { method?: string; body?: unknown } = {},
+  ) => {
+    const d = endpoints[id] as EndpointDef;
+    const response = await mock(
+      new Request(`${BASE}${path}`, {
+        method: init.method ?? d.method,
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      }),
+    );
+    const text = await response.text();
+    const data =
+      text && d.success.contentType !== 'text/csv' ? (JSON.parse(text) as unknown) : text;
+    if (response.status === d.success.status && d.success.schema && typeof data !== 'string') {
+      const parsed = d.success.schema.safeParse(data);
+      expect(parsed.success, `${id}: ${JSON.stringify(parsed.error?.issues.slice(0, 3))}`).toBe(
+        true,
+      );
+    }
+    return { status: response.status, data };
+  };
+  const codeOf = (data: unknown) => ApiError.parse(data).error.code;
+  const ids = (data: unknown) => (data as { items: { id: string }[] }).items.map((x) => x.id);
+
+  const signIn = async (phone: string, code = '123456') => {
+    const requested = await mock(
+      new Request(`${BASE}/v1/auth/code`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      }),
+    );
+    expect(requested.status).toBe(202);
+    const challenge = (await requested.json()) as { challengeId: string };
+    const verified = await mock(
+      new Request(`${BASE}/v1/auth/verify`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ challengeId: challenge.challengeId, code }),
+      }),
+    );
+    return { status: verified.status, data: (await verified.json()) as unknown };
+  };
+
+  for (const kind of ['venue', 'city', 'national'] as const) {
+    const account = fx.staffAccounts[kind];
+
+    it(`${kind}: signs in from its test number and reads its roles back`, async () => {
+      const { status, data } = await signIn(account.phone);
+      expect(status).toBe(200);
+      const signedIn = SignInResponse.parse(data);
+      expect(signedIn.accessToken).toBe(TOKENS[kind]);
+      expect(signedIn.me).toEqual(account.me);
+      expect(signedIn.me.roles).toHaveLength(1);
+      const me = await call('me.get', signedIn.accessToken, '/v1/me');
+      expect(me.status).toBe(200);
+      expect(me.data).toEqual(account.me);
+    });
+
+    it(`${kind}: refreshes into the same staff token`, async () => {
+      const { status, data } = await call('auth.refresh', 'unused', '/v1/auth/refresh', {
+        body: { refreshToken: account.refreshToken },
+      });
+      expect(status).toBe(200);
+      expect((data as { accessToken: string }).accessToken).toBe(account.token);
+    });
+
+    it(`${kind}: a wrong code is still otp_invalid`, async () => {
+      const { status, data } = await signIn(account.phone, '000000');
+      expect(status).toBe(400);
+      expect(codeOf(data)).toBe('otp_invalid');
+    });
+  }
+
+  it('signs any other number in as the attendee, as before', async () => {
+    const { data } = await signIn('+923000000099');
+    const signedIn = SignInResponse.parse(data);
+    expect(signedIn.accessToken).toBe('mock-user');
+    expect(signedIn.me).toEqual(fx.fixtureMe);
+    expect((await call('me.get', 'mock-user', '/v1/me')).data).toEqual(fx.fixtureMe);
+  });
+
+  it('serves fixture venues by role, with the city filter', async () => {
+    const venuesFor = async (token: string, q = '') =>
+      ids((await call('adminVenues.list', token, `/v1/admin/venues?limit=100${q}`)).data);
+    expect(await venuesFor(TOKENS.national)).toEqual(fx.venues.map((v) => v.id));
+    expect(await venuesFor(TOKENS.city)).toEqual(
+      fx.venues.filter((v) => v.cityId === rawalpindi.id).map((v) => v.id),
+    );
+    expect(await venuesFor(TOKENS.venue)).toEqual([alNoor.id]);
+    expect(await venuesFor(TOKENS.national, `&cityId=${lahore.id}&includeArchived=true`)).toEqual(
+      fx.venues.filter((v) => v.cityId === lahore.id).map((v) => v.id),
+    );
+    expect(await venuesFor(TOKENS.city, `&cityId=${lahore.id}`)).toEqual([]);
+  });
+
+  it('serves fixture sessions by role, with city and venue filters', async () => {
+    const sessionsFor = async (token: string, q = '') =>
+      ids((await call('adminSessions.list', token, `/v1/admin/sessions?limit=100${q}`)).data);
+    expect(await sessionsFor(TOKENS.national)).toEqual(fx.adminSessions.map((s) => s.id));
+    expect(await sessionsFor(TOKENS.city)).toEqual(
+      fx.sessions.filter((s) => s.cityId === rawalpindi.id).map((s) => s.id),
+    );
+    expect(await sessionsFor(TOKENS.venue)).toEqual(
+      fx.sessions.filter((s) => s.venueId === alNoor.id).map((s) => s.id),
+    );
+    expect(await sessionsFor(TOKENS.national, `&cityId=${lahore.id}`)).toEqual([sessionLahore]);
+    expect(await sessionsFor(TOKENS.city, `&venueId=${fx.venues[1]!.id}`)).toEqual([sessionIqra]);
+    const first = (await call('adminSessions.list', TOKENS.national, '/v1/admin/sessions?limit=2'))
+      .data as { nextCursor: string | null };
+    expect(first.nextCursor).toBe('2');
+  });
+
+  it('serves fixture circles by role, with city and venue filters', async () => {
+    const circlesFor = async (token: string, q = '') =>
+      ids((await call('adminCircles.list', token, `/v1/admin/circles?limit=100${q}`)).data);
+    expect(await circlesFor(TOKENS.national)).toEqual(fx.circles.map((c) => c.id));
+    expect(await circlesFor(TOKENS.national, `&cityId=${lahore.id}`)).toEqual([
+      fixtureId('circle', 2),
+    ]);
+    expect(await circlesFor(TOKENS.national, `&venueId=${alNoor.id}`)).toEqual([
+      fixtureId('circle', 1),
+    ]);
+    expect(await circlesFor(TOKENS.city)).toEqual([fixtureId('circle', 1)]);
+    expect(await circlesFor(TOKENS.venue)).toEqual([fixtureId('circle', 1)]);
+  });
+
+  it('serves fixture occurrences for a session, with from, to and limit', async () => {
+    const path = `/v1/admin/sessions/${sessionAlNoor}/occurrences`;
+    const all = (await call('adminSessions.occurrences', TOKENS.venue, path)).data as {
+      items: { id: string; startsAt: string; headcount: number | null }[];
+    };
+    const expected = fx.occurrences.filter((o) => o.sessionId === sessionAlNoor);
+    expect(all.items.map((o) => o.id)).toEqual(expected.map((o) => o.id));
+    expect(all.items[0]).toHaveProperty('headcount');
+    const from = expected[2]!.startsAt;
+    const to = expected[4]!.startsAt;
+    const window = (
+      await call('adminSessions.occurrences', TOKENS.venue, `${path}?from=${from}&to=${to}`)
+    ).data as { items: { id: string }[] };
+    expect(window.items.map((o) => o.id)).toEqual(expected.slice(2, 5).map((o) => o.id));
+    const limited = (await call('adminSessions.occurrences', TOKENS.venue, `${path}?limit=2`))
+      .data as { items: unknown[] };
+    expect(limited.items).toHaveLength(2);
+  });
+
+  it('builds attendance from the fixture occurrence: headcount, no entries, not marked', async () => {
+    const o = occurrenceOf(sessionAlNoor);
+    const { status, data } = await call(
+      'adminAttendance.get',
+      TOKENS.venue,
+      `/v1/admin/occurrences/${o.id}/attendance`,
+    );
+    expect(status).toBe(200);
+    expect(data).toEqual({
+      occurrenceId: o.id,
+      headcount: o.headcount,
+      entries: [],
+      markedAt: null,
+    });
+  });
+
+  it('lists synthetic registrants for a session, with totals and filters', async () => {
+    const path = `/v1/admin/sessions/${sessionAlNoor}/registrations`;
+    const { status, data } = await call('registrations.forSession', TOKENS.venue, path);
+    expect(status).toBe(200);
+    const body = data as {
+      items: { id: string; name: string | null; phone: string | null; status: string }[];
+      totals: { registrations: number; people: number; waitlisted: number };
+    };
+    expect(body.items.length).toBeGreaterThan(2);
+    expect(body.totals.registrations).toBe(body.items.length);
+    expect(body.totals.waitlisted).toBe(0);
+    for (const r of body.items) if (r.phone) expect(r.phone.startsWith('+92300000')).toBe(true);
+    expect(body.items.some((r) => r.name === null)).toBe(true);
+    expect(body.items.some((r) => r.phone === null)).toBe(true);
+    const full = (
+      await call(
+        'registrations.forSession',
+        TOKENS.city,
+        `/v1/admin/sessions/${sessionIqra}/registrations?status=waitlisted`,
+      )
+    ).data as typeof body;
+    expect(full.items.length).toBeGreaterThan(0);
+    expect(full.items.every((r) => r.status === 'waitlisted')).toBe(true);
+    expect(full.totals.waitlisted).toBe(full.items.length);
+    const occurrence = occurrenceOf(sessionAlNoor).id;
+    const forOne = (
+      await call(
+        'registrations.forSession',
+        TOKENS.venue,
+        `${path}?occurrenceId=${occurrence}&limit=2`,
+      )
+    ).data as typeof body & { nextCursor: string | null };
+    expect(forOne.items).toHaveLength(2);
+    expect(forOne.nextCursor).toBe('2');
+  });
+
+  it('answers not_found for unknown sessions and occurrences on the new handlers', async () => {
+    const missingSession = fixtureId('session', 99);
+    const missingOccurrence = fixtureId('occurrence', 9999);
+    for (const kind of ['venue', 'city', 'national'] as const) {
+      const token = TOKENS[kind];
+      for (const [id, path] of [
+        ['adminSessions.occurrences', `/v1/admin/sessions/${missingSession}/occurrences`],
+        ['registrations.forSession', `/v1/admin/sessions/${missingSession}/registrations`],
+        ['adminAttendance.get', `/v1/admin/occurrences/${missingOccurrence}/attendance`],
+        ['adminSessions.get', `/v1/admin/sessions/${missingSession}`],
+      ] as const) {
+        const { status, data } = await call(id, token, path);
+        expect(status, `${kind} ${id}`).toBe(404);
+        expect(codeOf(data)).toBe('not_found');
+      }
+    }
+  });
+
+  it('refuses a venue coordinator on another venue, and a city coordinator on another city', async () => {
+    const lahoreOccurrence = occurrenceOf(sessionLahore).id;
+    const iqraOccurrence = occurrenceOf(sessionIqra).id;
+    const cases = [
+      ['mock-venue', 'registrations.forSession', `/v1/admin/sessions/${sessionIqra}/registrations`],
+      ['mock-venue', 'adminSessions.occurrences', `/v1/admin/sessions/${sessionIqra}/occurrences`],
+      ['mock-venue', 'adminAttendance.get', `/v1/admin/occurrences/${iqraOccurrence}/attendance`],
+      [
+        'mock-city',
+        'registrations.forSession',
+        `/v1/admin/sessions/${sessionLahore}/registrations`,
+      ],
+      ['mock-city', 'adminSessions.occurrences', `/v1/admin/sessions/${sessionLahore}/occurrences`],
+      ['mock-city', 'adminAttendance.get', `/v1/admin/occurrences/${lahoreOccurrence}/attendance`],
+    ] as const;
+    for (const [token, id, path] of cases) {
+      const { status, data } = await call(id, token, path);
+      expect(status, `${token} ${id}`).toBe(403);
+      expect(codeOf(data)).toBe('forbidden');
+    }
+    // The city coordinator reaches every venue in the city; the national admin reaches all.
+    expect(
+      (
+        await call(
+          'adminAttendance.get',
+          'mock-city',
+          `/v1/admin/occurrences/${iqraOccurrence}/attendance`,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await call(
+          'registrations.forSession',
+          'mock-staff',
+          `/v1/admin/sessions/${sessionLahore}/registrations`,
+        )
+      ).status,
+    ).toBe(200);
+  });
+
+  it('answers not_found for a session or circle outside scope on the scoped reads', async () => {
+    const venueOwn = await call(
+      'adminSessions.get',
+      'mock-venue',
+      `/v1/admin/sessions/${sessionAlNoor}`,
+    );
+    expect(venueOwn.status).toBe(200);
+    for (const [token, id, path] of [
+      ['mock-venue', 'adminSessions.get', `/v1/admin/sessions/${sessionIqra}`],
+      ['mock-city', 'adminSessions.get', `/v1/admin/sessions/${sessionLahore}`],
+      ['mock-city', 'adminCircles.get', `/v1/admin/circles/${fixtureId('circle', 2)}`],
+    ] as const) {
+      const { status, data } = await call(id, token, path);
+      expect(status, `${token} ${path}`).toBe(404);
+      expect(codeOf(data)).toBe('not_found');
+    }
+    expect(
+      (await call('adminCircles.get', 'mock-staff', `/v1/admin/circles/${fixtureId('circle', 2)}`))
+        .status,
+    ).toBe(200);
+  });
+
+  it('refuses each role the endpoints the scope matrix does not give it', async () => {
+    const status = async (token: string, id: keyof typeof endpoints, path: string) =>
+      (await call(id, token, path)).status;
+    expect(await status('mock-venue', 'adminRoles.list', '/v1/admin/role-assignments')).toBe(403);
+    expect(await status('mock-venue', 'adminAudit.list', '/v1/admin/audit')).toBe(403);
+    expect(await status('mock-venue', 'adminSettings.get', '/v1/admin/settings')).toBe(403);
+    expect(await status('mock-city', 'adminSettings.get', '/v1/admin/settings')).toBe(403);
+    expect(await status('mock-city', 'adminRoles.list', '/v1/admin/role-assignments')).toBe(200);
+    expect(await status('mock-city', 'adminAudit.list', '/v1/admin/audit')).toBe(200);
+    expect(await status('mock-staff', 'adminSettings.get', '/v1/admin/settings')).toBe(200);
+    expect(await status('mock-venue', 'adminTemplates.list', '/v1/admin/message-templates')).toBe(
+      200,
+    );
+  });
+
+  it('checks writes against the place in the body or path', async () => {
+    const lahoreArea = fx.areas.find((a) => a.cityId === lahore.id)!;
+    const venueInLahore = {
+      ...fx.importExamples.venues[0]!,
+      cityId: lahore.id,
+      areaId: lahoreArea.id,
+    };
+    expect(
+      (await call('adminVenues.create', 'mock-city', '/v1/admin/venues', { body: venueInLahore }))
+        .status,
+    ).toBe(403);
+    const venueInRawalpindi = {
+      ...venueInLahore,
+      cityId: rawalpindi.id,
+      areaId: fx.areas.find((a) => a.cityId === rawalpindi.id)!.id,
+    };
+    expect(
+      (
+        await call('adminVenues.create', 'mock-city', '/v1/admin/venues', {
+          body: venueInRawalpindi,
+        })
+      ).status,
+    ).toBe(201);
+    const preview = (token: string, scope: unknown) =>
+      call('adminUpdates.preview', token, '/v1/admin/updates/preview', {
+        body: { scope, title: { en: 'Hello' }, body: { en: 'World' } },
+      });
+    expect((await preview('mock-venue', { type: 'national' })).status).toBe(403);
+    expect((await preview('mock-venue', { type: 'venue', venueId: fx.venues[1]!.id })).status).toBe(
+      403,
+    );
+    expect((await preview('mock-venue', { type: 'venue', venueId: alNoor.id })).status).toBe(200);
+    expect((await preview('mock-city', { type: 'city', cityId: rawalpindi.id })).status).toBe(200);
+    expect((await preview('mock-city', { type: 'city', cityId: lahore.id })).status).toBe(403);
+    const decide = (token: string) =>
+      call('adminCircles.decide', token, `/v1/admin/circles/${fixtureId('circle', 2)}/decision`, {
+        body: { decision: 'approve' },
+      });
+    expect((await decide('mock-city')).status).toBe(403);
+    expect((await decide('mock-venue')).status).toBe(403);
+    expect((await decide('mock-staff')).status).toBe(200);
+    const invite = (token: string, venueId: string) =>
+      call('adminRoles.invite', token, '/v1/admin/invites', {
+        body: { role: 'venue_coordinator', venueId, phone: '+923000000301' },
+      });
+    expect((await invite('mock-city', fx.venues[1]!.id)).status).toBe(201);
+    expect((await invite('mock-city', fx.venues[4]!.id)).status).toBe(403);
+    expect((await invite('mock-venue', alNoor.id)).status).toBe(403);
+  });
+
+  it('exports only the registrations in the caller scope', async () => {
+    const rows = async (token: string) =>
+      (
+        (await call('adminRegistrations.export', token, '/v1/admin/registrations/export'))
+          .data as string
+      )
+        .trimEnd()
+        .split('\r\n')
+        .slice(1);
+    expect(await rows('mock-staff')).toHaveLength(fx.sessions.length);
+    const venueRows = await rows('mock-venue');
+    expect(venueRows.length).toBe(fx.sessions.filter((s) => s.venueId === alNoor.id).length);
+    expect(venueRows.every((l) => l.includes(alNoor.id))).toBe(true);
+    const cityRows = await rows('mock-city');
+    expect(cityRows.length).toBe(fx.sessions.filter((s) => s.cityId === rawalpindi.id).length);
   });
 });

@@ -4,7 +4,7 @@ import { Area, City, Province, Venue } from './schemas/places';
 import { AdminOccurrence, AdminSession, Session } from './schemas/sessions';
 import { AdminCircle, checkImportRows } from './schemas/admin';
 import { ContentPage } from './schemas/config';
-import { Me } from './schemas/people';
+import { Me, StaffRegistration } from './schemas/people';
 import { Update } from './schemas/updates';
 import { PhoneE164 } from './common';
 
@@ -120,5 +120,44 @@ describe('fixtures', () => {
       expect(PhoneE164.safeParse(r.phone).success).toBe(true);
       expect(r.phone.startsWith('+92300000')).toBe(true);
     }
+  });
+
+  it('give each staff role a mock account with a fake number and real fixture scope', () => {
+    const accounts = Object.values(fx.staffAccounts);
+    expect(accounts.map((a) => a.kind).sort()).toEqual(['city', 'national', 'venue']);
+    for (const key of ['token', 'refreshToken', 'phone', 'challengeId'] as const)
+      expect(unique(accounts.map((a) => a[key])), key).toBe(true);
+    expect(unique([fx.fixtureMe.id, ...accounts.map((a) => a.me.id)])).toBe(true);
+    for (const a of accounts) {
+      Me.parse(a.me);
+      expect(a.me.phone).toBe(a.phone);
+      expect(a.phone.startsWith('+92300000')).toBe(true);
+      expect(a.refreshToken.length).toBeGreaterThanOrEqual(10);
+    }
+    const [venueRole] = fx.staffAccounts.venue.me.roles;
+    const venue = fx.venues.find((v) => v.id === venueRole?.venueId);
+    expect(venueRole?.role).toBe('venue_coordinator');
+    expect(venue?.cityId).toBe(venueRole?.cityId);
+    const [cityRole] = fx.staffAccounts.city.me.roles;
+    expect(cityRole?.role).toBe('city_coordinator');
+    expect(fx.cities.some((c) => c.id === cityRole?.cityId)).toBe(true);
+    expect(fx.staffAccounts.national.me.roles.map((r) => r.role)).toEqual(['national_admin']);
+    expect(fx.staffAccounts.national.token).toBe('mock-staff');
+  });
+
+  it('give every fixture session synthetic staff registrants, and none to an unknown one', () => {
+    const all = fx.sessions.flatMap((s) => {
+      const rows = fx.staffRegistrants(s.id);
+      expect(rows.length, s.id).toBeGreaterThan(0);
+      for (const r of rows) {
+        StaffRegistration.parse(r);
+        if (r.phone) expect(r.phone.startsWith('+92300000')).toBe(true);
+        if (s.section !== 'family') expect(r.section).toBe(s.section);
+      }
+      expect(rows.some((r) => r.status === 'waitlisted')).toBe(s.registration.full);
+      return rows;
+    });
+    expect(unique(all.map((r) => r.id))).toBe(true);
+    expect(fx.staffRegistrants(fx.fixtureId('session', 99))).toEqual([]);
   });
 });

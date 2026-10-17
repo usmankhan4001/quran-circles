@@ -2,7 +2,7 @@ import type { Area, City, Province, Venue } from './schemas/places';
 import type { AdminOccurrence, AdminSession, Occurrence, Session } from './schemas/sessions';
 import type { AdminCircle, VenueCreate } from './schemas/admin';
 import type { ContentPage } from './schemas/config';
-import type { Me } from './schemas/people';
+import type { Me, StaffRegistration } from './schemas/people';
 import type { Update } from './schemas/updates';
 
 /**
@@ -24,6 +24,8 @@ const KIND = {
   user: '0a',
   update: '0b',
   registration: '0c',
+  role: '0d',
+  challenge: '0e',
 } as const;
 
 /** A stable, valid UUID for fixture number `n` of a kind. */
@@ -629,6 +631,133 @@ export const fixtureMe: Me = {
     preferredLanguage: null,
   },
   roles: [],
+};
+
+/** A staff kind the mock can sign in as. */
+export type StaffKind = 'venue' | 'city' | 'national';
+
+/**
+ * Staff accounts for the mock server, one for each role. Sign in to the mock with the `phone`
+ * (any `auth.requestCode` body) and code `123456`: the mock returns `token` and `me`. The numbers
+ * are synthetic, in the fixture range, and belong to no one.
+ */
+export interface StaffAccount {
+  kind: StaffKind;
+  /** The bearer token the mock issues and accepts for this account. */
+  token: string;
+  refreshToken: string;
+  /** The fake number that signs in as this account. */
+  phone: string;
+  /** What `auth.requestCode` returns for `phone`, and `auth.verifyCode` maps back. */
+  challengeId: string;
+  me: Me;
+}
+
+const VENUE_AL_NOOR = venues[0]!;
+const CITY_RAWALPINDI = cities.find((c) => c.id === VENUE_AL_NOOR.cityId)!;
+
+const staffMe = (n: number, displayName: string, phone: string, roles: Me['roles']): Me => ({
+  id: fixtureId('user', n),
+  phone,
+  displayName,
+  locale: 'en',
+  createdAt: '2027-01-05T05:00:00Z',
+  profile: { ...fixtureMe.profile },
+  roles,
+});
+
+const assignedAt = '2027-01-05T05:00:00Z';
+
+export const staffAccounts: Record<StaffKind, StaffAccount> = {
+  venue: {
+    kind: 'venue',
+    token: 'mock-venue',
+    refreshToken: 'mock-refresh-venue-0000',
+    phone: '+923000000201',
+    challengeId: fixtureId('challenge', 1),
+    me: staffMe(2, 'Sample Venue Coordinator', '+923000000201', [
+      {
+        id: fixtureId('role', 1),
+        role: 'venue_coordinator',
+        scopeType: 'venue',
+        cityId: VENUE_AL_NOOR.cityId,
+        venueId: VENUE_AL_NOOR.id,
+        scopeName: VENUE_AL_NOOR.name,
+        createdAt: assignedAt,
+      },
+    ]),
+  },
+  city: {
+    kind: 'city',
+    token: 'mock-city',
+    refreshToken: 'mock-refresh-city-0000',
+    phone: '+923000000202',
+    challengeId: fixtureId('challenge', 2),
+    me: staffMe(3, 'Sample City Coordinator', '+923000000202', [
+      {
+        id: fixtureId('role', 2),
+        role: 'city_coordinator',
+        scopeType: 'city',
+        cityId: CITY_RAWALPINDI.id,
+        venueId: null,
+        scopeName: CITY_RAWALPINDI.name,
+        createdAt: assignedAt,
+      },
+    ]),
+  },
+  national: {
+    kind: 'national',
+    token: 'mock-staff',
+    refreshToken: 'mock-refresh-staff-0000',
+    phone: '+923000000203',
+    challengeId: fixtureId('challenge', 3),
+    me: staffMe(4, 'Sample National Admin', '+923000000203', [
+      {
+        id: fixtureId('role', 3),
+        role: 'national_admin',
+        scopeType: 'national',
+        cityId: null,
+        venueId: null,
+        scopeName: null,
+        createdAt: assignedAt,
+      },
+    ]),
+  },
+};
+
+const GUEST_NAMES = [
+  'Sample Guest One',
+  'Sample Guest Two',
+  null,
+  'نمونہ مہمان',
+  'Sample Guest Five',
+  'Sample Guest Six',
+];
+
+/**
+ * The registrants a coordinator sees for a fixture session: six invented people with numbers in
+ * the fixture range. One has no name yet and one has no number. A full session puts the last
+ * two on the waitlist. Empty for an unknown session.
+ */
+export const staffRegistrants = (sessionId: string): StaffRegistration[] => {
+  const index = sessions.findIndex((s) => s.id === sessionId);
+  const session = sessions[index];
+  if (!session) return [];
+  return GUEST_NAMES.map((name, i) => ({
+    id: fixtureId('registration', (index + 1) * 100 + i + 1),
+    name,
+    phone: i === 4 ? null : `+9230000003${String(index + 1)}${i + 1}`,
+    areaId: session.areaId,
+    section:
+      session.section === 'family'
+        ? (['family', 'women', 'men'] as const)[i % 3]!
+        : session.section,
+    partySize: (i % 3) + 1,
+    status: session.registration.full && i >= 4 ? 'waitlisted' : 'confirmed',
+    occurrenceId: null,
+    allowsWhatsapp: i % 2 === 0,
+    createdAt: FIXTURE_REGISTERED_AT,
+  }));
 };
 
 export const fixtureUpdates: Update[] = [

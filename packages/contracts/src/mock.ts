@@ -17,6 +17,19 @@ import {
 import { csvCell, csvFile } from './csv';
 import { ValidationIssue } from './errors';
 import { CONTRACT_VERSION } from './openapi';
+import {
+  can,
+  roleAssignAction,
+  scopeFilter,
+  updatePostAction,
+  ACTIONS,
+  type Principal,
+  type ResourceScope,
+  type ScopeAction,
+  type ScopeFilter,
+} from './scopes';
+import type { Me } from './schemas/people';
+import type { Role } from './enums';
 
 /**
  * A mock server generated from the API contract. It validates every request against the schemas,
@@ -24,9 +37,16 @@ import { CONTRACT_VERSION } from './openapi';
  *
  * Try it:
  * - `Authorization: Bearer mock-user` is an attendee; `mock-staff` is a national admin;
- *   `mock-expired` gets token_expired; no token on a signed-in endpoint gets unauthenticated.
+ *   `mock-city` is the city coordinator of Rawalpindi; `mock-venue` is the venue coordinator of
+ *   Sample Masjid Al-Noor (Rawalpindi). `mock-expired` gets token_expired; no token on a
+ *   signed-in endpoint gets unauthenticated.
  * - `x-mock-error: <error code>` makes any endpoint fail with that code.
- * - Code `123456` signs in; any other code gets otp_invalid.
+ * - Code `123456` signs in; any other code gets otp_invalid. A request for a code to one of the
+ *   staff test numbers in `staffAccounts` (+923000000201 venue, +923000000202 city,
+ *   +923000000203 national) signs in as that staff account; any other number is the attendee.
+ * - Staff tokens are checked against the scope matrix: a role that may not use an endpoint gets
+ *   forbidden, a known record outside the caller's scope gets forbidden (or not_found on the
+ *   scoped reads), and admin lists hold only what the role may see.
  */
 export type MockHandler = (request: Request) => Promise<Response>;
 
@@ -74,7 +94,133 @@ const page = <T>(items: T[], query: { cursor?: string; limit?: number }) => {
   return { items: slice, nextCursor: start + limit < items.length ? String(start + limit) : null };
 };
 
-type Ctx = { params: Record<string, string>; query: Record<string, unknown>; body: unknown };
+type Ctx = {
+  params: Record<string, string>;
+  query: Record<string, unknown>;
+  body: unknown;
+  /** The signed-in person behind the token, when there is one. */
+  me?: Me;
+  /** Their role assignments, for `can` and `scopeFilter`. */
+  principal?: Principal;
+};
+export type MockContext = Ctx;
+
+const staffList = Object.values(fx.staffAccounts);
+const staffByToken = (token: string) => staffList.find((a) => a.token === token);
+
+const principalOf = (me: Me): Principal => ({
+  userId: me.id,
+  assignments: me.roles.map((r) => ({ role: r.role, cityId: r.cityId, venueId: r.venueId })),
+});
+
+const inScope = (f: ScopeFilter, r: { cityId: string; venueId: string }): boolean =>
+  f.national || f.cityIds.includes(r.cityId) || f.venueIds.includes(r.venueId);
+
+/** The scope filter of a list action for the caller. No principal sees nothing. */
+const filterFor = (c: Ctx, action: ScopeAction): ScopeFilter =>
+  scopeFilter(c.principal ?? null, action);
+
+const venueScope = (venueId: unknown): ResourceScope | null => {
+  const v = fx.venues.find((x) => x.id === venueId);
+  return v ? { cityId: v.cityId, venueId: v.id } : null;
+};
+const sessionScope = (sessionId: unknown) => {
+  const s = fx.sessions.find((x) => x.id === sessionId);
+  return s ? { cityId: s.cityId, venueId: s.venueId } : null;
+};
+
+/**
+ * What a staff request acts on, from its path or body, with the actions to check it against.
+ * `null` when it names a record the fixtures do not have: the handler answers that (usually
+ * not_found). `undefined` when there is nothing to check beyond the role.
+ */
+const staffResource = (
+  def: EndpointDef,
+  c: Ctx,
+): { resource: ResourceScope; actions: ScopeAction[] } | null | undefined => {
+  const actions = [...def.actions] as ScopeAction[];
+  const p = c.params;
+  const body = (c.body ?? {}) as Record<string, unknown>;
+  const withActions = (resource: ResourceScope | null, only = actions) =>
+    resource ? { resource, actions: only } : null;
+  if (p.sessionId) return withActions(sessionScope(p.sessionId));
+  if (p.occurrenceId) {
+    const o = fx.occurrences.find((x) => x.id === p.occurrenceId);
+    return withActions(o ? sessionScope(o.sessionId) : null);
+  }
+  if (p.venueId) return withActions(venueScope(p.venueId));
+  if (p.circleId) {
+    const x = fx.circles.find((y) => y.id === p.circleId);
+    return withActions(x ? { cityId: x.cityId, venueId: x.venueId } : null);
+  }
+  switch (def.id) {
+    case 'adminVenues.create':
+      return fx.cities.some((x) => x.id === body.cityId)
+        ? { resource: { cityId: body.cityId as string }, actions: ['venue.create'] }
+        : null;
+    case 'adminCircles.create':
+    case 'adminSessions.create':
+      return withActions(venueScope(body.venueId));
+    case 'adminUpdates.post':
+    case 'adminUpdates.preview': {
+      const scope = body.scope as {
+        type: 'national' | 'city' | 'venue';
+        cityId?: string;
+        venueId?: string;
+      };
+      const only = [updatePostAction(scope.type)];
+      if (scope.type === 'national') return { resource: {}, actions: only };
+      if (scope.type === 'venue') return withActions(venueScope(scope.venueId), only);
+      return fx.cities.some((x) => x.id === scope.cityId)
+        ? { resource: { cityId: scope.cityId }, actions: only }
+        : null;
+    }
+    case 'adminRoles.invite':
+    case 'adminRoles.assign': {
+      const role = body.role as Role;
+      const only = [roleAssignAction(role)];
+      if (role === 'national_admin') return { resource: {}, actions: only };
+      if (role === 'venue_coordinator') return withActions(venueScope(body.venueId), only);
+      return fx.cities.some((x) => x.id === body.cityId)
+        ? { resource: { cityId: body.cityId as string }, actions: only }
+        : null;
+    }
+    default:
+      return undefined;
+  }
+};
+
+/**
+ * The server's scope check for a staff token, run after the request validates. A role that no
+ * action of the endpoint allows is forbidden. A known record outside the caller's scope is
+ * forbidden, except on the scoped reads (`any` actions such as `adminSessions.get`), which answer
+ * not_found so the record's existence is not revealed.
+ */
+const staffGuard = (def: EndpointDef, c: Ctx, requestId: string): Response | null => {
+  const principal = c.principal ?? null;
+  const actions = def.actions as readonly ScopeAction[];
+  const roles = new Set<Role>(actions.flatMap((a) => [...ACTIONS[a].roles]));
+  if (!principal?.assignments.some((a) => roles.has(a.role)))
+    return errorResponse('forbidden', requestId);
+  const target = staffResource(def, c);
+  if (!target) return null;
+  if (target.actions.every((a) => ACTIONS[a].level === 'any')) {
+    const r = target.resource as { cityId: string; venueId: string };
+    return target.actions.some((a) => inScope(filterFor(c, a), r)) ? null : notFound(requestId);
+  }
+  if (target.actions.some((a) => can(principal, a, target.resource))) return null;
+  return errorResponse('forbidden', requestId);
+};
+
+const signedIn = (account: (typeof staffList)[number]) => ({
+  accessToken: account.token,
+  accessTokenExpiresAt: '2027-02-15T09:00:00Z',
+  refreshToken: account.refreshToken,
+  refreshTokenExpiresAt: '2027-03-15T08:00:00Z',
+});
+
+const generated = (id: keyof typeof endpoints) =>
+  fakeFromSchema((endpoints[id] as EndpointDef).success.schema!, seeded(id));
 
 const sessionMatches = (s: Session, q: Record<string, unknown>): boolean => {
   if (q.cityId && s.cityId !== q.cityId) return false;
@@ -248,9 +394,22 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
     const s = o && fx.sessions.find((x) => x.id === o.sessionId);
     return o && s ? { ...fx.toPublicOccurrence(o), session: s } : notFound(id);
   },
+  'auth.requestCode': (c) => {
+    const body = c.body as { phone: string; channel: 'whatsapp' | 'sms' };
+    const account = staffList.find((a) => a.phone === body.phone);
+    if (!account) return generated('auth.requestCode');
+    return {
+      challengeId: account.challengeId,
+      channel: body.channel,
+      expiresAt: '2027-02-15T08:10:00Z',
+      resendAfterSeconds: 30,
+    };
+  },
   'auth.verifyCode': (c, id) => {
-    const body = c.body as { code: string };
+    const body = c.body as { challengeId: string; code: string };
     if (body.code !== '123456') return errorResponse('otp_invalid', id);
+    const account = staffList.find((a) => a.challengeId === body.challengeId);
+    if (account) return { ...signedIn(account), me: account.me, isNewAccount: false };
     const expires = '2027-02-15T09:00:00Z';
     return {
       accessToken: 'mock-user',
@@ -261,7 +420,12 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
       isNewAccount: false,
     };
   },
-  'me.get': () => fx.fixtureMe,
+  'auth.refresh': (c) => {
+    const body = c.body as { refreshToken: string };
+    const account = staffList.find((a) => a.refreshToken === body.refreshToken);
+    return account ? signedIn(account) : generated('auth.refresh');
+  },
+  'me.get': (c) => c.me ?? fx.fixtureMe,
   'registrations.create': (c, id) => {
     const body = c.body as {
       sessionId: string;
@@ -302,10 +466,12 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
       });
     const day = pakistanDate(fx.FIXTURE_REGISTERED_AT);
     const inRange = (!q.from || day >= q.from) && (!q.to || day <= q.to);
+    const scope = filterFor(c, 'registration.export');
     const lines = fx.sampleRegistrants
       .filter(
         (r) =>
           inRange &&
+          inScope(scope, r) &&
           (!q.cityId || r.cityId === q.cityId) &&
           (!q.venueId || r.venueId === q.venueId),
       )
@@ -327,6 +493,83 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
   'adminSessions.get': (c, id) =>
     fx.adminSessions.find((s) => s.id === c.params.sessionId) ?? notFound(id),
   'adminCircles.get': (c, id) => fx.circles.find((x) => x.id === c.params.circleId) ?? notFound(id),
+  'adminVenues.list': (c) => {
+    const scope = filterFor(c, 'venue.list_admin');
+    const q = c.query as { cityId?: string; includeArchived?: boolean };
+    const items = fx.venues.filter(
+      (v) =>
+        inScope(scope, { cityId: v.cityId, venueId: v.id }) &&
+        (!q.cityId || v.cityId === q.cityId) &&
+        (q.includeArchived === true || v.status !== 'archived'),
+    );
+    return page(items, c.query as { cursor?: string; limit?: number });
+  },
+  'adminSessions.list': (c) => {
+    const scope = filterFor(c, 'session.list_admin');
+    const q = c.query as { cityId?: string; venueId?: string; status?: string };
+    const items = fx.adminSessions.filter(
+      (s) =>
+        inScope(scope, s) &&
+        (!q.cityId || s.cityId === q.cityId) &&
+        (!q.venueId || s.venueId === q.venueId) &&
+        (!q.status || s.status === q.status),
+    );
+    return page(items, c.query as { cursor?: string; limit?: number });
+  },
+  'adminSessions.occurrences': (c, id) => {
+    if (!fx.sessions.some((s) => s.id === c.params.sessionId)) return notFound(id);
+    const q = c.query as { from?: string; to?: string; limit?: number };
+    return {
+      items: fx.occurrences
+        .filter(
+          (o) =>
+            o.sessionId === c.params.sessionId &&
+            (!q.from || o.startsAt >= q.from) &&
+            (!q.to || o.startsAt <= q.to),
+        )
+        .slice(0, q.limit ?? 30),
+    };
+  },
+  'adminCircles.list': (c) => {
+    const scope = filterFor(c, 'circle.list_admin');
+    const q = c.query as { cityId?: string; venueId?: string; status?: string };
+    const items = fx.circles.filter(
+      (x) =>
+        inScope(scope, x) &&
+        (!q.cityId || x.cityId === q.cityId) &&
+        (!q.venueId || x.venueId === q.venueId) &&
+        (!q.status || x.status === q.status),
+    );
+    return page(items, c.query as { cursor?: string; limit?: number });
+  },
+  'adminAttendance.get': (c, id) => {
+    const o = fx.occurrences.find((x) => x.id === c.params.occurrenceId);
+    if (!o) return notFound(id);
+    return { occurrenceId: o.id, headcount: o.headcount, entries: [], markedAt: null };
+  },
+  'registrations.forSession': (c, id) => {
+    if (!fx.sessions.some((s) => s.id === c.params.sessionId)) return notFound(id);
+    const q = c.query as {
+      occurrenceId?: string;
+      status?: string;
+      cursor?: string;
+      limit?: number;
+    };
+    const all = fx.staffRegistrants(c.params.sessionId!);
+    const rows = all.filter(
+      (r) =>
+        (!q.status || r.status === q.status) &&
+        (!q.occurrenceId || r.occurrenceId === null || r.occurrenceId === q.occurrenceId),
+    );
+    return {
+      ...page(rows, q),
+      totals: {
+        registrations: all.length,
+        people: all.filter((r) => r.status === 'confirmed').reduce((n, r) => n + r.partySize, 0),
+        waitlisted: all.filter((r) => r.status === 'waitlisted').length,
+      },
+    };
+  },
   'adminUpdates.preview': (c) => {
     const scope = (c.body as { scope: { type: 'national' | 'city' | 'venue' } }).scope.type;
     return { recipients: scope === 'national' ? 4200 : scope === 'city' ? 640 : 85 };
@@ -380,13 +623,15 @@ export function createMockHandler(options: MockOptions = {}): MockHandler {
       });
     }
 
+    let me: Me | undefined;
     if (def.auth !== 'public') {
       const token = /^Bearer (.+)$/.exec(request.headers.get('authorization') ?? '')?.[1];
       if (!token) return errorResponse('unauthenticated', requestId);
       if (token === 'mock-expired') return errorResponse('token_expired', requestId);
       if (token === 'mock-suspended') return errorResponse('account_suspended', requestId);
-      if (def.auth === 'staff' && token !== 'mock-staff')
-        return errorResponse('forbidden', requestId);
+      const staff = staffByToken(token);
+      if (def.auth === 'staff' && !staff) return errorResponse('forbidden', requestId);
+      me = staff?.me ?? fx.fixtureMe;
     }
 
     const parsedParams = def.params ? def.params.safeParse(params) : null;
@@ -412,7 +657,13 @@ export function createMockHandler(options: MockOptions = {}): MockHandler {
       params: (parsedParams?.success ? parsedParams.data : params) as Record<string, string>,
       query: (parsedQuery?.success ? parsedQuery.data : {}) as Record<string, unknown>,
       body,
+      ...(me ? { me, principal: principalOf(me) } : {}),
     };
+
+    if (def.auth === 'staff') {
+      const denied = staffGuard(def, ctx, requestId);
+      if (denied) return denied;
+    }
 
     if (def.success.status === 204) return new Response(null, { status: 204 });
 

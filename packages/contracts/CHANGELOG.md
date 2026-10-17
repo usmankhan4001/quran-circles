@@ -1,5 +1,23 @@
 # Contract changelog
 
+## Unreleased: mock server and fixtures only (2026-10-17)
+
+No change to the endpoint registry, the schemas, the scope matrix or `openapi.json`; the contract stays at 1.0.0-rc.2. The mock now serves staff screens.
+
+- Staff sign-in. `staffAccounts` in `@qc/contracts/fixtures` holds one account per role. Ask for a code to its synthetic number, then verify with `123456`:
+
+  | Number          | Token        | Role                                                  |
+  | --------------- | ------------ | ----------------------------------------------------- |
+  | `+923000000201` | `mock-venue` | venue coordinator, Sample Masjid Al-Noor (Rawalpindi) |
+  | `+923000000202` | `mock-city`  | city coordinator, Rawalpindi                          |
+  | `+923000000203` | `mock-staff` | national admin                                        |
+
+  `me.get` returns the matching `Me` with its role, and `auth.refresh` with the account's refresh token keeps the role. Any other number signs in as the attendee (`mock-user`, `fixtureMe`), as before.
+
+- Staff tokens are checked with `can` and `scopeFilter`: a role the endpoint's actions do not allow gets `forbidden`; a known session, occurrence, venue or circle (or a body place on creates, update previews and posts, invites and assignments) outside the caller's scope gets `forbidden`, or `not_found` on `adminSessions.get` and `adminCircles.get`. Ids the fixtures do not have go on to the handler.
+- Fixture-backed handlers instead of generated rows: `adminVenues.list`, `adminSessions.list`, `adminCircles.list` (scoped, with their filters), `adminSessions.occurrences` (from, to, limit), `adminAttendance.get` (fixture headcount, no entries, not marked) and `registrations.forSession` (`staffRegistrants`: six invented people per session, numbers in the fixture range). Unknown session or occurrence: `not_found`. `adminRegistrations.export` is scoped to the caller.
+- Handlers passed to `createMockHandler` get `me` and `principal` on their context (`MockContext`).
+
 ## 1.0.0-rc.2 (2026-10-17)
 
 Approved by the owner in `docs/engineering/change-requests/2026-10-17-digest.md`. Database migration 0008 goes with it. Existing endpoint ids and shapes keep working, with one exception (see "Not additive").

@@ -18,6 +18,8 @@ Branch: claude/peaceful-archimedes-ain95k
 
 - 2026-10-17: contract 1.0.0-rc.2 and migration 0008 applied from the owner-approved digest (`docs/engineering/change-requests/2026-10-17-digest.md`). Bulk import (venues, coordinators, sessions), scoped registration export, `adminSessions.get`, `adminCircles.get`, `adminUpdates.preview`, reminder lead settings, handover on invites, circle archive, `ApiClientError.issues`, `@qc/contracts/bookmarks`. No new scope action, so the SCOPES.md matrix is unchanged. See `packages/contracts/CHANGELOG.md`. `@qc/db`: 160 tests. `@qc/contracts`: 1463 tests.
 
+- 2026-10-17: mock server usable for staff screens (mock and fixtures only; registry, schemas, scope matrix and `openapi.json` unchanged, contract stays rc.2). Staff sign-in from synthetic numbers with code `123456`: `+923000000201` → `mock-venue` (venue coordinator, Sample Masjid Al-Noor), `+923000000202` → `mock-city` (city coordinator, Rawalpindi), `+923000000203` → `mock-staff` (national admin); `me.get` and `auth.refresh` keep the role (`staffAccounts` in fixtures). Staff requests are checked with `can`/`scopeFilter` (forbidden by role or out-of-scope record; not_found on scoped reads). Fixture-backed, scoped `adminVenues.list`, `adminSessions.list`, `adminCircles.list`, plus `adminSessions.occurrences`, `adminAttendance.get`, `registrations.forSession` (`staffRegistrants`), scoped `adminRegistrations.export`. Attendee behaviour unchanged. `@qc/contracts`: 1487 tests; `@qc/admin-app` 534 and `@qc/console` 263 still pass.
+
 ## In progress
 
 - Seed from fixtures in `packages/db` after the schema lands.
@@ -31,6 +33,7 @@ Branch: claude/peaceful-archimedes-ain95k
 - Posters, message-template editing, content-page editing, reports, bulk import and the demand map are not in the P0 contract. The lanes that need them (console WP7/WP15/WP19, renderer WP16) file change requests.
 - Confirm the Hijri offset range (-2 to +2 days) and the OTP rules: 6 digits, channel WhatsApp with SMS fallback.
 - Contract version is `1.0.0-rc.2` until Gate 1 is signed.
+- The only pending-approval fixture circle is in Lahore, so the mock's Rawalpindi city coordinator (`mock-city`) has no circle to approve. Adding a pending Rawalpindi circle would change the `@qc/db` seed too; say if the drawings need it.
 
 ## Contract change requests
 
