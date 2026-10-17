@@ -28,7 +28,7 @@ Branch: claude/peaceful-archimedes-ain95k (nothing committed by this lane; owner
 ## Questions for the orchestrator
 
 - F-01: how should the first national admin be created on a fresh database (a CLI in `packages/db` or `apps/api`)? The suite inserts a pending national invite with SQL until then.
-- The root `pnpm test` (and `pnpm check`) now runs the e2e suite, which needs Postgres binaries or `E2E_DATABASE_URL` and takes about 4 minutes. Keep it in `pnpm check`, or run it only through `pnpm --filter @qc/e2e test`?
+- Decided by the orchestrator (2026-10-17): the root `pnpm test` and `pnpm check` skip the e2e suite so they stay fast; run it with `pnpm e2e` (same as `pnpm --filter @qc/e2e test`) before signing a gate.
 
 ## Contract change requests
 

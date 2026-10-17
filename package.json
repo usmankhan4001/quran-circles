@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint .",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --filter '!@qc/e2e' test",
+    "e2e": "pnpm --filter @qc/e2e test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm format:check"
