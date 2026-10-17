@@ -43,3 +43,4 @@ A decision that changes a contract also needs a contract change request.
 - [0009: User app stack](0009-user-app-stack.md)
 - [0010: Admin app stack](0010-admin-app-stack.md)
 - [0011: API core route binder](0011-api-core-route-binder.md)
+- [0012: Poster Urdu rendering](0012-poster-urdu-rendering.md) (proposed)

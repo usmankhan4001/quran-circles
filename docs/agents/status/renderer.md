@@ -1,0 +1,91 @@
+# Status: renderer
+
+Updated: 2026-10-17
+Branch: lane/renderer/poster-renderer (not committed; the orchestrator commits)
+
+## Done
+
+- **Urdu go/no-go: go.** Decision record `docs/engineering/decisions/0012-poster-urdu-rendering.md` (status proposed, waiting for the orchestrator to accept). Mehr Nastaliq Web and Figtree in headless Chromium (Playwright 1.56.1) shape correctly; three rules came out of it (isolate Latin runs in Urdu, Figtree-first stack for spaces and digits, Urdu line height 2.0 or more and no clipping) and the templates follow them.
+- **`apps/poster-renderer` (`@qc/poster-renderer`)**: Hono service on the internal network. `GET /healthz`, `GET /templates`, `POST /render` (template id, formats, language, editable fields, session snapshot; answers the files as base64 plus the source snapshot, the deep link and alt text). Bearer token (`RENDERER_TOKEN`) on everything but `/healthz`; 64 KB body limit; errors are codes only (`validation_failed` with paths, `text_too_long` with box names, `busy` + Retry-After, `render_timeout`, `render_failed`).
+- **Limits**: concurrency limit with a bounded queue (overflow answers 503 at once), one deadline per request, Chromium heap cap (`--js-flags=--max-old-space-size`), browser restarted every N renders or after a crash, fresh context per page.
+- **Isolation** (tested against a local HTTP server that counts hits, with a positive control): page scripts off, a strict CSP in every template, every request aborted in Playwright, plus launch flags that hold on their own (no DNS, a dead proxy for every host including loopback, offline context). `file://` images and stylesheets do not load. Field values are escaped and isolated; control and bidi override characters are refused.
+- **Templates** (provisional, locked): `cloud` (light, green band) and `night` (full green, gilt frame), each at story 1080x1920 PNG, A4 and A3 PDF (one page, fonts embedded) and link preview 1200x630 PNG; languages `en`, `ur`, `en_ur`, `ur_en`; mixed text (English venue names inside Urdu, Urdu inside English) isolated automatically. Accents from a fixed palette (`tanzeem`, `deep`, `night`), contrast tested for every template and accent. Text shrinks to a floor, then wraps, then is refused naming the box; never clipped. Date and time come from the session snapshot, not typed by editors.
+- **QR code**: `qrcode-generator@2.0.4` (new dependency, MIT, no dependencies), error correction M, 4-module quiet zone, on white. Encodes `buildDeepLink({ type: 'register' | 'session', sessionId }, PUBLIC_WEB_BASE)` from `@qc/contracts`. A test reads every module back out of the exported PNG and compares it with the code; at least 280 px on a story and 28 mm in print.
+- **Job, cache, out of date**: cache key = template and version, format, language, fields, the whole snapshot including `sessionVersion`, and the link (in-memory LRU with a byte budget). `runPosterJob` (`src/job.ts`) stores files under content-addressed keys and returns what `posters` needs. `outOfDate(made, current)` returns `time` and/or `venue` from the stored `source_snapshot`. `pnpm --filter @qc/poster-renderer render:sample [out-dir]` renders all 32 combinations from synthetic data and shows the job, a cache hit and a time change being flagged.
+- **Fonts**: unmodified copies of Figtree (400, 600, 700; OFL) and Mehr Nastaliq Web (CC BY-SA 4.0) in `apps/poster-renderer/assets/fonts/` with `LICENSES.md`, the OFL text and checksums; checked at start and in tests. KFGQPC is not bundled (no Quran text on posters). PDFs embed font subsets, which is normal PDF embedding; KFGQPC would need a different decision if it is ever added.
+- **Dockerfile**: `apps/poster-renderer/Dockerfile` (+ `.dockerignore`), target `poster-renderer`, following `infra/docker` conventions. Not built here (no Docker daemon); the same esbuild bundle was built and run locally and served real renders.
+- Checks: `pnpm --filter @qc/poster-renderer test` (14 files, 134 tests, about 10 s with real Chromium), typecheck, eslint and prettier on the renderer's files all pass.
+
+## In progress
+
+- Nothing.
+
+## Blocked
+
+- Wiring into the API, the worker and the clients: change request `docs/engineering/change-requests/2026-10-17-poster-renderer.md`.
+
+## Infra change for the platform lane (do not apply from this lane)
+
+1. Move `apps/poster-renderer/Dockerfile` into `infra/docker/Dockerfile` as target `poster-renderer` (or keep it and point compose at it). Base is `node:22.22.0-bookworm-slim` (Chromium needs glibc, so not Alpine); **pin it by digest** as the api image is (it could not be resolved from here: registry rate limit). The build downloads Chromium's headless shell for Playwright 1.56.1 and installs its system libraries; nothing is fetched at run time.
+2. Compose service (`infra/docker-compose.prod.yml`), internal network only, never routed by Caddy:
+
+   ```yaml
+   poster-renderer:
+     image: ${QC_IMAGE_REGISTRY:-qc}/poster-renderer:${QC_IMAGE_TAG:-local}
+     build: { context: .., dockerfile: apps/poster-renderer/Dockerfile, target: poster-renderer }
+     restart: unless-stopped
+     environment:
+       APP_ENV: production
+       RENDERER_PORT: '8090'
+       RENDERER_TOKEN: ${RENDERER_TOKEN:?set RENDERER_TOKEN in the env file}
+       PUBLIC_WEB_BASE: https://${QC_DOMAIN}
+       RENDER_CONCURRENCY: '2'
+       RENDER_QUEUE_MAX: '8'
+       RENDER_TIMEOUT_MS: '20000'
+       BROWSER_HEAP_MB: '128'
+       BROWSER_RECYCLE_AFTER: '100'
+       RENDER_CACHE_BYTES: '67108864'
+     networks: [backend] # internal: true, so the container itself has no route out either
+     read_only: true
+     tmpfs: ['/tmp:size=256m'] # Chromium's profile and HOME=/tmp
+     cap_drop: [ALL]
+     security_opt: ['no-new-privileges:true']
+     init: true
+     stop_grace_period: 30s
+     healthcheck:
+       test:
+         [
+           'CMD',
+           'node',
+           '-e',
+           "fetch('http://127.0.0.1:8090/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+         ]
+       interval: 15s
+       timeout: 5s
+       retries: 3
+       start_period: 20s
+     deploy:
+       resources:
+         limits:
+           { cpus: '${QC_RENDERER_CPUS:-1.0}', memory: '${QC_RENDERER_MEMORY:-768m}', pids: 256 }
+   ```
+
+   The api and the worker get `RENDERER_URL=http://poster-renderer:8090` and the same `RENDERER_TOKEN` (generate on the server: `openssl rand -hex 32`). Add both to `infra/ENV.md` and `.env.example` (fake value).
+
+3. Chromium runs without its own sandbox (Playwright's default in containers); the container hardening above, the internal-only network and the in-browser blocks are the isolation. A seccomp profile that allows Chromium's sandbox is an option if the reviewer wants both.
+4. Storage for poster files (volume or object store) is not decided; `runPosterJob` takes any `FileStore`.
+5. CI: the root `pnpm test` now includes the renderer's browser tests, so the CI job needs Chromium's headless shell for Playwright 1.56.1 (`pnpm exec playwright install --only-shell chromium` or the e2e job's existing browser cache).
+6. `eslint.config.js`: add `@qc/poster-renderer` to `appPackages` so no app or package can import it.
+
+## Questions for the orchestrator
+
+- Accept decision 0012 (Urdu go)? Then add it to `docs/engineering/decisions/README.md` (not this lane's file).
+- `pnpm-lock.yaml` changed (new importer `apps/poster-renderer`, plus `qrcode-generator@2.0.4`); please commit it with this lane's files.
+- Human approvals needed: the two provisional templates (render them with `render:sample` and look at all four languages and formats), and the container (Dockerfile and compose block above).
+- Urdu wording on posters (`src/strings.ts`) is a draft for native review, like the rest of the Urdu.
+- `docs/design/poster-direction.md` still names emerald, DM Sans and Gulzar; the templates follow D3/D4 instead (ui lane to update the file).
+- Editors cannot type the date, time or venue: the renderer prints them from the session, so a poster cannot disagree with the session. The poster direction lists them as editable; confirm this is acceptable.
+
+## Contract change requests
+
+- `docs/engineering/change-requests/2026-10-17-poster-renderer.md`

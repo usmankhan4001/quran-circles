@@ -192,6 +192,34 @@ importers:
         specifier: 8.3.4
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(terser@5.51.2)(tsx@4.23.15)
 
+  apps/poster-renderer:
+    dependencies:
+      '@hono/node-server':
+        specifier: 2.1.5
+        version: 2.1.5(hono@4.13.13)
+      '@qc/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@qc/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      hono:
+        specifier: 4.13.13
+        version: 4.13.13
+      playwright-core:
+        specifier: 1.56.1
+        version: 1.56.1
+      qrcode-generator:
+        specifier: 2.0.4
+        version: 2.0.4
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      tsx:
+        specifier: 4.23.15
+        version: 4.23.15
+
   apps/user-app:
     dependencies:
       '@expo/metro-runtime':
@@ -3926,6 +3954,9 @@ packages:
   qified@0.10.1:
     resolution: {integrity: sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==}
     engines: {node: '>=20'}
+
+  qrcode-generator@2.0.4:
+    resolution: {integrity: sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==}
 
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
@@ -8181,6 +8212,8 @@ snapshots:
   qified@0.10.1:
     dependencies:
       hookified: 2.2.0
+
+  qrcode-generator@2.0.4: {}
 
   range-parser@1.2.1: {}
 

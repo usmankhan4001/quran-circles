@@ -1,0 +1,24 @@
+{
+  "name": "@qc/poster-renderer",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "start": "tsx src/main.ts",
+    "render:sample": "tsx src/cli/render-sample.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "@qc/contracts": "workspace:*",
+    "@qc/i18n": "workspace:*",
+    "hono": "4.13.13",
+    "playwright-core": "1.56.1",
+    "qrcode-generator": "2.0.4",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
