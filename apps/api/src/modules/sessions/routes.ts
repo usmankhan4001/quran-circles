@@ -1,6 +1,6 @@
 import type { Handlers } from '../shared/route';
 import { messagingDepsOf } from '../shared/context';
-import { invalid } from '../shared/errors';
+import { filterCovers } from '../shared/scope';
 import { findVenue } from '../venues/service';
 import {
   changeSchedule,
@@ -19,6 +19,7 @@ import {
   listPublicOccurrences,
   listPublicSessions,
 } from './public';
+import { loadSessions } from './views';
 
 export const sessionHandlers = (): Handlers => ({
   'sessions.list': (ctx) => listPublicSessions(ctx.db, ctx.now, ctx.query),
@@ -37,11 +38,25 @@ export const sessionHandlers = (): Handlers => ({
   'adminSessions.list': (ctx) =>
     listAdminSessions(ctx.db, ctx.now, ctx.scope('session.list_admin'), ctx.query),
 
+  'adminSessions.get': async (ctx) => {
+    const filter = ctx.scope('session.list_admin');
+    const record = await findSessionScope(ctx.db, ctx.params.sessionId);
+    // Out of scope reads as unknown, so a session's existence is not revealed.
+    if (
+      !record ||
+      !filterCovers(filter, { cityId: record.venue.cityId, venueId: record.s.venueId })
+    ) {
+      return ctx.missing('session.list_admin');
+    }
+    const [view] = await loadSessions(ctx.db, [record.s.id], ctx.now);
+    if (!view) return ctx.missing('session.list_admin');
+    return view;
+  },
+
   'adminSessions.create': async (ctx) => {
-    // Only people who may create sessions somewhere learn that a venue id is unknown.
-    ctx.scope('session.list_admin');
     const venue = await findVenue(ctx.db, ctx.body.venueId);
-    if (!venue) return invalid('venueId');
+    // Only people who may create sessions somewhere learn that a venue id is unknown.
+    if (!venue) return ctx.unknownRef('session.create');
     ctx.authorize('session.create', { cityId: venue.cityId, venueId: venue.id });
     return createSession(
       ctx.db,

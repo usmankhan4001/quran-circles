@@ -126,9 +126,13 @@ async function decide(deps: ProcessorDeps, row: OutboxRow): Promise<Step> {
     if (stale) return { kind: 'fail', errorCode: stale };
   }
 
-  const venueId = ctx.consents.some((c) => c.venueId !== null)
-    ? await resolveVenueId(deps.db, row, push?.data ?? null)
-    : null;
+  // The row names its venue (migration 0008). Rows queued before that carry none, so their venue
+  // is worked out from the payload, and only when a per-venue consent could make a difference.
+  const venueId =
+    row.venueId ??
+    (ctx.consents.some((c) => c.venueId !== null)
+      ? await resolveVenueId(deps.db, row, push?.data ?? null)
+      : null);
   const limits = await deps.limits?.(row, ctx);
   const gate = evaluateGate({
     channel: row.channel,

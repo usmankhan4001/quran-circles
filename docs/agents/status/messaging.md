@@ -1,15 +1,24 @@
 # Status: messaging
 
-Updated: 2026-10-16
+Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by the lane)
 
-## Done
+## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
+
+- `draftPushRow` and `draftTemplateRow` accept `venueId` and write `message_outbox.venue_id`; the reminder reconciler sets it (also when reviving a withdrawn reminder).
+- The processor checks per-venue consent against `row.venueId`; rows queued before 0008 (no venue) still work it out from the push or update they point at.
+- The worker stores the provider's message id in `provider_message_id` instead of `payload.providerMessageId`, and delivery reports without our callback data look the row up by that column. The `biz_opaque_callback_data` path is unchanged.
+- Reminders: registrants plus circle followers with alerts on (unchanged), lead time per program from `reminder_lead_minutes`, which is now in the Settings contract and edited by the console.
+- `CodeSender.send` returns `{channel}` (`ProviderCodeSender` reports `sms` after a fallback); the auth lane uses it so the response names the right channel. WhatsApp first for everyone, staff included.
+- Tests: `@qc/messaging` 191, `@qc/worker` 94, all passing; typecheck, eslint and prettier clean.
+
+## Done (earlier)
 
 WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`), typecheck, eslint and prettier clean for both packages. No test touches a network (loopback sockets only).
 
 - `packages/messaging`: provider interfaces and fakes (push, WhatsApp, SMS, code sender); FCM, APNs (HTTP/2), web push, WhatsApp Cloud, generic SMS gateway; consent gate (`evaluateGate`) and channel plan; retry policy; outbox row drafts; safe logger; `createMessaging(env)` wiring; webhook signature, handshake and parsing.
 - `apps/worker`: outbox repo and processor (compare-and-set, `SKIP LOCKED` claims, leases, crash recovery); dispatcher; pg-boss runtime (`outbox-send`, dead-letter queue, per-minute `reminders-reconcile`); reminder reconciler; WhatsApp webhook apply (status, STOP, START) and HTTP server with `/healthz`; config and `main.ts` (`pnpm --filter @qc/worker start`).
-- `CodeSender` interface plus `ProviderCodeSender` (WhatsApp auth template, SMS fallback) and `TestCodeSender`. The auth lane has not defined its own yet; mine is `send({phone, code, locale, channel, minutes?}): Promise<void>`.
+- `CodeSender` interface plus `ProviderCodeSender` (WhatsApp auth template, SMS fallback) and `TestCodeSender`.
 - i18n: added `notifications.reminder.title` and `.body` to en and ur (Urdu is a draft).
 - Decision record `docs/engineering/decisions/0005-messaging-outbox-and-providers.md`.
 
@@ -28,11 +37,10 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 - Which SMS gateway? `HttpSmsProvider` is a generic JSON stand-in.
 - Who gets Meta template approval and a native Urdu review of the template and reminder text?
 - Legacy WhatsApp subscribers: they have no `consents` rows, so nothing is sent to them until the data-migration lane records an opt-in or they send START.
-- Auth lane: confirm `CodeSender.send` returning `Promise<void>` (it throws `CodeDeliveryError` on failure) matches their use.
+- The daily occurrence top-up (`topUpAllOccurrences` in `apps/api/src/jobs.ts`) is not scheduled: the worker would need `@qc/api` as a workspace dependency (lockfile change). Reminders are built from occurrences, so a recurring session nobody opens can run out of them after 90 days until this is wired.
 
 ## Contract change requests
 
-- `docs/engineering/change-requests/2026-10-16-outbox-venue-and-provider-id.md`
-- `docs/engineering/change-requests/2026-10-16-reminder-lead-setting.md`
-- `docs/engineering/change-requests/2026-10-16-messaging-env-vars.md`
-- `docs/engineering/change-requests/2026-10-16-push-delivery-ack.md`
+- Applied 2026-10-17: `outbox-venue-and-provider-id`, `reminder-lead-setting`.
+- `messaging-env-vars`: names are in `.env.example`; passing them to the `worker` and `api` services in the compose files (`infra/`) and the webhook reverse-proxy route still need infra work (not this lane).
+- `push-delivery-ack`: open.

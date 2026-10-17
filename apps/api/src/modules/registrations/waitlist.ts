@@ -115,6 +115,7 @@ async function queuePromotionMessages(
         recipientUserId: user.id,
         recipientPhone: user.phone,
         cityId: facts.cityId,
+        venueId: facts.venueId,
       });
     }
     if (hasDevice.has(user.id)) {
@@ -137,6 +138,7 @@ async function queuePromotionMessages(
         },
         recipientUserId: user.id,
         cityId: facts.cityId,
+        venueId: facts.venueId,
       });
     }
   }

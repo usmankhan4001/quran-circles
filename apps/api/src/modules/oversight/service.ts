@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, lt, lte, sql, type SQL } from 'drizzle-orm';
-import type { ScopeFilter, Settings } from '@qc/contracts';
+import type { ScopeFilter, Settings, SettingsUpdate } from '@qc/contracts';
 import { schema, type Db } from '../../db';
 import { fail } from '../shared/errors';
 import { nationalScope, writeAudit } from '../shared/audit';
@@ -76,7 +76,7 @@ export const getSettings = (db: Db): Promise<Settings> => readSettings(db);
 export async function updateSettings(
   db: Db,
   actorId: string,
-  patch: Partial<Settings>,
+  patch: SettingsUpdate,
 ): Promise<Settings> {
   return db.transaction(async (tx) => {
     const { settings, changed } = await writeSettings(tx, patch, actorId);

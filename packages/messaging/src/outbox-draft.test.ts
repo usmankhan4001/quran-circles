@@ -18,6 +18,7 @@ describe('outbox row drafts', () => {
       sendAt,
       push,
       cityId: 'c1',
+      venueId: 'v1',
     });
     expect(row).toMatchObject({
       channel: 'push',
@@ -26,6 +27,7 @@ describe('outbox row drafts', () => {
       templateKey: null,
       nextAttemptAt: sendAt,
       cityId: 'c1',
+      venueId: 'v1',
       payload: { channel: 'push' },
     });
   });
@@ -60,7 +62,26 @@ describe('outbox row drafts', () => {
       templateKey: 'session_reminder',
       locale: 'ur',
       recipientPhoneE164: '+923000000001',
+      venueId: null,
     });
+  });
+
+  it('carries the venue on a template row when given', () => {
+    const row = draftTemplateRow({
+      idempotencyKey: 'k3',
+      channel: 'whatsapp',
+      template: 'session_reminder',
+      locale: 'en',
+      sendAt,
+      venueId: 'v2',
+      variables: {
+        sessionTitle: 'Tafsir',
+        venueName: 'Masjid',
+        when: 'Fri',
+        link: 'https://x.test',
+      },
+    });
+    expect(row.venueId).toBe('v2');
   });
 
   it('rejects missing or extra template variables', () => {

@@ -11,3 +11,5 @@ Workaround meanwhile: client-side dry run, sequential create calls, stop at the 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
 
 Applied in console 2026-10-17: `apps/console/src/import/server.ts` sends the rows to `adminImport.<kind>`. Check runs the console's own parse first, then the server dry run (`dryRun: true`), whose per-row answer (created, duplicate, invalid with issues, mapped to line and column, never cell contents) is what the report shows. Import sends `dryRun: false` once, after confirmation, and shows the all-or-nothing result (written, or refused with the rows that need fixing). The per-row create loop (`import/apply.ts`) is removed.
+
+Applied in api 2026-10-17: `adminImport.venues`, `.sessions` and `.coordinators` check every row (shape, references, `area_not_in_city`, per-row `forbidden`, duplicates), apply all or nothing in one transaction with one counts-only audit row, and queue coordinator invitations after the commit.

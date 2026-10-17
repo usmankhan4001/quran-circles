@@ -9,3 +9,5 @@ Affected lanes: contracts (db), auth-scopes.
 Workaround meanwhile: any mismatch revokes the session (implemented and tested). Clients must send one refresh at a time (single-flight) and must not retry a refresh whose response was lost without signing in again.
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
+
+Applied in api 2026-10-17: rotation keeps the previous hash and `rotated_at`; the previous token within 10 s returns the same pair (derived deterministically, no raw token stored), after 10 s it revokes the session, and a token matching neither is refused without revoking. Tests cover parallel refresh and two tabs.

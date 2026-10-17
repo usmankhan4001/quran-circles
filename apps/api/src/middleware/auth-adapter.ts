@@ -41,10 +41,21 @@ export function authorize(
  * For list endpoints: what the person may see for an `any` action. Throws `forbidden` when they
  * hold none of the qualifying roles.
  */
+/**
+ * The rows a caller may reach for an action: refuses someone with no qualifying role anywhere,
+ * otherwise returns the filter. For an `any` action this is exactly `can`; for a city or venue
+ * action (a scoped export) it is the set of places where `can` would say yes.
+ */
 export function authorizedScope(principal: Principal | null, action: ScopeAction): ScopeFilter {
   if (!principal?.userId) fail('unauthenticated');
-  if (!can(principal, action)) fail('forbidden');
+  if (!hasQualifyingRole(principal, action)) fail('forbidden');
   return scopeFilter(principal, action);
+}
+
+/** Whether the person holds any role that qualifies for the action somewhere. */
+export function hasQualifyingRole(principal: Principal | null, action: ScopeAction): boolean {
+  const f = scopeFilter(principal, action);
+  return f.national || f.cityIds.length > 0 || f.venueIds.length > 0;
 }
 
 /**
@@ -53,8 +64,7 @@ export function authorizedScope(principal: Principal | null, action: ScopeAction
  */
 export function resourceMissing(principal: Principal | null, action: ScopeAction): never {
   if (!principal?.userId) fail('unauthenticated');
-  const f = scopeFilter(principal, action);
-  if (!f.national && f.cityIds.length === 0 && f.venueIds.length === 0) fail('forbidden');
+  if (!hasQualifyingRole(principal, action)) fail('forbidden');
   return fail('not_found');
 }
 

@@ -88,6 +88,7 @@ describe('scheduling relative to the session start', () => {
     expect(rowA.status).toBe('queued');
     expect(rowA.costCategory).toBe('free');
     expect(rowA.cityId).toBe(world.city.id);
+    expect(rowA.venueId).toBe(world.venue.id);
     expect(rowA.nextAttemptAt).toEqual(new Date(startsAt.getTime() - HOUR));
 
     // The payload is a valid contract payload, in the person's language, with a deep link.

@@ -63,7 +63,11 @@ export const verifyPhoneKey = (ctx: AuthContext, phone: string): string =>
 const ipKeyOf = (ctx: AuthContext, ip: string | null): string =>
   hashIdentifier(ctx.keys, 'ip', ip ?? 'unknown');
 
-/** Starts a sign-in: makes a code, stores its hash and hands the code to the sender. */
+/**
+ * Starts a sign-in: makes a code, stores its hash and hands the code to the sender. The same rule
+ * holds for everyone, staff included: WhatsApp first (the contract's default channel), and the
+ * sender falls back to SMS and reports it, so the response says where the code went.
+ */
 export async function requestCode(
   ctx: AuthContext,
   body: RequestCodeInput,
@@ -95,6 +99,8 @@ export async function requestCode(
       id: challengeId,
       phoneE164: phone,
       channel: body.channel,
+      // Copied to the account if this sign-in creates one, so it starts in this language.
+      locale: body.locale,
       codeHash: hashCode(ctx.keys, challengeId, code),
       expiresAt,
       createdAt: now,

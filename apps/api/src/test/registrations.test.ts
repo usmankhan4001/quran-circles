@@ -59,6 +59,9 @@ describe('registering', () => {
       recipientUserId: person.userId,
       recipientPhoneE164: person.phone,
       idempotencyKey: `registration_confirmation:${body.id}:whatsapp`,
+      // The worker checks venue consent against this column.
+      venueId: h.world.venueA1,
+      providerMessageId: null,
     });
   });
 
@@ -148,18 +151,20 @@ describe('registering', () => {
     const unknown = await register(h, person, '00000000-0000-4000-8000-000000000000', {
       areaId: area,
     });
-    expect(unknown.status).toBe(400);
+    expect(unknown.status).toBe(404);
 
+    // A draft is invisible to the public, so it answers exactly like a session that does not exist.
     const draft = await createSession(h, { venueId: h.world.venueA1, as: admin, status: 'draft' });
-    expect((await register(h, person, draft.id, { areaId: area })).status).toBe(400);
+    expect((await register(h, person, draft.id, { areaId: area })).status).toBe(404);
 
-    const badArea = await register(h, person, closed.id, {
+    const open = await createSession(h, { venueId: h.world.venueA1, as: admin, title: 'Open' });
+    const badArea = await register(h, person, open.id, {
       areaId: '00000000-0000-4000-8000-000000000000',
     });
-    expect(badArea.status).toBeGreaterThanOrEqual(400);
+    expect(badArea.status).toBe(404);
   });
 
-  it('refuses a past occurrence and an occurrence of another session', async () => {
+  it('refuses a past occurrence, and answers not found for an occurrence of another session', async () => {
     const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
     const other = await createSession(h, { venueId: h.world.venueA1, as: admin, title: 'Other' });
     const list = (
@@ -182,7 +187,7 @@ describe('registering', () => {
       areaId: h.world.cityA.areaId,
       occurrenceId: otherList[0]!.id,
     });
-    expect(wrong.status).toBe(400);
+    expect(wrong.status).toBe(404);
 
     h.clock.advanceDays(1);
     const past = await register(h, person, session.id, {

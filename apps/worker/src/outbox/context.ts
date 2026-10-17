@@ -42,9 +42,9 @@ export async function loadRecipientContext(db: Db, row: OutboxRow): Promise<Reci
 }
 
 /**
- * The venue a message is about, when the row says so: a push for an occurrence or session, or a
- * row posted for a venue update. The outbox has no venue column (see the change request), so
- * other rows have none, and then only a global consent can satisfy the gate.
+ * The venue of a row queued before `message_outbox.venue_id` existed (migration 0008), worked out
+ * from what the row points at: a push for an occurrence or session, or a venue update. New rows
+ * carry the column and never come here. A row with neither can only pass on a global consent.
  */
 export async function resolveVenueId(
   db: Db,

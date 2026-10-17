@@ -3,6 +3,7 @@ import {
   asc,
   desc,
   eq,
+  gt,
   inArray,
   isNull,
   lte,
@@ -29,7 +30,7 @@ import { localized } from '../shared/mappers';
 import { visibleName } from '../shared/names';
 import { MS_PER_DAY } from '../shared/time';
 import { decodeOffsetCursor, offsetPage, type Page } from '../shared/pagination';
-import { enqueueOutbox } from '../shared/outbox';
+import { enqueueOutbox, type OutboxEntry } from '../shared/outbox';
 
 const { roleAssignments, coordinatorInvites, users, cities, venues } = schema;
 
@@ -96,7 +97,7 @@ export async function targetOfRow(
 }
 
 /** Same role at the same place: the unit the database keeps one live assignment per person for. */
-const sameTarget = (
+export const sameTarget = (
   table: { role: AnyColumn; cityId: AnyColumn; venueId: AnyColumn },
   target: RoleTarget,
 ): SQL =>
@@ -132,6 +133,164 @@ export interface InviteDeps {
   webBase?: string | undefined;
 }
 
+type Tx = Db;
+
+/** A lapsed invite still counts as pending to the database (unique index), so retire it first. */
+async function retireLapsedInvites(tx: Tx, phone: string, target: RoleTarget, now: Date) {
+  await tx
+    .update(coordinatorInvites)
+    .set({ status: 'expired' })
+    .where(
+      and(
+        eq(coordinatorInvites.phoneE164, phone),
+        sameTarget(coordinatorInvites, target),
+        eq(coordinatorInvites.status, 'pending'),
+        lte(coordinatorInvites.expiresAt, now),
+      ),
+    );
+}
+
+/** The account behind a number, if any, and whether it already holds this role at this place. */
+export async function roleHolder(
+  tx: Tx,
+  phone: string,
+  target: RoleTarget,
+): Promise<{ user: { id: string; locale: 'en' | 'ur' } | null; holds: boolean }> {
+  const [user] = await tx
+    .select({ id: users.id, locale: users.locale })
+    .from(users)
+    .where(eq(users.phoneE164, phone));
+  if (!user) return { user: null, holds: false };
+  const [holds] = await tx
+    .select({ id: roleAssignments.id })
+    .from(roleAssignments)
+    .where(
+      and(
+        eq(roleAssignments.userId, user.id),
+        isNull(roleAssignments.revokedAt),
+        sameTarget(roleAssignments, target),
+      ),
+    )
+    .limit(1);
+  return { user, holds: holds !== undefined };
+}
+
+/** The live pending invite for this number, role and place, if any. */
+export async function pendingInvite(
+  tx: Tx,
+  phone: string,
+  target: RoleTarget,
+  now: Date,
+): Promise<InviteRow | null> {
+  const [row] = await tx
+    .select()
+    .from(coordinatorInvites)
+    .where(
+      and(
+        eq(coordinatorInvites.phoneE164, phone),
+        sameTarget(coordinatorInvites, target),
+        eq(coordinatorInvites.status, 'pending'),
+        gt(coordinatorInvites.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Whether an assignment can be handed over by an invite for `target`: it exists, is live, and is
+ * the same role at the same place. Anything else reads as not found, so an id outside the
+ * caller's scope is never confirmed.
+ */
+export async function handoverAssignmentExists(
+  tx: Tx,
+  assignmentId: string,
+  target: RoleTarget,
+): Promise<boolean> {
+  const [row] = await tx
+    .select({ id: roleAssignments.id })
+    .from(roleAssignments)
+    .where(
+      and(
+        eq(roleAssignments.id, assignmentId),
+        isNull(roleAssignments.revokedAt),
+        sameTarget(roleAssignments, target),
+      ),
+    );
+  return row !== undefined;
+}
+
+const scopeNameIn = (target: RoleTarget, locale: 'en' | 'ur'): string =>
+  target.scopeName
+    ? locale === 'ur' && target.scopeName.ur
+      ? target.scopeName.ur
+      : target.scopeName.en
+    : 'Quran Circles';
+
+/** The WhatsApp invitation for one invite row. Coordinator invitations need no consent. */
+export function inviteMessage(
+  row: InviteRow,
+  target: RoleTarget,
+  recipient: { id: string; locale: 'en' | 'ur' } | null,
+  inviterName: string | null,
+  actorId: string,
+  webBase: string | undefined,
+): OutboxEntry {
+  const locale = recipient?.locale ?? 'en';
+  return {
+    key: `coordinator_invite:${row.id}:whatsapp`,
+    payload: {
+      channel: 'whatsapp',
+      template: 'coordinator_invite',
+      locale,
+      variables: {
+        inviterName: (inviterName ?? 'Quran Circles').slice(0, 200),
+        scopeName: scopeNameIn(target, locale).slice(0, 200),
+        link: buildDeepLink({ type: 'updates' }, webBase),
+      },
+    },
+    recipientUserId: recipient?.id ?? null,
+    recipientPhone: row.phoneE164,
+    cityId: target.cityId ?? target.resource.cityId ?? null,
+    venueId: target.venueId,
+    sentBy: actorId,
+  };
+}
+
+export async function inviterNameOf(db: Db, actorId: string): Promise<string | null> {
+  const [inviter] = await db
+    .select({ name: users.displayName })
+    .from(users)
+    .where(eq(users.id, actorId));
+  return visibleName(inviter?.name);
+}
+
+export const inviteValues = (
+  deps: InviteDeps,
+  actorId: string,
+  target: RoleTarget,
+  body: { phone: string; displayName?: string | undefined },
+  replacesAssignmentId: string | null,
+): typeof coordinatorInvites.$inferInsert => ({
+  phoneE164: body.phone,
+  displayName: body.displayName ?? null,
+  role: target.role,
+  scopeType: target.scopeType,
+  cityId: target.cityId,
+  venueId: target.venueId,
+  invitedBy: actorId,
+  replacesAssignmentId,
+  status: 'pending',
+  createdAt: deps.now,
+  expiresAt: new Date(deps.now.getTime() + deps.ttlDays * MS_PER_DAY),
+});
+
+/**
+ * Invites a person to a role. With `replacesAssignmentId` it is a handover: the invite stays
+ * pending, and accepting it at sign-in creates the new assignment and revokes the replaced one in
+ * one transaction. Inviting a number again for the same role and place is a resend: the pending
+ * invite is replaced by a new one with a fresh expiry, and the message goes out again.
+ */
 export async function createInvite(
   db: Db,
   deps: InviteDeps,
@@ -139,91 +298,62 @@ export async function createInvite(
   target: RoleTarget,
   body: InviteBody,
 ): Promise<Invite> {
+  const replacesId = 'replacesAssignmentId' in body ? body.replacesAssignmentId : undefined;
   try {
     const invite = await db.transaction(async (tx) => {
-      // A lapsed invite still counts as pending to the database, so retire it first.
-      await tx
-        .update(coordinatorInvites)
-        .set({ status: 'expired' })
-        .where(
-          and(
-            eq(coordinatorInvites.phoneE164, body.phone),
-            sameTarget(coordinatorInvites, target),
-            eq(coordinatorInvites.status, 'pending'),
-            lte(coordinatorInvites.expiresAt, deps.now),
-          ),
-        );
+      await retireLapsedInvites(tx, body.phone, target, deps.now);
+      const { user: existing, holds } = await roleHolder(tx, body.phone, target);
+      if (holds) return fail('role_already_assigned');
+      if (replacesId && !(await handoverAssignmentExists(tx, replacesId, target))) {
+        return fail('not_found');
+      }
 
-      const [existing] = await tx.select().from(users).where(eq(users.phoneE164, body.phone));
-      if (existing) {
-        const [holds] = await tx
-          .select({ id: roleAssignments.id })
-          .from(roleAssignments)
+      // Resend: the pending invite gives way to this one.
+      const previous = await pendingInvite(tx, body.phone, target, deps.now);
+      if (previous) {
+        await tx
+          .update(coordinatorInvites)
+          .set({ status: 'revoked' })
           .where(
-            and(
-              eq(roleAssignments.userId, existing.id),
-              isNull(roleAssignments.revokedAt),
-              sameTarget(roleAssignments, target),
-            ),
-          )
-          .limit(1);
-        if (holds) return fail('role_already_assigned');
+            and(eq(coordinatorInvites.id, previous.id), eq(coordinatorInvites.status, 'pending')),
+          );
       }
 
       const [row] = await tx
         .insert(coordinatorInvites)
-        .values({
-          phoneE164: body.phone,
-          displayName: body.displayName ?? null,
-          role: target.role,
-          scopeType: target.scopeType,
-          cityId: target.cityId,
-          venueId: target.venueId,
-          invitedBy: actorId,
-          status: 'pending',
-          createdAt: deps.now,
-          expiresAt: new Date(deps.now.getTime() + deps.ttlDays * MS_PER_DAY),
-        })
+        .values(
+          inviteValues(
+            deps,
+            actorId,
+            target,
+            body,
+            replacesId ?? previous?.replacesAssignmentId ?? null,
+          ),
+        )
         .returning();
       if (!row) throw new Error('invite insert returned no row');
 
-      const [inviter] = await tx
-        .select({ name: users.displayName })
-        .from(users)
-        .where(eq(users.id, actorId));
-      const locale = existing?.locale ?? 'en';
-      const scopeName = target.scopeName
-        ? locale === 'ur' && target.scopeName.ur
-          ? target.scopeName.ur
-          : target.scopeName.en
-        : 'Quran Circles';
       await enqueueOutbox(tx, [
-        {
-          key: `coordinator_invite:${row.id}:whatsapp`,
-          payload: {
-            channel: 'whatsapp',
-            template: 'coordinator_invite',
-            locale,
-            variables: {
-              inviterName: (visibleName(inviter?.name) ?? 'Quran Circles').slice(0, 200),
-              scopeName: scopeName.slice(0, 200),
-              link: buildDeepLink({ type: 'updates' }, deps.webBase),
-            },
-          },
-          recipientUserId: existing?.id ?? null,
-          recipientPhone: body.phone,
-          cityId: target.cityId ?? target.resource.cityId ?? null,
-          sentBy: actorId,
-        },
+        inviteMessage(
+          row,
+          target,
+          existing,
+          await inviterNameOf(tx, actorId),
+          actorId,
+          deps.webBase,
+        ),
       ]);
-
       await writeAudit(tx, {
         actorUserId: actorId,
         action: 'role.invite',
         entityType: 'invite',
         entityId: row.id,
         scope: target.audit,
-        meta: { role: target.role },
+        meta: {
+          role: target.role,
+          replacesInviteId: previous?.id ?? null,
+          replacesAssignmentId: row.replacesAssignmentId,
+        },
       });
       return row;
     });
@@ -401,7 +531,7 @@ export async function assignRole(
   body: AssignRoleBody,
 ): Promise<StaffRoleAssignment> {
   const [user] = await db.select({ id: users.id }).from(users).where(eq(users.id, body.userId));
-  if (!user) invalid('userId');
+  if (!user) fail('not_found');
   const replacesId = 'replacesAssignmentId' in body ? body.replacesAssignmentId : undefined;
 
   try {
@@ -412,9 +542,9 @@ export async function assignRole(
           .from(roleAssignments)
           .where(and(eq(roleAssignments.id, replacesId), sameTarget(roleAssignments, target)))
           .for('update');
-        if (!old || old.revokedAt || old.userId === body.userId) {
-          return invalid('replacesAssignmentId');
-        }
+        // Unknown, revoked or at another place reads as not found, like an id out of scope.
+        if (!old || old.revokedAt) return fail('not_found');
+        if (old.userId === body.userId) return invalid('replacesAssignmentId');
         await tx
           .update(roleAssignments)
           .set({ revokedAt: now })

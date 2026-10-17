@@ -9,3 +9,5 @@ Affected lanes: contracts, api-core (settings endpoints), console (a settings fo
 Workaround meanwhile: the worker reads `reminder_lead_minutes` (or `reminderLeadMinutes`) from the `settings` table directly, validates it, and falls back to 60 for each program.
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
+
+Applied in api and worker 2026-10-17: `adminSettings` serves `reminderLeadMinutes` under the key `reminder_lead_minutes` (a partial update merges); the worker reads the same key.

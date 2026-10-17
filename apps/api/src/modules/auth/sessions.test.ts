@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { eq } from 'drizzle-orm';
 import { ApiError, Tokens } from '@qc/contracts';
 import { schema } from '@qc/db';
-import { requireAction } from '../../auth/middleware';
+import { authFailureReason, requireAction } from '../../auth';
 import { hashRefreshToken } from '../../auth/crypto';
 import {
   PHONE_A,
@@ -22,6 +22,7 @@ beforeAll(async () => {
         c.json({ ok: true, principal: c.get('principal') }),
       );
       app.get('/test/public', requireAction('config.read'), (c) => c.json({ ok: true }));
+      app.get('/test/reason', (c) => c.json({ reason: authFailureReason(c) }));
     },
   });
 }, 60_000);
@@ -72,9 +73,31 @@ describe('auth.refresh', () => {
     expect(dump).not.toContain(result.refreshToken.split('.')[1] ?? 'x');
   });
 
-  it('treats a used refresh token as theft and ends the whole session', async () => {
+  it('answers a retry of the old token within ten seconds with the very same pair', async () => {
+    const first = await signedIn();
+    h.clock.advance(600);
+    const second = Tokens.parse(await (await refresh(first.refreshToken)).json());
+    h.clock.advance(9);
+    const retry = await refresh(first.refreshToken);
+    expect(retry.status).toBe(200);
+    expect(Tokens.parse(await retry.json())).toEqual(second);
+    expect((await whoAmI(second.accessToken)).status).toBe(200);
+    const [session] = await sessions();
+    expect(session?.revokedAt).toBeNull();
+    expect(session?.refreshTokenHash).toBe(hashRefreshToken(second.refreshToken));
+    expect(session?.previousRefreshTokenHash).toBe(hashRefreshToken(first.refreshToken));
+    // Only hashes are stored, never a token.
+    const dump = JSON.stringify(await sessions());
+    expect(dump).not.toContain(second.refreshToken);
+    expect(dump).not.toContain(first.refreshToken);
+    // The new token still rotates normally afterwards.
+    expect((await refresh(second.refreshToken)).status).toBe(200);
+  });
+
+  it('treats the old token after ten seconds as theft and ends the whole session', async () => {
     const first = await signedIn();
     const second = Tokens.parse(await (await refresh(first.refreshToken)).json());
+    h.clock.advance(11);
 
     const replay = await errorOf(await refresh(first.refreshToken));
     expect(replay).toMatchObject({ status: 401, code: 'refresh_token_invalid' });
@@ -87,19 +110,72 @@ describe('auth.refresh', () => {
     expect(h.logger.entries.some((e) => e.event === 'auth.refresh_reuse_detected')).toBe(true);
   });
 
+  it('refuses a token that matches neither the current nor the previous one, and revokes nothing', async () => {
+    const t0 = await signedIn();
+    const t1 = Tokens.parse(await (await refresh(t0.refreshToken)).json());
+    const t2 = Tokens.parse(await (await refresh(t1.refreshToken)).json());
+    // t0 is two rotations old: neither current (t2) nor previous (t1).
+    expect((await errorOf(await refresh(t0.refreshToken))).code).toBe('refresh_token_invalid');
+    const [session] = await sessions();
+    expect(session?.revokedAt).toBeNull();
+    expect((await refresh(t2.refreshToken)).status).toBe(200);
+  });
+
   it('leaves the person other sign-ins alone when one session is revoked', async () => {
     const phone = await signedIn(PHONE_A);
     h.clock.advance(120);
     const tablet = await signedIn(PHONE_A);
     await refresh(phone.refreshToken);
+    h.clock.advance(11);
     await refresh(phone.refreshToken); // reuse: phone session revoked
     expect((await refresh(tablet.refreshToken)).status).toBe(200);
   });
 
-  it('lets only one of two parallel refreshes win', async () => {
+  it('gives two parallel refreshes of one token the same new pair', async () => {
     const first = await signedIn();
     const [a, b] = await Promise.all([refresh(first.refreshToken), refresh(first.refreshToken)]);
-    expect([a.status, b.status].sort()).toEqual([200, 401]);
+    expect([a.status, b.status]).toEqual([200, 200]);
+    const [pairA, pairB] = [Tokens.parse(await a.json()), Tokens.parse(await b.json())];
+    expect(pairA).toEqual(pairB);
+    const [session] = await sessions();
+    expect(session?.revokedAt).toBeNull();
+    expect(session?.refreshTokenHash).toBe(hashRefreshToken(pairA.refreshToken));
+    expect(session?.previousRefreshTokenHash).toBe(hashRefreshToken(first.refreshToken));
+    expect((await whoAmI(pairA.accessToken)).status).toBe(200);
+  });
+
+  it('keeps two tabs sharing one sign-in working while they refresh moments apart', async () => {
+    const shared = await signedIn();
+    // Tab A refreshes; tab B, which read the same stored token, follows a few seconds later.
+    h.clock.advance(900);
+    const tabA = Tokens.parse(await (await refresh(shared.refreshToken)).json());
+    h.clock.advance(3);
+    const tabB = Tokens.parse(await (await refresh(shared.refreshToken)).json());
+    expect(tabB).toEqual(tabA);
+
+    // Next round: tab B goes first this time, tab A follows within the window.
+    h.clock.advance(900);
+    const roundTwoB = Tokens.parse(await (await refresh(tabB.refreshToken)).json());
+    h.clock.advance(5);
+    const roundTwoA = Tokens.parse(await (await refresh(tabA.refreshToken)).json());
+    expect(roundTwoA).toEqual(roundTwoB);
+    expect((await whoAmI(roundTwoA.accessToken)).status).toBe(200);
+    expect((await sessions())[0]?.revokedAt).toBeNull();
+
+    // A tab that wakes up much later with the stale token is treated as reuse.
+    h.clock.advance(60);
+    expect((await refresh(tabA.refreshToken)).status).toBe(401);
+    expect((await sessions())[0]?.revokedAt).not.toBeNull();
+  });
+
+  it('does not hand a retry to a suspended account', async () => {
+    const first = await signedIn();
+    await refresh(first.refreshToken);
+    await h.db
+      .update(schema.users)
+      .set({ status: 'suspended' })
+      .where(eq(schema.users.id, first.me.id));
+    expect((await errorOf(await refresh(first.refreshToken))).code).toBe('account_suspended');
   });
 
   it('refuses an expired refresh token', async () => {
@@ -216,6 +292,29 @@ describe('access tokens', () => {
     expect((await h.get('/test/public', { token: result.accessToken })).status).toBe(200);
     expect((await h.get('/test/public', { token: 'garbage' })).status).toBe(200);
     expect((await h.get('/test/public')).status).toBe(200);
+  });
+});
+
+describe('authFailureReason', () => {
+  const reason = async (token?: string) =>
+    ((await (await h.get('/test/reason', token ? { token } : {})).json()) as { reason: string })
+      .reason;
+
+  it('tells an expired token apart from a missing, forged or revoked one', async () => {
+    const result = await signedIn();
+    expect(await reason()).toBe('unauthenticated');
+    expect(await reason('not-a-token')).toBe('unauthenticated');
+    h.clock.advance(15 * 60 + 1);
+    expect(await reason(result.accessToken)).toBe('token_expired');
+  });
+
+  it('reads account_suspended for a suspended account', async () => {
+    const result = await signedIn();
+    await h.db
+      .update(schema.users)
+      .set({ status: 'suspended' })
+      .where(eq(schema.users.id, result.me.id));
+    expect(await reason(result.accessToken)).toBe('account_suspended');
   });
 });
 

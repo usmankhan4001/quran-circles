@@ -207,7 +207,7 @@ describe('follows', () => {
     expect(await alerts(person.userId, h.world.venueA1)).toEqual([]);
   });
 
-  it('refuses a duplicate follow, an unknown venue and an archived venue', async () => {
+  it('refuses a duplicate follow, and answers not found for an unknown or archived venue', async () => {
     const person = await h.person();
     const body = { target: 'venue', venueId: h.world.venueA1 };
     await h.api('follows.create', { as: person, body });
@@ -217,7 +217,7 @@ describe('follows', () => {
     expect(
       (await h.api('follows.create', { as: person, body: { target: 'venue', venueId: nil } }))
         .status,
-    ).toBe(400);
+    ).toBe(404);
     await h.api('adminVenues.archive', { as: admin, params: { venueId: h.world.venueA2 } });
     expect(
       (
@@ -226,7 +226,7 @@ describe('follows', () => {
           body: { target: 'venue', venueId: h.world.venueA2 },
         })
       ).status,
-    ).toBe(400);
+    ).toBe(404);
   });
 
   it('follows a published circle, but not one still waiting for approval', async () => {
@@ -246,7 +246,7 @@ describe('follows', () => {
           body: { target: 'circle', circleId: pending.id },
         })
       ).status,
-    ).toBe(400);
+    ).toBe(404);
     const res = await h.api('follows.create', {
       as: person,
       body: { target: 'circle', circleId: live.id },
@@ -679,10 +679,8 @@ describe('deleting the account', () => {
 
   it('will not remove the last national admin, but will once another exists', async () => {
     const refused = await h.api('me.delete', { as: admin, body: { confirm: true } });
-    expect(refused.status).toBe(400);
-    expect(
-      refused.json<{ error: { code: string; issues: { code: string }[] } }>().error.issues[0]?.code,
-    ).toBe('last_national_admin');
+    expect(refused.status).toBe(409);
+    expect(refused.json<{ error: { code: string } }>().error.code).toBe('last_national_admin');
     expect((await h.api('me.get', { as: admin })).status).toBe(200);
 
     await h.nationalAdmin();

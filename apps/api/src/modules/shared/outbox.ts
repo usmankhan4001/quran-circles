@@ -15,6 +15,8 @@ export interface OutboxEntry {
   /** Needed by the worker for template sends. Cleared after sending or account deletion. */
   recipientPhone?: string | null;
   cityId?: string | null;
+  /** The venue the message is about. The worker checks venue-scoped consent against it. */
+  venueId?: string | null;
   sentBy?: string | null;
   updateId?: string | null;
 }
@@ -40,6 +42,7 @@ export async function enqueueOutbox(db: Db, entries: readonly OutboxEntry[]): Pr
         payload,
         costCategory: template ? TEMPLATES[template].costCategory : ('free' as const),
         cityId: e.cityId ?? null,
+        venueId: e.venueId ?? null,
         sentBy: e.sentBy ?? null,
         updateId: e.updateId ?? null,
       };

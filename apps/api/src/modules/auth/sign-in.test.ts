@@ -238,6 +238,31 @@ describe('auth.verifyCode', () => {
     expect(session?.userId).toBe(body.me.id);
   });
 
+  it('keeps the language chosen on the code screen and gives it to the new account', async () => {
+    const asked = await h.post('/v1/auth/code', { phone: PHONE_A, locale: 'en' });
+    const { challengeId } = RequestCodeResponse.parse(await asked.json());
+    const [row] = await challengeRows();
+    expect(row?.locale).toBe('en');
+    const body = SignInResponse.parse(
+      await (await verify(challengeId, h.sender.last?.code ?? '')).json(),
+    );
+    expect(body.me.locale).toBe('en');
+    const [user] = await h.db.select().from(schema.users);
+    expect(user?.locale).toBe('en');
+    expect(user?.displayName).toBeNull();
+  });
+
+  it('leaves the language of an existing account as it is', async () => {
+    await h.signIn(PHONE_A);
+    h.clock.advance(120);
+    const asked = await h.post('/v1/auth/code', { phone: PHONE_A, locale: 'en' });
+    const { challengeId } = RequestCodeResponse.parse(await asked.json());
+    const body = SignInResponse.parse(
+      await (await verify(challengeId, h.sender.last?.code ?? '')).json(),
+    );
+    expect(body.me.locale).toBe('ur');
+  });
+
   it('marks the code used', async () => {
     const { challengeId, code } = await startCode();
     await verify(challengeId, code);

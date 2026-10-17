@@ -26,6 +26,7 @@ type InviteShape = {
   status?: 'pending' | 'accepted' | 'revoked' | 'expired';
   expiresInSeconds?: number;
   invitedBy?: string;
+  replacesAssignmentId?: string;
 };
 
 async function invite(shape: InviteShape) {
@@ -44,6 +45,7 @@ async function invite(shape: InviteShape) {
       cityId: shape.cityId ?? null,
       venueId: shape.venueId ?? null,
       invitedBy: shape.invitedBy ?? null,
+      replacesAssignmentId: shape.replacesAssignmentId ?? null,
       status: shape.status ?? 'pending',
       createdAt: h.clock.now(),
       expiresAt: new Date(h.clock.now().getTime() + (shape.expiresInSeconds ?? 7 * 86400) * 1000),
@@ -267,5 +269,77 @@ describe('coordinator invites at sign-in', () => {
     h.clock.advance(120);
     const again = await h.signIn(PHONE_A);
     expect(again.body.me.roles).toEqual([]);
+  });
+});
+
+describe('handing a place over by invite', () => {
+  async function holder(venueId: string) {
+    const user = await h.createUser();
+    const [row] = await h.db
+      .insert(schema.roleAssignments)
+      .values({ userId: user.id, role: 'venue_coordinator', scopeType: 'venue', venueId })
+      .returning();
+    if (!row) throw new Error('assignment not created');
+    return row;
+  }
+
+  it('ends the old assignment in the same transaction that grants the new one, with audit rows', async () => {
+    const admin = await h.createUser();
+    const old = await holder(h.world.venueA1);
+    const row = await invite({
+      role: 'venue_coordinator',
+      venueId: h.world.venueA1,
+      invitedBy: admin.id,
+      replacesAssignmentId: old.id,
+    });
+    const { body } = await h.signIn(PHONE_A);
+    const rows = await assignments();
+    const ended = rows.find((r) => r.id === old.id);
+    expect(ended?.revokedAt?.getTime()).toBe(h.clock.now().getTime());
+    expect(rows.filter((r) => r.revokedAt === null).map((r) => r.userId)).toEqual([body.me.id]);
+    const entries = await audits();
+    expect(entries.map((e) => e.action).sort()).toEqual(['role.accept_invite', 'role.revoke']);
+    expect(entries.find((e) => e.action === 'role.revoke')).toMatchObject({
+      actorUserId: admin.id,
+      entityId: old.id,
+      venueId: h.world.venueA1,
+      cityId: h.world.cityA.id,
+      meta: { role: 'venue_coordinator', reason: 'handover', inviteId: row.id },
+    });
+  });
+
+  it('leaves an assignment that was already ended, or that is somewhere else, alone', async () => {
+    const elsewhere = await holder(h.world.venueA2);
+    await invite({
+      role: 'venue_coordinator',
+      venueId: h.world.venueA1,
+      replacesAssignmentId: elsewhere.id,
+    });
+    await h.signIn(PHONE_A);
+    const rows = await assignments();
+    expect(rows.find((r) => r.id === elsewhere.id)?.revokedAt).toBeNull();
+    expect((await audits()).map((e) => e.action)).toEqual(['role.accept_invite']);
+  });
+
+  it('does not end the role of the person accepting when they were the one being replaced', async () => {
+    const first = await h.signIn(PHONE_A);
+    const [mine] = await h.db
+      .insert(schema.roleAssignments)
+      .values({
+        userId: first.body.me.id,
+        role: 'venue_coordinator',
+        scopeType: 'venue',
+        venueId: h.world.venueA1,
+      })
+      .returning();
+    await invite({
+      role: 'venue_coordinator',
+      venueId: h.world.venueA1,
+      replacesAssignmentId: mine!.id,
+    });
+    h.clock.advance(120);
+    const again = await h.signIn(PHONE_A);
+    expect(again.status).toBe(200);
+    expect((await assignments()).filter((r) => r.revokedAt === null)).toHaveLength(1);
   });
 });

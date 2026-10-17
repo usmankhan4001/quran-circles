@@ -1,6 +1,7 @@
 import type { Handlers } from './shared/route';
 import { attendanceHandlers } from './attendance/routes';
 import { circleHandlers } from './circles/routes';
+import { importHandlers } from './import/routes';
 import { meHandlers } from './me/routes';
 import { oversightHandlers } from './oversight/routes';
 import { placesHandlers } from './places/routes';
@@ -28,5 +29,6 @@ export function allHandlers(): Handlers[] {
     roleHandlers(),
     attendanceHandlers(),
     oversightHandlers(),
+    importHandlers(),
   ];
 }

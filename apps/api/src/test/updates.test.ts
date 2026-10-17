@@ -251,11 +251,12 @@ describe('posting an update', () => {
     ).toBe(401);
   });
 
-  it('answers a venue or city that does not exist with forbidden for outsiders and a field error for staff', async () => {
+  it('answers a venue or city that does not exist with forbidden for outsiders and not found for staff', async () => {
     const nil = '00000000-0000-4000-8000-000000000000';
     const staff = await h.cityCoordinator(h.world.cityA.id);
     const res = await post(staff, { type: 'venue', venueId: nil });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
+    expect((await post(staff, { type: 'city', cityId: nil })).status).toBe(404);
     expect((await post(await h.person(), { type: 'venue', venueId: nil })).status).toBe(403);
   });
 
@@ -332,6 +333,7 @@ describe('posting an update', () => {
       updateId: loud.body.id,
       sentBy: admin.userId,
       idempotencyKey: `update:${loud.body.id}:${withApp.userId}:push`,
+      venueId: h.world.venueA1,
     });
     // Posts to the feed do not send WhatsApp: that is reserved for critical session changes.
     expect((await outboxRows(h)).filter((r) => r.channel === 'whatsapp' && r.updateId)).toEqual([]);
@@ -394,7 +396,7 @@ describe('posting an update', () => {
           { sessionId: '00000000-0000-4000-8000-000000000000' },
         )
       ).status,
-    ).toBe(400);
+    ).toBe(404);
   });
 
   it('sends a venue time change or cancellation about its own session to registrants on WhatsApp too', async () => {
@@ -418,8 +420,8 @@ describe('posting an update', () => {
     );
     expect(res.status).toBe(201);
     const rows = (await outboxRows(h)).slice(before).filter((r) => r.channel === 'whatsapp');
-    expect(rows.map((r) => [r.templateKey, r.recipientUserId])).toEqual([
-      ['session_cancelled', consenting.userId],
+    expect(rows.map((r) => [r.templateKey, r.recipientUserId, r.venueId])).toEqual([
+      ['session_cancelled', consenting.userId, h.world.venueA1],
     ]);
   });
 
@@ -457,6 +459,75 @@ describe('posting an update', () => {
       body: { scope: { type: 'national' }, title: { en: 'x'.repeat(501) }, body: { en: 'x' } },
     });
     expect(long.status).toBe(400);
+  });
+});
+
+describe('previewing an update', () => {
+  const preview = (as: Actor, scope: PostBody, extra: Record<string, unknown> = {}) =>
+    h.api('adminUpdates.preview', {
+      as,
+      body: { scope, title: { en: 'Preview' }, body: { en: 'Preview body' }, ...extra },
+    });
+
+  it('counts the people a post would reach and writes or sends nothing', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    for (let i = 0; i < 2; i++)
+      await register(h, await h.person(), session.id, { areaId: h.world.cityA.areaId });
+    const outboxBefore = await outboxRows(h);
+    const auditBefore = await auditRows(h);
+
+    const res = await preview(admin, { type: 'venue', venueId: h.world.venueA1 });
+    expect(res.status).toBe(200);
+    expect(res.json<{ recipients: number }>()).toEqual({ recipients: 2 });
+    expect((await preview(admin, { type: 'national' }, { notify: true })).status).toBe(200);
+    expect(await h.db.select().from(schema.updates)).toEqual([]);
+    expect(await outboxRows(h)).toEqual(outboxBefore);
+    expect(await auditRows(h)).toEqual(auditBefore);
+
+    // The count matches what posting reports.
+    const posted = await post(admin, { type: 'venue', venueId: h.world.venueA1 });
+    expect(posted.body.recipients).toBe(2);
+  });
+
+  it('follows the same scope rules as posting', async () => {
+    const cityA = await h.cityCoordinator(h.world.cityA.id);
+    const venueA1 = await h.venueCoordinator(h.world.venueA1);
+    const cases: [Actor, PostBody, number][] = [
+      [admin, { type: 'national' }, 200],
+      [cityA, { type: 'national' }, 403],
+      [cityA, { type: 'city', cityId: h.world.cityA.id }, 200],
+      [cityA, { type: 'city', cityId: h.world.cityB.id }, 403],
+      [cityA, { type: 'venue', venueId: h.world.venueA2 }, 200],
+      [venueA1, { type: 'venue', venueId: h.world.venueA1 }, 200],
+      [venueA1, { type: 'venue', venueId: h.world.venueA2 }, 403],
+      [await h.person(), { type: 'venue', venueId: h.world.venueA1 }, 403],
+    ];
+    for (const [who, scope, status] of cases) {
+      expect((await preview(who, scope)).status, JSON.stringify(scope)).toBe(status);
+    }
+  });
+
+  it('validates like posting: unknown references are not found, bad input is refused', async () => {
+    const nil = '00000000-0000-4000-8000-000000000000';
+    const theirs = await createSession(h, { venueId: h.world.venueB1, as: admin });
+    const venueA1 = await h.venueCoordinator(h.world.venueA1);
+    expect((await preview(admin, { type: 'venue', venueId: nil })).status).toBe(404);
+    expect((await preview(admin, { type: 'national' }, { sessionId: nil })).status).toBe(404);
+    expect(
+      (
+        await preview(
+          venueA1,
+          { type: 'venue', venueId: h.world.venueA1 },
+          { sessionId: theirs.id },
+        )
+      ).status,
+    ).toBe(400);
+    expect((await preview(await h.person(), { type: 'venue', venueId: nil })).status).toBe(403);
+    const blank = await h.api('adminUpdates.preview', {
+      as: admin,
+      body: { scope: { type: 'national' }, title: { en: '' }, body: { en: 'x' } },
+    });
+    expect(blank.status).toBe(400);
   });
 });
 

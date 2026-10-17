@@ -27,6 +27,11 @@ export interface OutboxRowDraft {
   costCategory: CostCategory;
   nextAttemptAt: Date;
   cityId: string | null;
+  /**
+   * The venue the message is about (`message_outbox.venue_id`). The worker checks per-venue
+   * consent against it.
+   */
+  venueId: string | null;
   sentBy: string | null;
   updateId: string | null;
 }
@@ -38,6 +43,7 @@ interface Common {
   /** Send no earlier than this. Defaults to now at insert time. */
   sendAt: Date;
   cityId?: string | null;
+  venueId?: string | null;
   sentBy?: string | null;
   updateId?: string | null;
 }
@@ -57,6 +63,7 @@ export function draftPushRow(
     costCategory: 'free',
     nextAttemptAt: input.sendAt,
     cityId: input.cityId ?? null,
+    venueId: input.venueId ?? null,
     sentBy: input.sentBy ?? null,
     updateId: input.updateId ?? null,
   };
@@ -87,6 +94,7 @@ export function draftTemplateRow<K extends TemplateKey>(
     costCategory: TEMPLATES[input.template].costCategory,
     nextAttemptAt: input.sendAt,
     cityId: input.cityId ?? null,
+    venueId: input.venueId ?? null,
     sentBy: input.sentBy ?? null,
     updateId: input.updateId ?? null,
   };

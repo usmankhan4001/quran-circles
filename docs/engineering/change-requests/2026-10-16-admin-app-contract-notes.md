@@ -29,3 +29,5 @@ Applied in admin-app 2026-10-17, item 5: the app uses the exported `Attendance` 
 Applied in admin-app 2026-10-17, items 3 and 4 (deferred): no change; the app still fills template blanks itself and copies Urdu-only text into `en`.
 Applied in admin-app 2026-10-17, item 6: the registrants screen shows no number and keeps the call and WhatsApp buttons (done in the redesign pass).
 Applied in admin-app 2026-10-17, item 7: recap and portion stay on the occurrence screen (`adminOccurrences.update`).
+
+Applied in api 2026-10-17, items 1 and 2: `adminSessions.get` and `adminCircles.get` return the list entry (`not_found` outside scope); `adminUpdates.preview` validates like post and returns `{recipients}` without writing or sending.

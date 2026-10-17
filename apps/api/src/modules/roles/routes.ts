@@ -17,7 +17,7 @@ export const roleHandlers = (): Handlers => ({
   'adminRoles.invite': async (ctx) => {
     const action = roleAssignAction(ctx.body.role);
     const target = await resolveRoleTarget(ctx.db, ctx.body);
-    if (!target) return ctx.unknownRef(action, 'cityId' in ctx.body ? 'cityId' : 'venueId');
+    if (!target) return ctx.unknownRef(action);
     ctx.authorize(action, target.resource);
     return createInvite(
       ctx.db,
@@ -43,7 +43,7 @@ export const roleHandlers = (): Handlers => ({
   'adminRoles.assign': async (ctx) => {
     const action = roleAssignAction(ctx.body.role);
     const target = await resolveRoleTarget(ctx.db, ctx.body);
-    if (!target) return ctx.unknownRef(action, 'cityId' in ctx.body ? 'cityId' : 'venueId');
+    if (!target) return ctx.unknownRef(action);
     ctx.authorize(action, target.resource);
     return assignRole(ctx.db, ctx.now, ctx.uid(), target, ctx.body);
   },

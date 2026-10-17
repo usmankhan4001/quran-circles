@@ -128,8 +128,8 @@ export async function deleteAccount(db: Db, userId: string, now: Date): Promise<
             ne(roleAssignments.userId, userId),
           ),
         );
-      // me.delete does not list last_national_admin in the contract (change request filed).
-      if ((others?.n ?? 0) === 0) return invalid('confirm', 'last_national_admin');
+      // The platform must keep at least one national admin.
+      if ((others?.n ?? 0) === 0) return fail('last_national_admin');
     }
 
     const mine = await tx

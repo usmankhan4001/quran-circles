@@ -99,6 +99,86 @@ export async function findSessionScope(db: Db, sessionId: string) {
   return row ?? null;
 }
 
+/**
+ * Writes one session and its occurrences up to the horizon (no reference checks, no audit). A
+ * Dora session without a season joins the active Dora season, and stops at the season's end.
+ * The caller has checked the circle and season ids.
+ */
+export async function insertSession(
+  tx: Db,
+  deps: AdminDeps,
+  venue: { id: string; cityId: string },
+  input: SessionCreate,
+): Promise<string> {
+  const programId = await ensureProgram(tx, input.program);
+  let seasonId = input.seasonId;
+  let seasonEnd: string | null = null;
+  if (seasonId) {
+    const [season] = await tx
+      .select({ endsOn: seasons.endsOn })
+      .from(seasons)
+      .where(eq(seasons.id, seasonId));
+    seasonEnd = season?.endsOn ?? null;
+  } else if (input.program === 'dora') {
+    const [active] = await tx
+      .select()
+      .from(seasons)
+      .where(and(eq(seasons.programId, programId), eq(seasons.isActive, true)))
+      .limit(1);
+    if (active) {
+      seasonId = active.id;
+      seasonEnd = active.endsOn;
+    }
+  }
+  const [city] = await tx
+    .select({ timezone: cities.timezone })
+    .from(cities)
+    .where(eq(cities.id, venue.cityId));
+  const timezone = city?.timezone ?? 'Asia/Karachi';
+
+  const recurring = input.kind === 'recurring';
+  const startsOn = recurring ? input.startsOn : input.date;
+  const endsOn = recurring ? input.endsOn : input.date;
+  const daysOfWeek = recurring ? [...new Set(input.daysOfWeek)].sort((a, b) => a - b) : [];
+
+  const [row] = await tx
+    .insert(sessions)
+    .values({
+      programId,
+      seasonId,
+      venueId: venue.id,
+      circleId: input.circleId,
+      kind: input.kind,
+      titleEn: input.title.en,
+      titleUr: input.title.ur ?? input.title.en,
+      descriptionEn: input.description?.en ?? null,
+      descriptionUr: input.description?.ur ?? null,
+      section: input.section,
+      language: input.language,
+      localStartTime: input.localStartTime,
+      durationMinutes: input.durationMinutes,
+      daysOfWeek,
+      startsOn,
+      endsOn,
+      timezone,
+      capacityEnabled: input.capacity !== null,
+      capacity: input.capacity,
+      registrationEnabled: input.registrationEnabled,
+      status: input.status,
+    })
+    .returning();
+  if (!row) throw new Error('session insert returned no row');
+  const spec: ScheduleSpec = {
+    ...specOf(row),
+    endsOn:
+      seasonEnd && (!row.endsOn || compareDates(seasonEnd, row.endsOn) < 0)
+        ? seasonEnd
+        : row.endsOn,
+  };
+  await materializeSession(tx, row.id, spec, deps.now, deps.horizonDays);
+  return row.id;
+}
+
 export async function createSession(
   db: Db,
   deps: AdminDeps,
@@ -111,83 +191,37 @@ export async function createSession(
       .select({ venueId: circles.venueId })
       .from(circles)
       .where(eq(circles.id, input.circleId));
-    if (!circle || circle.venueId !== venue.id) invalid('circleId');
+    if (!circle) fail('not_found');
+    if (circle.venueId !== venue.id) invalid('circleId');
   }
-  const programId = await ensureProgram(db, input.program);
-  let seasonId = input.seasonId;
-  let seasonEnd: string | null = null;
-  if (seasonId) {
-    const [season] = await db.select().from(seasons).where(eq(seasons.id, seasonId));
-    if (!season || season.programId !== programId) invalid('seasonId');
-    seasonEnd = season.endsOn;
-  } else if (input.program === 'dora') {
-    const [active] = await db
-      .select()
+  if (input.seasonId) {
+    const [season] = await db
+      .select({ programKey: programs.key })
       .from(seasons)
-      .where(and(eq(seasons.programId, programId), eq(seasons.isActive, true)))
-      .limit(1);
-    if (active) {
-      seasonId = active.id;
-      seasonEnd = active.endsOn;
-    }
+      .innerJoin(programs, eq(programs.id, seasons.programId))
+      .where(eq(seasons.id, input.seasonId));
+    if (!season) return fail('not_found');
+    if (season.programKey !== input.program) invalid('seasonId');
   }
-  const [city] = await db
-    .select({ timezone: cities.timezone })
-    .from(cities)
-    .where(eq(cities.id, venue.cityId));
-  const timezone = city?.timezone ?? 'Asia/Karachi';
-
-  const recurring = input.kind === 'recurring';
-  const startsOn = recurring ? input.startsOn : input.date;
-  const endsOn = recurring ? input.endsOn : input.date;
-  if (recurring && endsOn && compareDates(endsOn, startsOn) < 0) invalid('endsOn');
-  const daysOfWeek = recurring ? [...new Set(input.daysOfWeek)].sort((a, b) => a - b) : [];
+  if (
+    input.kind === 'recurring' &&
+    input.endsOn &&
+    compareDates(input.endsOn, input.startsOn) < 0
+  ) {
+    invalid('endsOn');
+  }
 
   const sessionId = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(sessions)
-      .values({
-        programId,
-        seasonId,
-        venueId: venue.id,
-        circleId: input.circleId,
-        kind: input.kind,
-        titleEn: input.title.en,
-        titleUr: input.title.ur ?? input.title.en,
-        descriptionEn: input.description?.en ?? null,
-        descriptionUr: input.description?.ur ?? null,
-        section: input.section,
-        language: input.language,
-        localStartTime: input.localStartTime,
-        durationMinutes: input.durationMinutes,
-        daysOfWeek,
-        startsOn,
-        endsOn,
-        timezone,
-        capacityEnabled: input.capacity !== null,
-        capacity: input.capacity,
-        registrationEnabled: input.registrationEnabled,
-        status: input.status,
-      })
-      .returning();
-    if (!row) throw new Error('session insert returned no row');
-    const spec: ScheduleSpec = {
-      ...specOf(row),
-      endsOn:
-        seasonEnd && (!row.endsOn || compareDates(seasonEnd, row.endsOn) < 0)
-          ? seasonEnd
-          : row.endsOn,
-    };
-    await materializeSession(tx, row.id, spec, deps.now, deps.horizonDays);
+    const id = await insertSession(tx, deps, venue, input);
     await writeAudit(tx, {
       actorUserId: actorId,
       action: 'session.create',
       entityType: 'session',
-      entityId: row.id,
+      entityId: id,
       scope: venueScope(venue),
       meta: { kind: input.kind, program: input.program },
     });
-    return row.id;
+    return id;
   });
   const [view] = await loadSessions(db, [sessionId], deps.now);
   if (!view) throw new Error('created session not found');

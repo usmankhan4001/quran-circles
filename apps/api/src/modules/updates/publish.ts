@@ -108,6 +108,7 @@ async function pushEntries(
   const deepLink = buildDeepLink(link, deps.webBase);
   const out: OutboxEntry[] = [];
   const cityId = input.scope.type === 'national' ? null : input.scope.cityId;
+  const venueId = input.scope.type === 'venue' ? input.scope.venueId : null;
   for (let i = 0; i < reach.length; i += 1000) {
     const rows = await db
       .selectDistinct({ id: users.id, locale: users.locale })
@@ -135,6 +136,7 @@ async function pushEntries(
         payload,
         recipientUserId: user.id,
         cityId,
+        venueId,
         sentBy: input.authorId,
         updateId,
       });
@@ -362,6 +364,7 @@ export async function publishSessionEvent(
           recipientUserId: a.id,
           recipientPhone: a.phone,
           cityId: session.cityId,
+          venueId: session.venueId,
           sentBy: input.actorId,
           updateId: result.updateId,
         };

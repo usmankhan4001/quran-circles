@@ -35,7 +35,13 @@ describe('provider code sender', () => {
 
   it('sends the WhatsApp authentication template with the code in body and button', async () => {
     const { sender, whatsapp, sms, reports } = setup();
-    await sender.send({ phone: PHONE, code: CODE, locale: 'ur', channel: 'whatsapp' });
+    const result = await sender.send({
+      phone: PHONE,
+      code: CODE,
+      locale: 'ur',
+      channel: 'whatsapp',
+    });
+    expect(result).toEqual({ channel: 'whatsapp' });
     expect(whatsapp.sent).toHaveLength(1);
     expect(whatsapp.sent[0]).toMatchObject({
       to: PHONE,
@@ -63,7 +69,14 @@ describe('provider code sender', () => {
   ])('falls back to SMS after a WhatsApp %s', async (_n, failure) => {
     const { sender, whatsapp, sms, reports } = setup();
     whatsapp.failNext(failure);
-    await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'whatsapp' });
+    const result = await sender.send({
+      phone: PHONE,
+      code: CODE,
+      locale: 'en',
+      channel: 'whatsapp',
+    });
+    // The auth lane passes this on, so the app says "check your SMS".
+    expect(result).toEqual({ channel: 'sms' });
     expect(sms.sent).toHaveLength(1);
     expect(sms.sent[0]!.to).toBe(PHONE);
     expect(sms.sent[0]!.body).toBe(
@@ -84,7 +97,8 @@ describe('provider code sender', () => {
 
   it('goes straight to SMS when the caller asks for SMS', async () => {
     const { sender, whatsapp, sms } = setup();
-    await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' });
+    const result = await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' });
+    expect(result).toEqual({ channel: 'sms' });
     expect(whatsapp.sent).toHaveLength(0);
     expect(sms.sent).toHaveLength(1);
   });

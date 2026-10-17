@@ -17,7 +17,10 @@ import { describeError, type AuthDeps, type AuthVariables } from './types';
 type AuthEnv = { Variables: AuthVariables };
 
 /** Why a request has no principal. `null` means no credentials were sent. */
-type AuthFailure = Extract<ErrorCode, 'unauthenticated' | 'token_expired' | 'account_suspended'>;
+export type AuthFailure = Extract<
+  ErrorCode,
+  'unauthenticated' | 'token_expired' | 'account_suspended'
+>;
 
 interface RequestAuth {
   principal: Principal | null;
@@ -30,6 +33,14 @@ interface RequestAuth {
  * other lanes code against) and keyed by the Hono context.
  */
 const requestAuth = new WeakMap<object, RequestAuth>();
+
+/**
+ * Why this request has no signed-in person, as `authMiddleware` worked it out: `token_expired`
+ * (refresh and retry), `account_suspended` (show the suspended screen) or `unauthenticated` (sign
+ * in; also when no token was sent at all, or the middleware has not run on this request).
+ */
+export const authFailureReason = (c: Context): AuthFailure =>
+  requestAuth.get(c)?.failure ?? 'unauthenticated';
 
 /** The session behind this request's access token, for sign-out. Null when not signed in. */
 export const sessionIdOf = (c: Context): string | null => requestAuth.get(c)?.sessionId ?? null;
@@ -134,10 +145,7 @@ export function requireAction(
       await next();
       return;
     }
-    if (principal === null) {
-      const failure = requestAuth.get(c)?.failure ?? 'unauthenticated';
-      return errorResponse(c, failure);
-    }
+    if (principal === null) return errorResponse(c, authFailureReason(c));
     return errorResponse(c, 'forbidden');
   };
 }

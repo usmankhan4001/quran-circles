@@ -67,6 +67,7 @@ interface OccurrenceRow {
   programKey: 'dora' | 'circles';
   venueNameEn: string;
   venueNameUr: string;
+  venueId: string;
   cityId: string;
 }
 
@@ -88,6 +89,7 @@ async function loadOccurrences(db: Db, ids: string[]): Promise<OccurrenceRow[]> 
           programKey: tables.programs.key,
           venueNameEn: tables.venues.nameEn,
           venueNameUr: tables.venues.nameUr,
+          venueId: tables.venues.id,
           cityId: tables.venues.cityId,
         })
         .from(tables.occurrences)
@@ -261,6 +263,7 @@ export async function reconcileReminders(opts: ReconcileOptions): Promise<Reconc
           templateKey: 'session_reminder',
           locale: user.locale,
           cityId: o.cityId,
+          venueId: o.venueId,
         }),
       });
     }
@@ -295,6 +298,7 @@ export async function reconcileReminders(opts: ReconcileOptions): Promise<Reconc
           payload: w.draft.payload,
           locale: w.draft.locale,
           cityId: w.draft.cityId,
+          venueId: w.draft.venueId,
         })
         .where(and(eq(out.id, row.id), eq(out.status, 'failed')));
       summary.revived++;

@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import type { Follow } from '@qc/contracts';
 import { schema, type Db } from '../../db';
-import { fail, invalid, isUniqueViolation } from '../shared/errors';
+import { fail, isUniqueViolation } from '../shared/errors';
 import { localized } from '../shared/mappers';
 import { applyConsent } from './consents';
 
@@ -95,11 +95,12 @@ export async function createFollow(
       let venueId: string;
       if (input.target === 'venue') {
         const [venue] = await tx.select().from(venues).where(eq(venues.id, input.venueId));
-        if (!venue || venue.status !== 'active') return invalid('venueId');
+        // An archived venue is not public, so it reads as unknown.
+        if (!venue || venue.status !== 'active') return fail('not_found');
         venueId = venue.id;
       } else {
         const [circle] = await tx.select().from(circles).where(eq(circles.id, input.circleId));
-        if (!circle || circle.status !== 'published') return invalid('circleId');
+        if (!circle || circle.status !== 'published') return fail('not_found');
         venueId = circle.venueId;
       }
       const [created] = await tx

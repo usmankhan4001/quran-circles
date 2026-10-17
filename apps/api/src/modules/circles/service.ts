@@ -42,6 +42,12 @@ export function toAdminCircle(r: Record): AdminCircle {
 const select = (db: Db) =>
   db.select(columns).from(circles).innerJoin(venues, eq(venues.id, circles.venueId));
 
+/** The city and venue `can` needs to decide on a circle. */
+export const circleResource = (r: Record): { cityId: string; venueId: string } => ({
+  cityId: r.cityId,
+  venueId: r.circle.venueId,
+});
+
 /** A circle with the city of its venue, for the scope check. */
 export async function findCircle(db: Db, circleId: string) {
   const [row] = await select(db).where(eq(circles.id, circleId));
@@ -141,7 +147,12 @@ export interface CirclePatch {
   language?: AdminCircle['language'] | undefined;
   section?: AdminCircle['section'] | undefined;
   onlineLink?: string | null | undefined;
+  /** Archive a published circle or publish an archived one again. */
+  status?: 'published' | 'archived' | undefined;
 }
+
+/** `status` only moves a circle between published and archived; pending, rejected and draft stay. */
+const ARCHIVE_MOVES: ReadonlySet<string> = new Set(['published>archived', 'archived>published']);
 
 export async function updateCircle(
   db: Db,
@@ -178,6 +189,12 @@ export async function updateCircle(
     set.onlineLink = patch.onlineLink;
     fields.push('onlineLink');
   }
+  const from = record.circle.status;
+  if (patch.status !== undefined && patch.status !== from) {
+    if (!ARCHIVE_MOVES.has(`${from}>${patch.status}`)) invalid('status', 'invalid_transition');
+    set.status = patch.status;
+    fields.push('status');
+  }
   if (fields.length > 0) {
     await db.transaction(async (tx) => {
       await tx
@@ -190,7 +207,7 @@ export async function updateCircle(
         entityType: 'circle',
         entityId: record.circle.id,
         scope: venueScope({ id: record.circle.venueId, cityId: record.cityId }),
-        meta: { fields },
+        meta: { fields, ...(set.status ? { status: set.status } : {}) },
       });
     });
   }
@@ -205,7 +222,6 @@ export async function decideCircle(
   actorId: string,
   circleId: string,
   decision: 'approve' | 'reject',
-  hasNote: boolean,
 ): Promise<AdminCircle> {
   await db.transaction(async (tx) => {
     // Conditional update: only a circle still pending can be decided, even with two deciders at once.
@@ -229,7 +245,6 @@ export async function decideCircle(
       entityType: 'circle',
       entityId: circleId,
       scope: venueScope({ id: changed.venueId, cityId: venue?.cityId as string }),
-      meta: { hasNote },
     });
   });
   const found = await findCircle(db, circleId);

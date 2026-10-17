@@ -73,11 +73,20 @@ describe('creating a circle', () => {
     expect((await h.api('adminCircles.create', { body })).status).toBe(401);
   });
 
-  it('refuses an unknown or archived venue and bad input', async () => {
+  it('answers not found for an unknown venue, and refuses an archived venue and bad input', async () => {
     const base = { name: { en: 'A circle' }, language: 'en' };
     expect(
       (await h.api('adminCircles.create', { as: admin, body: { ...base, venueId: nil } })).status,
-    ).toBe(400);
+    ).toBe(404);
+    // Someone with no circle role at all still learns nothing about which venues exist.
+    expect(
+      (
+        await h.api('adminCircles.create', {
+          as: await h.person(),
+          body: { ...base, venueId: nil },
+        })
+      ).status,
+    ).toBe(403);
     await h.api('adminVenues.archive', { as: admin, params: { venueId: h.world.venueA2 } });
     expect(
       (
@@ -203,6 +212,81 @@ describe('editing a circle', () => {
   });
 });
 
+describe('archiving a circle', () => {
+  const setStatus = (who: Actor, circleId: string, status: string) =>
+    h.api('adminCircles.update', { as: who, params: { circleId }, body: { status } });
+
+  it('archives a published circle and brings it back, auditing the status', async () => {
+    const coordinator = await h.venueCoordinator(h.world.venueA1);
+    const circle = await createCircle(h, { venueId: h.world.venueA1, as: admin });
+    expect(circle.status).toBe('published');
+    const archived = await setStatus(coordinator, circle.id, 'archived');
+    expect(archived.status).toBe(200);
+    expect(archived.json<AdminCircle>().status).toBe('archived');
+    const listed = (await h.api('adminCircles.list', { as: admin })).json<{
+      items: AdminCircle[];
+    }>().items;
+    expect(listed.map((c) => c.id)).not.toContain(circle.id);
+    const back = await setStatus(coordinator, circle.id, 'published');
+    expect(back.json<AdminCircle>().status).toBe('published');
+    const rows = (await auditRows(h)).filter((r) => r.action === 'circle.update');
+    expect(rows.map((r) => (r.meta as { status?: string }).status)).toEqual([
+      'archived',
+      'published',
+    ]);
+  });
+
+  it('will not publish or archive a circle that still waits for approval or was rejected', async () => {
+    const coordinator = await h.venueCoordinator(h.world.venueA1);
+    const pending = await createCircle(h, { venueId: h.world.venueA1, as: coordinator });
+    for (const status of ['published', 'archived']) {
+      const res = await setStatus(admin, pending.id, status);
+      expect(res.status, status).toBe(400);
+      expect(
+        res.json<{ error: { issues: { path: string; code: string }[] } }>().error.issues,
+      ).toEqual([{ path: 'status', code: 'invalid_transition' }]);
+    }
+    await decide(admin, pending.id, { decision: 'reject' });
+    expect((await setStatus(admin, pending.id, 'published')).status).toBe(400);
+    expect((await setStatus(admin, pending.id, 'pending_approval')).status).toBe(400);
+  });
+
+  it('keeps coordinators of other venues out', async () => {
+    const circle = await createCircle(h, { venueId: h.world.venueA1, as: admin });
+    const other = await h.venueCoordinator(h.world.venueA2);
+    expect((await setStatus(other, circle.id, 'archived')).status).toBe(403);
+  });
+});
+
+describe('reading one circle', () => {
+  it('returns the same entry the list shows, to anyone whose scope holds it', async () => {
+    const circle = await createCircle(h, { venueId: h.world.venueA1, as: admin });
+    const listed = (await h.api('adminCircles.list', { as: admin })).json<{
+      items: AdminCircle[];
+    }>().items[0];
+    for (const who of [
+      admin,
+      await h.cityCoordinator(h.world.cityA.id),
+      await h.venueCoordinator(h.world.venueA1),
+    ]) {
+      const res = await h.api('adminCircles.get', { as: who, params: { circleId: circle.id } });
+      expect(res.status).toBe(200);
+      expect(res.json<AdminCircle>()).toEqual(listed);
+    }
+  });
+
+  it('answers not found outside the scope or for an unknown id, and forbidden to non-staff', async () => {
+    const circle = await createCircle(h, { venueId: h.world.venueA1, as: admin });
+    const get = (who: Actor, circleId: string) =>
+      h.api('adminCircles.get', { as: who, params: { circleId } });
+    expect((await get(await h.venueCoordinator(h.world.venueA2), circle.id)).status).toBe(404);
+    expect((await get(await h.cityCoordinator(h.world.cityB.id), circle.id)).status).toBe(404);
+    expect((await get(admin, nil)).status).toBe(404);
+    expect((await get(await h.person(), circle.id)).status).toBe(403);
+    expect((await get(await h.person(), nil)).status).toBe(403);
+  });
+});
+
 describe('deciding on a circle', () => {
   it('lets a city coordinator approve, which publishes it and stamps who and when', async () => {
     const venueCoordinator = await h.venueCoordinator(h.world.venueA1);
@@ -218,7 +302,7 @@ describe('deciding on a circle', () => {
     expect(row?.approvedBy).toBe(city.userId);
   });
 
-  it('rejects a circle, and the note is never stored', async () => {
+  it('rejects a circle, and a note sent by an old client is never stored', async () => {
     const coordinator = await h.venueCoordinator(h.world.venueA1);
     const circle = await createCircle(h, { venueId: h.world.venueA1, as: coordinator });
     const res = await decide(admin, circle.id, {
@@ -228,7 +312,7 @@ describe('deciding on a circle', () => {
     expect(res.json<AdminCircle>().status).toBe('rejected');
     const rows = (await auditRows(h)).filter((r) => r.action === 'circle.reject');
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.meta).toEqual({ hasNote: true });
+    expect(rows[0]?.meta).toEqual({});
     expect(JSON.stringify(await auditRows(h))).not.toContain('right venue');
   });
 

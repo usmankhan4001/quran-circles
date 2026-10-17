@@ -70,6 +70,7 @@ describe('inviting someone by phone', () => {
       recipientUserId: null,
       idempotencyKey: `coordinator_invite:${made.id}:whatsapp`,
       sentBy: admin.userId,
+      venueId: h.world.venueA1,
     });
     expect(rows[0]?.payload).toMatchObject({
       template: 'coordinator_invite',
@@ -101,19 +102,38 @@ describe('inviting someone by phone', () => {
     expect(h.logs.join('\n')).not.toContain(phone);
   });
 
-  it('refuses someone who already holds the role, and a second pending invite', async () => {
+  it('refuses someone who already holds the role', async () => {
     const holder = await h.venueCoordinator(h.world.venueA1);
     const refused = await venueInvite(admin, h.world.venueA1, holder.phone);
     expect(refused.status).toBe(409);
     expect(code(refused)).toBe('role_already_assigned');
+  });
 
+  it('treats a second invite to the same place as a resend: a fresh invite replaces the pending one', async () => {
     const phone = newPhone();
-    expect((await venueInvite(admin, h.world.venueA1, phone)).status).toBe(201);
-    const twice = await venueInvite(admin, h.world.venueA1, phone);
-    expect(twice.status).toBe(409);
-    expect(code(twice)).toBe('conflict');
-    // The same number may be invited to a different venue.
+    const first = (await venueInvite(admin, h.world.venueA1, phone)).json<Invite>();
+    h.clock.advanceDays(3);
+    const again = await venueInvite(admin, h.world.venueA1, phone);
+    expect(again.status).toBe(201);
+    const second = again.json<Invite>();
+    expect(second.id).not.toBe(first.id);
+    expect(second.status).toBe('pending');
+    expect(new Date(second.expiresAt).getTime()).toBe(h.clock.now().getTime() + 7 * DAY);
+
+    const list = (await h.api('adminRoles.invites', { as: admin })).json<{ items: Invite[] }>()
+      .items;
+    expect(list.find((i) => i.id === first.id)?.status).toBe('revoked');
+    const keys = (await outboxRows(h)).map((r) => r.idempotencyKey);
+    expect(keys).toContain(`coordinator_invite:${first.id}:whatsapp`);
+    expect(keys).toContain(`coordinator_invite:${second.id}:whatsapp`);
+    const audit = (await auditRows(h)).filter((r) => r.action === 'role.invite');
+    expect(audit.at(-1)?.meta).toMatchObject({ replacesInviteId: first.id });
+
+    // The same number may be invited to a different venue without touching either invite.
     expect((await venueInvite(admin, h.world.venueA2, phone)).status).toBe(201);
+    const after = (await h.api('adminRoles.invites', { as: admin })).json<{ items: Invite[] }>()
+      .items;
+    expect(after.find((i) => i.id === second.id)?.status).toBe('pending');
   });
 
   it('allows a fresh invite once the old one has lapsed', async () => {
@@ -178,10 +198,61 @@ describe('inviting someone by phone', () => {
     }
   });
 
-  it('answers an unknown venue with a field error for staff and forbidden for everyone else', async () => {
+  it('answers an unknown venue with not found for staff and forbidden for everyone else', async () => {
     const cityA = await h.cityCoordinator(h.world.cityA.id);
-    expect((await venueInvite(cityA, nil)).status).toBe(400);
+    expect((await venueInvite(cityA, nil)).status).toBe(404);
     expect((await venueInvite(await h.person(), nil)).status).toBe(403);
+  });
+
+  it('stores a handover on the invite, and answers not found for an assignment that is unknown, ended or elsewhere', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const elsewhere = await h.venueCoordinator(h.world.venueB1);
+    const [old] = await liveAssignments(holder.userId);
+    const [far] = await liveAssignments(elsewhere.userId);
+    const cityA = await h.cityCoordinator(h.world.cityA.id);
+    const made = await venueInvite(cityA, h.world.venueA1, newPhone(), {
+      replacesAssignmentId: old!.id,
+    });
+    expect(made.status).toBe(201);
+    const [row] = await h.db
+      .select()
+      .from(schema.coordinatorInvites)
+      .where(eq(schema.coordinatorInvites.id, made.json<Invite>().id));
+    expect(row?.replacesAssignmentId).toBe(old!.id);
+    expect((await auditRows(h)).find((r) => r.action === 'role.invite')?.meta).toMatchObject({
+      replacesAssignmentId: old!.id,
+    });
+    // The old holder keeps the role until the invite is accepted.
+    expect(await liveAssignments(holder.userId)).toHaveLength(1);
+
+    for (const replacesAssignmentId of [nil, far!.id]) {
+      const res = await venueInvite(cityA, h.world.venueA1, newPhone(), { replacesAssignmentId });
+      expect(res.status, replacesAssignmentId).toBe(404);
+    }
+    await revoke(admin, old!.id);
+    expect(
+      (await venueInvite(cityA, h.world.venueA1, newPhone(), { replacesAssignmentId: old!.id }))
+        .status,
+    ).toBe(404);
+    // Someone with no right to invite there is refused before any lookup.
+    const venueCoord = await h.venueCoordinator(h.world.venueA2);
+    expect(
+      (await venueInvite(venueCoord, h.world.venueA1, newPhone(), { replacesAssignmentId: nil }))
+        .status,
+    ).toBe(403);
+  });
+
+  it('keeps the handover when a pending handover invite is resent', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const phone = newPhone();
+    await venueInvite(admin, h.world.venueA1, phone, { replacesAssignmentId: old!.id });
+    const resent = (await venueInvite(admin, h.world.venueA1, phone)).json<Invite>();
+    const [row] = await h.db
+      .select()
+      .from(schema.coordinatorInvites)
+      .where(eq(schema.coordinatorInvites.id, resent.id));
+    expect(row?.replacesAssignmentId).toBe(old!.id);
   });
 
   it('refuses a number that is not E.164', async () => {
@@ -307,14 +378,14 @@ describe('assigning roles', () => {
     });
   });
 
-  it('refuses the same role twice, and an unknown person', async () => {
+  it('refuses the same role twice, and answers not found for an unknown person', async () => {
     const person = await h.person();
     const body = { role: 'city_coordinator', cityId: h.world.cityA.id, userId: person.userId };
     expect((await assign(admin, body)).status).toBe(201);
     const twice = await assign(admin, body);
     expect(twice.status).toBe(409);
     expect(code(twice)).toBe('role_already_assigned');
-    expect((await assign(admin, { ...body, userId: nil })).status).toBe(400);
+    expect((await assign(admin, { ...body, userId: nil })).status).toBe(404);
   });
 
   it('lets a city coordinator assign venue coordinators in the city only', async () => {
@@ -370,13 +441,13 @@ describe('assigning roles', () => {
     ).toBe(403);
   });
 
-  it('answers an unknown venue with a field error for staff and forbidden for everyone else', async () => {
+  it('answers an unknown venue with not found for staff and forbidden for everyone else', async () => {
     const person = await h.person();
     const cityA = await h.cityCoordinator(h.world.cityA.id);
     expect(
       (await assign(cityA, { role: 'venue_coordinator', venueId: nil, userId: person.userId }))
         .status,
-    ).toBe(400);
+    ).toBe(404);
     expect(
       (await assign(person, { role: 'venue_coordinator', venueId: nil, userId: person.userId }))
         .status,
@@ -412,15 +483,15 @@ describe('assigning roles', () => {
     expect(history.filter((a) => a.revokedAt !== null)).toHaveLength(1);
   });
 
-  it('refuses a handover that points at the wrong, a revoked or the same assignment, and changes nothing', async () => {
+  it('answers not found for a handover of an unknown, revoked or elsewhere assignment, refuses the same person, and changes nothing', async () => {
     const holder = await h.venueCoordinator(h.world.venueA1);
     const elsewhere = await h.venueCoordinator(h.world.venueA2);
     const incoming = await h.person();
     const [here] = await liveAssignments(holder.userId);
     const [there] = await liveAssignments(elsewhere.userId);
     const body = { role: 'venue_coordinator', venueId: h.world.venueA1, userId: incoming.userId };
-    expect((await assign(admin, { ...body, replacesAssignmentId: there!.id })).status).toBe(400);
-    expect((await assign(admin, { ...body, replacesAssignmentId: nil })).status).toBe(400);
+    expect((await assign(admin, { ...body, replacesAssignmentId: there!.id })).status).toBe(404);
+    expect((await assign(admin, { ...body, replacesAssignmentId: nil })).status).toBe(404);
     expect(
       (await assign(admin, { ...body, userId: holder.userId, replacesAssignmentId: here!.id }))
         .status,
@@ -430,7 +501,7 @@ describe('assigning roles', () => {
     expect((await liveAssignments(elsewhere.userId)).length).toBe(1);
 
     await revoke(admin, here!.id);
-    expect((await assign(admin, { ...body, replacesAssignmentId: here!.id })).status).toBe(400);
+    expect((await assign(admin, { ...body, replacesAssignmentId: here!.id })).status).toBe(404);
   });
 
   it('puts a second person at the same venue when no handover is asked for', async () => {

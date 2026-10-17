@@ -9,3 +9,5 @@ Affected lanes: contracts (db), auth-scopes.
 Workaround meanwhile: new accounts start with the column default (`ur`). The app sends the person's language with its first profile update.
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
+
+Applied in api 2026-10-17: `auth.requestCode` writes `otp_challenges.locale`; a new account takes it as `users.locale`.

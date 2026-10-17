@@ -392,7 +392,28 @@ describe('platform settings', () => {
       seasonMode: 'circles',
       whatsappDailyCapPerPerson: 1,
       circleRequestAlertThreshold: 10,
+      reminderLeadMinutes: { dora: 60, circles: 60 },
     });
+  });
+
+  it('merges a partial reminder lead time with the stored one', async () => {
+    const one = await h.api('adminSettings.update', {
+      as: admin,
+      body: { reminderLeadMinutes: { dora: 90 } },
+    });
+    expect(one.json<Settings>().reminderLeadMinutes).toEqual({ dora: 90, circles: 60 });
+    await h.api('adminSettings.update', {
+      as: admin,
+      body: { reminderLeadMinutes: { circles: 30 } },
+    });
+    expect(
+      (await h.api('adminSettings.get', { as: admin })).json<Settings>().reminderLeadMinutes,
+    ).toEqual({ dora: 90, circles: 30 });
+    const stored = await h.db
+      .select()
+      .from(schema.settings)
+      .where(eq(schema.settings.key, 'reminder_lead_minutes'));
+    expect(stored[0]?.value).toEqual({ dora: 90, circles: 30 });
   });
 
   it('changes only what is sent, and the apps see the new values', async () => {
@@ -411,6 +432,7 @@ describe('platform settings', () => {
       seasonMode: 'dora',
       whatsappDailyCapPerPerson: 2,
       circleRequestAlertThreshold: 10,
+      reminderLeadMinutes: { dora: 60, circles: 60 },
     });
     const config = (await h.api('config.get')).json<AppConfig>();
     expect(config).toMatchObject({ hijriOffsetDays: -1, seasonMode: 'dora' });

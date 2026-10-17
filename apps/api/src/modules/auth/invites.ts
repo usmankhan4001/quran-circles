@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, lte } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, lte, ne } from 'drizzle-orm';
 import { schema } from '@qc/db';
 import type { AuthContext } from '../../auth/context';
 import type { AuthDb } from '../../auth/types';
@@ -52,6 +52,11 @@ export interface AcceptedInvites {
  * audit row each. Runs inside the sign-in transaction, so either the account, the roles and the
  * session all exist, or none do. Claiming an invite is an update that only matches while it is
  * still pending, so two sign-ins at once cannot accept it twice.
+ *
+ * A handover invite (`replaces_assignment_id`) also revokes the assignment it replaces, in the same
+ * transaction and with its own audit row, so the place never has two coordinators by accident.
+ * The replaced assignment must still be live and be the same role at the same place; if it was
+ * revoked in the meantime there is nothing left to end.
  */
 export async function acceptInvites(
   tx: Tx,
@@ -105,6 +110,41 @@ export async function acceptInvites(
         .where(eq(venues.id, invite.venueId))
         .limit(1);
       cityId = venue?.cityId ?? null;
+    }
+
+    if (invite.replacesAssignmentId) {
+      const [ended] = await tx
+        .update(roleAssignments)
+        .set({ revokedAt: input.now })
+        .where(
+          and(
+            eq(roleAssignments.id, invite.replacesAssignmentId),
+            isNull(roleAssignments.revokedAt),
+            // Handing a place to the person who already holds it changes nothing.
+            ne(roleAssignments.userId, input.userId),
+            eq(roleAssignments.role, invite.role),
+            invite.cityId
+              ? eq(roleAssignments.cityId, invite.cityId)
+              : isNull(roleAssignments.cityId),
+            invite.venueId
+              ? eq(roleAssignments.venueId, invite.venueId)
+              : isNull(roleAssignments.venueId),
+          ),
+        )
+        .returning({ id: roleAssignments.id, userId: roleAssignments.userId });
+      if (ended) {
+        await tx.insert(auditLog).values({
+          actorUserId: invite.invitedBy ?? input.userId,
+          action: 'role.revoke',
+          entityType: 'role_assignment',
+          entityId: ended.id,
+          scopeType: invite.scopeType,
+          cityId,
+          venueId: invite.venueId,
+          meta: { role: invite.role, reason: 'handover', inviteId: invite.id },
+          createdAt: input.now,
+        });
+      }
     }
     await tx.insert(auditLog).values({
       actorUserId: input.userId,

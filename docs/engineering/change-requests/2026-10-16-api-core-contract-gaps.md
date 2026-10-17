@@ -15,3 +15,5 @@ Affected lanes: contracts (endpoints, db), api-core, console and admin app (circ
 Workaround meanwhile: as described in each item. All five are covered by tests, so a change shows up as a test to update, not as a silent difference.
 
 Partly applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008. Applied: item 1 (`me.delete` lists `last_national_admin`), item 2 (`not_found` allowed on body references), item 3 (`CircleUpdate.status`; `note` removed from `CircleDecisionBody` instead of adding a column). Not applied: item 4 (`updates.recipient_count`) and item 5 (`attendance_marked_at`); neither was in the approved digest.
+
+Applied in api 2026-10-17, items 1 to 3: `me.delete` answers 409 `last_national_admin`; unknown body references answer `not_found` to role holders and `forbidden` to outsiders; circles move between `published` and `archived` through `adminCircles.update`, and the decision note is neither accepted nor audited.

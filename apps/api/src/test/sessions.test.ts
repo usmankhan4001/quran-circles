@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { and, eq, gt } from 'drizzle-orm';
 import type {
   AdminOccurrence,
   AdminSession,
@@ -8,6 +9,7 @@ import type {
   Update,
 } from '@qc/contracts';
 import { schema } from '@qc/db';
+import { topUpAllOccurrences } from '../jobs';
 import { createHarness, type Actor, type Harness } from './harness';
 import { auditRows, createOneOff, createSession, outboxRows, register } from './fixtures';
 
@@ -122,7 +124,7 @@ describe('creating sessions', () => {
     expect(JSON.stringify(rows[0]?.meta)).not.toContain('Secret');
   });
 
-  it('refuses bad references and dates', async () => {
+  it('answers not found for unknown references and refuses bad dates', async () => {
     const base = {
       kind: 'recurring' as const,
       venueId: h.world.venueA1,
@@ -145,17 +147,17 @@ describe('creating sessions', () => {
       as: admin,
       body: { ...base, circleId: nilId },
     });
-    expect(badCircle.status).toBe(400);
+    expect(badCircle.status).toBe(404);
     const badSeason = await h.api('adminSessions.create', {
       as: admin,
       body: { ...base, seasonId: nilId },
     });
-    expect(badSeason.status).toBe(400);
+    expect(badSeason.status).toBe(404);
     const badVenue = await h.api('adminSessions.create', {
       as: admin,
       body: { ...base, venueId: nilId },
     });
-    expect(badVenue.status).toBe(400);
+    expect(badVenue.status).toBe(404);
     const badTime = await h.api('adminSessions.create', {
       as: admin,
       body: { ...base, localStartTime: '25:99' },
@@ -767,5 +769,101 @@ describe('who reads what', () => {
       await h.api('sessions.occurrences', { params: { sessionId: session.id } })
     ).json<{ items: Record<string, unknown>[] }>().items;
     expect(occurrences[0]).not.toHaveProperty('headcount');
+  });
+});
+
+describe('reading one session', () => {
+  it('returns the same entry the list shows, to anyone whose scope holds it', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const listed = (await h.api('adminSessions.list', { as: admin })).json<{
+      items: AdminSession[];
+    }>().items[0];
+    for (const who of [
+      admin,
+      await h.cityCoordinator(h.world.cityA.id),
+      await h.venueCoordinator(h.world.venueA1),
+    ]) {
+      const res = await h.api('adminSessions.get', { as: who, params: { sessionId: session.id } });
+      expect(res.status).toBe(200);
+      expect(res.json<AdminSession>()).toEqual(listed);
+    }
+  });
+
+  it('answers not found outside the scope or for an unknown id, and forbidden to non-staff', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const nil = '00000000-0000-4000-8000-000000000000';
+    const get = (who: Actor, sessionId: string) =>
+      h.api('adminSessions.get', { as: who, params: { sessionId } });
+    expect((await get(await h.venueCoordinator(h.world.venueA2), session.id)).status).toBe(404);
+    expect((await get(await h.cityCoordinator(h.world.cityB.id), session.id)).status).toBe(404);
+    expect((await get(admin, nil)).status).toBe(404);
+    expect((await get(await h.person(), session.id)).status).toBe(403);
+  });
+});
+
+describe('the daily occurrence top-up', () => {
+  it('fills every live recurring session up to the horizon, and does nothing on a second run', async () => {
+    const weekly = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const cancelled = await createSession(h, {
+      venueId: h.world.venueA2,
+      as: admin,
+      title: 'Cancelled',
+    });
+    await h.api('adminSessions.update', {
+      as: admin,
+      params: { sessionId: cancelled.id },
+      body: { status: 'cancelled' },
+    });
+    const count = async (sessionId: string) =>
+      (await h.db.select().from(schema.occurrences)).filter((o) => o.sessionId === sessionId)
+        .length;
+    const before = await count(weekly.id);
+    const cancelledBefore = await count(cancelled.id);
+
+    h.clock.advanceDays(28);
+    const first = await topUpAllOccurrences(h.db, h.clock.now(), 90);
+    expect(first.occurrencesAdded).toBe(4);
+    expect(await count(weekly.id)).toBe(before + 4);
+    expect(await count(cancelled.id)).toBe(cancelledBefore);
+
+    const second = await topUpAllOccurrences(h.db, h.clock.now(), 90);
+    expect(second.occurrencesAdded).toBe(0);
+  });
+
+  it('stops at the last day of the season the session belongs to', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const [row] = await h.db
+      .select()
+      .from(schema.sessions)
+      .where(eq(schema.sessions.id, session.id));
+    const [season] = await h.db
+      .insert(schema.seasons)
+      .values({
+        programId: row!.programId,
+        name: 'Short season',
+        startsOn: '2026-10-01',
+        endsOn: '2026-11-06',
+      })
+      .returning();
+    await h.db
+      .update(schema.sessions)
+      .set({ seasonId: season!.id })
+      .where(eq(schema.sessions.id, session.id));
+    // Start from the first occurrence only, as if the session had been made with a short horizon.
+    await h.db
+      .delete(schema.occurrences)
+      .where(
+        and(
+          eq(schema.occurrences.sessionId, session.id),
+          gt(schema.occurrences.startsAt, new Date('2026-10-17T00:00:00Z')),
+        ),
+      );
+    h.clock.advanceDays(1);
+    await topUpAllOccurrences(h.db, h.clock.now(), 90);
+    const dates = (await h.db.select().from(schema.occurrences))
+      .filter((o) => o.sessionId === session.id)
+      .map((o) => o.startsAt.toISOString().slice(0, 10))
+      .sort();
+    expect(dates).toEqual(['2026-10-16', '2026-10-23', '2026-10-30', '2026-11-06']);
   });
 });

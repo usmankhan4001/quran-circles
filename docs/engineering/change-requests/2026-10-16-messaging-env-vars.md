@@ -15,3 +15,5 @@ Affected lanes: platform, api-core, auth-scopes (uses `CodeSender`).
 Workaround meanwhile: defaults are safe for development (fake providers, in-memory codes). Nothing is committed with values.
 
 Applied 2026-10-17: the variable names are in the root `.env.example` (names only, commented out, no values). No contract or migration change. Passing them to the `worker` and `api` services in the compose files (`infra/`) and the reverse-proxy route are not part of this change.
+
+Status 2026-10-17 (messaging): still needs infra work, the compose services and the webhook route in `infra/`. Not done in the api, worker or messaging lanes.

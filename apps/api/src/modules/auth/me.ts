@@ -4,14 +4,14 @@ import { schema } from '@qc/db';
 import type { AuthDb } from '../../auth/types';
 
 /**
- * `users.display_name` cannot be empty, but a new account has no name until registration asks for
- * one. Sign-in stores this one-character placeholder, which `PersonName` (two characters or more)
- * can never produce, and `Me.displayName` reports it as null. See change request
- * 2026-10-16-users-display-name.
+ * A new account has no name (`users.display_name` is NULL) until registration asks for it.
+ * Accounts made before migration 0008 hold a one-character dash instead; it is read as no name.
+ * `PersonName` needs two characters or more, so a real name is never the dash.
  */
-export const UNNAMED_DISPLAY_NAME = '-';
+const LEGACY_PLACEHOLDER = '-';
 
-const named = (value: string): string | null => (value === UNNAMED_DISPLAY_NAME ? null : value);
+const named = (value: string | null): string | null =>
+  value === null || value.trim() === '' || value === LEGACY_PLACEHOLDER ? null : value;
 
 const localized = (en: string | null, ur: string | null): Localized | null =>
   en ? { en, ur: ur ? ur : null } : null;

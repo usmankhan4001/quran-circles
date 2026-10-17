@@ -2,7 +2,13 @@ import { updatePostAction } from '@qc/contracts';
 import type { Handlers } from '../shared/route';
 import { messagingDepsOf } from '../shared/context';
 import { getFeed, markRead, unreadCount } from './feed';
-import { listApprovedTemplates, listPostedUpdates, postUpdate, resolvePostScope } from './admin';
+import {
+  listApprovedTemplates,
+  listPostedUpdates,
+  postUpdate,
+  previewUpdate,
+  resolvePostScope,
+} from './admin';
 
 export const updateHandlers = (): Handlers => ({
   'updates.feed': (ctx) => getFeed(ctx.db, ctx.now, ctx.uid(), ctx.query),
@@ -14,9 +20,16 @@ export const updateHandlers = (): Handlers => ({
   'adminUpdates.post': async (ctx) => {
     const action = updatePostAction(ctx.body.scope.type);
     const scope = await resolvePostScope(ctx.db, ctx.body.scope);
-    if (!scope) return ctx.unknownRef(action, 'scope');
+    if (!scope) return ctx.unknownRef(action);
     ctx.authorize(action, scope.resource);
     return postUpdate(ctx.db, messagingDepsOf(ctx.deps, ctx.now), ctx.uid(), scope, ctx.body);
+  },
+  'adminUpdates.preview': async (ctx) => {
+    const action = updatePostAction(ctx.body.scope.type);
+    const scope = await resolvePostScope(ctx.db, ctx.body.scope);
+    if (!scope) return ctx.unknownRef(action);
+    ctx.authorize(action, scope.resource);
+    return previewUpdate(ctx.db, scope, ctx.body);
   },
   'adminUpdates.list': (ctx) =>
     listPostedUpdates(ctx.db, ctx.scope('update.list_admin'), ctx.query),

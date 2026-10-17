@@ -7,7 +7,10 @@ import { buildWhatsAppRequest, type WhatsAppProvider } from './providers/whatsap
  * Sign-in code delivery for the auth-scopes lane.
  *
  * `CodeSender.send({ phone, code, locale, channel })` is the shape the auth lane calls. It resolves
- * when the code was handed to a provider and throws `CodeDeliveryError` when no channel worked.
+ * with the channel that carried the code once a provider accepted it (`sms` after a WhatsApp
+ * failure, so the app can tell the person where to look) and throws `CodeDeliveryError` when no
+ * channel worked. Everyone, staff included, gets WhatsApp first with SMS as the fallback (owner
+ * decision of 2026-10-17).
  * Codes never go through `message_outbox`: the outbox payload is stored, and a code is stored only
  * as a hash. The sender reports spend through `onDelivery`, which carries no phone number or code.
  */
@@ -22,8 +25,13 @@ export interface CodeSendRequest {
   minutes?: number;
 }
 
+export interface CodeSendResult {
+  /** The channel that carried the code. */
+  channel: OtpChannel;
+}
+
 export interface CodeSender {
-  send(request: CodeSendRequest): Promise<void>;
+  send(request: CodeSendRequest): Promise<CodeSendResult>;
 }
 
 export class CodeDeliveryError extends Error {
@@ -65,7 +73,7 @@ export interface ProviderCodeSenderOptions {
 export class ProviderCodeSender implements CodeSender {
   constructor(private readonly options: ProviderCodeSenderOptions) {}
 
-  async send(request: CodeSendRequest): Promise<void> {
+  async send(request: CodeSendRequest): Promise<CodeSendResult> {
     const log = this.options.logger ?? silentLogger;
     const minutes = request.minutes ?? this.options.codeValidityMinutes ?? 10;
     const report = (channel: OtpChannel, outcome: 'sent' | 'failed', fellBack: boolean): void =>
@@ -86,7 +94,7 @@ export class ProviderCodeSender implements CodeSender {
       if (result.status === 'ok') {
         log.info('code.sent', { channel: 'whatsapp' });
         report('whatsapp', 'sent', false);
-        return;
+        return { channel: 'whatsapp' };
       }
       log.warn('code.whatsapp_failed', { errorCode: result.code });
       if (!this.options.sms || this.options.smsFallback === false) {
@@ -109,7 +117,7 @@ export class ProviderCodeSender implements CodeSender {
     if (result.status === 'ok') {
       log.info('code.sent', { channel: 'sms', fellBack: triedWhatsApp });
       report('sms', 'sent', triedWhatsApp);
-      return;
+      return { channel: 'sms' };
     }
     log.warn('code.sms_failed', { errorCode: result.code });
     report('sms', 'failed', triedWhatsApp);
@@ -133,12 +141,12 @@ export class TestCodeSender implements CodeSender {
 
   constructor(private readonly options: TestCodeSenderOptions = {}) {}
 
-  send(request: CodeSendRequest): Promise<void> {
+  send(request: CodeSendRequest): Promise<CodeSendResult> {
     this.requests.push(request);
     const list = this.codes.get(request.phone) ?? [];
     list.push(request.code);
     this.codes.set(request.phone, list.slice(-(this.options.keep ?? 5)));
-    return Promise.resolve();
+    return Promise.resolve({ channel: request.channel });
   }
 
   lastCode(phone: string): string | undefined {

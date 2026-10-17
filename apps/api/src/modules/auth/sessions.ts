@@ -6,6 +6,7 @@ import type { AuthContext } from '../../auth/context';
 import {
   hashRefreshToken,
   newRefreshToken,
+  nextRefreshToken,
   parseRefreshToken,
   safeEqualHex,
 } from '../../auth/crypto';
@@ -86,65 +87,94 @@ async function revokeSession(ctx: AuthContext, sessionId: string, now: Date): Pr
     .where(and(eq(authSessions.id, sessionId), isNull(authSessions.revokedAt)));
 }
 
+/** How long after a rotation the token it replaced may still be presented, as a retry. */
+export const REFRESH_GRACE_MS = 10_000;
+
 /**
- * Swaps a refresh token for a new pair. The refresh token changes every time. A token that names a
- * live session but no longer matches it has been used before, so someone holds a stale copy: the
- * whole session is revoked and the person signs in again.
+ * Swaps a refresh token for a new pair. The refresh token changes every time; the session keeps
+ * the hash it replaced for one step (`previous_refresh_token_hash`, `rotated_at`).
+ *
+ * - The current token rotates: the new token is derived from it (`nextRefreshToken`).
+ * - The previous token within 10 seconds of the rotation is a retry (a lost response, a second
+ *   tab, two refreshes in parallel): it gets the very same pair again, because the token is
+ *   derived and the access token is signed for the rotation instant.
+ * - The previous token later than that has been used twice: someone holds a stale copy, so the
+ *   session is revoked and the person signs in again.
+ * - Any other token is simply invalid and revokes nothing, so knowing a session id (it is inside
+ *   the access token) is not enough to sign someone out.
  */
 export async function refreshTokens(ctx: AuthContext, body: RefreshInput): Promise<Tokens> {
   const now = ctx.now();
   const invalid = () => new AuthHttpError('refresh_token_invalid');
   const parsed = parseRefreshToken(body.refreshToken);
   if (!parsed) throw invalid();
-
-  const [row] = await ctx.db
-    .select({
-      id: authSessions.id,
-      userId: authSessions.userId,
-      hash: authSessions.refreshTokenHash,
-      createdAt: authSessions.createdAt,
-      expiresAt: authSessions.expiresAt,
-      revokedAt: authSessions.revokedAt,
-      status: users.status,
-    })
-    .from(authSessions)
-    .innerJoin(users, eq(users.id, authSessions.userId))
-    .where(eq(authSessions.id, parsed.sessionId))
-    .limit(1);
-  if (!row || row.revokedAt !== null || row.expiresAt.getTime() <= now.getTime()) throw invalid();
-
   const presentedHash = hashRefreshToken(body.refreshToken);
-  if (!safeEqualHex(presentedHash, row.hash)) return reuseDetected(ctx, row.id, row.userId, now);
-  if (row.status !== 'active') throw new AuthHttpError('account_suspended');
+  const next = nextRefreshToken(ctx.keys, body.refreshToken);
 
-  const refreshToken = newRefreshToken(row.id);
-  const refreshExpiresAt = refreshExpiry(ctx, row.createdAt, now);
-  // Compare-and-swap: only one of two parallel refreshes with the same token can win.
-  const [rotated] = await ctx.db
-    .update(authSessions)
-    .set({
-      refreshTokenHash: hashRefreshToken(refreshToken),
-      expiresAt: refreshExpiresAt,
-      lastUsedAt: now,
-    })
-    .where(
-      and(
-        eq(authSessions.id, row.id),
-        eq(authSessions.refreshTokenHash, row.hash),
-        isNull(authSessions.revokedAt),
-        gt(authSessions.expiresAt, now),
-      ),
-    )
-    .returning({ id: authSessions.id });
-  if (!rotated) return reuseDetected(ctx, row.id, row.userId, now);
+  // A parallel refresh can rotate the session between the read and the swap; then look again,
+  // and the second look finds this token as the previous one (the retry case).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const [row] = await ctx.db
+      .select({
+        id: authSessions.id,
+        userId: authSessions.userId,
+        hash: authSessions.refreshTokenHash,
+        previousHash: authSessions.previousRefreshTokenHash,
+        rotatedAt: authSessions.rotatedAt,
+        createdAt: authSessions.createdAt,
+        expiresAt: authSessions.expiresAt,
+        revokedAt: authSessions.revokedAt,
+        status: users.status,
+      })
+      .from(authSessions)
+      .innerJoin(users, eq(users.id, authSessions.userId))
+      .where(eq(authSessions.id, parsed.sessionId))
+      .limit(1);
+    if (!row || row.revokedAt !== null || row.expiresAt.getTime() <= now.getTime()) throw invalid();
+    const claims = { userId: row.userId, sessionId: row.id };
 
-  return tokensFor(
-    ctx,
-    { userId: row.userId, sessionId: row.id },
-    refreshToken,
-    refreshExpiresAt,
-    now,
-  );
+    if (safeEqualHex(presentedHash, row.hash)) {
+      if (row.status !== 'active') throw new AuthHttpError('account_suspended');
+      const refreshExpiresAt = refreshExpiry(ctx, row.createdAt, now);
+      // Compare-and-swap: only one of two parallel refreshes with the same token can win.
+      const [rotated] = await ctx.db
+        .update(authSessions)
+        .set({
+          refreshTokenHash: hashRefreshToken(next),
+          previousRefreshTokenHash: row.hash,
+          rotatedAt: now,
+          expiresAt: refreshExpiresAt,
+          lastUsedAt: now,
+        })
+        .where(
+          and(
+            eq(authSessions.id, row.id),
+            eq(authSessions.refreshTokenHash, row.hash),
+            isNull(authSessions.revokedAt),
+            gt(authSessions.expiresAt, now),
+          ),
+        )
+        .returning({ id: authSessions.id });
+      if (rotated) return tokensFor(ctx, claims, next, refreshExpiresAt, now);
+      continue;
+    }
+
+    if (row.previousHash !== null && safeEqualHex(presentedHash, row.previousHash)) {
+      const rotatedAt = row.rotatedAt;
+      const withinGrace =
+        rotatedAt !== null && now.getTime() - rotatedAt.getTime() <= REFRESH_GRACE_MS;
+      if (!withinGrace) return reuseDetected(ctx, row.id, row.userId, now);
+      if (row.status !== 'active') throw new AuthHttpError('account_suspended');
+      // The pair this token was already exchanged for: same refresh token, same expiry, and an
+      // access token signed for the rotation instant, so it is byte for byte the same.
+      if (!safeEqualHex(hashRefreshToken(next), row.hash)) throw invalid();
+      ctx.logger.info('auth.refresh_retry', { sessionId: row.id });
+      return tokensFor(ctx, claims, next, row.expiresAt, rotatedAt);
+    }
+
+    throw invalid();
+  }
+  throw invalid();
 }
 
 async function reuseDetected(

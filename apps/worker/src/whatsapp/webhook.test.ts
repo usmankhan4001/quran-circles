@@ -79,7 +79,7 @@ describe('delivery status events', () => {
 
   it('matches by the provider message id when there is no callback data', async () => {
     const { row } = await sentWhatsApp();
-    const providerMessageId = (row.payload as { providerMessageId?: string }).providerMessageId;
+    const { providerMessageId } = await h.row(row.id);
     expect(providerMessageId).toBeTruthy();
     await applyWhatsAppEvents(deps(), [status({ providerMessageId: providerMessageId! })]);
     expect((await h.row(row.id)).status).toBe('delivered');

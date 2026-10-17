@@ -82,7 +82,10 @@ export async function getRow(db: Db, id: string): Promise<OutboxRow | undefined>
   return row;
 }
 
-/** The send succeeded. Clears the recipient phone and remembers the provider's message id. */
+/**
+ * The send succeeded. Clears the recipient phone and stores the provider's message id in its own
+ * column, where delivery reports without our callback data look the row up.
+ */
 export async function markSent(
   db: Db,
   id: string,
@@ -97,11 +100,7 @@ export async function markSent(
       sentAt: sql`COALESCE(${t.sentAt}, ${opts.now.toISOString()}::timestamptz)`,
       recipientPhoneE164: null,
       lastErrorCode: null,
-      ...(opts.providerMessageId
-        ? {
-            payload: sql`${t.payload} || ${JSON.stringify({ providerMessageId: opts.providerMessageId })}::jsonb`,
-          }
-        : {}),
+      ...(opts.providerMessageId ? { providerMessageId: opts.providerMessageId } : {}),
     })
     .where(and(eq(t.id, id), inArray(t.status, ['sending', 'sent', 'delivered'])));
 }
@@ -165,9 +164,7 @@ export async function applyDeliveryReport(
 ): Promise<boolean> {
   const t = tables.messageOutbox;
   const target =
-    'id' in where
-      ? eq(t.id, where.id)
-      : sql`${t.payload} ->> 'providerMessageId' = ${where.providerMessageId}`;
+    'id' in where ? eq(t.id, where.id) : eq(t.providerMessageId, where.providerMessageId);
   if (report.status === 'delivered') {
     const rows = await db
       .update(t)

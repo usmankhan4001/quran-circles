@@ -148,9 +148,9 @@ describe('WhatsApp and the consent gate', () => {
     const after = await h.row(row.id);
     expect(after.status).toBe('sent');
     expect(after.recipientPhoneE164).toBeNull();
-    expect((after.payload as { providerMessageId?: string }).providerMessageId).toMatch(
-      /^wamid\.fake-/,
-    );
+    expect(after.providerMessageId).toMatch(/^wamid\.fake-/);
+    // The id lives in its own column now, not inside the payload.
+    expect(after.payload).not.toHaveProperty('providerMessageId');
     expect(h.whatsapp.sent).toHaveLength(1);
     expect(h.whatsapp.sent[0]).toMatchObject({
       to: user.phoneE164,
@@ -287,6 +287,68 @@ describe('WhatsApp and the consent gate', () => {
     );
     await h.run();
     expect((await h.row(row.id)).lastErrorCode).toBe('gate_no_consent');
+  });
+
+  it('a venue-specific consent covers a message whose row names that venue', async () => {
+    const world = await seedWorld(test.db);
+    const user = await seedUser(test.db);
+    await seedConsent(test.db, user.id, {
+      purpose: 'registration_updates',
+      venueId: world.venue.id,
+    });
+    const row = await h.queue_({
+      ...whatsappDraft(
+        'venue:2',
+        'registration_confirmation',
+        user.id,
+        h.clock.now(),
+        user.phoneE164,
+      ),
+      venueId: world.venue.id,
+    });
+    await h.run();
+    expect((await h.row(row.id)).status).toBe('sent');
+  });
+
+  it('a venue-specific consent does not cover a message about another venue', async () => {
+    const world = await seedWorld(test.db);
+    const elsewhere = await seedWorld(test.db);
+    const user = await seedUser(test.db);
+    await seedConsent(test.db, user.id, {
+      purpose: 'registration_updates',
+      venueId: world.venue.id,
+    });
+    const row = await h.queue_({
+      ...whatsappDraft(
+        'venue:3',
+        'registration_confirmation',
+        user.id,
+        h.clock.now(),
+        user.phoneE164,
+      ),
+      venueId: elsewhere.venue.id,
+    });
+    await h.run();
+    expect((await h.row(row.id)).lastErrorCode).toBe('gate_no_consent');
+  });
+
+  it('a row queued before the venue column existed still finds its venue from its push', async () => {
+    const world = await seedWorld(test.db);
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    // The person turned reminders off for this venue only.
+    await seedConsent(test.db, user.id, {
+      channel: 'push',
+      purpose: 'session_reminders',
+      venueId: world.venue.id,
+      revokedAt: new Date('2026-01-03T00:00:00Z'),
+    });
+    const row = await h.queue_(
+      pushDraft('old:1', user.id, h.clock.now(), reminderPush({ sessionId: world.session.id })),
+    );
+    expect(row.venueId).toBeNull();
+    await h.run();
+    expect((await h.row(row.id)).lastErrorCode).toBe('gate_push_opted_out');
   });
 
   it('sign-in-style templates need no consent and no account', async () => {

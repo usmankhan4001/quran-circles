@@ -90,6 +90,9 @@ async function exerciseEverything() {
   h.clock.advance(1000);
   const second = await h.signIn(PHONE_A, { ip: REAL_LOOKING_IP });
   await keep(await h.post('/v1/auth/refresh', { refreshToken: second.body.refreshToken }));
+  // A retry inside the grace window, then a replay after it.
+  await keep(await h.post('/v1/auth/refresh', { refreshToken: second.body.refreshToken }));
+  h.clock.advance(11);
   await keep(await h.post('/v1/auth/refresh', { refreshToken: second.body.refreshToken }));
 
   // A delivery failure and a database failure.
@@ -134,6 +137,7 @@ describe('personal data stays out of logs and error bodies', () => {
       'auth.code_requested',
       'auth.code_rejected',
       'auth.signed_in',
+      'auth.refresh_retry',
       'auth.refresh_reuse_detected',
       'auth.signed_out',
       'auth.code_send_failed',

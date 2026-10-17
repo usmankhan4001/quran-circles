@@ -15,6 +15,8 @@ export interface AuthKeys {
   otp: Buffer;
   /** Hashes network addresses and phone numbers used as rate-limit keys. */
   id: Buffer;
+  /** Derives the refresh token that replaces a presented one (see `nextRefreshToken`). */
+  refresh: Buffer;
 }
 
 const derive = (secret: string, purpose: string): Buffer =>
@@ -27,6 +29,7 @@ export function deriveKeys(secret: string): AuthKeys {
     token: new Uint8Array(derive(secret, 'access-token')),
     otp: derive(secret, 'otp'),
     id: derive(secret, 'identifier'),
+    refresh: derive(secret, 'refresh-rotation'),
   };
 }
 
@@ -71,6 +74,15 @@ export function parseRefreshToken(token: string): { sessionId: string; secret: s
   }
   return { sessionId, secret };
 }
+
+/**
+ * The refresh token a rotation hands out in exchange for `previous`: the same session id and an
+ * HMAC of the whole previous token under a server key. Only the server can work it out, and it
+ * can work it out again, so a retry inside the grace window gets exactly the same token without
+ * the raw token ever being stored. `previous` must already have passed `parseRefreshToken`.
+ */
+export const nextRefreshToken = (keys: AuthKeys, previous: string): string =>
+  `${previous.slice(0, 36)}.${createHmac('sha256', keys.refresh).update(previous).digest('base64url')}`;
 
 /** Only this hash is stored in `auth_sessions.refresh_token_hash`. */
 export const hashRefreshToken = (token: string): string => sha256Hex(token);

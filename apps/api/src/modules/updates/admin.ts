@@ -66,17 +66,14 @@ async function authorName(db: Db, userId: string): Promise<string | null> {
   return row ? visibleName(row.name) : null;
 }
 
-export async function postUpdate(
-  db: Db,
-  deps: PublishDeps,
-  actorId: string,
-  scope: ResolvedScope,
-  body: PostUpdateBody,
-) {
-  // A linked session must be inside the scope the update is posted to.
+/**
+ * The checks an update must pass before it is posted (or previewed): a linked session exists and
+ * is inside the scope the update is posted to, and a template, if named, is approved.
+ */
+async function checkPostBody(db: Db, scope: ResolvedScope, body: PostUpdateBody) {
   const facts = body.sessionId ? await sessionFacts(db, body.sessionId) : null;
   if (body.sessionId) {
-    if (!facts) invalid('sessionId');
+    if (!facts) return fail('not_found');
     const { ref } = scope;
     if (ref.type === 'venue' && facts.venueId !== ref.venueId) invalid('sessionId', 'out_of_scope');
     if (ref.type === 'city' && facts.cityId !== ref.cityId) invalid('sessionId', 'out_of_scope');
@@ -91,6 +88,30 @@ export async function postUpdate(
       .limit(1);
     if (!template) invalid('templateKey', 'not_approved');
   }
+  return facts;
+}
+
+/**
+ * How many people an update would reach now. Same checks as posting; writes and queues nothing.
+ * Posting counts the same reach, so the two agree unless people follow or register in between.
+ */
+export async function previewUpdate(
+  db: Db,
+  scope: ResolvedScope,
+  body: PostUpdateBody,
+): Promise<{ recipients: number }> {
+  await checkPostBody(db, scope, body);
+  return { recipients: (await reachUserIds(db, scope.ref)).length };
+}
+
+export async function postUpdate(
+  db: Db,
+  deps: PublishDeps,
+  actorId: string,
+  scope: ResolvedScope,
+  body: PostUpdateBody,
+) {
+  const facts = await checkPostBody(db, scope, body);
 
   const title = { en: body.title.en, ur: body.title.ur ?? null };
   const text = { en: body.body.en, ur: body.body.ur ?? null };

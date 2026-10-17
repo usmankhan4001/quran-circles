@@ -4,8 +4,10 @@ import {
   SCOPE_ACTIONS,
   can,
   endpoints,
+  scopeFilter,
   type EndpointDef,
   type EndpointId,
+  type ImportResult,
   type Principal,
   type ResourceScope,
   type ScopeAction,
@@ -52,7 +54,47 @@ interface Scenario {
 const venueRes = (fx: Fixture): ResourceScope => ({ cityId: fx.cityId, venueId: fx.venueId });
 
 /** Built lazily so ids exist: `resource` is filled in from the fixture when the scenario runs. */
-type ScenarioSpec = Omit<Scenario, 'resource'> & { target: 'venue' | 'city' | 'national' | 'any' };
+type ScenarioSpec = Omit<Scenario, 'resource'> & {
+  target: 'venue' | 'city' | 'national' | 'any';
+  /** Overrides `can` when the endpoint decides by its own rule (a single record of a list action). */
+  oracle?: (principal: Principal | null, fx: Fixture) => boolean;
+  /**
+   * What a refused caller who holds a qualifying role somewhere sees, when that is not 403:
+   * `not_found` for a single record outside their scope, `row_forbidden` for an import that
+   * reports the row as invalid with the issue `forbidden`. A caller with no qualifying role at all
+   * is always refused with 403.
+   */
+  denied?: 'not_found' | 'row_forbidden';
+  /** The actions that count as a qualifying role; the scenario's action when left out. */
+  qualifying?: ScopeAction[];
+};
+
+const holdsAny = (principal: Principal | null, actions: ScopeAction[]): boolean =>
+  actions.some((action) => {
+    const f = scopeFilter(principal, action);
+    return f.national || f.cityIds.length > 0 || f.venueIds.length > 0;
+  });
+
+/** Whether the list filter for `action` includes the fixture's venue. */
+const listCovers = (principal: Principal | null, action: ScopeAction, fx: Fixture): boolean => {
+  const f = scopeFilter(principal, action);
+  return f.national || f.cityIds.includes(fx.cityId) || f.venueIds.includes(fx.venueId);
+};
+
+const venueImportRow = (fx: Fixture) => ({
+  cityId: fx.cityId,
+  areaId: h.world.cityA.areaId,
+  name: { en: 'Imported venue' },
+  address: { en: '3 Road' },
+  lat: 31.5,
+  lng: 74.3,
+});
+
+const ROLE_ACTIONS: ScopeAction[] = [
+  'role.assign_national_admin',
+  'role.assign_city_coordinator',
+  'role.assign_venue_coordinator',
+];
 
 const sessionBody = (fx: Fixture) => ({
   kind: 'one_off' as const,
@@ -120,6 +162,83 @@ const SPECS: ScenarioSpec[] = [
         title: { en: 'Hi' },
         body: { en: 'Venue' },
         notify: false,
+      },
+    }),
+  },
+  ...(['national', 'city', 'venue'] as const).map((type): ScenarioSpec => ({
+    id: 'adminUpdates.preview',
+    label: type,
+    action:
+      type === 'national'
+        ? 'update.post_national'
+        : type === 'city'
+          ? 'update.post_city'
+          : 'update.post_venue',
+    target: type,
+    request: (fx) => ({
+      body: {
+        scope:
+          type === 'national'
+            ? { type }
+            : type === 'city'
+              ? { type, cityId: fx.cityId }
+              : { type, venueId: fx.venueId },
+        title: { en: 'Hi' },
+        body: { en: 'Preview' },
+      },
+    }),
+  })),
+  {
+    id: 'adminRegistrations.export',
+    label: 'one venue',
+    action: 'registration.export',
+    target: 'venue',
+    request: (fx) => ({ query: { venueId: fx.venueId } }),
+  },
+  {
+    id: 'adminRegistrations.export',
+    label: 'one city',
+    action: 'registration.export',
+    target: 'city',
+    // A venue coordinator may not ask for a whole city, even their own.
+    request: (fx) => ({ query: { cityId: fx.cityId } }),
+  },
+  {
+    id: 'adminRegistrations.export',
+    label: 'whole scope',
+    action: 'registration.export',
+    target: 'any',
+    // With no filter every staff member gets their own scope.
+    oracle: (principal) => holdsAny(principal, ['registration.export']),
+    request: () => ({ query: {} }),
+  },
+  {
+    id: 'adminImport.venues',
+    label: 'dry run',
+    action: 'venue.create',
+    target: 'city',
+    denied: 'row_forbidden',
+    request: (fx) => ({ body: { dryRun: true, rows: [venueImportRow(fx)] } }),
+  },
+  {
+    id: 'adminImport.sessions',
+    label: 'dry run',
+    action: 'session.create',
+    target: 'venue',
+    denied: 'row_forbidden',
+    request: (fx) => ({ body: { dryRun: true, rows: [sessionBody(fx)] } }),
+  },
+  {
+    id: 'adminImport.coordinators',
+    label: 'dry run',
+    action: 'role.assign_venue_coordinator',
+    target: 'venue',
+    denied: 'row_forbidden',
+    qualifying: ROLE_ACTIONS,
+    request: (fx) => ({
+      body: {
+        dryRun: true,
+        rows: [{ role: 'venue_coordinator', venueId: fx.venueId, phone: '+923000009004' }],
       },
     }),
   },
@@ -254,6 +373,15 @@ const SPECS: ScenarioSpec[] = [
     request: () => ({}),
   },
   {
+    id: 'adminCircles.get',
+    label: 'get',
+    action: 'circle.list_admin',
+    target: 'venue',
+    oracle: (principal, fx) => listCovers(principal, 'circle.list_admin', fx),
+    denied: 'not_found',
+    request: (fx) => ({ params: { circleId: fx.circleId } }),
+  },
+  {
     id: 'adminCircles.create',
     label: 'create',
     action: 'circle.create',
@@ -282,6 +410,15 @@ const SPECS: ScenarioSpec[] = [
     action: 'session.list_admin',
     target: 'any',
     request: () => ({}),
+  },
+  {
+    id: 'adminSessions.get',
+    label: 'get',
+    action: 'session.list_admin',
+    target: 'venue',
+    oracle: (principal, fx) => listCovers(principal, 'session.list_admin', fx),
+    denied: 'not_found',
+    request: (fx) => ({ params: { sessionId: fx.sessionId } }),
   },
   {
     id: 'adminSessions.create',
@@ -464,6 +601,7 @@ async function build(): Promise<{
 }
 
 const oracle = (principal: Principal | null, spec: ScenarioSpec, fx: Fixture): boolean => {
+  if (spec.oracle) return spec.oracle(principal, fx);
   const resource =
     spec.target === 'venue' ? venueRes(fx) : spec.target === 'city' ? { cityId: fx.cityId } : {};
   return can(principal, spec.action, resource);
@@ -491,6 +629,25 @@ describe('every staff endpoint agrees with the scope engine for every kind of ca
           expect(res.status, label).not.toBe(401);
           expect(res.status, label).not.toBe(403);
           expect(res.status, label).toBeLessThan(500);
+          if (spec.denied === 'row_forbidden') {
+            expect(res.json<ImportResult>().rows[0], label).toMatchObject({ status: 'created' });
+          }
+        } else if (
+          spec.denied &&
+          holdsAny(caller.actor.principal, spec.qualifying ?? [spec.action])
+        ) {
+          if (spec.denied === 'not_found') {
+            expect(res.status, label).toBe(404);
+          } else {
+            expect(res.status, label).toBe(200);
+            const result = res.json<ImportResult>();
+            expect(result.applied, label).toBe(false);
+            expect(result.rows[0]?.status, label).toBe('invalid');
+            expect(
+              result.rows[0]?.issues.map((i) => i.code),
+              label,
+            ).toContain('forbidden');
+          }
         } else {
           expect(res.status, label).toBe(403);
         }
@@ -510,5 +667,5 @@ describe('every staff endpoint agrees with the scope engine for every kind of ca
     for (const [name, status] of Object.entries(happy)) {
       expect(status, name).toBeLessThan(300);
     }
-  });
+  }, 30_000);
 });

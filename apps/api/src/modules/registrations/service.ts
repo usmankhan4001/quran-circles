@@ -112,13 +112,13 @@ export async function createRegistration(
           or(isNull(sessions.circleId), eq(circles.status, 'published')),
         ),
       );
-    if (!visible) return invalid('sessionId');
+    if (!visible) return fail('not_found');
     const [session] = await tx
       .select()
       .from(sessions)
       .where(eq(sessions.id, input.sessionId))
       .for('update');
-    if (!session) return invalid('sessionId');
+    if (!session) return fail('not_found');
     if (session.status === 'cancelled') return fail('session_cancelled');
     if (!session.registrationEnabled) return fail('registration_closed');
 
@@ -128,7 +128,7 @@ export async function createRegistration(
         .select()
         .from(occurrences)
         .where(eq(occurrences.id, input.occurrenceId));
-      if (!occ || occ.sessionId !== session.id) invalid('occurrenceId');
+      if (!occ || occ.sessionId !== session.id) return fail('not_found');
       if (occ.status === 'cancelled') return fail('session_cancelled');
       if (occ.endsAt <= now) return fail('occurrence_in_past');
       occurrenceId = occ.id;
@@ -149,7 +149,7 @@ export async function createRegistration(
     }
 
     const [area] = await tx.select({ id: areas.id }).from(areas).where(eq(areas.id, input.areaId));
-    if (!area) invalid('areaId');
+    if (!area) return fail('not_found');
 
     const [user] = await tx.select().from(users).where(eq(users.id, userId));
     if (!user) return fail('unauthenticated');
@@ -160,6 +160,8 @@ export async function createRegistration(
     } else if (isNameMissing(displayName)) {
       invalid('name', 'required');
     }
+    // The name was required above, so it is set from here on.
+    const name = displayName as string;
 
     const [existing] = await tx
       .select({ id: registrations.id })
@@ -250,7 +252,7 @@ export async function createRegistration(
           template: 'registration_confirmation',
           locale,
           variables: {
-            name: clip(displayName, 200),
+            name: clip(name, 200),
             sessionTitle: clip(locale === 'ur' ? facts.titleUr : facts.titleEn, 200),
             venueName: clip(locale === 'ur' ? facts.venueNameUr : facts.venueNameEn, 200),
             when: clip(start ? formatWhen(start, facts.timezone, locale) : '-', 200),
@@ -264,6 +266,7 @@ export async function createRegistration(
             recipientUserId: userId,
             recipientPhone: user.phoneE164,
             cityId: facts.cityId,
+            venueId: facts.venueId,
           },
         ]);
       }

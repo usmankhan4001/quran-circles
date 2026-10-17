@@ -3,12 +3,15 @@ import { schema } from '@qc/db';
 import type { AuthContext } from '../../auth/context';
 import { AuthHttpError } from '../../auth/errors';
 import { acceptInvites, expireLapsedInvites } from './invites';
-import { UNNAMED_DISPLAY_NAME, loadMe } from './me';
+import { loadMe } from './me';
 import { checkCode, verifyPhoneKey } from './otp';
 import { createSession, issueTokens } from './sessions';
 import type { SignInResult, VerifyCodeInput } from './types';
 
 const { users, otpChallenges } = schema;
+
+/** What accounts made before migration 0008 hold instead of NULL. Read as no name. */
+const LEGACY_PLACEHOLDER = '-';
 
 /**
  * Finishes a sign-in once the code is right: finds or creates the account (the verified number is
@@ -44,7 +47,8 @@ export async function verifyCode(
     // Two sign-ins racing on one code: only the first to get here wins.
     if (!consumed) throw new AuthHttpError('otp_invalid');
 
-    let user: { id: string; displayName: string; status: 'active' | 'suspended' } | undefined;
+    let user:
+      { id: string; displayName: string | null; status: 'active' | 'suspended' } | undefined;
     let isNewAccount = false;
     [user] = await tx
       .select({ id: users.id, displayName: users.displayName, status: users.status })
@@ -57,7 +61,9 @@ export async function verifyCode(
         .values({
           phoneE164: phone,
           phoneVerifiedAt: now,
-          displayName: UNNAMED_DISPLAY_NAME,
+          // No name until registration asks for it; the language is the one used to sign in.
+          displayName: null,
+          locale: challenge.locale,
           createdAt: now,
         })
         .onConflictDoNothing()
@@ -76,7 +82,10 @@ export async function verifyCode(
     if (user.status !== 'active') throw new AuthHttpError('account_suspended');
 
     const accepted = await acceptInvites(tx, { userId: user.id, phone, now });
-    const nameFromInvite = user.displayName === UNNAMED_DISPLAY_NAME ? accepted.displayName : null;
+    const nameFromInvite =
+      user.displayName === null || user.displayName === LEGACY_PLACEHOLDER
+        ? accepted.displayName
+        : null;
     await tx
       .update(users)
       .set({

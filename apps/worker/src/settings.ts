@@ -7,8 +7,9 @@ import { tables, type Db } from './db';
  * Settings the worker reads from the `settings` table. Keys are stored in snake case, as the
  * migration comment describes; the contract's camel-case names are accepted too.
  *
- * - `reminder_lead_minutes`: `{ "dora": 60, "circles": 60 }`, minutes before a session's start.
- *   Per program. (Not yet in the Settings contract; see the change request.)
+ * - `reminder_lead_minutes`: `{ "dora": 60, "circles": 60 }`, minutes before a session's start,
+ *   per program. The console edits it as `reminderLeadMinutes` in the Settings contract and the
+ *   API stores it under this key (a partial update keeps the other program's value).
  * - `whatsapp_daily_cap_per_person`: Wave 4 reads it; Wave 2 only exposes it to the gate.
  */
 export const DEFAULT_REMINDER_LEAD_MINUTES: Record<Program, number> = { dora: 60, circles: 60 };

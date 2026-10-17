@@ -133,41 +133,47 @@ export async function cityExists(db: Db, cityId: string): Promise<boolean> {
   return !!row;
 }
 
+/** Writes one venue (no checks, no audit). The caller checks the area and the scope. */
+export async function insertVenue(tx: Db, input: VenueCreate): Promise<string> {
+  const f = input.facilities;
+  const [row] = await tx
+    .insert(venues)
+    .values({
+      cityId: input.cityId,
+      areaId: input.areaId,
+      slug: `${slugify(input.name.en)}-${randomBytes(3).toString('hex')}`,
+      nameEn: input.name.en,
+      nameUr: input.name.ur ?? input.name.en,
+      addressEn: input.address.en,
+      addressUr: input.address.ur ?? input.address.en,
+      lat: input.lat,
+      lng: input.lng,
+      contactPhone: input.contactPhone,
+      hasWomenSection: f.womenSection ?? false,
+      hasParking: f.parking ?? false,
+      hasWuduArea: f.wuduArea ?? false,
+      hasElderWheelchairAccess: f.elderWheelchairAccess ?? false,
+      isChildFriendly: f.childFriendly ?? false,
+      entranceNotesEn: f.entranceNotes?.en ?? null,
+      entranceNotesUr: f.entranceNotes?.ur ?? null,
+    })
+    .returning({ id: venues.id });
+  if (!row) throw new Error('venue insert returned no row');
+  return row.id;
+}
+
 export async function createVenue(db: Db, actorId: string, input: VenueCreate): Promise<Venue> {
   await assertAreaInCity(db, input.areaId, input.cityId);
-  const f = input.facilities;
   const id = await db.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(venues)
-      .values({
-        cityId: input.cityId,
-        areaId: input.areaId,
-        slug: `${slugify(input.name.en)}-${randomBytes(3).toString('hex')}`,
-        nameEn: input.name.en,
-        nameUr: input.name.ur ?? input.name.en,
-        addressEn: input.address.en,
-        addressUr: input.address.ur ?? input.address.en,
-        lat: input.lat,
-        lng: input.lng,
-        contactPhone: input.contactPhone,
-        hasWomenSection: f.womenSection ?? false,
-        hasParking: f.parking ?? false,
-        hasWuduArea: f.wuduArea ?? false,
-        hasElderWheelchairAccess: f.elderWheelchairAccess ?? false,
-        isChildFriendly: f.childFriendly ?? false,
-        entranceNotesEn: f.entranceNotes?.en ?? null,
-        entranceNotesUr: f.entranceNotes?.ur ?? null,
-      })
-      .returning({ id: venues.id });
-    if (!row) throw new Error('venue insert returned no row');
+    const id = await insertVenue(tx, input);
     await writeAudit(tx, {
       actorUserId: actorId,
       action: 'venue.create',
       entityType: 'venue',
-      entityId: row.id,
-      scope: venueScope({ id: row.id, cityId: input.cityId }),
+      entityId: id,
+      scope: venueScope({ id, cityId: input.cityId }),
     });
-    return row.id;
+    return id;
   });
   return toVenue((await findVenue(db, id))!);
 }

@@ -11,11 +11,16 @@ import {
   type ScopeFilter,
   can,
 } from '@qc/contracts';
-import { authorize, authorizedScope, resourceMissing } from '../../middleware/auth-adapter';
+import {
+  authorize,
+  authorizedScope,
+  hasQualifyingRole,
+  resourceMissing,
+} from '../../middleware/auth-adapter';
 import { errorResponse } from '../../middleware/error-handler';
 import type { AppDeps, AppEnv } from './context';
 import type { Db } from '../../db';
-import { ApiException, fail, invalid } from './errors';
+import { ApiException, fail } from './errors';
 
 /**
  * Binds a handler to an endpoint of the contract registry. The method, path, input schemas, status
@@ -58,10 +63,18 @@ export interface HandlerCtx<K extends EndpointId> {
   /** The target was not found: `forbidden` for outsiders, `not_found` for people in scope. */
   missing(action: ScopeAction): never;
   /**
-   * A body field points at nothing. Outsiders get `forbidden`; people in scope get
-   * `validation_failed` on the field, for endpoints that have no `not_found` in the contract.
+   * A body field points at nothing (an unknown city, venue, session...). Outsiders get
+   * `forbidden`, so an id's existence is never revealed to them; anyone holding a role that
+   * qualifies for the action gets `not_found`. The contract lists `not_found` on every endpoint
+   * that uses this.
    */
-  unknownRef(action: ScopeAction, path: string): never;
+  unknownRef(action: ScopeAction): never;
+  /**
+   * For requests decided item by item (bulk import): refuses with `forbidden` a caller who holds
+   * no role that qualifies for any of these actions anywhere. Each item must then be decided with
+   * `allowed`.
+   */
+  qualify(...actions: ScopeAction[]): void;
   /** Whether the person may do an action on a resource, without failing. For branching on rank. */
   allowed(action: ScopeAction, resource?: ResourceScope): boolean;
   header(name: string, value: string): void;
@@ -205,14 +218,14 @@ function register<K extends EndpointId>(
         decided = true;
         return resourceMissing(principal, action);
       },
-      unknownRef(action, path) {
+      unknownRef(action) {
         decided = true;
-        try {
-          return resourceMissing(principal, action);
-        } catch (error) {
-          if (error instanceof ApiException && error.code === 'not_found') return invalid(path);
-          throw error;
-        }
+        return resourceMissing(principal, action);
+      },
+      qualify(...actions) {
+        if (!principal?.userId) fail('unauthenticated');
+        if (!actions.some((a) => hasQualifyingRole(principal, a))) fail('forbidden');
+        decided = true;
       },
       allowed(action, resource) {
         return can(principal, action, resource);

@@ -9,3 +9,5 @@ Affected lanes: contracts (db), api-core (anything that reads the name), auth-sc
 Workaround meanwhile: new accounts get the one-character placeholder `-` (`UNNAMED_DISPLAY_NAME`, exported from the auth lane). `PersonName` needs two characters or more, so a real name can never equal it, and `loadMe` reports it as `null`. Other code that reads `users.display_name` directly (for example a coordinator's registrant list) should treat `-` as no name until this lands.
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
+
+Applied in api 2026-10-17: new accounts get `display_name` null, `loadMe` returns null, and every reader treats null (and a legacy `-`) as no name.
