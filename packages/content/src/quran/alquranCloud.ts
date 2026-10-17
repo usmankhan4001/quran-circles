@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { isValidAyah } from '../meta/ayah';
 import { isJuzNumber } from '../meta/juz';
 import { isSurahNumber } from '../meta/surahs';
 import {
   isAbortError,
   QuranSourceError,
   type FetchOptions,
+  type QuranAyah,
   type QuranPassage,
   type QuranSource,
   type QuranVerse,
@@ -30,6 +32,8 @@ const AyahSchema = z.object({
 const EditionSchema = z.object({ ayahs: z.array(AyahSchema) });
 const Envelope = z.object({ status: z.string(), data: z.unknown() });
 const SurahEditionsData = z.array(EditionSchema).min(2);
+/** `/ayah/{surah}:{ayah}/editions/...` answers with one ayah per edition, in the asked order. */
+const AyahEditionsData = z.array(AyahSchema).min(2);
 
 async function getJson(
   doFetch: typeof fetch,
@@ -131,6 +135,37 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
         juz,
         join(arabic.data, urdu.data, (a) => a.surah?.number ?? 0),
       );
+    },
+
+    async getAyah(surah, ayah, fetchOptions): Promise<QuranAyah> {
+      if (!isValidAyah(surah, ayah)) throw new QuranSourceError('not_found');
+      const data = await getJson(
+        options.fetch,
+        `${baseUrl}/ayah/${surah}:${ayah}/editions/${editions.arabic},${editions.urdu}`,
+        fetchOptions,
+      );
+      const parsed = AyahEditionsData.safeParse(data);
+      if (!parsed.success) throw new QuranSourceError('invalid_response');
+      const [arabic, urdu] = parsed.data;
+      // The answer has to be the ayah that was asked for, in both editions.
+      const isAsked = (a: z.infer<typeof AyahSchema> | undefined) =>
+        a !== undefined &&
+        a.numberInSurah === ayah &&
+        (a.surah === undefined || a.surah.number === surah);
+      if (!arabic || !isAsked(arabic) || !arabic.text.trim()) {
+        throw new QuranSourceError('invalid_response');
+      }
+      return {
+        verse: {
+          surah,
+          ayah,
+          arabic: arabic.text,
+          urdu: isAsked(urdu) && urdu?.number === arabic.number ? urdu.text.trim() || null : null,
+        },
+        fromCache: false,
+        stale: false,
+        fetchedAt: now().toISOString(),
+      };
     },
   };
 }

@@ -7,6 +7,7 @@ import { DEFAULT_READER_PREFS, clampZoomIndex, type ReaderPrefs } from '../quran
 import {
   isAbortError,
   type PassageRef,
+  type QuranAyah,
   type QuranPassage,
   type QuranSourceError,
 } from '../quran/types';
@@ -205,6 +206,61 @@ export function usePassage(ref: PassageRef): PassageState {
     return { status: 'error', error: state.error, previous: lastReady.current, reload };
   }
   return { status: 'loading', previous: lastReady.current, reload };
+}
+
+export type AyahState =
+  | { status: 'loading' }
+  | { status: 'ready'; ayah: QuranAyah }
+  | { status: 'error'; error: QuranSourceError | Error };
+
+/**
+ * One ayah, read through the same source and cache as the reader but without fetching its whole
+ * surah (`services.source.getAyah`). For a card that shows a single ayah.
+ */
+export function useAyah(surah: number, ayah: number): AyahState {
+  const { services } = useContent();
+  const [state, setState] = useState<AyahState>({ status: 'loading' });
+  useEffect(() => {
+    const controller = new AbortController();
+    setState({ status: 'loading' });
+    services.source.getAyah(surah, ayah, { signal: controller.signal }).then(
+      (result) => {
+        if (!controller.signal.aborted) setState({ status: 'ready', ayah: result });
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted || isAbortError(error)) return;
+        setState({
+          status: 'error',
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      },
+    );
+    return () => controller.abort();
+  }, [services, surah, ayah]);
+  return state;
+}
+
+/**
+ * The surahs kept on this phone by the text cache, so the list can mark them as readable
+ * offline. Read once when the list mounts (the list mounts again when the reader closes).
+ */
+export function useSavedSurahs(): ReadonlySet<number> {
+  const { services } = useContent();
+  const [saved, setSaved] = useState<ReadonlySet<number>>(() => new Set());
+  useEffect(() => {
+    let active = true;
+    services.source.cachedPassages().then(
+      (refs) => {
+        if (!active) return;
+        setSaved(new Set(refs.filter((r) => r.kind === 'surah').map((r) => r.id)));
+      },
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [services]);
+  return saved;
 }
 
 export interface ViewStateHook extends ViewState {

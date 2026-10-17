@@ -40,6 +40,7 @@ export {
   type FetchOptions,
   type PassageKind,
   type PassageRef,
+  type QuranAyah,
   type QuranPassage,
   type QuranSource,
   type QuranSourceErrorCode,

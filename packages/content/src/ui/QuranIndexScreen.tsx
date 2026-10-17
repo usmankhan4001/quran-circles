@@ -6,6 +6,7 @@ import {
   ListItem,
   SegmentedControl,
   Skeleton,
+  StarNumber,
   Text,
   TextField,
   screenGutter,
@@ -18,9 +19,10 @@ import { getSurah, JUZ_COUNT, type SurahInfo } from '../meta/surahs';
 import { ContinueReadingCard } from './ContinueReadingCard';
 import { useContent } from './context';
 import { surahName } from './format';
-import { useBookmarks } from './hooks';
+import { useBookmarks, useSavedSurahs } from './hooks';
 import { useContentI18n, type ContentI18n } from './i18n';
 import { targetForBookmark, type ReaderTarget } from './reader';
+import { SavedMark } from './QuranText';
 import { V1ImportBanner } from './V1ImportBanner';
 
 type Tab = 'surahs' | 'juz' | 'bookmarks';
@@ -46,6 +48,7 @@ export function QuranIndexScreen({ onOpen, initialTab = 'surahs', testID }: Qura
   const i18n = useContentI18n();
   const { signedIn } = useContent();
   const bookmarks = useBookmarks();
+  const saved = useSavedSurahs();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState('');
 
@@ -138,10 +141,18 @@ export function QuranIndexScreen({ onOpen, initialTab = 'surahs', testID }: Qura
       ListEmptyComponent={empty ?? undefined}
       contentContainerStyle={{ paddingHorizontal: screenGutter, paddingBottom: spacing.xxl }}
       initialNumToRender={14}
+      extraData={saved}
       keyboardShouldPersistTaps="handled"
       renderItem={({ item }) => {
         if (item.type === 'surah')
-          return <SurahRow surah={item.surah} onOpen={onOpen} i18n={i18n} />;
+          return (
+            <SurahRow
+              surah={item.surah}
+              saved={saved.has(item.surah.id)}
+              onOpen={onOpen}
+              i18n={i18n}
+            />
+          );
         if (item.type === 'juz') return <JuzRow juz={item.juz} onOpen={onOpen} i18n={i18n} />;
         return (
           <BookmarkRow
@@ -156,32 +167,45 @@ export function QuranIndexScreen({ onOpen, initialTab = 'surahs', testID }: Qura
   );
 }
 
+/**
+ * A surah as drawn (Q1): its number in the eight-point star, the name and verse count, the
+ * Arabic name in the Quran font at the row end, and a mark when it is saved on this phone.
+ */
 function SurahRow({
   surah,
+  saved,
   onOpen,
   i18n,
 }: {
   surah: SurahInfo;
+  saved: boolean;
   onOpen: (target: ReaderTarget) => void;
   i18n: ContentI18n;
 }) {
   const count = i18n.tn('quran.surah.ayahs', surah.ayahCount);
   const subtitle = `${surah.nameEnglish} · ${count}`;
+  const label = [`${i18n.n(surah.id)}. ${surah.nameSimple}. ${subtitle}`];
+  if (saved) label.push(i18n.t('quran.offline.saved'));
   return (
     <ListItem
       testID={`surah-row-${surah.id}`}
       title={surah.nameSimple}
       subtitle={subtitle}
-      accessibilityLabel={`${i18n.n(surah.id)}. ${surah.nameSimple}. ${subtitle}`}
-      leading={
-        <Text color="textSecondary" decorative>
-          {i18n.n(surah.id)}
-        </Text>
-      }
+      accessibilityLabel={label.join('. ')}
+      leading={<StarNumber value={surah.id} testID={`surah-number-${surah.id}`} />}
       trailing={
-        <Text variant="quran" lang="ar" decorative>
-          {surah.nameArabic}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Text
+            variant="quran"
+            lang="ar"
+            color="textAccent"
+            decorative
+            testID={`surah-arabic-${surah.id}`}
+          >
+            {surah.nameArabic}
+          </Text>
+          {saved ? <SavedMark testID={`surah-saved-${surah.id}`} /> : null}
+        </View>
       }
       chevron={false}
       divider
@@ -210,6 +234,8 @@ function JuzRow({
     <ListItem
       testID={`juz-row-${juz}`}
       title={title}
+      accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+      leading={<StarNumber value={juz} testID={`juz-number-${juz}`} />}
       {...(subtitle ? { subtitle } : {})}
       divider
       onPress={() => onOpen({ kind: 'juz', id: juz })}

@@ -65,6 +65,37 @@ describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
   });
 });
 
+describe.each(matrix)('QuranReaderScreen marks and credit in $name', (combo) => {
+  it('puts each ayah number in the star at the start of its Arabic, read right to left', async () => {
+    const t = createTestServices();
+    open(t, { kind: 'surah', id: 1 }, { combo: { combo } });
+    await screen.findByTestId('arabic-1-1');
+    const star = screen.getByTestId('ayah-number-1-7');
+    expect(star.textContent).toBe('7');
+    expect(star.getAttribute('role')).toBe('img');
+    expect(star.getAttribute('aria-label')).toBe(
+      msg(combo.locale, 'quran.ayah.number', { number: 7 }),
+    );
+
+    // Star and Arabic share a row that runs right to left in both app languages, star first.
+    const pair = star.parentElement as HTMLElement;
+    expect(pair.contains(arabicOf(1, 7))).toBe(true);
+    expect(getComputedStyle(pair).flexDirection).toBe(
+      combo.direction === 'rtl' ? 'row' : 'row-reverse',
+    );
+    expect(pair.firstElementChild).toBe(star);
+  });
+
+  it('credits the source of the Arabic text under the passage', async () => {
+    const t = createTestServices();
+    open(t, { kind: 'surah', id: 1 }, { combo: { combo } });
+    await screen.findByTestId('arabic-1-1');
+    const credit = await screen.findByTestId('reader-text-credit');
+    expect(credit.textContent).toBe(msg(combo.locale, 'quran.credit.arabic'));
+    expect(getComputedStyle(credit).fontFamily).not.toContain(fonts.quran);
+  });
+});
+
 describe('QuranReaderScreen', () => {
   it('uses the Quran font for the Quran text only', async () => {
     const t = createTestServices();
@@ -317,6 +348,18 @@ describe('QuranReaderScreen', () => {
     expect(screen.getByTestId('reader-stale-note').textContent).toBe(
       msg('en', 'quran.reader.staleNote'),
     );
+  });
+
+  it('credits the Arabic text in a juz too, and not before the text is there', async () => {
+    const t = createTestServices();
+    t.quranApi.offline = true;
+    open(t, { kind: 'juz', id: 30 });
+    await screen.findByTestId('reader-error');
+    expect(screen.queryByTestId('reader-text-credit')).toBeNull();
+    t.quranApi.offline = false;
+    fireEvent.click(within(screen.getByTestId('reader-error')).getByRole('button'));
+    expect(await screen.findByTestId('reader-text-credit')).toBeTruthy();
+    expect(screen.queryByTestId('reader-next-surah')).toBeNull();
   });
 
   it('goes back', async () => {

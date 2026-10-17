@@ -15,5 +15,16 @@ export type { PrayerTimesScreenProps } from './PrayerTimesScreen';
 export { QuranPrayerTab } from './QuranPrayerTab';
 export type { QuranPrayerTabProps } from './QuranPrayerTab';
 export { V1ImportBanner } from './V1ImportBanner';
+export { AyahText, QuranTextCredit, SavedMark } from './QuranText';
+export type { AyahTextProps, QuranTextCreditProps, SavedMarkProps } from './QuranText';
 export type { ReaderTarget } from './reader';
-export { useNow, useNextPrayer, useBookmarks, useReadingPosition, useReaderPrefs } from './hooks';
+export {
+  useNow,
+  useNextPrayer,
+  useBookmarks,
+  useReadingPosition,
+  useReaderPrefs,
+  useAyah,
+  useSavedSurahs,
+} from './hooks';
+export type { AyahState } from './hooks';

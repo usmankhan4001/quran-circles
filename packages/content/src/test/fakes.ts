@@ -84,6 +84,19 @@ export function createFakeQuranApi(): FakeQuranApi {
         return Promise.resolve(json({ status: 'OK', data: [{ ayahs: arabic }, { ayahs: urdu }] }));
       }
 
+      const ayahMatch = /\/ayah\/(\d+):(\d+)\/editions\/([^,]+),(.+)$/.exec(url);
+      if (ayahMatch) {
+        const surah = Number(ayahMatch[1]);
+        const ayah = Number(ayahMatch[2]);
+        if (ayah < 1 || ayah > ayahCountOf(surah)) {
+          return Promise.resolve(new Response('{}', { status: 404 }));
+        }
+        const data = [ayahOf(surah, ayah, fakeArabic(surah, ayah), true)];
+        if (!api.withoutTranslation) data.push(ayahOf(surah, ayah, fakeUrdu(surah, ayah), true));
+        else data.push(ayahOf(surah, ayah, '', true));
+        return Promise.resolve(json({ status: 'OK', data }));
+      }
+
       const juzMatch = /\/juz\/(\d+)\/(.+)$/.exec(url);
       if (juzMatch) {
         const juz = Number(juzMatch[1]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createMemoryStorage } from '../storage/memory';
-import { createClock, createFakeQuranApi, fakeArabic } from '../test/fakes';
+import { createClock, createFakeQuranApi, fakeArabic, fakeUrdu } from '../test/fakes';
 import { createAlQuranCloudSource } from './alquranCloud';
 import { CACHE_FRESH_MS, createCachedQuranSource } from './cache';
 
@@ -178,5 +178,169 @@ describe('createCachedQuranSource', () => {
     });
     const passage = await source.getSurah(112);
     expect(passage.verses).toHaveLength(4);
+  });
+});
+
+describe('createCachedQuranSource getAyah', () => {
+  const ayahUrl = (key: string) => expect.stringContaining(`/ayah/${key}/editions/`) as unknown;
+
+  it('fetches one ayah on its own, not the whole surah', async () => {
+    const { api, source } = setup();
+    const result = await source.getAyah(2, 255);
+    expect(api.calls).toEqual([ayahUrl('2:255')]);
+    expect(result).toMatchObject({ fromCache: false, stale: false });
+    expect(result.verse).toEqual({
+      surah: 2,
+      ayah: 255,
+      arabic: fakeArabic(2, 255),
+      urdu: fakeUrdu(2, 255),
+    });
+  });
+
+  it('serves a fresh single ayah again from the cache, also offline', async () => {
+    const { api, clock, source } = setup();
+    await source.getAyah(93, 3);
+    clock.advance(DAY);
+    api.offline = true;
+    const again = await source.getAyah(93, 3);
+    expect(again).toMatchObject({ fromCache: true, stale: false });
+    expect(again.verse.arabic).toBe(fakeArabic(93, 3));
+    expect(api.calls).toHaveLength(1);
+  });
+
+  it('reads the ayah out of a cached surah without a request', async () => {
+    const { api, source } = setup();
+    await source.getSurah(112);
+    const result = await source.getAyah(112, 3);
+    expect(result).toMatchObject({ fromCache: true, stale: false });
+    expect(result.verse).toEqual({
+      surah: 112,
+      ayah: 3,
+      arabic: fakeArabic(112, 3),
+      urdu: fakeUrdu(112, 3),
+    });
+    expect(api.calls).toHaveLength(1);
+  });
+
+  it('reads the ayah out of a cached juz without a request', async () => {
+    const { api, source } = setup();
+    await source.getJuz(30);
+    const callsAfterJuz = api.calls.length;
+    const result = await source.getAyah(93, 3);
+    expect(result.fromCache).toBe(true);
+    expect(result.verse.arabic).toBe(fakeArabic(93, 3));
+    expect(api.calls).toHaveLength(callsAfterJuz);
+  });
+
+  it('refreshes an old copy, and falls back to it marked stale when that fails', async () => {
+    const { api, clock, source } = setup();
+    await source.getAyah(93, 3);
+    clock.advance(CACHE_FRESH_MS + DAY);
+    const refreshed = await source.getAyah(93, 3);
+    expect(refreshed.fromCache).toBe(false);
+    expect(api.calls).toHaveLength(2);
+
+    clock.advance(CACHE_FRESH_MS + DAY);
+    api.offline = true;
+    const stale = await source.getAyah(93, 3);
+    expect(stale).toMatchObject({ fromCache: true, stale: true });
+    expect(stale.verse.arabic).toBe(fakeArabic(93, 3));
+  });
+
+  it('falls back to an old surah copy when the single read fails', async () => {
+    const { api, clock, source } = setup();
+    await source.getSurah(112);
+    clock.advance(CACHE_FRESH_MS + DAY);
+    api.failNextWith = 500;
+    const stale = await source.getAyah(112, 2);
+    expect(stale).toMatchObject({ fromCache: true, stale: true });
+    expect(stale.verse.ayah).toBe(2);
+  });
+
+  it('fails offline when nothing holds the ayah, and caches no failure', async () => {
+    const { api, source } = setup();
+    api.offline = true;
+    await expect(source.getAyah(93, 3)).rejects.toMatchObject({ code: 'offline' });
+    api.offline = false;
+    expect((await source.getAyah(93, 3)).fromCache).toBe(false);
+  });
+
+  it('rejects an ayah that does not exist without a request', async () => {
+    const { api, source } = setup();
+    await expect(source.getAyah(1, 8)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(source.getAyah(115, 1)).rejects.toMatchObject({ code: 'not_found' });
+    expect(api.calls).toEqual([]);
+  });
+
+  it('shares one request between callers that ask at the same time', async () => {
+    const { api, source } = setup();
+    const [a, b] = await Promise.all([source.getAyah(2, 255), source.getAyah(2, 255)]);
+    expect(api.calls).toHaveLength(1);
+    expect(a.verse).toEqual(b.verse);
+  });
+
+  it('does not list a single ayah as a passage that can be read offline', async () => {
+    const { source } = setup();
+    await source.getAyah(2, 255);
+    expect(await source.cachedPassages()).toEqual([]);
+    expect(await source.isCached({ kind: 'surah', id: 2 })).toBe(false);
+  });
+
+  it('counts a single ayah against the limit and clears it with the rest', async () => {
+    const { clock, storage, source } = setup({ maxPassages: 1 });
+    await source.getAyah(2, 255);
+    clock.advance(1000);
+    await source.getSurah(112);
+    expect(await storage.getItem('qc.quran.cache.v1:ayah:2:255')).toBeNull();
+    await source.getAyah(2, 255);
+    await source.clear();
+    expect(storage.keys()).toEqual([]);
+  });
+
+  it('keeps nothing when the limit is 0', async () => {
+    const { api, storage, source } = setup({ maxPassages: 0 });
+    await source.getAyah(2, 255);
+    expect(storage.keys().filter((k) => k.includes('ayah:'))).toEqual([]);
+    await source.getAyah(2, 255);
+    expect(api.calls).toHaveLength(2);
+  });
+
+  it('ignores a damaged single-ayah entry and fetches again', async () => {
+    const { api, storage, source } = setup();
+    await source.getAyah(2, 255);
+    await storage.setItem('qc.quran.cache.v1:ayah:2:255', '{"kind":"ayah","verse":"oops"}');
+    expect((await source.getAyah(2, 255)).fromCache).toBe(false);
+    expect(api.calls).toHaveLength(2);
+  });
+
+  it('ignores a single-ayah entry stored under the wrong ayah', async () => {
+    const { api, storage, source } = setup();
+    await source.getAyah(2, 255);
+    const raw = await storage.getItem('qc.quran.cache.v1:ayah:2:255');
+    await storage.setItem('qc.quran.cache.v1:ayah:2:256', raw ?? '');
+    const other = await source.getAyah(2, 256);
+    expect(other.verse.ayah).toBe(256);
+    expect(other.fromCache).toBe(false);
+    expect(api.calls).toHaveLength(2);
+  });
+
+  it('lets an abort through instead of falling back', async () => {
+    const controller = new AbortController();
+    const storage = createMemoryStorage();
+    const source = createCachedQuranSource({
+      source: createAlQuranCloudSource({
+        // Like the real fetch: a signal that is already aborted rejects at once.
+        fetch: ((_: RequestInfo | URL, init?: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            const abort = () => reject(new DOMException('aborted', 'AbortError'));
+            if (init?.signal?.aborted) abort();
+            init?.signal?.addEventListener('abort', abort);
+          })) as typeof fetch,
+      }),
+      storage,
+    });
+    const pending = source.getAyah(2, 255, { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });
 });

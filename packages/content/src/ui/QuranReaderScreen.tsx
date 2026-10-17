@@ -8,6 +8,7 @@ import {
   ListItem,
   Sheet,
   Skeleton,
+  StarNumber,
   Switch,
   Text,
   TextField,
@@ -25,6 +26,7 @@ import { surahName } from './format';
 import { useBookmarks, usePassage, useReaderPrefs } from './hooks';
 import { useContentI18n, type ContentI18n } from './i18n';
 import { usePositionTracker } from './positionTracker';
+import { QuranTextCredit } from './QuranText';
 import { buildRows, resolveJump, rowIndexFor, type ReaderRow, type ReaderTarget } from './reader';
 
 type SheetName = 'settings' | 'jump' | 'surahs' | null;
@@ -222,15 +224,22 @@ export function QuranReaderScreen({
 
   const notice = noticeFor(state, shown, i18n, theme.t('ui.retry'));
 
-  const footer =
-    shown?.kind === 'surah' ? (
-      <SurahPager
-        surah={shown.id}
-        onGo={(id) => go({ kind: 'surah', id })}
-        i18n={i18n}
-        rtl={theme.direction === 'rtl'}
-      />
-    ) : null;
+  // The pager (a surah only), then the credit for the Arabic text shown above it.
+  const footer = shown ? (
+    <View style={{ gap: spacing.lg }}>
+      {shown.kind === 'surah' ? (
+        <SurahPager
+          surah={shown.id}
+          onGo={(id) => go({ kind: 'surah', id })}
+          i18n={i18n}
+          rtl={theme.direction === 'rtl'}
+        />
+      ) : null}
+      <View style={styles.gutter}>
+        <QuranTextCredit testID="reader-text-credit" />
+      </View>
+    </View>
+  ) : null;
 
   let body: ReactElement;
   if (!shown && state.status === 'error') {
@@ -569,15 +578,32 @@ const VerseRow = memo(function VerseRow({
       }}
     >
       <View accessible style={{ gap: spacing.sm }}>
-        <Text
-          variant="quran"
-          lang="ar"
-          style={arabicStyle}
-          selectable
-          testID={`arabic-${surah}-${ayah}`}
+        {/* As drawn (Q1): the ayah's number in the eight-point star beside its Arabic. The pair
+            reads right to left in both app languages, so the star sits at the Arabic's start. */}
+        <View
+          style={{
+            flexDirection: theme.direction === 'rtl' ? 'row' : 'row-reverse',
+            alignItems: 'flex-start',
+            gap: spacing.sm,
+          }}
         >
-          {row.text}
-        </Text>
+          <StarNumber
+            value={ayah}
+            accessibilityLabel={i18n.t('quran.ayah.number', { number })}
+            testID={`ayah-number-${surah}-${ayah}`}
+          />
+          <View style={{ flex: 1 }}>
+            <Text
+              variant="quran"
+              lang="ar"
+              style={arabicStyle}
+              selectable
+              testID={`arabic-${surah}-${ayah}`}
+            >
+              {row.text}
+            </Text>
+          </View>
+        </View>
         {showTranslation ? (
           urdu ? (
             <Text lang="ur" selectable testID={`urdu-${surah}-${ayah}`}>
@@ -593,9 +619,6 @@ const VerseRow = memo(function VerseRow({
       <View
         style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm }}
       >
-        <Text variant="caption" color="textSecondary" testID={`ayah-number-${surah}-${ayah}`}>
-          {i18n.t('quran.ayah.number', { number })}
-        </Text>
         <Button
           variant="tertiary"
           icon={bookmarked ? 'close' : 'plus'}

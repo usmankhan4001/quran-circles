@@ -760,6 +760,7 @@
   "quran.import.done.one": "Added {count} bookmark to your account.",
   "quran.import.done.other": "Added {count} bookmarks to your account.",
   "quran.import.error": "We could not import right now. Please try again.",
+  "quran.credit.arabic": "Arabic text: Tanzil Project (tanzil.net)",
   "prayer.am": "AM",
   "prayer.pm": "PM",
   "prayer.next.tomorrow": "Tomorrow",

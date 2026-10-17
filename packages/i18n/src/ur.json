@@ -761,6 +761,7 @@
   "quran.import.done.one": "آپ کے اکاؤنٹ میں {count} بک مارک شامل ہو گیا۔",
   "quran.import.done.other": "آپ کے اکاؤنٹ میں {count} بک مارکس شامل ہو گئے۔",
   "quran.import.error": "ابھی شامل نہیں ہو سکا۔ براہِ کرم دوبارہ کوشش کریں۔",
+  "quran.credit.arabic": "عربی متن: تنزیل پروجیکٹ (tanzil.net)",
   "prayer.am": "صبح",
   "prayer.pm": "شام",
   "prayer.next.tomorrow": "کل",

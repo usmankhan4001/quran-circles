@@ -27,6 +27,17 @@ function sourceAnswer(surah: number, ayahs: number) {
   return { code: 200, status: 'OK', data: [edition('arabic'), edition('urdu')] };
 }
 
+/** The same made-up words for one ayah, in the shape of the single-ayah answer. */
+function ayahAnswer(surah: number, ayah: number) {
+  const one = (label: string) => ({
+    number: surah * 1000 + ayah,
+    numberInSurah: ayah,
+    text: `${label} placeholder ${ayah}`,
+    surah: { number: surah },
+  });
+  return { code: 200, status: 'OK', data: [one('arabic'), one('urdu')] };
+}
+
 /** The real package with in-memory storage and no network: the Quran text is never asked for. */
 function modules(storage = createMemoryStorage()) {
   const requests: string[] = [];
@@ -91,11 +102,16 @@ describe('the Quran & Prayer package inside the app', () => {
       const place = ayahOfTheDay(NOW);
       const content = createContentModules({
         storage: createMemoryStorage(),
-        fetch: async () =>
-          new Response(JSON.stringify(sourceAnswer(place.surah, place.ayah + 2)), {
-            status: 200,
-            headers: { 'content-type': 'application/json' },
-          }),
+        // Home asks for the one ayah; the reader would ask for the whole surah.
+        fetch: async (input) =>
+          new Response(
+            JSON.stringify(
+              String(input).includes('/ayah/')
+                ? ayahAnswer(place.surah, place.ayah)
+                : sourceAnswer(place.surah, place.ayah + 2),
+            ),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          ),
         getApi: () => null,
       });
       const view = await renderScreen(<HomeScreen />, { content, locale });

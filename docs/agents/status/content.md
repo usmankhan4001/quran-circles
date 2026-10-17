@@ -1,9 +1,25 @@
 # Status: content
 
-Updated: 2026-10-16
+Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
+
+### 2026-10-17: Quran gaps from the drawings (redesign-handoff.md, gap list, Quran list and reader rows)
+
+Drawing: Q1 "Clean lists" in https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx.
+
+- **Quran list.** Surah and juz numbers in the kit's `StarNumber`. The Arabic surah name sits at the row end in the Quran font (`Text variant="quran" lang="ar"`, so `fonts.quran` with its fallback), in the accent colour as drawn. Surahs kept by the text cache show a "saved on this phone" mark (`SavedMark`, drawn with views because the kit has no download icon) and the row's screen-reader name ends with `quran.offline.saved`. The saved set comes from the existing `source.cachedPassages()` (surahs only; a cached juz or single ayah does not mark a surah), read by the new `useSavedSurahs()` hook when the list mounts.
+- **Reader.** Each ayah's number is in `StarNumber` beside its Arabic, at the Arabic's start, in a row that runs right to left in both app languages (as drawn). The star has the accessible name `quran.ayah.number`; the plain "Ayah N" caption is gone.
+- **Single-ayah read.** `QuranSource.getAyah(surah, ayah, options?) => Promise<QuranAyah>` (`{ verse: QuranVerse; fromCache; stale; fetchedAt }`), on the same source and cache path:
+  - `createAlQuranCloudSource`: one request, `/ayah/{surah}:{ayah}/editions/quran-uthmani,ur.maududi`; checked with zod; refuses an answer for another ayah; drops a translation that belongs to another ayah; `not_found` without a request for an ayah that does not exist.
+  - `createCachedQuranSource` (what `services.source` is, which the user app's `AyahText` mount uses today): served from a cached surah or juz that holds the ayah when there is one, else fetched alone and kept under its own key (`qc.quran.cache.v1:ayah:S:A`). Same 30-day freshness, stale fallback when offline, in-flight sharing and abort handling. A single ayah takes one place in the same index, so `cacheMaxPassages` (including 0) still bounds what is kept; it is not listed by `cachedPassages()`.
+  - Also exported: `useAyah(surah, ayah)` hook and `AyahText` component (`{ surah, ayah, showTranslation?, testID? }`: Arabic in the Quran font without the opening formula, Urdu translation on an Urdu screen by default, then the credit; draws nothing while loading or on failure, matching the app's `AyahText` mount contract). The user-app lane can mount `AyahText` directly in place of its own `HomeAyahText`, which still fetches the whole surah.
+- **Text credit.** `QuranTextCredit` shows `quran.credit.arabic` ("Arabic text: Tanzil Project (tanzil.net)", Urdu draft added under the file's `_meta.status` marker) under every reader passage (surah and juz) and inside `AyahText`. No licence name is printed; see the question below.
+- Tests: **820 in 25 files** (was 657 in 24). New: source and cache `getAyah` (fetch, cache hit from surah / juz / single entry, refresh, stale fallback, offline, not found, in-flight, limit 0, eviction, damaged and mismatched entries, abort); list star numbers, Arabic name font and colour, saved mark and label, juz stars, storage failure; reader star placement and accessible name, credit under surah and juz; `AyahText`, `QuranTextCredit`, `SavedMark` across the 24-combination matrix (light / dark / high contrast x en / ur x four text sizes). All text is invented ("FAKE-AR 93:3").
+- Checks: `pnpm --filter @qc/content typecheck` and `test`, `npx eslint packages/content`, `prettier --check` on changed files, `pnpm --filter @qc/user-app test` (670 pass) and `typecheck`, `pnpm --filter @qc/i18n test`.
+
+### Earlier (WP8)
 
 WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or translation is committed.
 
@@ -40,6 +56,10 @@ WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or tra
 - The app wires it up: `createContentServices({ fetch, storage, cacheStorage?, getApi, readV1? })`, then `<ContentProvider services hijriOffsetDays={config.hijriOffsetDays} signedIn>` and `<QuranPrayerTab />` in the fourth tab. Home uses `<NextPrayerCard place={...} />` and `<ContinueReadingCard onOpen />`. On the web pass `readV1: (key) => localStorage.getItem(key)` to get the V1 import; on phones leave it out.
 
 ## Questions for the orchestrator
+
+- **Text credit (for the owner):** the repo says the Arabic text is "reported as CC BY 3.0: credit Tanzil" (`docs/product/decisions.md`, brief). Nothing in the repo confirms that the `quran-uthmani` edition served by api.alquran.cloud is the Tanzil text, or what wording or link the licence asks for. The line shown is "Arabic text: Tanzil Project (tanzil.net)", without a licence name. Please confirm the source and whether the line should also name the licence (for example "CC BY 3.0") or link to tanzil.net. The Urdu translation (Maududi) has no credit line yet; its rights are still open (WP18).
+- **Decision 0008** lists `QuranSource` as `getSurah` and `getJuz`; it now also has `getAyah`. Not my file to edit; worth a line there.
+- **Kit:** a `download` (saved offline) icon in `Icon` would replace the package's drawn `SavedMark`.
 
 - **Rights:** the cache keeps fetched translation text on the person's device (at most 24 passages), as V1's service worker did. If that is not acceptable until WP18 is cleared, pass `cacheMaxPassages: 0` to `createContentServices` (tested): the reader then works online only.
 - **Reader page-turn direction:** I followed the spec's proposal. Previous / next surah are ordered right to left in both languages (previous on the right). Say if English mode should follow the app direction instead.

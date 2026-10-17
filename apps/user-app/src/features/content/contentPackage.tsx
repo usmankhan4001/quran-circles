@@ -9,6 +9,7 @@ import {
   PrayerTimesScreen,
   QuranIndexScreen,
   QuranReaderScreen,
+  QuranTextCredit,
   computeDay,
   createContentServices,
   formatClock,
@@ -93,7 +94,7 @@ function HomePrayerStrip({ onPress }: { onPress?: () => void }) {
 
 /**
  * The words of one ayah, read through the package's own source and cache (the same path as the
- * reader). Arabic always; the Urdu translation on an Urdu screen. There is no English
+ * reader), fetching only that ayah. Arabic always, with the text credit; the Urdu translation on an Urdu screen. There is no English
  * translation source, so an English screen shows the Arabic alone.
  */
 function HomeAyahText({ surah, ayah }: QuranPlace) {
@@ -104,9 +105,9 @@ function HomeAyahText({ surah, ayah }: QuranPlace) {
     let active = true;
     setVerse(null);
     services.source
-      .getSurah(surah)
-      .then((passage) => {
-        if (active) setVerse(passage.verses.find((v) => v.ayah === ayah) ?? null);
+      .getAyah(surah, ayah)
+      .then((result) => {
+        if (active) setVerse(result.verse);
       })
       .catch(() => {
         // Offline with nothing cached, or the source is down: the card keeps the reference.
@@ -126,6 +127,7 @@ function HomeAyahText({ surah, ayah }: QuranPlace) {
           {verse.urdu}
         </Text>
       ) : null}
+      <QuranTextCredit />
     </View>
   );
 }

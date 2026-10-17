@@ -30,6 +30,17 @@ export interface QuranPassage extends PassageRef {
   fetchedAt: string;
 }
 
+/** One ayah read on its own, for a card that shows a single ayah (Home's ayah of the day). */
+export interface QuranAyah {
+  verse: QuranVerse;
+  /** True when the text came from the on-device cache and not from the network. */
+  fromCache: boolean;
+  /** True when the cached copy is older than its freshness window and could not be refreshed. */
+  stale: boolean;
+  /** When the text was fetched, as an ISO instant. */
+  fetchedAt: string;
+}
+
 export type QuranSourceErrorCode =
   /** There is no connection, or the request failed. */
   | 'offline'
@@ -37,7 +48,7 @@ export type QuranSourceErrorCode =
   | 'unavailable'
   /** The source answered with something we cannot read. */
   | 'invalid_response'
-  /** The surah or juz does not exist. */
+  /** The surah, juz or ayah does not exist. */
   | 'not_found';
 
 export class QuranSourceError extends Error {
@@ -58,6 +69,11 @@ export interface FetchOptions {
 export interface QuranSource {
   getSurah(surah: number, options?: FetchOptions): Promise<QuranPassage>;
   getJuz(juz: number, options?: FetchOptions): Promise<QuranPassage>;
+  /**
+   * One ayah, without fetching the whole surah. Like a passage's first verse, ayah 1 still
+   * starts with the opening formula; `splitBismillah` cuts it off.
+   */
+  getAyah(surah: number, ayah: number, options?: FetchOptions): Promise<QuranAyah>;
 }
 
 /** A request that was cancelled on purpose. Not a failure to report. */

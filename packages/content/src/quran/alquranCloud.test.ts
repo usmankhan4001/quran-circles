@@ -96,6 +96,95 @@ describe('createAlQuranCloudSource', () => {
     await expect(source.getJuz(1)).rejects.toMatchObject({ code: 'invalid_response' });
   });
 
+  describe('getAyah', () => {
+    it('asks for one ayah in both editions in one request, not the whole surah', async () => {
+      const { api, source } = setup();
+      const result = await source.getAyah(2, 255);
+      expect(api.calls).toEqual([
+        `${ALQURAN_CLOUD_BASE_URL}/ayah/2:255/editions/quran-uthmani,ur.maududi`,
+      ]);
+      expect(result).toEqual({
+        verse: { surah: 2, ayah: 255, arabic: fakeArabic(2, 255), urdu: fakeUrdu(2, 255) },
+        fromCache: false,
+        stale: false,
+        fetchedAt: '2026-10-16T12:00:00.000Z',
+      });
+    });
+
+    it('keeps the opening formula on ayah 1, like the passage does', async () => {
+      const { source } = setup();
+      const result = await source.getAyah(18, 1);
+      expect(result.verse.arabic).toBe(fakeArabic(18, 1));
+    });
+
+    it('gives a null translation when the edition has none', async () => {
+      const { api, source } = setup();
+      api.withoutTranslation = true;
+      const result = await source.getAyah(112, 1);
+      expect(result.verse.urdu).toBeNull();
+      expect(result.verse.arabic).toBe(fakeArabic(112, 1));
+    });
+
+    it('rejects an ayah that does not exist without a request', async () => {
+      const { api, source } = setup();
+      await expect(source.getAyah(1, 8)).rejects.toMatchObject({ code: 'not_found' });
+      await expect(source.getAyah(0, 1)).rejects.toMatchObject({ code: 'not_found' });
+      await expect(source.getAyah(2, 0)).rejects.toMatchObject({ code: 'not_found' });
+      await expect(source.getAyah(2, 1.5)).rejects.toMatchObject({ code: 'not_found' });
+      expect(api.calls).toEqual([]);
+    });
+
+    it('reports offline, error statuses and unreadable answers like the other reads', async () => {
+      const { api, source } = setup();
+      api.offline = true;
+      await expect(source.getAyah(1, 1)).rejects.toMatchObject({ code: 'offline' });
+      api.offline = false;
+      api.failNextWith = 503;
+      await expect(source.getAyah(1, 1)).rejects.toMatchObject({ code: 'unavailable' });
+      api.failNextWith = 404;
+      await expect(source.getAyah(1, 1)).rejects.toMatchObject({ code: 'not_found' });
+      api.garbage = true;
+      await expect(source.getAyah(1, 1)).rejects.toMatchObject({ code: 'invalid_response' });
+    });
+
+    it('refuses an answer for a different ayah than the one asked for', async () => {
+      const source = createAlQuranCloudSource({
+        fetch: (() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                status: 'OK',
+                data: [
+                  { number: 9, numberInSurah: 2, text: 'FAKE-AR 2:2', surah: { number: 2 } },
+                  { number: 9, numberInSurah: 2, text: 'FAKE-UR 2:2', surah: { number: 2 } },
+                ],
+              }),
+            ),
+          )) as typeof fetch,
+      });
+      await expect(source.getAyah(2, 3)).rejects.toMatchObject({ code: 'invalid_response' });
+    });
+
+    it('drops a translation that belongs to another ayah', async () => {
+      const source = createAlQuranCloudSource({
+        fetch: (() =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                status: 'OK',
+                data: [
+                  { number: 10, numberInSurah: 3, text: 'FAKE-AR 2:3', surah: { number: 2 } },
+                  { number: 11, numberInSurah: 4, text: 'FAKE-UR 2:4', surah: { number: 2 } },
+                ],
+              }),
+            ),
+          )) as typeof fetch,
+      });
+      const result = await source.getAyah(2, 3);
+      expect(result.verse).toEqual({ surah: 2, ayah: 3, arabic: 'FAKE-AR 2:3', urdu: null });
+    });
+  });
+
   it('lets an aborted request through as an abort, not as offline', async () => {
     const controller = new AbortController();
     const source = createAlQuranCloudSource({
