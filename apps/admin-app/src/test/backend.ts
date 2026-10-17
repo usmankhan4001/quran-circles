@@ -3,10 +3,15 @@ import {
   can,
   endpoints,
   makeApiError,
+  readingRangeIssue,
   scopeFilter,
   updatePostAction,
   type AdminCircle,
   type AdminOccurrence,
+  type AppConfig,
+  type DailyAyahEntry,
+  type DailyAyahPut,
+  type FeatureFlagKey,
   type EndpointDef,
   type ErrorCode,
   type Me,
@@ -66,6 +71,14 @@ export const ids = {
   sessionLahore: fx.sessions[4]!.id,
   circlePublished: fx.circles[0]!.id,
   circlePending: fx.circles[1]!.id,
+  /** Fixture ayah picks (rc.4): national on 2027-02-15 (2:255) and 2027-02-16 (94:5). */
+  dailyAyahNationalToday: fx.dailyAyahs[0]!.id,
+  /** Al-Noor's venue pick on 2027-02-15: 13:28. */
+  dailyAyahAlNoorToday: fx.dailyAyahs[2]!.id,
+  /** The Tuesday Tajweed Circle's pick on 2027-02-16: 73:4. */
+  dailyAyahCircleTomorrow: fx.dailyAyahs[3]!.id,
+  /** The Lahore venue's pick on 2027-02-15: 39:53. */
+  dailyAyahLahoreToday: fx.dailyAyahs[4]!.id,
 } as const;
 
 export type RoleKind = 'venue' | 'city' | 'admin' | 'multi';
@@ -174,6 +187,7 @@ export interface Backend {
       { headcount: number | null; entries: unknown[]; markedAt: string | null }
     >;
     updates: unknown[];
+    dailyAyahs: DailyAyahEntry[];
   };
 }
 
@@ -219,6 +233,10 @@ export interface BackendOptions {
   me?: Me;
   /** How many registrants each session gets. Default 3. */
   registrantCount?: number;
+  /** Feature flags over the mock's defaults (every rc.4 flag on). Per city: `flagsByCity`. */
+  flags?: Partial<Record<FeatureFlagKey, boolean>>;
+  /** Flags for one city's config (`config.get?cityId=`), over `flags`. */
+  flagsByCity?: Record<string, Partial<Record<FeatureFlagKey, boolean>>>;
   /** Extra or replacement handlers, by endpoint id. */
   handlers?: Record<string, Handler>;
 }
@@ -255,6 +273,7 @@ export function createBackend(options: BackendOptions = {}): Backend {
     registrants: new Map(),
     attendance: new Map(),
     updates: [],
+    dailyAyahs: structuredClone(fx.dailyAyahs),
   };
   for (const s of state.sessions) {
     state.registrants.set(s.id, registrantsFor(s.id, s.id === ids.sessionWomen ? 60 : count));
@@ -276,7 +295,106 @@ export function createBackend(options: BackendOptions = {}): Backend {
     };
   };
 
+  /** The city and venue a daily ayah pick is checked at; null for an unknown place. */
+  const pickPlace = (
+    scope: DailyAyahPut['scope'],
+  ): { cityId: string | null; venueId: string | null; circleId: string | null } | null => {
+    if (scope.type === 'national') return { cityId: null, venueId: null, circleId: null };
+    if (scope.type === 'venue') {
+      const v = state.venues.find((x) => x.id === scope.venueId);
+      return v ? { cityId: v.cityId, venueId: v.id, circleId: null } : null;
+    }
+    const c = state.circles.find((x) => x.id === scope.circleId);
+    return c ? { cityId: c.cityId, venueId: c.venueId, circleId: c.id } : null;
+  };
+
   const handlers: Record<string, Handler> = {
+    'config.get': (c): AppConfig => {
+      const cityId = c.query.cityId as string | undefined;
+      return {
+        seasonMode: 'dora',
+        hijriOffsetDays: 0,
+        featureFlags: {
+          circle_requests: true,
+          session_companion: true,
+          invite_friends: true,
+          poster_sharing: false,
+          quran_offline_copy: false,
+          whatsapp_fallback_reminders: false,
+          reading_days: true,
+          community_today: true,
+          ayah_of_the_day: true,
+          memorisation: true,
+          read_along: true,
+          ...options.flags,
+          ...(cityId ? options.flagsByCity?.[cityId] : undefined),
+        },
+        supportedLocales: ['en', 'ur'],
+        minimumAppVersion: { ios: '1.0.0', android: '1.0.0' },
+        serverTime: fx.FIXTURE_NOW,
+      };
+    },
+    'adminDailyAyahs.list': (c) => {
+      const q = c.query as {
+        from: string;
+        to: string;
+        scopeType?: string;
+        venueId?: string;
+        circleId?: string;
+      };
+      const issue = readingRangeIssue(q);
+      if (issue) return errorResponse('validation_failed', { issues: [issue] });
+      // National picks for every caller; place picks only in scope (as the real server).
+      const filter = scopeFilter(principal, 'daily_ayah.manage');
+      const items = state.dailyAyahs.filter(
+        (x) =>
+          x.date >= q.from &&
+          x.date <= q.to &&
+          (x.scopeType === 'national' ||
+            filter.national ||
+            filter.cityIds.includes(x.cityId ?? '') ||
+            filter.venueIds.includes(x.venueId ?? '')) &&
+          (!q.scopeType || x.scopeType === q.scopeType) &&
+          (!q.venueId || x.venueId === q.venueId) &&
+          (!q.circleId || x.circleId === q.circleId),
+      );
+      return { items };
+    },
+    'adminDailyAyahs.put': (c) => {
+      const body = c.body as DailyAyahPut;
+      const place = pickPlace(body.scope);
+      if (!place) return errorResponse('not_found');
+      const existing = state.dailyAyahs.find(
+        (x) =>
+          x.date === body.date &&
+          x.scopeType === body.scope.type &&
+          x.venueId === place.venueId &&
+          x.circleId === place.circleId,
+      );
+      if (existing) {
+        existing.surah = body.surah;
+        existing.ayah = body.ayah;
+        existing.updatedAt = fx.FIXTURE_NOW;
+        return existing;
+      }
+      const entry: DailyAyahEntry = {
+        id: uuid(9500 + state.dailyAyahs.length),
+        date: body.date,
+        scopeType: body.scope.type,
+        ...place,
+        surah: body.surah,
+        ayah: body.ayah,
+        updatedAt: fx.FIXTURE_NOW,
+      };
+      state.dailyAyahs.push(entry);
+      return entry;
+    },
+    'adminDailyAyahs.delete': (c) => {
+      const i = state.dailyAyahs.findIndex((x) => x.id === c.params.dailyAyahId);
+      if (i < 0) return errorResponse('not_found');
+      state.dailyAyahs.splice(i, 1);
+      return new Response(null, { status: 204 });
+    },
     'auth.verifyCode': (c, id) => {
       const body = c.body as { code: string };
       if (body.code !== '123456') return errorResponse('otp_invalid');
@@ -598,6 +716,13 @@ export function createBackend(options: BackendOptions = {}): Backend {
     } else if (params.circleId) {
       const c = state.circles.find((x) => x.id === params.circleId);
       if (c) resource = { cityId: c.cityId, venueId: c.venueId };
+    } else if (params.dailyAyahId) {
+      const pick = state.dailyAyahs.find((x) => x.id === params.dailyAyahId);
+      // A national pick has no place: only a national admin passes (`dailyAyahResource`).
+      if (pick) resource = pick.scopeType === 'national' ? {} : pick;
+    } else if (def.id === 'adminDailyAyahs.put' && body?.scope) {
+      const place = pickPlace(body.scope as DailyAyahPut['scope']);
+      if (place) resource = place.venueId ? place : {};
     } else if (def.id === 'adminCircles.create' && typeof body?.venueId === 'string') {
       const v = state.venues.find((x) => x.id === body.venueId);
       if (v) resource = { cityId: v.cityId, venueId: v.id };
@@ -662,6 +787,13 @@ export function createBackend(options: BackendOptions = {}): Backend {
     }
     const denied = await guard(request);
     if (denied) return denied;
+    // The contract mock answers every 204 endpoint itself, before any handler runs, so a
+    // stateful delete would never happen there. Run ours directly (params only; no body).
+    const own = found && found.def.success.status === 204 ? handlers[found.def.id] : undefined;
+    if (found && own) {
+      const result = own({ params: found.params, query, body }, 'test-request');
+      return result instanceof Response ? result : new Response(null, { status: 204 });
+    }
     return inner(request);
   };
 

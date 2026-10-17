@@ -1,6 +1,6 @@
 # Status: admin-app
 
-Updated: 2026-10-17 (drawing gap pass)
+Updated: 2026-10-17 (ayah of the day pick, contract 1.0.0-rc.4)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -65,6 +65,19 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 
 - `src/fonts/FontGate.tsx` wraps the root layout and loads the bundled fonts with `expo-font` (`src/fonts/appFonts.ts`: Figtree 400 to 800, Mehr Nastaliq Web, KFGQPC Uthmanic Script HAFS from `@qc/ui/font-sources`). It draws the app once they load, on failure at once, and after 3 s at the latest. The web export bundles all seven files unmodified.
 
+## Ayah of the day pick (2026-10-17, contract 1.0.0-rc.4)
+
+- New screen `features/daily-ayah/DailyAyahScreen.tsx`, route `/daily-ayah?venueId=` or `?circleId=` (`routes.dailyAyah`, `app/daily-ayah.tsx`). A coordinator sees, sets, replaces and removes the pick for one venue or one circle, for today and the next 29 days (Pakistan dates, `pakistanDate`/`addDays`). Kit pieces: `HeroHeader` (place name as subtitle), `DateStrip` for the days ("Today" on the first), `StarNumber` with the surah, `Tag` (your pick / no pick), `TextField`s, `ConfirmSheet` for remove, `Toast` for saved/removed, pinned save bar ("Save pick" or "Replace pick").
+- Calls: `adminDailyAyahs.list` twice for the window (national picks, and this place's own with `scopeType` + `venueId`/`circleId`, so a venue's list never shows its circles' picks), `adminDailyAyahs.put` with a `venue` or `circle` target only (national picks stay with the console), `adminDailyAyahs.delete` by id. After each write the list reloads; a refused delete (for example `not_found` because someone else removed it) shows the mapped error and reloads.
+- Validation with the shared schema: `validatePick` runs `DailyAyahPut.safeParse` (surah 1 to 114, the ayah must exist in the surah via the contract's `isAyahInSurah` refinement). Messages: "Enter a surah number from 1 to 114.", "Enter the ayah number.", "Surah 1 has 7 ayahs. Enter a number from 1 to 7." (plural forms), plus a live hint "Surah N has M ayahs." from `AYAH_COUNTS`. Same ayah as the existing pick: says so and sends nothing. Server `validation_failed` issues on `surah`/`ayah` mark the field.
+- Fallback: "Without a pick" card computed with `resolveDailyAyah` over the day's national picks: the national pick, else the built-in ayah (`builtInAyahFor`), with a note that someone following more than one place with its own pick that day sees it too. The remove sheet says what followers will see instead.
+- Hidden when it should be: the `ayah_of_the_day` flag is read with `config.get?cityId=<place's city>` (`api/featureFlags.ts`, `featureOn`; missing = off). Way in: an "Ayah of the day" card on the venue page (edit mode) and the circle page (not on archived or rejected circles), shown only when `can(principal, 'daily_ayah.manage', dailyAyahResource(...))` allows the place and the flag loaded as on; while loading, off or unreadable it shows nothing, and outside the scope it never asks for the flag. The screen itself shows "not available" when the flag is off, "forbidden" when the role does not reach the place (no list call made), "not available" for a circle out of scope (`adminCircles.get` not_found), and a retry for a config or list failure.
+- Roles (matrix in `pick.test.ts`, screens in `DailyAyahScreen.test.tsx` and `AyahPickCard.test.tsx`): venue coordinator for their venue and its circles only; city coordinator for venues and circles in their city; national admin everywhere; multi-role for each of their venues; attendee never. The test backend's guard also refuses a venue coordinator's PUT to another city's venue and DELETE of a national pick (403).
+- Small moves: `loadVenue` moved out of `VenueEditorScreen` into `features/venues/loadVenue.ts` (shared with the new screen, unchanged); `dayParts` added to `lib/time.ts`.
+- Test backend: stateful `adminDailyAyahs.list/put/delete` (scope-filtered like the server), `config.get` with `flags` and `flagsByCity` options, guard for `dailyAyahId` and the PUT target. It runs its own handler for 204 endpoints because the contract mock answers every 204 itself before any handler (see Blocked).
+- i18n (en and ur together, Urdu draft under the file's `_meta.status` marker): 38 keys under the new namespace `admin.dailyAyah.*`, inserted after `admin.circleEditor.archivedNote`; nothing else touched. Re-checked at the end: all 38 present in both files.
+- Tests: 674 passing in 38 files (120 new: `pick.test.ts` 55, `DailyAyahScreen.test.tsx` 44, `AyahPickCard.test.tsx` 19, `dayParts` 2). LTR/RTL x light/dark x text sizes 0 and 3 for the screen and the card. Checks: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `pnpm exec eslint apps/admin-app`, `npx prettier --check apps/admin-app packages/i18n`, `pnpm --filter @qc/i18n test` pass; `expo export --platform web` bundles the new route (to a scratch folder, removed).
+
 ## In progress
 
 - Nothing.
@@ -74,6 +87,8 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - Running the admin app against the raw contract mock (`pnpm --filter @qc/contracts mock`) cannot show real admin screens; the causes are in `packages/contracts/src/mock.ts` (contracts lane), not in the app:
   - `me.get` (line 264) returns `fixtureMe`, whose `roles` is `[]` (`fixtures.ts` 617-632), and `auth.verifyCode` (lines 251-263) hands out `mock-user`, which every staff endpoint refuses (line 388). So no one can be a coordinator. Fix: staff tokens such as `mock-venue` / `mock-city` / `mock-staff` with a `me` that carries the matching role (venue 1, city 1, national), and scope the lists below by that role with `scopeFilter`.
   - No handler for `adminVenues.list`, `adminSessions.list`, `adminSessions.occurrences`, `adminCircles.list`, `adminAttendance.get` or `registrations.forSession`, so they answer with `fakeFromSchema` rows (ids like `...000000000001`, name "sample"). That is the Places empty state (the generated venue is not the coordinator's venue, so the app's working-venue filter leaves nothing), the "sample" sessions on Today (`adminSessions.get` then says not found), and the occurrence and attendance error (the generated occurrence list never holds the fixture occurrence id the app asks for). Fix: add these to the `overrides` table (after `adminCircles.get`, line 329) serving `fx.venues` (cityId, includeArchived), `fx.adminSessions` (cityId, venueId via `sessionMatches`), `fx.occurrences` for the session (from, to, limit; not_found for an unknown session), `fx.circles` (cityId, venueId), attendance from the fixture occurrence (headcount, `entries: []`, `markedAt: null`; not_found for an unknown occurrence) and synthetic registrants for a known session. The admin app's own test backend (`src/test/backend.ts`) already does all of this and can be the model.
+- Contract mock (contracts lane, `packages/contracts/src/mock.ts`, `createMockHandler`): `if (def.success.status === 204) return new Response(null, { status: 204 })` runs before the handler table, so no 204 handler ever runs. Against the raw mock, `adminDailyAyahs.delete` answers 204 for an unknown id (the rc.4 changelog says `not_found`) and removes nothing. The admin app's test backend works around it; the fix belongs in the mock (look up the handler before the 204 shortcut).
+- Surah names on the ayah pick: the screen shows numbers ("Surah 13, ayah 28") because surah names live in `@qc/content`, which the admin app does not depend on; adding it changes `pnpm-lock.yaml` (platform lane). Say if names are wanted and the dependency can be added.
 - Venue photos: the drawings show photos; contracts have no photo field. The app draws venue art until `Venue` gets a photo URL (and an upload or a console field to set it).
 
 Nothing else blocking. Items below work around gaps and wait on the change requests.
@@ -85,6 +100,9 @@ Nothing else blocking. Items below work around gaps and wait on the change reque
 - Sign-in sends the code over `whatsapp`. Is that the intended default channel for coordinators?
 - Design specs (written by the ui lane at the same time) ask for things the build does not do yet: offline queue for attendance and a cached registrants list, a session picker and offline note on registrants, "Present" text on ticked rows, recap and portion fields on the attendance screen (they live on the occurrence screen, per the contract), cancelling a whole session from the schedule screen, a map pin picker and "Archive this venue", "Save draft" for circles. None is in the assigned item list. Which should be next?
 - `admin.schedule.scope.one` ends in `.one` but is not a plural form ("This session only"); it makes the plural-key type think it is. Unused by this app. Owner of the key should rename it.
+
+- Ayah pick: the screen offers today plus 29 days and no past days, and no national option (the console owns national picks). Is 30 days the right reach? The flag is read per screen with `config.get?cityId=`; there is no app-wide config cache yet.
+- New i18n namespace `admin.dailyAyah` (38 keys). Please confirm, as for the earlier namespaces.
 
 ## Contract change requests
 

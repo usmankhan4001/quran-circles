@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ltrRun } from '@qc/ui';
 import {
+  dayParts,
   formatInstantDate,
   formatInstantTime,
   formatLocalDate,
@@ -102,4 +103,21 @@ describe('validation', () => {
     'rejects the date %j',
     (v) => expect(isLocalDate(v)).toBe(false),
   );
+});
+
+describe('dayParts', () => {
+  it('gives the short weekday, the day and the full date in English', () => {
+    expect(dayParts('2027-02-16', 'en')).toEqual({
+      weekday: 'Tue',
+      day: '16',
+      full: 'Tuesday 16 February',
+    });
+  });
+
+  it('keeps Latin digits for the day in Urdu and names the day in Urdu', () => {
+    const parts = dayParts('2027-02-16', 'ur');
+    expect(parts.day).toBe('16');
+    expect(parts.weekday).not.toBe('Tue');
+    expect(parts.full).toContain('16');
+  });
 });

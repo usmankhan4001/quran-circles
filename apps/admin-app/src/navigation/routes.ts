@@ -20,4 +20,9 @@ export const routes = {
   venue: (venueId: string) => `/venue/${venueId}`,
   newCircle: (venueId?: string) => (venueId ? `/circle/new?venueId=${venueId}` : '/circle/new'),
   circle: (circleId: string) => `/circle/${circleId}`,
+  /** The coordinator's ayah of the day pick for one venue or one circle. */
+  dailyAyah: (target: { venueId: string } | { circleId: string }) =>
+    'circleId' in target
+      ? `/daily-ayah?circleId=${target.circleId}`
+      : `/daily-ayah?venueId=${target.venueId}`,
 } as const;

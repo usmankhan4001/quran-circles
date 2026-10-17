@@ -25,6 +25,7 @@ import { Screen, ScreenFooter } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
+import { AyahPickCard } from '../daily-ayah/AyahPickCard';
 import {
   circleFormOf,
   emptyCircleForm,
@@ -352,6 +353,18 @@ function CircleEditorFlow({
             />
           </View>
         </Card>
+      ) : null}
+
+      {original && original.status !== 'archived' && original.status !== 'rejected' ? (
+        <AyahPickCard
+          place={{
+            type: 'circle',
+            circleId: original.id,
+            venueId: original.venueId,
+            cityId: original.cityId,
+            name: original.name,
+          }}
+        />
       ) : null}
 
       {willBePending ? (

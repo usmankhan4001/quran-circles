@@ -96,6 +96,29 @@ export function formatLocalDate(localDate: string, locale: Locale): string {
 export const formatInstantDate = (instant: string, locale: Locale): string =>
   formatLocalDate(pkDateOf(instant), locale);
 
+/**
+ * The parts of a local date a day picker shows: short weekday (`Tue`), day of the month (`18`,
+ * Latin digits in both languages) and the full date for screen readers (`Tuesday 18 February`).
+ */
+export function dayParts(
+  localDate: string,
+  locale: Locale,
+): { weekday: string; day: string; full: string } {
+  const date = new Date(`${localDate}T00:00:00Z`);
+  const day = String(date.getUTCDate());
+  try {
+    const fmt = (options: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat(intlTag(locale), { ...options, timeZone: 'UTC' }).format(date);
+    return {
+      weekday: fmt({ weekday: 'short' }),
+      day,
+      full: fmt({ weekday: 'long', day: 'numeric', month: 'long' }),
+    };
+  } catch {
+    return { weekday: localDate, day, full: localDate };
+  }
+}
+
 /** Weekday name for 0 (Sunday) to 6 (Saturday). */
 export function weekdayName(
   dow: number,

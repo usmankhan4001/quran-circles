@@ -14,7 +14,7 @@ import {
   spacing,
   useTheme,
 } from '@qc/ui';
-import { isErrorCode, serverFieldErrors } from '../../api/errors';
+import { serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -26,6 +26,8 @@ import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
+import { AyahPickCard } from '../daily-ayah/AyahPickCard';
+import { loadVenue } from './loadVenue';
 import {
   emptyVenueForm,
   FACILITY_KEYS,
@@ -81,19 +83,6 @@ export function VenueEditorScreen({ venueId }: VenueEditorScreenProps) {
       </QueryBoundary>
     </Screen>
   );
-}
-
-/** The public call reads published venues; a draft or archived one comes from the admin list. */
-async function loadVenue(api: ReturnType<typeof useApi>, venueId: string): Promise<Venue> {
-  try {
-    return await api.venues.get({ params: { venueId } });
-  } catch (error) {
-    if (!isErrorCode(error, 'not_found')) throw error;
-    const page = await api.adminVenues.list({ query: { includeArchived: 'true', limit: 100 } });
-    const found = page.items.find((v) => v.id === venueId);
-    if (!found) throw error;
-    return found;
-  }
 }
 
 function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
@@ -284,6 +273,16 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       </Card>
 
       {original ? <VenueCircles venue={original} /> : null}
+      {original ? (
+        <AyahPickCard
+          place={{
+            type: 'venue',
+            venueId: original.id,
+            cityId: original.cityId,
+            name: original.name,
+          }}
+        />
+      ) : null}
 
       {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="venue-nothing">
