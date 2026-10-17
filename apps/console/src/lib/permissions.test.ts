@@ -125,3 +125,31 @@ describe('who may assign which role', () => {
     );
   });
 });
+
+describe('pages behind a feature flag', () => {
+  const on = { ayah_of_the_day: true };
+
+  it('adds the ayah of the day page for every staff role when the flag is on', () => {
+    const withFlag = (p: Parameters<typeof visibleNav>[0]) => visibleNav(p, on).map((i) => i.id);
+    expect(withFlag(venueCoordinator)).toEqual(['sessions', 'venues', 'exports', 'dailyAyahs']);
+    expect(withFlag(cityCoordinator)).toContain('dailyAyahs');
+    expect(withFlag(nationalAdmin).slice(-2)).toEqual(['dailyAyahs', 'settings']);
+  });
+
+  it('hides it when the flag is off or missing, whatever the role', () => {
+    for (const p of [venueCoordinator, cityCoordinator, nationalAdmin]) {
+      expect(isNavAllowed(p, 'dailyAyahs')).toBe(false);
+      expect(isNavAllowed(p, 'dailyAyahs', { ayah_of_the_day: false })).toBe(false);
+      expect(isNavAllowed(p, 'dailyAyahs', on)).toBe(true);
+    }
+  });
+
+  it('never shows it to someone with no staff role, even with the flag on', () => {
+    expect(visibleNav(null, on)).toEqual([]);
+    expect(visibleNav({ userId: 'u', assignments: [] }, on)).toEqual([]);
+  });
+
+  it('other flags do not unlock it', () => {
+    expect(isNavAllowed(nationalAdmin, 'dailyAyahs', { memorisation: true })).toBe(false);
+  });
+});

@@ -1,6 +1,8 @@
 import {
   ACTIONS,
   can,
+  featureOn,
+  type FeatureFlagKey,
   type Me,
   type Principal,
   type ResourceScope,
@@ -27,7 +29,14 @@ export function canSomewhere(principal: Principal | null, action: ScopeAction): 
 }
 
 export type NavId =
-  'sessions' | 'venues' | 'coordinators' | 'exports' | 'import' | 'audit' | 'settings';
+  | 'sessions'
+  | 'venues'
+  | 'coordinators'
+  | 'exports'
+  | 'import'
+  | 'audit'
+  | 'dailyAyahs'
+  | 'settings';
 
 export interface NavItem {
   id: NavId;
@@ -35,7 +44,12 @@ export interface NavItem {
   labelKey: MessageKey;
   /** Shown when the person may do at least one of these somewhere. */
   anyOf: readonly ScopeAction[];
+  /** A feature flag that must be on as well (rc.4 features ship behind a flag). */
+  flag?: FeatureFlagKey;
 }
+
+/** Flags as `GET /v1/config` answers them. Missing means off. */
+export type NavFlags = Partial<Record<FeatureFlagKey, boolean>>;
 
 /** Every page of the console, in menu order, with the actions that unlock it. */
 export const NAV_ITEMS: readonly NavItem[] = [
@@ -65,15 +79,38 @@ export const NAV_ITEMS: readonly NavItem[] = [
     anyOf: ['venue.create', 'role.assign_venue_coordinator'],
   },
   { id: 'audit', path: '/audit', labelKey: 'console.nav.audit', anyOf: ['audit.read'] },
+  {
+    id: 'dailyAyahs',
+    path: '/ayah-of-the-day',
+    labelKey: 'console.nav.dailyAyahs',
+    anyOf: ['daily_ayah.manage'],
+    flag: 'ayah_of_the_day',
+  },
   { id: 'settings', path: '/settings', labelKey: 'console.nav.settings', anyOf: ['settings.read'] },
 ];
 
-export function visibleNav(principal: Principal | null): NavItem[] {
-  return NAV_ITEMS.filter((item) => item.anyOf.some((a) => canSomewhere(principal, a)));
+/** True when the person's roles unlock the page, whatever its feature flag says. */
+export function roleAllowsNav(principal: Principal | null, item: NavItem): boolean {
+  return item.anyOf.some((a) => canSomewhere(principal, a));
 }
 
-export function isNavAllowed(principal: Principal | null, id: NavId): boolean {
-  return visibleNav(principal).some((i) => i.id === id);
+/**
+ * The menu: pages the roles unlock and whose feature flag (if any) is on. Without flags, every
+ * flagged page is left out, because a missing flag is off.
+ */
+export function visibleNav(principal: Principal | null, flags: NavFlags = {}): NavItem[] {
+  return NAV_ITEMS.filter(
+    (item) =>
+      roleAllowsNav(principal, item) && (item.flag === undefined || featureOn(flags, item.flag)),
+  );
+}
+
+export function isNavAllowed(
+  principal: Principal | null,
+  id: NavId,
+  flags: NavFlags = {},
+): boolean {
+  return visibleNav(principal, flags).some((i) => i.id === id);
 }
 
 /** The roles a person may invite or assign, for the scope they pick. */

@@ -1282,3 +1282,46 @@ html[dir='rtl'] .field-box-select::after {
   gap: var(--space-sm);
   justify-items: start;
 }
+
+/* Ayah of the day (rc.4) ----------------------------------------------------------------------- */
+
+.pick-place {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+}
+/* The reference preview is a Quran moment: a leaf card with a gilt rule (handoff, Home ayah). The
+   gilt is decoration only; the text keeps the leaf card's own colour. */
+.ayah-preview {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--c-accent-subtle);
+  color: var(--c-text-on-accent-subtle);
+  border-radius: var(--radius-lg);
+  border-inline-start: 4px solid var(--c-decoration);
+}
+.ayah-preview p {
+  margin: 0;
+}
+.ayah-preview-label {
+  font-size: var(--type-caption-size);
+  font-weight: 700;
+}
+.ayah-preview-ref {
+  font-size: var(--type-title3-size);
+  font-weight: var(--type-title3-weight);
+}
+.ayah-preview-note {
+  font-size: var(--type-caption-size);
+}
+html[lang='ur'] .ayah-preview-label,
+html[lang='ur'] .ayah-preview-ref {
+  font-weight: 400;
+}
+.fallback-card {
+  display: grid;
+  gap: var(--space-md);
+  border-block-start: 4px solid var(--c-decoration);
+}

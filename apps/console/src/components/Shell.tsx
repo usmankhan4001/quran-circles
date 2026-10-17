@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router';
 import type { Role } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
+import { useFeatures } from '../api/features';
 import { useI18n, type Locale } from '../i18n';
 import { visibleNav, type NavId } from '../lib/permissions';
 import { useTheme, type ThemeChoice } from '../theme';
@@ -68,6 +69,7 @@ const NAV_ICONS = {
   coordinators: 'users',
   import: 'upload',
   audit: 'log',
+  dailyAyahs: 'book',
   settings: 'gear',
 } as const satisfies Record<NavId, IconName>;
 
@@ -91,7 +93,8 @@ export function initialsOf(name: string): string {
 export function Shell() {
   const { t, tx } = useI18n();
   const { me, principal, signOut } = useSignedIn();
-  const items = visibleNav(principal);
+  const features = useFeatures();
+  const items = visibleNav(principal, features.flags);
   const roles = [...new Set(me.roles.map((r) => r.role))];
   const name = me.displayName ?? t('console.shell.unnamed');
 

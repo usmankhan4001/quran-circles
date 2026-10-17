@@ -1,12 +1,30 @@
 import { within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, screen, shellReady, text, writes, type TestRole } from '../test/harness';
+import {
+  renderConsole,
+  screen,
+  shellReady,
+  text,
+  waitFor,
+  writes,
+  type TestRole,
+} from '../test/harness';
 import type { Locale } from '../i18n';
 
+// The mock config has the rc.4 flags on, so the ayah of the day page is in every staff menu.
 const NAV: Record<Exclude<TestRole, 'none'>, string[]> = {
-  venue: ['sessions', 'venues', 'exports'],
-  city: ['sessions', 'venues', 'exports', 'coordinators', 'import', 'audit'],
-  national: ['sessions', 'venues', 'exports', 'coordinators', 'import', 'audit', 'settings'],
+  venue: ['sessions', 'venues', 'exports', 'dailyAyahs'],
+  city: ['sessions', 'venues', 'exports', 'coordinators', 'import', 'audit', 'dailyAyahs'],
+  national: [
+    'sessions',
+    'venues',
+    'exports',
+    'coordinators',
+    'import',
+    'audit',
+    'dailyAyahs',
+    'settings',
+  ],
 };
 
 describe.each<Locale>(['en', 'ur'])('console shell (%s)', (locale) => {
@@ -14,13 +32,17 @@ describe.each<Locale>(['en', 'ur'])('console shell (%s)', (locale) => {
     renderConsole({ role, locale, path: '/sessions' });
     await shellReady(locale);
     const nav = screen.getByRole('navigation', { name: text('console.shell.navLabel', locale) });
-    const links = within(nav)
-      .getAllByRole('link')
-      .map((a) => a.textContent);
     const expected = NAV[role].map((id) =>
       text(`console.nav.${id}` as 'console.nav.audit', locale),
     );
-    expect(links).toEqual(expected);
+    // Flagged pages join the menu once the config has loaded.
+    await waitFor(() =>
+      expect(
+        within(nav)
+          .getAllByRole('link')
+          .map((a) => a.textContent),
+      ).toEqual(expected),
+    );
   });
 
   it('sets the page language and direction', async () => {

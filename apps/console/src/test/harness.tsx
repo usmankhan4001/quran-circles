@@ -8,6 +8,7 @@ import * as fx from '@qc/contracts/fixtures';
 import { AppProviders, AppRoutes } from '../App';
 import type { Locale } from '../i18n';
 import { memoryStore } from '../lib/storage';
+import type { ThemeChoice } from '../theme';
 import { messages } from '@qc/i18n';
 import { rawalpindi, venueA } from './people';
 
@@ -74,6 +75,8 @@ export interface HarnessOptions {
   signedIn?: boolean;
   handlers?: NonNullable<MockOptions['handlers']>;
   textStep?: 0 | 1 | 2 | 3;
+  /** Light unless a test asks for dark. */
+  theme?: ThemeChoice;
   /** Makes a request fail with an API error code (the mock's x-mock-error header). */
   forceError?: (call: Call) => string | undefined;
 }
@@ -159,7 +162,7 @@ export function renderConsole(options: HarnessOptions = {}) {
       apiBaseUrl="http://mock.test"
       fetchImpl={fetchImpl}
       initialLocale={options.locale ?? 'en'}
-      initialTheme="light"
+      initialTheme={options.theme ?? 'light'}
       initialTextStep={options.textStep ?? 0}
       displayStore={displayStore}
       tokenStore={tokenStore}

@@ -2,13 +2,15 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { AuthProvider, useAuth, useSignedIn } from './api/auth';
 import { DirectoryProvider } from './api/directory';
+import { FeaturesProvider, useFeatures } from './api/features';
 import { Shell } from './components/Shell';
 import { EmptyState, Loading } from './components/ui';
 import { I18nProvider, useI18n, type Locale } from './i18n';
-import { isNavAllowed, visibleNav, type NavId } from './lib/permissions';
+import { NAV_ITEMS, roleAllowsNav, visibleNav, type NavId } from './lib/permissions';
 import type { KeyValueStore } from './lib/storage';
 import AuditPage from './pages/AuditPage';
 import CoordinatorsPage from './pages/CoordinatorsPage';
+import DailyAyahsPage from './pages/DailyAyahsPage';
 import ExportsPage from './pages/ExportsPage';
 import ImportPage from './pages/ImportPage';
 import RegistrationsPage from './pages/RegistrationsPage';
@@ -71,14 +73,23 @@ function RequireAuth({ children }: { children: ReactNode }) {
   if (status === 'loading') return <Loading />;
   if (status === 'signedOut')
     return <Navigate to="/sign-in" replace state={{ from: location.pathname + location.search }} />;
-  return <DirectoryProvider>{children}</DirectoryProvider>;
+  return (
+    <FeaturesProvider>
+      <DirectoryProvider>{children}</DirectoryProvider>
+    </FeaturesProvider>
+  );
 }
 
-/** A page the person's roles do not unlock. The API would refuse it too. */
+/**
+ * A page the person's roles do not unlock (the API would refuse it too), or a page whose feature
+ * flag is off. Nothing on the page loads in either case.
+ */
 function Guard({ nav, children }: { nav: NavId; children: ReactNode }) {
   const { t } = useI18n();
   const { principal } = useSignedIn();
-  if (!isNavAllowed(principal, nav))
+  const features = useFeatures();
+  const item = NAV_ITEMS.find((i) => i.id === nav);
+  if (!item || !roleAllowsNav(principal, item))
     return (
       <div className="page">
         <EmptyState
@@ -87,12 +98,24 @@ function Guard({ nav, children }: { nav: NavId; children: ReactNode }) {
         />
       </div>
     );
+  if (item.flag !== undefined && !features.on(item.flag)) {
+    if (features.status === 'loading') return <Loading />;
+    return (
+      <div className="page">
+        <EmptyState
+          title={t('console.shell.featureOff.title')}
+          body={t('console.shell.featureOff.body')}
+        />
+      </div>
+    );
+  }
   return <>{children}</>;
 }
 
 function Home() {
   const { principal } = useSignedIn();
-  const first = visibleNav(principal)[0];
+  const features = useFeatures();
+  const first = visibleNav(principal, features.flags)[0];
   return first ? <Navigate to={first.path} replace /> : <NotFound />;
 }
 
@@ -173,6 +196,14 @@ export function AppRoutes() {
           element={
             <Guard nav="audit">
               <AuditPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/ayah-of-the-day"
+          element={
+            <Guard nav="dailyAyahs">
+              <DailyAyahsPage />
             </Guard>
           }
         />
