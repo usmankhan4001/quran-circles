@@ -120,6 +120,7 @@ export default function CoordinatorsPage() {
       cell: (i) =>
         i.status === 'pending' && canAssignRole(principal, i.role, inviteScope(i)) ? (
           <Button
+            variant="danger"
             className="btn-small"
             aria-label={`${t('console.invites.revoke')} ${t('console.invites.revoke.for', { digits: phoneTail(i.phone) })}`}
             onClick={() => setRevokingInvite(i)}
@@ -165,7 +166,7 @@ export default function CoordinatorsPage() {
                 {t('console.invites.handover')}
               </Button>
             ) : null}
-            <Button className="btn-small" onClick={() => setRemoving(a)}>
+            <Button variant="danger" className="btn-small" onClick={() => setRemoving(a)}>
               {t('console.invites.remove')}
             </Button>
           </div>
@@ -352,9 +353,10 @@ export function ConfirmDialog({
     <Modal
       title={title}
       onClose={onClose}
+      careful={danger}
       footer={
         <>
-          <Button onClick={onClose} disabled={busy}>
+          <Button variant={danger ? 'primary' : 'secondary'} onClick={onClose} disabled={busy}>
             {t('console.shell.keep')}
           </Button>
           <Button variant={danger ? 'danger' : 'primary'} busy={busy} onClick={() => void run()}>

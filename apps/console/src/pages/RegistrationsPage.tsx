@@ -186,7 +186,7 @@ export default function RegistrationsPage() {
       ) : null}
       {list.status === 'ready' && list.items.length > 0 ? (
         <>
-          <Banner tone="info">{t('console.exports.registrations.sensitive')}</Banner>
+          <Banner tone="notice">{t('console.exports.registrations.sensitive')}</Banner>
           <DataTable
             caption={t('console.exports.registrations.title')}
             columns={columns}

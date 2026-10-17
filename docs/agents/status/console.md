@@ -1,6 +1,6 @@
 # Status: console
 
-Updated: 2026-10-16
+Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -15,9 +15,24 @@ WP7 Wave 2 items only (reports, templates and content editing are WP15/WP19 and 
 - Export: audited per-session `registrations.export`; venue and city exports merge the per-session files with a leading `session_id` column and save nothing unless all succeed. UTF-8 byte order mark so Excel reads Urdu.
 - All text through `@qc/i18n`, English and Urdu with `lang`/`dir` switching (persisted), light/dark/system, four text sizes (root font size), skip link, labelled fields, real tables with captions and row headers, dialogs that trap focus and return it, logical CSS properties only.
 - i18n: 342 `console.*` keys now exist in `en.json` and `ur.json`; I added about 290 of them (`console.shell/nav/roles/scope/phone/signIn/sessions/venues/audit/settings.*` plus more under `console.invites/import/exports.*`). Nothing existing was changed or reordered. Urdu values are drafts under the existing `_meta.status`.
-- Tests: 166 passing in 12 files, no skips. CSV parser (valid, quotes, BOM, delimiters, malformed, limits), phone/E.164, venue/coordinator/session validators (valid, malformed, duplicate phones, bad E.164, out of scope, duplicates of existing records), apply stops at first failure, nav for each of the three roles (plus none), per-action scope checks, all 24 error codes map to an existing `errors.*` key in both languages, sign-in and refresh flows, forms (invite, sign-in, settings, handover), and render tests of every page against `createMockHandler` in LTR and RTL. A guard test fails on non-logical CSS and on undefined CSS variables.
+- Tests: 199 passing in 13 files (166 before the redesign), no skips. CSV parser (valid, quotes, BOM, delimiters, malformed, limits), phone/E.164, venue/coordinator/session validators (valid, malformed, duplicate phones, bad E.164, out of scope, duplicates of existing records), apply stops at first failure, nav for each of the three roles (plus none), per-action scope checks, all 24 error codes map to an existing `errors.*` key in both languages, sign-in and refresh flows, forms (invite, sign-in, settings, handover), and render tests of every page against `createMockHandler` in LTR and RTL. A guard test fails on non-logical CSS and on undefined CSS variables.
 - Checks run (package scoped): `pnpm --filter @qc/console typecheck`, `test`, `build`; `pnpm exec eslint apps/console`; `pnpm exec prettier --check apps/console docs/agents/status/console.md` all clean.
 - Decision record: `docs/engineering/decisions/0006-console-web-tooling.md`.
+
+## Redesign (layout C2) applied, 2026-10-17
+
+The whole console is restyled: sign-in, shell and navigation, Sessions, Venues, Registrations (phone numbers stay visible, per the owner decision of 2026-10-17), Exports, Coordinators and invites and handover, Audit log, Settings, and the bulk import dry run.
+
+- Green sidebar with the eight-point pattern at the start edge (moves to the right in Urdu with no separate rules), light content area, display settings in a bar above the page. Sign-in is one card with a green top.
+- Colours, fonts (Figtree, Jameel Noori Nastaleeq, KFGQPC, by name only, no font files), radii, shadows, type roles and line heights are CSS variables generated from the shared tokens in `src/theme/index.tsx`. `src/styles.css` has no raw colour. `src/lib/ui-tokens.ts` re-exports the new token groups (`elevation`, `fontFallbacks`, `contrastRatio`).
+- Buttons (primary, secondary, outline, danger, ghost, on-green; loading is the turning eight-point star), outlined fields with the label inside, rounded-square checkboxes, banners with icons, tables, status tags, step indicator on the import, and green-topped dialogs. A careful dialog (remove access, cancel an invite) has the star badge and the safe action first, with the terracotta outline action under it.
+- Focus order is skip link, menu, who is signed in, display settings, page. Focus ring is 2px with a 3px gap, white on green.
+- Four i18n keys added to `en.json` and `ur.json` together (Urdu draft): `console.shell.brandSub`, `console.shell.toolsLabel`, `console.import.steps.label`, `console.import.step.current`.
+- New tests in `src/theme/redesign.test.tsx`: no raw colour outside `lib/ui-tokens.ts` (hex, colour functions, named colours; comments ignored), stricter logical-property check, token variables for both modes, sidebar text contrast on the gradient (light and dark), initials, sidebar and focus order and icon hiding in LTR and RTL, every restyled page in LTR and RTL, import step indicator, careful dialog. 199 tests in 13 files, no skips. Typecheck, eslint, prettier and build clean.
+
+Not matched to the drawn screens (data or endpoints are not in the P0 contract): no KPI row or search on Sessions, no nav count badge, invites stay in a (restyled) dialog and not a side panel, exports have no Attendance kind, date filter or history. The gold privacy banner is used. Gilt is not used (Quran moments only). The import now has a three-step indicator driven by its phase, which replaces difference (1) below. Urdu and Figtree fonts are not installed on the build machine, so the Urdu look was checked with a serif fallback only.
+
+Still open: a real-browser pass for keyboard order and Urdu line heights with the real fonts at the largest size; native Urdu review of the four new strings.
 
 ## In progress
 

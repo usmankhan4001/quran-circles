@@ -12,10 +12,16 @@ import { createPortal } from 'react-dom';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf, retryAfterOf } from '../lib/errors';
 import { formatPhone, maskPhone } from '../lib/phone';
+import { EightPointStar, Icon, StarBadge, type IconName } from './icons';
 
 /* Buttons ---------------------------------------------------------------------------------- */
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+/**
+ * Soft rounded buttons (D8). `primary` is the one main action; `secondary` is the leaf tint;
+ * `outline` is the green outline; `ghost` is text only; `danger` is the terracotta outline for
+ * careful actions; `onHero` is for the green sidebar and headers.
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'onHero';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -40,6 +46,7 @@ export function Button({
       aria-busy={busy || undefined}
       {...rest}
     >
+      {busy ? <EightPointStar className="btn-spinner" /> : null}
       {children}
     </button>
   );
@@ -53,6 +60,8 @@ interface FieldShellProps {
   hint?: string | undefined;
   error?: string | null | undefined;
   optional?: boolean | undefined;
+  /** Extra class on the outlined box, such as the one that draws a select's chevron. */
+  boxClassName?: string;
   children: (aria: {
     id: string;
     'aria-describedby': string | undefined;
@@ -60,30 +69,44 @@ interface FieldShellProps {
   }) => ReactNode;
 }
 
-/** A label, the control, a hint and an error message, wired together for screen readers. */
-export function FieldShell({ id, label, hint, error, optional, children }: FieldShellProps) {
+/**
+ * An outlined field with the label small at the top inside the border (D9). The label, the
+ * control, the hint and the error message are wired together for screen readers.
+ */
+export function FieldShell({
+  id,
+  label,
+  hint,
+  error,
+  optional,
+  boxClassName,
+  children,
+}: FieldShellProps) {
   const { t } = useI18n();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const describedBy = [hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ');
   return (
     <div className={`field${error ? ' field-invalid' : ''}`}>
-      <label htmlFor={id} className="field-label">
-        {label}
-        {optional ? <span className="field-optional"> ({t('ui.optional')})</span> : null}
-      </label>
+      <div className={`field-box${boxClassName ? ` ${boxClassName}` : ''}`}>
+        <label htmlFor={id} className="field-label">
+          {label}
+          {optional ? <span className="field-optional"> ({t('ui.optional')})</span> : null}
+        </label>
+        {children({
+          id,
+          'aria-describedby': describedBy || undefined,
+          'aria-invalid': error ? true : undefined,
+        })}
+      </div>
       {hint ? (
         <p id={hintId} className="field-hint">
           {hint}
         </p>
       ) : null}
-      {children({
-        id,
-        'aria-describedby': describedBy || undefined,
-        'aria-invalid': error ? true : undefined,
-      })}
       {error ? (
         <p id={errorId} className="field-error">
+          <Icon name="alert" size="sm" />
           {error}
         </p>
       ) : null}
@@ -159,7 +182,14 @@ export function SelectField({
   const auto = useId();
   const id = idProp ?? auto;
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error} optional={optional}>
+    <FieldShell
+      id={id}
+      label={label}
+      hint={hint}
+      error={error}
+      optional={optional}
+      boxClassName="field-box-select"
+    >
       {(aria) => (
         <select
           {...aria}
@@ -197,7 +227,19 @@ export function CheckboxField({
 
 /* Messages and states ---------------------------------------------------------------------- */
 
-export type BannerTone = 'info' | 'success' | 'warning' | 'danger';
+/**
+ * `notice` is the gold banner (D13) for things to read before acting, such as the privacy line on
+ * exports. It is a polite status, not an alert, because it is part of the page, not an event.
+ */
+export type BannerTone = 'info' | 'success' | 'warning' | 'danger' | 'notice';
+
+const BANNER_ICONS: Record<BannerTone, IconName> = {
+  info: 'info',
+  success: 'check',
+  warning: 'alert',
+  danger: 'alert',
+  notice: 'info',
+};
 
 export function Banner({
   tone = 'info',
@@ -216,6 +258,9 @@ export function Banner({
       className={`banner banner-${tone}`}
       role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
     >
+      <span className="banner-icon">
+        <Icon name={BANNER_ICONS[tone]} />
+      </span>
       <div className="banner-body">
         {title ? <p className="banner-title">{title}</p> : null}
         {children ? <div>{children}</div> : null}
@@ -357,6 +402,47 @@ export function Section({
   );
 }
 
+/**
+ * A row of numbered steps. The current step is marked with text for screen readers (and an
+ * `aria-current`), not by colour alone.
+ */
+export function StepIndicator({
+  label,
+  steps,
+  current,
+}: {
+  label: string;
+  steps: readonly string[];
+  /** Zero-based index of the current step. */
+  current: number;
+}) {
+  const { t, number } = useI18n();
+  return (
+    <ol className="steps" aria-label={label}>
+      {steps.map((name, i) => (
+        <li
+          key={name}
+          className={`step${i < current ? ' step-done' : ''}${i === current ? ' step-current' : ''}`}
+          aria-current={i === current ? 'step' : undefined}
+        >
+          <span className="step-number" aria-hidden="true">
+            {i < current ? <Icon name="check" size="sm" /> : number(i + 1)}
+          </span>
+          <span className="step-name">{name}</span>
+          {i === current ? (
+            <span className="sr-only">
+              {t('console.import.step.current', {
+                number: number(i + 1),
+                total: number(steps.length),
+              })}
+            </span>
+          ) : null}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 export function LoadMore({
   hasMore,
   loading,
@@ -455,11 +541,17 @@ export function Modal({
   onClose,
   children,
   footer,
+  careful = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer: ReactNode;
+  /**
+   * For a careful action (D13): the icon sits on a white eight-point star and the footer stacks,
+   * with the safe action first and the careful (terracotta outline) action under it.
+   */
+  careful?: boolean;
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -504,15 +596,22 @@ export function Modal({
     <div className="modal-backdrop">
       <div
         ref={dialogRef}
-        className="modal"
+        className={`modal${careful ? ' modal-careful' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
       >
-        <h2 id={titleId} className="modal-title">
-          {title}
-        </h2>
+        <div className="modal-head">
+          {careful ? (
+            <StarBadge>
+              <Icon name="alert" />
+            </StarBadge>
+          ) : null}
+          <h2 id={titleId} className="modal-title">
+            {title}
+          </h2>
+        </div>
         <div className="modal-body">{children}</div>
         <div className="modal-footer">{footer}</div>
       </div>

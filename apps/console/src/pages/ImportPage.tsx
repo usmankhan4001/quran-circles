@@ -25,6 +25,7 @@ import {
   PageHeader,
   Section,
   SelectField,
+  StepIndicator,
   type BadgeTone,
   type Column,
 } from '../components/ui';
@@ -209,11 +210,22 @@ export default function ImportPage() {
   return (
     <div className="page">
       <PageHeader title={t('console.import.title')} intro={t('console.import.intro')} />
+      <StepIndicator
+        label={t('console.import.steps.label')}
+        steps={[
+          t('console.import.step.upload'),
+          t('console.import.step.check'),
+          t('console.import.step.import'),
+        ]}
+        current={
+          phase.name === 'applied' ? 3 : phase.name === 'applying' ? 2 : report || busy ? 1 : 0
+        }
+      />
       <Banner tone="info" title={t('console.import.dryRun.title')}>
         {t('console.import.dryRun.help')}
       </Banner>
 
-      <div className="form card">
+      <div className="form form-grid card">
         <SelectField
           id="import-kind"
           label={t('console.import.kind.label')}
@@ -234,8 +246,8 @@ export default function ImportPage() {
       </div>
 
       <Section title={t('console.import.step.upload')}>
-        <div className="form card">
-          <div className="field">
+        <div className="form">
+          <div className="field field-file">
             <label className="field-label" htmlFor="import-file">
               {t('console.import.file.choose')}
             </label>
@@ -268,7 +280,7 @@ export default function ImportPage() {
       {report && phase.name !== 'applied' ? (
         <Section title={t('console.import.step.check')}>
           <Banner tone="warning">{t('console.import.nothingSaved')}</Banner>
-          <dl className="stats" aria-label={t('console.import.summary')}>
+          <dl className="stats stats-four" aria-label={t('console.import.summary')}>
             <div className="stat">
               <dt className="stat-label">{t('console.import.count.total')}</dt>
               <dd className="stat-value">{number(report.counts.total)}</dd>
@@ -281,7 +293,7 @@ export default function ImportPage() {
               <dt className="stat-label">{t('console.import.count.duplicate')}</dt>
               <dd className="stat-value">{number(report.counts.duplicate)}</dd>
             </div>
-            <div className="stat">
+            <div className={`stat${report.counts.invalid > 0 ? ' stat-warn' : ''}`}>
               <dt className="stat-label">{t('console.import.count.invalid')}</dt>
               <dd className="stat-value">{number(report.counts.invalid)}</dd>
             </div>

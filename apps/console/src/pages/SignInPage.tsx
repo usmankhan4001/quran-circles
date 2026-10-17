@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { useAuth } from '../api/auth';
 import { DisplayControls } from '../components/Shell';
+import { Icon, PatternLayer } from '../components/icons';
 import { Banner, Button, PageHeader, TextField } from '../components/ui';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf } from '../lib/errors';
@@ -89,83 +90,91 @@ export default function SignInPage() {
 
   return (
     <div className="auth-page">
+      <div className="auth-tools" role="group" aria-label={t('console.shell.toolsLabel')}>
+        <DisplayControls />
+      </div>
       <div className="card auth-card">
-        <div className="auth-tools">
-          <DisplayControls />
+        <div className="auth-hero">
+          <PatternLayer />
+          <span className="brand-mark brand-mark-large">
+            <Icon name="halaqa" />
+          </span>
+          <PageHeader title={t('console.signIn.title')} intro={t('console.signIn.intro')} />
         </div>
-        <PageHeader title={t('console.signIn.title')} intro={t('console.signIn.intro')} />
-        {noAccess ? (
-          <Banner tone="danger" title={t('console.signIn.noAccess.title')}>
-            {t('console.signIn.noAccess.body')}
-          </Banner>
-        ) : null}
-        {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
+        <div className="auth-body">
+          {noAccess ? (
+            <Banner tone="danger" title={t('console.signIn.noAccess.title')}>
+              {t('console.signIn.noAccess.body')}
+            </Banner>
+          ) : null}
+          {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
 
-        {challenge === null ? (
-          <form className="form" onSubmit={(e) => void sendCode(e)} noValidate>
-            <TextField
-              id="signin-phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              dir="ltr"
-              label={t('console.signIn.phone.label')}
-              hint={t('console.signIn.phone.hint')}
-              error={phoneError}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-            <div className="form-actions">
-              <Button type="submit" variant="primary" busy={busy}>
-                {t('console.signIn.sendCode')}
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <form className="form" onSubmit={(e) => void verify(e)} noValidate>
-            <TextField
-              id="signin-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              dir="ltr"
-              maxLength={12}
-              label={t('console.signIn.code.label')}
-              hint={t('console.signIn.code.hint')}
-              error={codeError}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              required
-            />
-            <div className="form-actions">
-              <Button type="submit" variant="primary" busy={busy}>
-                {t('console.signIn.verify')}
-              </Button>
-              <Button
-                disabled={waiting || busy}
-                onClick={() => {
-                  void sendCode();
-                }}
-              >
-                {t('console.signIn.resend')}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setChallenge(null);
-                  setFailure(null);
-                }}
-              >
-                {t('console.signIn.changeNumber')}
-              </Button>
-            </div>
-            {waiting ? (
-              <p className="field-hint">
-                {t('console.signIn.resendIn', { seconds: number(challenge.resendIn) })}
-              </p>
-            ) : null}
-          </form>
-        )}
+          {challenge === null ? (
+            <form className="form" onSubmit={(e) => void sendCode(e)} noValidate>
+              <TextField
+                id="signin-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                dir="ltr"
+                label={t('console.signIn.phone.label')}
+                hint={t('console.signIn.phone.hint')}
+                error={phoneError}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+              <div className="form-actions">
+                <Button type="submit" variant="primary" busy={busy}>
+                  {t('console.signIn.sendCode')}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form className="form" onSubmit={(e) => void verify(e)} noValidate>
+              <TextField
+                id="signin-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                dir="ltr"
+                maxLength={12}
+                label={t('console.signIn.code.label')}
+                hint={t('console.signIn.code.hint')}
+                error={codeError}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+              />
+              <div className="form-actions">
+                <Button type="submit" variant="primary" busy={busy}>
+                  {t('console.signIn.verify')}
+                </Button>
+                <Button
+                  disabled={waiting || busy}
+                  onClick={() => {
+                    void sendCode();
+                  }}
+                >
+                  {t('console.signIn.resend')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setChallenge(null);
+                    setFailure(null);
+                  }}
+                >
+                  {t('console.signIn.changeNumber')}
+                </Button>
+              </div>
+              {waiting ? (
+                <p className="field-hint">
+                  {t('console.signIn.resendIn', { seconds: number(challenge.resendIn) })}
+                </p>
+              ) : null}
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

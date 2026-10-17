@@ -7,7 +7,9 @@
  */
 export {
   colors,
+  elevation,
   fonts,
+  fontFallbacks,
   radii,
   spacing,
   textScale,
@@ -22,6 +24,7 @@ export {
   type ColorMode,
   type SemanticColors,
 } from '../../../../packages/ui/src/semantic-colors';
+export { contrastRatio } from '../../../../packages/ui/src/contrast';
 export {
   directionForLocale,
   isolate,

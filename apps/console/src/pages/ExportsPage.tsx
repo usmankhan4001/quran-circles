@@ -119,7 +119,7 @@ export default function ExportsPage() {
   return (
     <div className="page">
       <PageHeader title={t('console.exports.title')} intro={t('console.exports.intro')} />
-      <Banner tone="info" title={t('console.exports.privacy.title')}>
+      <Banner tone="notice" title={t('console.exports.privacy.title')}>
         <p>{t('console.exports.privacy')}</p>
         <p>{t('console.exports.audited')}</p>
       </Banner>
@@ -130,7 +130,7 @@ export default function ExportsPage() {
       ) : null}
       {sessions.status === 'ready' ? (
         <form
-          className="form card"
+          className="form form-grid card"
           onSubmit={(e) => {
             e.preventDefault();
             void run();
