@@ -17,7 +17,7 @@ All eleven brief deliverables, in order.
 
 ## In progress
 
-- Redesign from scratch with the product owner, run as a design conversation. Decisions are recorded in `docs/design/redesign-decisions.md`. On 2026-10-17 the owner called the UI final: D8–D16 cover buttons, fields, choices, cards, screen direction, overlays, Home, the picks for every other screen (D15, suggested picks awaiting the owner's confirmation) and the feature, poster, admin and console screens (D16). Next: once confirmed and the owner gives the go-ahead, apply the design to `packages/ui` (tokens, Figtree / Nastaliq / KFGQPC, green-topped Sheet, floating TabBar) and then the apps; update `poster-direction.md` to the new colours and type. The kit and the apps are unchanged until then.
+- Redesign from scratch with the product owner, run as a design conversation. Decisions are recorded in `docs/design/redesign-decisions.md`. On 2026-10-17 the owner called the UI final: D8–D16 cover buttons, fields, choices, cards, screen direction, overlays, Home, the picks for every other screen (D15, confirmed by the owner) and the feature, poster, admin and console screens (D16). Next: once the owner gives the go-ahead, apply the design to `packages/ui` (tokens, Figtree / Nastaliq / KFGQPC, green-topped Sheet, floating TabBar) and then the apps; update `poster-direction.md` to the new colours and type. The kit and the apps are unchanged until then.
 
 ## Blocked
 

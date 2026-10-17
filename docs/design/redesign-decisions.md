@@ -111,7 +111,7 @@ Chosen by the owner on 2026-10-17 from [Home options](https://claude.ai/artifact
 
 ### D15. Screens settled on 2026-10-17
 
-The owner called the UI final on 2026-10-17. The picks below are the suggested ones from each set; the owner was asked to confirm or change them.
+The owner called the UI final on 2026-10-17. The owner confirmed the suggested pick from each set on 2026-10-17.
 
 | Screen | Pick | What it means | Options page |
 | --- | --- | --- | --- |
@@ -135,7 +135,6 @@ The remaining screens were drawn in the chosen styles (Q1 lists, O3 sheets, admi
 
 ## Open questions
 
-- Confirm the D15 picks (asked on 2026-10-17).
 - Update `poster-direction.md` to the D3 colours and D4 type.
 - Font files and licences: Jameel Noori Nastaleeq or Mehr Nastaliq, and KFGQPC or QCF.
 - Applying the design to `packages/ui` and the apps waits for the owner's go-ahead.
