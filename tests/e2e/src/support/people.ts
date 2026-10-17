@@ -1,6 +1,8 @@
+import { join } from 'node:path';
 import type { ApiClient, Me } from '@qc/contracts';
+import { REPO_DIR, TSX_BIN } from '../stack/paths';
+import { run } from '../stack/processes';
 import { client } from './client';
-import { db } from './db';
 import { stack } from './env';
 
 /**
@@ -54,9 +56,9 @@ export async function signIn(phone: string = syntheticPhone()): Promise<Person> 
 }
 
 /**
- * The first national admin. There is no API or command for it (FINDINGS.md, F-01), so this
- * writes a pending national invite straight into the database, then signs in through the API,
- * which turns the invite into the role exactly as for any invited coordinator.
+ * A national admin, made the supported way (FINDINGS.md, F-01): the `@qc/db` `bootstrap-admin`
+ * command creates a pending national invite, then the person signs in through the API, which
+ * turns the invite into the role exactly as for any invited coordinator.
  */
 export async function bootstrapNationalAdmin(): Promise<Person> {
   const admin = await signIn(await nationalAdminInvite());
@@ -67,17 +69,25 @@ export async function bootstrapNationalAdmin(): Promise<Person> {
 }
 
 /**
- * Writes the pending national invite only and returns the number, for a flow that signs in some
- * other way (the console's own sign-in page). A number can ask for one code a minute, so the
- * API must not have asked for one first.
+ * Runs `pnpm --filter @qc/db bootstrap-admin` (the script itself, on this run's database) and
+ * returns the invited number, for a flow that signs in some other way (the console's own sign-in
+ * page). A number can ask for one code a minute, so the API must not have asked for one first.
+ * Flows share one stack, so every call after the first adds another admin: `--force-additional`.
  */
 export async function nationalAdminInvite(): Promise<string> {
   const phone = syntheticPhone();
-  await db().query(
-    `insert into coordinator_invites (phone_e164, display_name, role, scope_type, expires_at)
-     values ($1, 'E2E Admin', 'national_admin', 'national', now() + interval '1 day')`,
-    [phone],
-  );
+  const output = await run({
+    name: 'bootstrap-admin',
+    command: TSX_BIN,
+    args: ['src/cli/bootstrap-admin.ts', '--phone', phone, '--force-additional'],
+    cwd: join(REPO_DIR, 'packages', 'db'),
+    env: { DATABASE_URL: stack().databaseUrl, APP_ENV: 'test' },
+    timeoutMs: 60_000,
+  });
+  if (!/^invite [0-9a-f-]{36}$/m.test(output)) {
+    throw new Error('bootstrap-admin did not print an invite id');
+  }
+  if (output.includes(phone)) throw new Error('bootstrap-admin printed the phone number');
   return phone;
 }
 

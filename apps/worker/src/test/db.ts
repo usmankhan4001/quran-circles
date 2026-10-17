@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { guardTransactions } from '@qc/db/testing';
 import { sql } from 'drizzle-orm';
 import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { migrateUp, pgliteExecutor, schema } from '@qc/db';
@@ -13,7 +14,8 @@ export interface TestDb {
 
 /** An in-process Postgres with every real migration applied. Booting takes a few seconds. */
 export async function createTestDb(): Promise<TestDb> {
-  const pg = new PGlite();
+  // Transactions refuse overlapping queries, as node-postgres 9 will (F-02).
+  const pg = guardTransactions(new PGlite());
   await migrateUp(pgliteExecutor(pg));
   const db = drizzle(pg, { schema });
   return {

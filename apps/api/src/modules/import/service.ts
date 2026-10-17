@@ -133,23 +133,22 @@ async function checkVenues(
   const valid = checks.flatMap((c) => (c.ok ? [c.value] : []));
   const cityIds = uniq(valid.map((v) => v.cityId));
   const areaIds = uniq(valid.map((v) => v.areaId));
-  const [knownCities, knownAreas, existing] = await Promise.all([
-    cityIds.length
-      ? db.select({ id: cities.id }).from(cities).where(inArray(cities.id, cityIds))
-      : [],
-    areaIds.length
-      ? db
-          .select({ id: areas.id, cityId: areas.cityId })
-          .from(areas)
-          .where(inArray(areas.id, areaIds))
-      : [],
-    cityIds.length
-      ? db
-          .select({ cityId: venues.cityId, name: sql<string>`lower(${venues.nameEn})` })
-          .from(venues)
-          .where(inArray(venues.cityId, cityIds))
-      : [],
-  ]);
+  // One after another, here and in checkSessions: the import runs these inside its transaction.
+  const knownCities = cityIds.length
+    ? await db.select({ id: cities.id }).from(cities).where(inArray(cities.id, cityIds))
+    : [];
+  const knownAreas = areaIds.length
+    ? await db
+        .select({ id: areas.id, cityId: areas.cityId })
+        .from(areas)
+        .where(inArray(areas.id, areaIds))
+    : [];
+  const existing = cityIds.length
+    ? await db
+        .select({ cityId: venues.cityId, name: sql<string>`lower(${venues.nameEn})` })
+        .from(venues)
+        .where(inArray(venues.cityId, cityIds))
+    : [];
   const cityKnown = new Set(knownCities.map((c) => c.id));
   const areaCity = new Map(knownAreas.map((a) => [a.id, a.cityId]));
   const taken = new Set(existing.map((v) => `${v.cityId}|${v.name}`));
@@ -231,40 +230,38 @@ async function checkSessions(
   const venueIds = uniq(valid.map((s) => s.venueId));
   const circleIds = uniq(valid.flatMap((s) => (s.circleId ? [s.circleId] : [])));
   const seasonIds = uniq(valid.flatMap((s) => (s.seasonId ? [s.seasonId] : [])));
-  const [knownVenues, knownCircles, knownSeasons, existing] = await Promise.all([
-    venueIds.length
-      ? db
-          .select({ id: venues.id, cityId: venues.cityId })
-          .from(venues)
-          .where(inArray(venues.id, venueIds))
-      : [],
-    circleIds.length
-      ? db
-          .select({ id: circles.id, venueId: circles.venueId })
-          .from(circles)
-          .where(inArray(circles.id, circleIds))
-      : [],
-    seasonIds.length
-      ? db
-          .select({ id: seasons.id, programKey: programs.key })
-          .from(seasons)
-          .innerJoin(programs, eq(programs.id, seasons.programId))
-          .where(inArray(seasons.id, seasonIds))
-      : [],
-    venueIds.length
-      ? db
-          .select({
-            venueId: sessions.venueId,
-            titleEn: sessions.titleEn,
-            kind: sessions.kind,
-            time: sessions.localStartTime,
-            daysOfWeek: sessions.daysOfWeek,
-            startsOn: sessions.startsOn,
-          })
-          .from(sessions)
-          .where(and(inArray(sessions.venueId, venueIds), ne(sessions.status, 'archived')))
-      : [],
-  ]);
+  const knownVenues = venueIds.length
+    ? await db
+        .select({ id: venues.id, cityId: venues.cityId })
+        .from(venues)
+        .where(inArray(venues.id, venueIds))
+    : [];
+  const knownCircles = circleIds.length
+    ? await db
+        .select({ id: circles.id, venueId: circles.venueId })
+        .from(circles)
+        .where(inArray(circles.id, circleIds))
+    : [];
+  const knownSeasons = seasonIds.length
+    ? await db
+        .select({ id: seasons.id, programKey: programs.key })
+        .from(seasons)
+        .innerJoin(programs, eq(programs.id, seasons.programId))
+        .where(inArray(seasons.id, seasonIds))
+    : [];
+  const existing = venueIds.length
+    ? await db
+        .select({
+          venueId: sessions.venueId,
+          titleEn: sessions.titleEn,
+          kind: sessions.kind,
+          time: sessions.localStartTime,
+          daysOfWeek: sessions.daysOfWeek,
+          startsOn: sessions.startsOn,
+        })
+        .from(sessions)
+        .where(and(inArray(sessions.venueId, venueIds), ne(sessions.status, 'archived')))
+    : [];
   const venueById = new Map(knownVenues.map((v) => [v.id, v]));
   const circleVenue = new Map(knownCircles.map((c) => [c.id, c.venueId]));
   const seasonProgram = new Map(knownSeasons.map((s) => [s.id, s.programKey]));

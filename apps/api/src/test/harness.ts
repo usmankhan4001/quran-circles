@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { guardTransactions } from '@qc/db/testing';
 import { drizzle } from 'drizzle-orm/pglite';
 import { vi } from 'vitest';
 import type { Hono } from 'hono';
@@ -143,7 +144,8 @@ const isActor = (value: Actor | Principal): value is Actor => 'principal' in val
 
 export async function createHarness(options: HarnessOptions = {}): Promise<Harness> {
   vi.setConfig({ testTimeout: 60_000, hookTimeout: 180_000 });
-  const pg = new PGlite();
+  // Transactions refuse overlapping queries, as node-postgres 9 will (F-02).
+  const pg = guardTransactions(new PGlite());
   await migrateUp(pgliteExecutor(pg));
   const db: Db = drizzle(pg, { schema });
   const clock = new FakeClock();

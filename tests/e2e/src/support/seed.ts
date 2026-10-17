@@ -1,9 +1,10 @@
 import { fixtureId } from '@qc/contracts/fixtures';
 
 /**
- * Ids from the synthetic `@qc/db` seed, which copies the contract fixtures. Fixture dates are in
- * February 2027, so seeded occurrences are in the future; flows that need "soon" create their own
- * session through the admin API.
+ * Ids from the synthetic `@qc/db` seed, which copies the contract fixtures. The seed command
+ * moves the fixture dates to the current week (F-07), so seeded sessions have occurrences this
+ * week and next; flows that need a session starting within minutes still create their own through
+ * the admin API.
  */
 export const SEED = {
   rawalpindi: fixtureId('city', 1),

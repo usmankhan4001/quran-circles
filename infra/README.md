@@ -91,6 +91,8 @@ QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh
 rclone ls "$(grep ^QC_BACKUP_RCLONE_REMOTE= /srv/qc/prod.env | cut -d= -f2)/daily"
 ```
 
+Then create the first national admin. `pnpm --filter @qc/db bootstrap-admin --phone <E.164> --yes` creates a pending national-admin invite for that number and prints only the invite id; the person then signs in with a code and accepts it as usual (see `packages/db/README.md`). It needs `DATABASE_URL` pointing at the production database, which publishes no port, so for now run it from a Node 22 container attached to the stack's internal network with the checkout mounted. Open item for the platform lane: bundle a `bootstrap-admin` runner into the `migrate` image so this becomes one `infra/scripts/compose.sh run` command.
+
 Then, in Meta's WhatsApp dashboard, set the callback URL to `https://<QC_DOMAIN>/webhooks/whatsapp` and the verify token to the value of `WHATSAPP_VERIFY_TOKEN`, and subscribe to `messages`.
 
 What `up` does: `postgres` starts and becomes healthy, `migrate` applies pending SQL migrations and exits, then `api` and `worker` start and must pass their health checks, then `proxy` (Caddy) starts and obtains certificates. Postgres publishes no port and sits on an internal network; only Caddy listens on the host.

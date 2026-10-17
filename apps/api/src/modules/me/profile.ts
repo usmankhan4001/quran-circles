@@ -30,10 +30,13 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
 
   const cityIds = assignments.flatMap((a) => (a.cityId ? [a.cityId] : []));
   const venueIds = assignments.flatMap((a) => (a.venueId ? [a.venueId] : []));
-  const [cityRows, venueRows] = await Promise.all([
-    cityIds.length ? db.select().from(cities).where(inArray(cities.id, cityIds)) : [],
-    venueIds.length ? db.select().from(venues).where(inArray(venues.id, venueIds)) : [],
-  ]);
+  // One after another: `db` may be a transaction, whose single client runs one query at a time.
+  const cityRows = cityIds.length
+    ? await db.select().from(cities).where(inArray(cities.id, cityIds))
+    : [];
+  const venueRows = venueIds.length
+    ? await db.select().from(venues).where(inArray(venues.id, venueIds))
+    : [];
   const cityName = new Map(cityRows.map((c) => [c.id, localized(c.nameEn, c.nameUr)]));
   const venueName = new Map(venueRows.map((v) => [v.id, localized(v.nameEn, v.nameUr)]));
 

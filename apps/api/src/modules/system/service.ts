@@ -37,6 +37,7 @@ export async function getConfig(
   now: Date,
   query: { cityId?: string | undefined },
 ): Promise<AppConfig> {
+  // Side by side is fine here: `config.get` reads through the pool, never inside a transaction.
   const [settings, featureFlags, minimumAppVersion] = await Promise.all([
     readSettings(db),
     resolveFlags(db, query.cityId),

@@ -20,28 +20,27 @@ export async function venueConnectedUserIds(
 ): Promise<string[]> {
   if (venueIds.length === 0) return [];
   const ids = [...venueIds];
-  const [registered, followedVenue, followedCircle] = await Promise.all([
-    db
-      .selectDistinct({ userId: registrations.userId })
-      .from(registrations)
-      .innerJoin(sessions, eq(sessions.id, registrations.sessionId))
-      .where(
-        and(
-          inArray(sessions.venueId, ids),
-          ne(registrations.status, 'cancelled'),
-          isNotNull(registrations.userId),
-        ),
+  // One after another, here and below: `db` may be a transaction (F-02).
+  const registered = await db
+    .selectDistinct({ userId: registrations.userId })
+    .from(registrations)
+    .innerJoin(sessions, eq(sessions.id, registrations.sessionId))
+    .where(
+      and(
+        inArray(sessions.venueId, ids),
+        ne(registrations.status, 'cancelled'),
+        isNotNull(registrations.userId),
       ),
-    db
-      .selectDistinct({ userId: follows.userId })
-      .from(follows)
-      .where(inArray(follows.venueId, ids)),
-    db
-      .selectDistinct({ userId: follows.userId })
-      .from(follows)
-      .innerJoin(circles, eq(circles.id, follows.circleId))
-      .where(inArray(circles.venueId, ids)),
-  ]);
+    );
+  const followedVenue = await db
+    .selectDistinct({ userId: follows.userId })
+    .from(follows)
+    .where(inArray(follows.venueId, ids));
+  const followedCircle = await db
+    .selectDistinct({ userId: follows.userId })
+    .from(follows)
+    .innerJoin(circles, eq(circles.id, follows.circleId))
+    .where(inArray(circles.venueId, ids));
   return uniq([
     ...registered.flatMap((r) => (r.userId ? [r.userId] : [])),
     ...followedVenue.map((r) => r.userId),
@@ -55,17 +54,15 @@ async function cityUserIds(db: Db, cityId: string): Promise<string[]> {
     .select({ id: venues.id })
     .from(venues)
     .where(eq(venues.cityId, cityId));
-  const [connected, inCity] = await Promise.all([
-    venueConnectedUserIds(
-      db,
-      cityVenues.map((v) => v.id),
-    ),
-    db
-      .selectDistinct({ userId: profiles.userId })
-      .from(profiles)
-      .innerJoin(areas, eq(areas.id, profiles.areaId))
-      .where(eq(areas.cityId, cityId)),
-  ]);
+  const connected = await venueConnectedUserIds(
+    db,
+    cityVenues.map((v) => v.id),
+  );
+  const inCity = await db
+    .selectDistinct({ userId: profiles.userId })
+    .from(profiles)
+    .innerJoin(areas, eq(areas.id, profiles.areaId))
+    .where(eq(areas.cityId, cityId));
   return uniq([...connected, ...inCity.map((r) => r.userId)]);
 }
 
@@ -99,27 +96,25 @@ export async function connectedScopes(
   userId: string,
   cityHint?: string,
 ): Promise<{ cityIds: string[]; venueIds: string[] }> {
-  const [registered, followedVenue, followedCircle, home] = await Promise.all([
-    db
-      .selectDistinct({ venueId: sessions.venueId })
-      .from(registrations)
-      .innerJoin(sessions, eq(sessions.id, registrations.sessionId))
-      .where(and(eq(registrations.userId, userId), ne(registrations.status, 'cancelled'))),
-    db
-      .select({ venueId: follows.venueId })
-      .from(follows)
-      .where(and(eq(follows.userId, userId), isNotNull(follows.venueId))),
-    db
-      .select({ venueId: circles.venueId })
-      .from(follows)
-      .innerJoin(circles, eq(circles.id, follows.circleId))
-      .where(eq(follows.userId, userId)),
-    db
-      .select({ cityId: areas.cityId })
-      .from(profiles)
-      .innerJoin(areas, eq(areas.id, profiles.areaId))
-      .where(eq(profiles.userId, userId)),
-  ]);
+  const registered = await db
+    .selectDistinct({ venueId: sessions.venueId })
+    .from(registrations)
+    .innerJoin(sessions, eq(sessions.id, registrations.sessionId))
+    .where(and(eq(registrations.userId, userId), ne(registrations.status, 'cancelled')));
+  const followedVenue = await db
+    .select({ venueId: follows.venueId })
+    .from(follows)
+    .where(and(eq(follows.userId, userId), isNotNull(follows.venueId)));
+  const followedCircle = await db
+    .select({ venueId: circles.venueId })
+    .from(follows)
+    .innerJoin(circles, eq(circles.id, follows.circleId))
+    .where(eq(follows.userId, userId));
+  const home = await db
+    .select({ cityId: areas.cityId })
+    .from(profiles)
+    .innerJoin(areas, eq(areas.id, profiles.areaId))
+    .where(eq(profiles.userId, userId));
   const venueIds = uniq([
     ...registered.map((r) => r.venueId),
     ...followedVenue.flatMap((r) => (r.venueId ? [r.venueId] : [])),

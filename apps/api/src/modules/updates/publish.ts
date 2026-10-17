@@ -206,31 +206,30 @@ interface Audience {
  * venue or circle with alerts on.
  */
 export async function sessionAudience(db: Db, session: SessionFacts): Promise<Audience[]> {
-  const [registered, followers] = await Promise.all([
-    db
-      .selectDistinct({ id: users.id, locale: users.locale, phone: users.phoneE164 })
-      .from(registrations)
-      .innerJoin(users, eq(users.id, registrations.userId))
-      .where(
-        and(
-          eq(registrations.sessionId, session.id),
-          ne(registrations.status, 'cancelled'),
-          eq(users.status, 'active'),
-        ),
+  // One after another: `db` is often the schedule change's transaction (F-02).
+  const registered = await db
+    .selectDistinct({ id: users.id, locale: users.locale, phone: users.phoneE164 })
+    .from(registrations)
+    .innerJoin(users, eq(users.id, registrations.userId))
+    .where(
+      and(
+        eq(registrations.sessionId, session.id),
+        ne(registrations.status, 'cancelled'),
+        eq(users.status, 'active'),
       ),
-    db
-      .selectDistinct({ id: users.id, locale: users.locale, phone: users.phoneE164 })
-      .from(follows)
-      .innerJoin(users, eq(users.id, follows.userId))
-      .leftJoin(circles, eq(circles.id, follows.circleId))
-      .where(
-        and(
-          eq(follows.alertsEnabled, true),
-          eq(users.status, 'active'),
-          or(eq(follows.venueId, session.venueId), eq(circles.venueId, session.venueId)),
-        ),
+    );
+  const followers = await db
+    .selectDistinct({ id: users.id, locale: users.locale, phone: users.phoneE164 })
+    .from(follows)
+    .innerJoin(users, eq(users.id, follows.userId))
+    .leftJoin(circles, eq(circles.id, follows.circleId))
+    .where(
+      and(
+        eq(follows.alertsEnabled, true),
+        eq(users.status, 'active'),
+        or(eq(follows.venueId, session.venueId), eq(circles.venueId, session.venueId)),
       ),
-  ]);
+    );
   const byId = new Map<string, Audience>();
   for (const r of [...registered, ...followers]) byId.set(r.id, r);
   return [...byId.values()];

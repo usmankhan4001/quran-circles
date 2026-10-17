@@ -1,4 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
+import { guardTransactions } from '@qc/db/testing';
 import { Hono } from 'hono';
 import { drizzle } from 'drizzle-orm/pglite';
 import { migrateUp, pgliteExecutor, schema } from '@qc/db';
@@ -127,7 +128,8 @@ export interface HarnessOptions {
 
 /** A real Postgres (PGlite) with the real migrations, plus a Hono app with the auth lane mounted. */
 export async function createHarness(options: HarnessOptions = {}): Promise<Harness> {
-  const pg = new PGlite();
+  // Transactions refuse overlapping queries, as node-postgres 9 will (F-02).
+  const pg = guardTransactions(new PGlite());
   await migrateUp(pgliteExecutor(pg));
   const db = drizzle(pg, { schema }) as AuthDb;
 

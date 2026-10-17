@@ -11,10 +11,13 @@ type FollowRow = typeof follows.$inferSelect;
 async function toFollows(db: Db, rows: readonly FollowRow[]): Promise<Follow[]> {
   const venueIds = rows.flatMap((r) => (r.venueId ? [r.venueId] : []));
   const circleIds = rows.flatMap((r) => (r.circleId ? [r.circleId] : []));
-  const [venueRows, circleRows] = await Promise.all([
-    venueIds.length ? db.select().from(venues).where(inArray(venues.id, venueIds)) : [],
-    circleIds.length ? db.select().from(circles).where(inArray(circles.id, circleIds)) : [],
-  ]);
+  // One after another: `db` may be a transaction, whose single client runs one query at a time.
+  const venueRows = venueIds.length
+    ? await db.select().from(venues).where(inArray(venues.id, venueIds))
+    : [];
+  const circleRows = circleIds.length
+    ? await db.select().from(circles).where(inArray(circles.id, circleIds))
+    : [];
   const venueName = new Map(venueRows.map((v) => [v.id, localized(v.nameEn, v.nameUr)]));
   const circleName = new Map(circleRows.map((c) => [c.id, localized(c.nameEn, c.nameUr)]));
   return rows.flatMap((r) => {

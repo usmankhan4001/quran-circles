@@ -4,9 +4,9 @@ import { stack } from './env';
 let pool: pg.Pool | null = null;
 
 /**
- * Direct database access, for two things only: checking what the worker did (the outbox) and
- * creating the very first national admin, which has no API (see FINDINGS.md). Flows themselves go
- * through the API.
+ * Direct database access, for reads only: checking what the API and the worker wrote (the outbox,
+ * an invite's state). National admins come from the `bootstrap-admin` command (see `people.ts`).
+ * Flows themselves go through the API.
  */
 export function db(): pg.Pool {
   pool ??= new pg.Pool({ connectionString: stack().databaseUrl, max: 2 });

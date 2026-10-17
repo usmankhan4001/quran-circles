@@ -178,6 +178,35 @@ describe('pg-boss runtime', () => {
     expect(schedules.some((s) => s.name === RECONCILE_QUEUE && s.cron === '* * * * *')).toBe(true);
   });
 
+  it('logs a reconcile that reached the queue once, not twice', async () => {
+    await start({ scheduleReminders: false });
+    const world = await seedWorld(test.db);
+    await seedOccurrence(
+      test.db,
+      world.session.id,
+      new Date(h.clock.now().getTime() + 5 * 3_600_000),
+    );
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    await seedRegistration(test.db, {
+      userId: user.id,
+      sessionId: world.session.id,
+      areaId: world.area.id,
+    });
+    const reminders = async () =>
+      (await test.db.select().from(tables.messageOutbox)).filter(
+        (r) => r.templateKey === 'session_reminder',
+      );
+
+    await boss.send(RECONCILE_QUEUE, {});
+    await until(reminders, (rows) => rows.length === 1);
+    // Let the job finish (it logs before it returns), then make sure nothing else arrives.
+    await new Promise((r) => setTimeout(r, 500));
+    const lines = h.logger.lines.filter((l) => l.event === 'reminders.reconciled');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]!.fields).toMatchObject({ inserted: 1 });
+  });
+
   it('registers the daily occurrence top-up in Pakistan time, once however often it starts', async () => {
     await start();
     await runtime!.stop({ timeoutMs: 5_000 });
