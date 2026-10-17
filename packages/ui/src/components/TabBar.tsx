@@ -24,6 +24,11 @@ export interface TabBarProps {
   testID?: string;
 }
 
+// The chosen tab takes the width its label needs, so the label is not cut; the others share
+// what is left.
+const chosen = { flexGrow: 0, flexShrink: 0, paddingHorizontal: spacing.lg } as const;
+const other = { flexGrow: 1, flexShrink: 1, flexBasis: 0 } as const;
+
 const styles = StyleSheet.create({
   // D12: a floating bar. The chosen tab is a green pill with its label; the others show the
   // icon, and every tab keeps its name for screen readers.
@@ -39,14 +44,17 @@ const styles = StyleSheet.create({
   tab: {
     flexDirection: 'row',
     minHeight: 52,
+    minWidth: 48,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
   },
-  label: { marginStart: spacing.xs + 2 },
+  label: { marginStart: spacing.xs + 2, flexShrink: 1 },
   iconWrap: { minHeight: 28, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', top: -4, start: '55%' },
+  // On the icon's top end corner, clear of the label.
+  badge: { position: 'absolute', top: -6, end: -12 },
+  badgeInline: { marginStart: spacing.xs },
 });
 
 export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID }: TabBarProps) {
@@ -80,20 +88,22 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
             onPress={() => onChange(item.key)}
             style={({ pressed }) => [
               styles.tab,
+              selected ? chosen : other,
               {
-                flex: selected ? 1.6 : 1,
                 backgroundColor: selected ? c.accent : pressed ? c.surfaceMuted : 'transparent',
               },
             ]}
           >
-            <View style={styles.iconWrap}>
-              {typeof item.icon === 'function' ? item.icon({ selected, color }) : item.icon}
-              {item.badge ? (
-                <View style={styles.badge}>
-                  <Badge {...item.badge} decorative />
-                </View>
-              ) : null}
-            </View>
+            {item.icon ? (
+              <View style={styles.iconWrap}>
+                {typeof item.icon === 'function' ? item.icon({ selected, color }) : item.icon}
+                {item.badge ? (
+                  <View style={styles.badge}>
+                    <Badge {...item.badge} decorative />
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
             {/* Without an icon the label is the only thing to see, so it always shows. */}
             {selected || !item.icon ? (
               <Text
@@ -107,6 +117,11 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
               >
                 {item.label}
               </Text>
+            ) : null}
+            {item.badge && !item.icon ? (
+              <View style={styles.badgeInline}>
+                <Badge {...item.badge} decorative />
+              </View>
             ) : null}
           </Touchable>
         );

@@ -66,5 +66,7 @@ export { PrayerStrip } from './components/PrayerStrip';
 export type { PrayerStripProps, PrayerTime } from './components/PrayerStrip';
 export { SessionCard } from './components/SessionCard';
 export type { SessionCardProps } from './components/SessionCard';
+export { StarNumber } from './components/StarNumber';
+export type { StarNumberProps } from './components/StarNumber';
 export { ConfirmSheet } from './components/ConfirmSheet';
 export type { ConfirmSheetProps } from './components/ConfirmSheet';

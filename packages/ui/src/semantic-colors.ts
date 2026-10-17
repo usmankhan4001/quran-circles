@@ -61,6 +61,8 @@ export interface SemanticColors {
   /** The green header that tops main screens and sheets (D12, D13). */
   hero: string;
   textOnHero: string;
+  /** Where the header's gradient lightens before it fades into the page. Behind cards only, never text. */
+  heroEnd: string;
   /** Light glass on the green header: icon buttons and the sheet handle. Decoration. */
   heroGlass: string;
   heroGlassPressed: string;
@@ -116,6 +118,7 @@ const light: SemanticColors = {
 
   hero: colors.brand.tanzeem,
   textOnHero: colors.white,
+  heroEnd: colors.green[500],
   heroGlass: 'rgba(255, 255, 255, 0.16)',
   heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
 
@@ -170,6 +173,7 @@ const dark: SemanticColors = {
 
   hero: colors.green[800],
   textOnHero: colors.white,
+  heroEnd: colors.green[700],
   heroGlass: 'rgba(255, 255, 255, 0.16)',
   heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
 
@@ -223,6 +227,7 @@ const highContrast: SemanticColors = {
 
   hero: colors.green[975],
   textOnHero: colors.white,
+  heroEnd: colors.green[975],
   heroGlass: 'rgba(255, 255, 255, 0.16)',
   heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
 

@@ -67,7 +67,15 @@ export function Badge({ count, dot, max = 99, decorative, testID }: BadgeProps) 
       {...a11y}
       style={[styles.count, { backgroundColor: theme.colors.danger }]}
     >
-      <Text variant="caption" color="textOnDanger" direction="ltr" align="center" decorative strong>
+      <Text
+        variant="caption"
+        color="textOnDanger"
+        lang="en"
+        direction="ltr"
+        align="center"
+        decorative
+        strong
+      >
         {shown}
       </Text>
     </View>

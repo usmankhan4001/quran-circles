@@ -13,8 +13,13 @@ import {
   SearchField,
   SeatMeter,
   SessionCard,
+  StarNumber,
+  TabBar,
   Tag,
+  Icon,
+  iconNames,
 } from '../index';
+import { formatNumber } from '../numerals';
 import { semanticColors } from '../semantic-colors';
 import { minTouchTarget } from '../tokens';
 import { matrix, px, renderThemed, rgb } from '../test/utils';
@@ -234,5 +239,81 @@ describe('Banner', () => {
   it('uses a polite status for offline and time changes', () => {
     renderThemed(<Banner kind="offline" title="You are offline" />);
     expect(screen.getByRole('status').textContent).toContain('You are offline');
+  });
+});
+
+describe.each(matrix)('drawing details in $name', (combo) => {
+  it('StarNumber shows the number in the locale numerals and can be named', () => {
+    renderThemed(<StarNumber value={18} accessibilityLabel="Surah 18" />, combo);
+    expect(screen.getByRole('img', { name: 'Surah 18' })).toBeTruthy();
+    expect(screen.getByText(formatNumber(18, combo.locale))).toBeTruthy();
+  });
+
+  it('every kit icon draws something and hides from screen readers without a label', () => {
+    for (const name of iconNames) {
+      const { unmount } = renderThemed(<Icon name={name} />, combo);
+      const el = screen.getByTestId(`icon-${name}`);
+      expect(el.childElementCount, name).toBeGreaterThan(0);
+      expect(el.getAttribute('aria-hidden'), name).toBe('true');
+      unmount();
+    }
+  });
+});
+
+describe('HeroHeader shapes', () => {
+  it('draws the eight-point pattern by default and leaves it out on request or in high contrast', () => {
+    const { unmount } = renderThemed(<HeroHeader title="Home" />);
+    expect(screen.getByTestId('hero-pattern')).toBeTruthy();
+    unmount();
+    const off = renderThemed(<HeroHeader title="Home" pattern={false} />);
+    expect(screen.queryByTestId('hero-pattern')).toBeNull();
+    off.unmount();
+    renderThemed(<HeroHeader title="Home" />, { mode: 'highContrast' });
+    expect(screen.queryByTestId('hero-pattern')).toBeNull();
+  });
+
+  it('fades into the page on the web, and rounds its lower corners when asked', () => {
+    const { unmount } = renderThemed(<HeroHeader testID="hero" title="Home" />);
+    expect(screen.getByTestId('hero').style.backgroundImage).toContain('linear-gradient');
+    unmount();
+    renderThemed(<HeroHeader testID="hero" title="Home" shape="rounded" />);
+    const hero = screen.getByTestId('hero');
+    expect(hero.style.backgroundImage).toBe('');
+    expect(
+      px(hero.style.borderBottomLeftRadius) + px(hero.style.borderBottomRightRadius),
+    ).toBeGreaterThan(0);
+  });
+});
+
+describe('TabBar sizing', () => {
+  const items = [
+    { key: 'home', label: 'Home', icon: <Icon name="home" />, badge: { count: 1 } },
+    { key: 'journey', label: 'My Journey', icon: <Icon name="route" /> },
+    { key: 'more', label: 'More' },
+  ];
+
+  it('the chosen tab does not shrink, so its label is not cut', () => {
+    renderThemed(<TabBar items={items} activeKey="journey" onChange={() => {}} />);
+    const chosen = screen.getByTestId('tab-journey');
+    expect(chosen.style.flexShrink).toBe('0');
+    expect(chosen.textContent).toBe('My Journey');
+    expect(screen.getByTestId('tab-home').style.flexGrow).toBe('1');
+  });
+
+  it('a badge sits on the icon, apart from the label, and after the label when there is no icon', () => {
+    renderThemed(
+      <TabBar
+        items={[items[0]!, { key: 'more', label: 'More', badge: { count: 2 } }]}
+        activeKey="home"
+        onChange={() => {}}
+      />,
+    );
+    const home = screen.getByTestId('tab-home');
+    expect(home.getAttribute('aria-label')).toContain('Home');
+    // The icon box holds the badge; the label is its sibling, not under the badge.
+    const label = screen.getByText('Home');
+    expect(label.parentElement?.contains(screen.getByTestId('icon-home'))).toBe(true);
+    expect(screen.getByTestId('icon-home').parentElement?.textContent).toBe('1');
+    expect(screen.getByTestId('tab-more').textContent).toBe('More2');
   });
 });

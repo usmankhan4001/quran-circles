@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { iconFlipTransform } from '../direction';
 import { useTheme } from '../theme';
 import { Text } from './Text';
@@ -6,6 +6,8 @@ import { Text } from './Text';
 /**
  * A small set of icons drawn with views, so the kit needs no icon font or SVG library.
  * Names that point somewhere (`chevron-forward`, `arrow-back`) mirror in right-to-left.
+ * The object icons from `home` on are the drawings' line set (D12), so apps need no glyphs of
+ * their own.
  */
 export type IconName =
   | 'chevron-forward'
@@ -19,7 +21,21 @@ export type IconName =
   | 'success'
   | 'warning'
   | 'error'
-  | 'search';
+  | 'search'
+  | 'home'
+  | 'pin'
+  | 'book'
+  | 'calendar'
+  | 'clock'
+  | 'bell'
+  | 'people'
+  | 'user'
+  | 'filter'
+  | 'route'
+  | 'prayer'
+  | 'share'
+  | 'bookmark'
+  | 'star';
 
 export const iconNames: readonly IconName[] = [
   'chevron-forward',
@@ -34,6 +50,20 @@ export const iconNames: readonly IconName[] = [
   'warning',
   'error',
   'search',
+  'home',
+  'pin',
+  'book',
+  'calendar',
+  'clock',
+  'bell',
+  'people',
+  'user',
+  'filter',
+  'route',
+  'prayer',
+  'share',
+  'bookmark',
+  'star',
 ];
 
 export interface IconProps {
@@ -134,6 +164,360 @@ function Badge({ size, color, glyph }: { size: number; color: string; glyph: str
   );
 }
 
+const abs = { position: 'absolute' } as const;
+
+function Ring({
+  d,
+  color,
+  w,
+  fill,
+  style,
+}: {
+  d: number;
+  color: string;
+  w: number;
+  fill?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View
+      style={[
+        { width: d, height: d, borderRadius: d / 2 },
+        fill ? { backgroundColor: color } : { borderWidth: w, borderColor: color },
+        style,
+      ]}
+    />
+  );
+}
+
+/** The line icons of the drawings. Physical on purpose, like the rest of this file. */
+function objectArt(name: IconName, size: number, tint: string) {
+  const w = Math.max(2, Math.round(size / 11));
+  const line = (style: ViewStyle) => (
+    <View style={[abs, { backgroundColor: tint, borderRadius: w }, style]} />
+  );
+  switch (name) {
+    case 'home':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.5,
+                height: size * 0.5,
+                top: size * 0.12,
+                borderTopWidth: w,
+                borderLeftWidth: w,
+                borderColor: tint,
+                borderTopLeftRadius: w,
+                transform: [{ rotate: '45deg' }],
+              },
+            ]}
+          />
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.62,
+                height: size * 0.4,
+                bottom: size * 0.1,
+                borderWidth: w,
+                borderTopWidth: 0,
+                borderColor: tint,
+                borderBottomLeftRadius: w,
+                borderBottomRightRadius: w,
+              },
+            ]}
+          />
+        </>
+      );
+    case 'pin':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.62,
+                height: size * 0.62,
+                top: size * 0.08,
+                borderWidth: w,
+                borderColor: tint,
+                borderRadius: size * 0.31,
+                borderBottomRightRadius: 0,
+                transform: [{ rotate: '45deg' }],
+              },
+            ]}
+          />
+          <Ring d={size * 0.2} color={tint} w={w} fill style={{ marginBottom: size * 0.1 }} />
+        </>
+      );
+    case 'book':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.86,
+                height: size * 0.62,
+                borderWidth: w,
+                borderColor: tint,
+                borderRadius: w * 1.5,
+              },
+            ]}
+          />
+          {line({ width: w, height: size * 0.62 })}
+        </>
+      );
+    case 'calendar':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.8,
+                height: size * 0.72,
+                bottom: size * 0.1,
+                borderWidth: w,
+                borderColor: tint,
+                borderRadius: w * 1.5,
+              },
+            ]}
+          />
+          {line({ width: size * 0.8, height: w, top: size * 0.36 })}
+          {line({ width: w, height: size * 0.2, top: size * 0.08, left: size * 0.3 })}
+          {line({ width: w, height: size * 0.2, top: size * 0.08, right: size * 0.3 })}
+        </>
+      );
+    case 'clock':
+      return (
+        <>
+          <Ring d={size * 0.84} color={tint} w={w} />
+          {line({ width: w, height: size * 0.26, top: size * 0.24 })}
+          {line({ width: size * 0.22, height: w, left: size * 0.48 })}
+        </>
+      );
+    case 'bell':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.6,
+                height: size * 0.56,
+                top: size * 0.12,
+                borderWidth: w,
+                borderBottomWidth: 0,
+                borderColor: tint,
+                borderTopLeftRadius: size * 0.3,
+                borderTopRightRadius: size * 0.3,
+              },
+            ]}
+          />
+          {line({ width: size * 0.84, height: w, bottom: size * 0.24 })}
+          <Ring d={size * 0.18} color={tint} w={w} fill style={[abs, { bottom: size * 0.04 }]} />
+        </>
+      );
+    case 'people':
+    case 'user': {
+      const head = name === 'user' ? 0.36 : 0.3;
+      return (
+        <>
+          <Ring d={size * head} color={tint} w={w} style={[abs, { top: size * 0.08 }]} />
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.74,
+                height: size * 0.34,
+                bottom: size * 0.08,
+                borderWidth: w,
+                borderBottomWidth: 0,
+                borderColor: tint,
+                borderTopLeftRadius: size * 0.37,
+                borderTopRightRadius: size * 0.37,
+              },
+            ]}
+          />
+          {name === 'people' ? (
+            <Ring
+              d={size * 0.22}
+              color={tint}
+              w={w}
+              style={[abs, { top: size * 0.16, right: 0 }]}
+            />
+          ) : null}
+        </>
+      );
+    }
+    case 'filter':
+      return (
+        <>
+          {[0.26, 0.5, 0.74].map((top, i) => (
+            <View
+              key={top}
+              style={[
+                abs,
+                {
+                  width: size * (i === 1 ? 0.5 : 0.78),
+                  height: w,
+                  top: size * top - w / 2,
+                  backgroundColor: tint,
+                  borderRadius: w,
+                },
+              ]}
+            />
+          ))}
+        </>
+      );
+    case 'route':
+      return (
+        <>
+          <Ring
+            d={size * 0.26}
+            color={tint}
+            w={w}
+            style={[abs, { bottom: size * 0.1, left: size * 0.1 }]}
+          />
+          <Ring
+            d={size * 0.26}
+            color={tint}
+            w={w}
+            style={[abs, { top: size * 0.1, right: size * 0.1 }]}
+          />
+          {line({ width: w, height: size * 0.5, transform: [{ rotate: '45deg' }] })}
+        </>
+      );
+    case 'prayer':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.62,
+                height: size * 0.6,
+                bottom: size * 0.12,
+                borderWidth: w,
+                borderBottomWidth: 0,
+                borderColor: tint,
+                borderTopLeftRadius: size * 0.31,
+                borderTopRightRadius: size * 0.31,
+              },
+            ]}
+          />
+          {line({ width: w, height: size * 0.18, top: size * 0.06 })}
+          {line({ width: size * 0.88, height: w, bottom: size * 0.12 })}
+        </>
+      );
+    case 'share':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.66,
+                height: size * 0.44,
+                bottom: size * 0.1,
+                borderWidth: w,
+                borderTopWidth: 0,
+                borderColor: tint,
+                borderBottomLeftRadius: w * 1.5,
+                borderBottomRightRadius: w * 1.5,
+              },
+            ]}
+          />
+          {line({ width: w, height: size * 0.56, top: size * 0.1 })}
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.28,
+                height: size * 0.28,
+                top: size * 0.12,
+                borderTopWidth: w,
+                borderLeftWidth: w,
+                borderColor: tint,
+                transform: [{ rotate: '45deg' }],
+              },
+            ]}
+          />
+        </>
+      );
+    case 'bookmark':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.56,
+                height: size * 0.6,
+                top: size * 0.1,
+                borderWidth: w,
+                borderBottomWidth: 0,
+                borderColor: tint,
+                borderTopLeftRadius: w,
+                borderTopRightRadius: w,
+              },
+            ]}
+          />
+          {line({
+            width: w,
+            height: size * 0.36,
+            bottom: size * 0.1,
+            left: size * 0.36,
+            transform: [{ rotate: '-50deg' }],
+          })}
+          {line({
+            width: w,
+            height: size * 0.36,
+            bottom: size * 0.1,
+            right: size * 0.36,
+            transform: [{ rotate: '50deg' }],
+          })}
+        </>
+      );
+    case 'star':
+      return (
+        <>
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.6,
+                height: size * 0.6,
+                borderWidth: w,
+                borderColor: tint,
+                borderRadius: w / 2,
+              },
+            ]}
+          />
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.6,
+                height: size * 0.6,
+                borderWidth: w,
+                borderColor: tint,
+                borderRadius: w / 2,
+                transform: [{ rotate: '45deg' }],
+              },
+            ]}
+          />
+        </>
+      );
+    default:
+      return undefined;
+  }
+}
+
 export function Icon({ name, size = 24, color, accessibilityLabel }: IconProps) {
   const theme = useTheme();
   const tint = color ?? theme.colors.text;
@@ -230,6 +614,8 @@ export function Icon({ name, size = 24, color, accessibilityLabel }: IconProps) 
       );
       break;
     }
+    default:
+      art = objectArt(name, size, tint);
   }
   return (
     <View

@@ -4,7 +4,7 @@
  */
 import type { ReactElement, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AppRegistry } from 'react-native';
+import { AppRegistry, View } from 'react-native';
 import {
   Avatar,
   Badge,
@@ -20,6 +20,7 @@ import {
   Header,
   HeroHeader,
   Icon,
+  StarNumber,
   IconButton,
   ListItem,
   PrayerStrip,
@@ -431,10 +432,10 @@ const stories: Story[] = [
   {
     id: 'tab-bar',
     title: 'TabBar',
-    note: 'Icons here are stand-ins. The bar floats; the selected tab is a green pill with its label, so it is shown by shape and text, not by colour alone.',
+    note: 'The bar floats; the selected tab is a green pill with its label, so it is shown by shape and text, not by colour alone.',
     cases: [
       {
-        label: 'Four tabs, one with an unread badge',
+        label: 'Five tabs, two with badges',
         render: (l) => (
           <TabBar
             accessibilityLabel={pick(l, 'Main menu', 'مین مینو')}
@@ -444,24 +445,29 @@ const stories: Story[] = [
               {
                 key: 'home',
                 label: pick(l, 'Home', 'ہوم'),
-                icon: ({ color }) => <Icon name="success" color={color} />,
+                icon: ({ color }) => <Icon name="home" color={color} />,
                 badge: { dot: true },
               },
               {
                 key: 'nearby',
                 label: pick(l, 'Nearby', 'قریب'),
-                icon: ({ color }) => <Icon name="info" color={color} />,
+                icon: ({ color }) => <Icon name="pin" color={color} />,
               },
               {
                 key: 'journey',
                 label: pick(l, 'My Journey', 'میرا سفر'),
-                icon: ({ color }) => <Icon name="check" color={color} />,
+                icon: ({ color }) => <Icon name="route" color={color} />,
                 badge: { count: 2 },
               },
               {
                 key: 'quran',
                 label: pick(l, 'Quran & Prayer', 'قرآن و نماز'),
-                icon: ({ color }) => <Icon name="plus" color={color} />,
+                icon: ({ color }) => <Icon name="book" color={color} />,
+              },
+              {
+                key: 'profile',
+                label: pick(l, 'Profile', 'پروفائل'),
+                icon: ({ color }) => <Icon name="user" color={color} />,
               },
             ]}
           />
@@ -802,6 +808,34 @@ const stories: Story[] = [
               </Text>
             </Card>
           </HeroHeader>
+        ),
+      },
+      {
+        label: 'Rounded, without the pattern (sheets, short headers)',
+        render: (l) => (
+          <HeroHeader
+            shape="rounded"
+            pattern={false}
+            title={pick(l, 'Register', 'رجسٹریشن')}
+            onBack={noop}
+          />
+        ),
+      },
+    ],
+  },
+  {
+    id: 'star-number',
+    title: 'StarNumber',
+    note: 'Surah, para and ayah numbers in the eight-point star of the drawings.',
+    cases: [
+      {
+        label: 'Surahs 1, 18 and 114',
+        render: () => (
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <StarNumber value={1} />
+            <StarNumber value={18} />
+            <StarNumber value={114} />
+          </View>
         ),
       },
     ],
