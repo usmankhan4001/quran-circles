@@ -3,6 +3,13 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by the lane)
 
+## Done (2026-10-17: change request `auth-purge-to-db`)
+
+- Worker schedules the sign-in purge: `runAuthPurge` (`apps/worker/src/auth/purge.ts`) calls `purgeStaleAuthRows` from `@qc/db` on queue `auth-purge`, cron `0 3 * * *` Asia/Karachi (03:00 Pakistan time), key `daily`, singleton, `missed: 'once'`, retries 3 with backoff. `scheduleAuthPurge: false` turns the schedule off; `runtime.authPurgeNow()` for tests. Not wired to an environment variable (same as the top-up and ayah switches).
+- One log line per run, `auth.purged`, with `challenges` and `sessions` counts only.
+- Tests: 4 in `auth/purge.test.ts` (spent codes and expired or revoked sessions deleted, live and recent ones kept, second run deletes nothing; injected clock; log content has no number, name, hash or id; a database failure throws and logs no success) and 3 in `runtime.test.ts` (schedule registered once across restarts at 03:00 Asia/Karachi; off when told; on demand and via a queue job, keeping the live session). Seed helpers `seedOtpChallenge` and `seedAuthSession` in `src/test/seed.ts`.
+- `@qc/worker`: 128 tests in 8 files; typecheck, eslint and prettier clean.
+
 ## Done (2026-10-17: morning ayah push, contract 1.0.0-rc.4, migration 0009)
 
 - Joint change with contracts (cleared by the orchestrator): `PushData.type` gains `ayah_of_the_day` (`packages/contracts/src/messages.ts`, one test in `messages.test.ts`, CHANGELOG line under rc.4; the rc.4 "Not in this version" bullet removed). `openapi.json` and `SCOPES.md` are unchanged by the generator (checked), so not regenerated. Nothing else in contracts touched.
@@ -14,7 +21,7 @@ Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by 
   - Keyset pages of 500 people, one `INSERT ... ON CONFLICT DO NOTHING` per page. A run that starts at or after 12:00 Pakistan time queues nothing (a make-up run after an outage would otherwise send a "morning" ayah in the evening). If the flag is off everywhere the run stops before reading people.
   - One log line per run, `ayah_daily.run`, counts only (`candidates`, `queued`, `alreadyQueued`, `flagOff`, `consentOff`, `skipped`). The date is not logged because the safe logger redacts `YYYY-MM-DD` as phone-shaped.
   - Tests (15 in `morning.test.ts`, 3 in `runtime.test.ts`): built-in ayah in both languages, web origin, follow resolution (one followed pick, two followed picks fall back to national, a pick for another day ignored), flag off or missing, city override both ways, consent no row / revoked / re-granted / other purpose revoked, no device / revoked device / suspended account, duplicate run and next day, paging, a database failure mid-run and a clean retry, the noon cutoff, log content, end to end send once, blocked at send time after the person turned it off or lost the last device, schedule registered once at 06:30 Asia/Karachi, schedule off, a queue job.
-- `purgeStaleAuthRows` is **not** scheduled: it lives in `apps/api/src/modules/auth/cleanup.ts` (re-exported by `apps/api/src/jobs.ts`), and apps never import apps. See the change request below.
+- `purgeStaleAuthRows` was not scheduled at this point (it lived in the API); since done, see above.
 - Tests: `@qc/contracts` 1706, `@qc/messaging` 197, `@qc/worker` 121, all passing; typecheck, eslint and prettier clean for the three packages and the i18n files; `@qc/i18n` parity tests pass.
 
 ## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
@@ -60,7 +67,7 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 - Applied 2026-10-17: `outbox-venue-and-provider-id`, `reminder-lead-setting`.
 - `messaging-env-vars`: names are in `.env.example`; passing them to the `worker` and `api` services in the compose files (`infra/`) and the webhook reverse-proxy route still need infra work (not this lane).
 - `push-delivery-ack`: open.
-- `auth-purge-to-db` (new, for auth-scopes and contracts): move `purgeStaleAuthRows` (no HTTP dependency, takes a db and a time) into `@qc/db` jobs next to `topUpAllOccurrences`, keeping the API's re-export. The worker then schedules it daily (proposed `0 3 * * *` Asia/Karachi on an `auth-purge` queue, counts-only log line). Until then nothing removes spent sign-in codes and dead sessions.
+- `auth-purge-to-db`: **applied 2026-10-17** (moved to `@qc/db`, scheduled at 03:00 Asia/Karachi). Original request: move `purgeStaleAuthRows` (no HTTP dependency, takes a db and a time) into `@qc/db` jobs next to `topUpAllOccurrences`, keeping the API's re-export. The worker then schedules it daily (proposed `0 3 * * *` Asia/Karachi on an `auth-purge` queue, counts-only log line).
 
 ## Findings from integration
 

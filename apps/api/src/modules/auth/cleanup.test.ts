@@ -18,6 +18,9 @@ beforeEach(async () => {
 
 const DAY = 86400;
 
+// The rule itself is tested row by row in `@qc/db` (packages/db/src/jobs/auth-purge.test.ts). This
+// suite checks the API's re-export against rows made by the real sign-in and sign-out flow.
+
 describe('purgeStaleAuthRows', () => {
   it('removes old codes and finished sessions and keeps the rest', async () => {
     const signedIn = await h.signIn(PHONE_A); // a live session and a used code

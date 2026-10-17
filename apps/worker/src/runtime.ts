@@ -1,11 +1,12 @@
 import type { PgBoss } from 'pg-boss';
-import { DEFAULT_OCCURRENCE_HORIZON_DAYS, type TopUpSummary } from '@qc/db';
+import { DEFAULT_OCCURRENCE_HORIZON_DAYS, type PurgeResult, type TopUpSummary } from '@qc/db';
 import type { Logger, RetryPolicy } from '@qc/messaging';
 import type { Clock, Db } from './db';
 import { createDispatcher, type SendJob, type SendQueue } from './outbox/dispatcher';
 import { processJob, type ProcessorDeps } from './outbox/processor';
 import { runOccurrenceTopUp } from './occurrences/top-up';
 import { runMorningAyah, type AyahJobSummary } from './ayah/morning';
+import { runAuthPurge } from './auth/purge';
 import { reconcileReminders, type ReconcileSummary } from './reminders/reconcile';
 
 export const SEND_QUEUE = 'outbox-send';
@@ -19,6 +20,10 @@ export const AYAH_QUEUE = 'ayah-daily';
 /** 06:30 every day in Pakistan time: after Fajr for most of the year, before the working day. */
 export const AYAH_CRON = '30 6 * * *';
 export const AYAH_TIMEZONE = 'Asia/Karachi';
+export const AUTH_PURGE_QUEUE = 'auth-purge';
+/** 03:00 every day in Pakistan time, the quietest hour for sign-ins. */
+export const AUTH_PURGE_CRON = '0 3 * * *';
+export const AUTH_PURGE_TIMEZONE = 'Asia/Karachi';
 
 export interface RuntimeOptions {
   db: Db;
@@ -39,6 +44,8 @@ export interface RuntimeOptions {
   scheduleTopUp?: boolean;
   /** Queue the morning ayah push on a schedule (daily, 06:30 Pakistan time). Default true. */
   scheduleAyah?: boolean;
+  /** Purge spent sign-in codes and dead sessions on a schedule (daily, 03:00 Pakistan time). Default true. */
+  scheduleAuthPurge?: boolean;
   /** How many days ahead the top-up keeps occurrences. Default 90, the API's value. */
   occurrenceHorizonDays?: number;
   webBase?: string;
@@ -53,6 +60,8 @@ export interface Runtime {
   topUpNow(): Promise<TopUpSummary>;
   /** One morning ayah run now. */
   ayahNow(): Promise<AyahJobSummary>;
+  /** One sign-in purge now. */
+  authPurgeNow(): Promise<PurgeResult>;
   /** Stops the loops and waits for in-flight work. Does not close the database. */
   stop(options?: { timeoutMs?: number; close?: boolean }): Promise<void>;
 }
@@ -72,7 +81,9 @@ export interface Runtime {
  *   run (the worker was down) is made up once on start; the job is idempotent, so a duplicate run
  *   adds nothing;
  * - a cron job queues the morning ayah push once a day (06:30 Pakistan time). A missed run is made
- *   up once on start, but only before noon Pakistan time; rows are idempotent per person and date.
+ *   up once on start, but only before noon Pakistan time; rows are idempotent per person and date;
+ * - a cron job purges spent sign-in codes and expired or revoked sessions once a day (03:00 Pakistan
+ *   time). A missed run is made up once on start; a second run deletes nothing more.
  */
 export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
   const { boss, logger } = options;
@@ -111,6 +122,16 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     policy: 'singleton',
     retryLimit: 3,
     retryDelay: 120,
+    retryBackoff: true,
+    expireInSeconds: 900,
+    retentionSeconds: 2 * 24 * 3600,
+    deleteAfterSeconds: 7 * 24 * 3600,
+  });
+
+  await boss.createQueue(AUTH_PURGE_QUEUE, {
+    policy: 'singleton',
+    retryLimit: 3,
+    retryDelay: 300,
     retryBackoff: true,
     expireInSeconds: 900,
     retentionSeconds: 2 * 24 * 3600,
@@ -227,6 +248,25 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     );
   }
 
+  const authPurge = (): Promise<PurgeResult> =>
+    runAuthPurge({ db: options.db, logger, now: options.now });
+  await boss.work(
+    AUTH_PURGE_QUEUE,
+    { pollingIntervalSeconds: Math.max(pollingIntervalSeconds, 5) },
+    async () => {
+      // `runAuthPurge` logs its one counts-only line per run.
+      await authPurge();
+    },
+  );
+  if (options.scheduleAuthPurge ?? true) {
+    await boss.schedule(
+      AUTH_PURGE_QUEUE,
+      AUTH_PURGE_CRON,
+      {},
+      { key: 'daily', tz: AUTH_PURGE_TIMEZONE, missed: 'once' },
+    );
+  }
+
   // The poll loop. One pass at a time; a slow pass delays the next instead of overlapping it.
   const intervalMs = options.dispatchIntervalMs ?? 5_000;
   let stopped = false;
@@ -253,6 +293,7 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     reconcileNow: reconcile,
     topUpNow: topUp,
     ayahNow: ayah,
+    authPurgeNow: authPurge,
     async stop(stopOptions = {}) {
       stopped = true;
       if (timer) clearTimeout(timer);

@@ -11,7 +11,8 @@ import { countByStatus } from './outbox/repo';
 
 /**
  * The worker process: sends the outbox through pg-boss, keeps reminders in step with the schedule,
- * tops up session occurrences daily, and serves the WhatsApp webhook and `/healthz`.
+ * tops up session occurrences daily, queues the morning ayah, purges spent sign-in codes and dead
+ * sessions daily, and serves the WhatsApp webhook and `/healthz`.
  */
 export async function main(env: Record<string, string | undefined> = process.env): Promise<void> {
   const logger = createConsoleLogger();

@@ -203,3 +203,42 @@ export async function seedRegistration(
       .returning(),
   );
 }
+
+let tokenCounter = 0;
+
+/** A sign-in code for a synthetic number, with a fake hash. */
+export async function seedOtpChallenge(
+  db: Db,
+  input: { expiresAt: Date; consumedAt?: Date | null },
+): Promise<typeof tables.otpChallenges.$inferSelect> {
+  return first(
+    db
+      .insert(tables.otpChallenges)
+      .values({
+        phoneE164: nextPhone(),
+        channel: 'sms',
+        codeHash: 'fake-code-hash',
+        expiresAt: input.expiresAt,
+        consumedAt: input.consumedAt ?? null,
+      })
+      .returning(),
+  );
+}
+
+/** A refresh-token session with a fake hash. */
+export async function seedAuthSession(
+  db: Db,
+  input: { userId: string; expiresAt: Date; revokedAt?: Date | null },
+): Promise<typeof tables.authSessions.$inferSelect> {
+  return first(
+    db
+      .insert(tables.authSessions)
+      .values({
+        userId: input.userId,
+        refreshTokenHash: `fake-refresh-hash-${++tokenCounter}`,
+        expiresAt: input.expiresAt,
+        revokedAt: input.revokedAt ?? null,
+      })
+      .returning(),
+  );
+}

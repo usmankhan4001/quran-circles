@@ -4,6 +4,13 @@
  */
 export { topUpAllOccurrences, type TopUpSummary } from './top-up';
 export {
+  DEFAULT_CHALLENGE_RETENTION_DAYS,
+  DEFAULT_SESSION_RETENTION_DAYS,
+  purgeStaleAuthRows,
+  type PurgeOptions,
+  type PurgeResult,
+} from './auth-purge';
+export {
   DEFAULT_OCCURRENCE_HORIZON_DAYS,
   horizonDate,
   insertPlanned,

@@ -54,6 +54,13 @@ export async function loadMe(db: AuthDb, userId: string): Promise<Me | null> {
       education: profile?.education ?? null,
       priorReading: profile?.priorReading ?? null,
       preferredLanguage: profile?.preferredLanguage ?? null,
+      // rc.4: the same mapping as `GET /v1/me` (modules/me/profile.ts). The columns are both set or
+      // both NULL (profiles_daily_goal_shape_chk), so one without the other is read as no goal.
+      dailyGoal:
+        profile?.dailyGoalUnit && profile.dailyGoalAmount !== null
+          ? { unit: profile.dailyGoalUnit, amount: profile.dailyGoalAmount }
+          : null,
+      memorisationReviseAfterDays: profile?.memorisationReviseAfterDays ?? null,
     },
     roles: assignments.map((a) => ({
       id: a.id,

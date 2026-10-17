@@ -3,6 +3,12 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; lane branch name to be set by the orchestrator)
 
+## Done (2026-10-17: contract 1.0.0-rc.4 follow-up, change request `auth-purge-to-db`)
+
+- `loadMe` (`modules/auth/me.ts`) now sends `profile.dailyGoal` (`{ unit, amount }` when both profile columns are set, else null) and `profile.memorisationReviseAfterDays` (the column, or null), the same mapping as api-core's `getMe` in `modules/me/profile.ts`. The sign-in response's `Me` therefore matches `GET /v1/me`. Tests in the new `modules/auth/me.test.ts` (6): new account sends both as present nulls, a saved goal and setting come back through sign-in (parsed with `SignInResponse`), a profile row without them gives nulls, every goal unit, a revision setting without a goal, no profile row, unknown user.
+- `purgeStaleAuthRows` moved to `@qc/db` (`packages/db/src/jobs/auth-purge.ts`), behaviour unchanged (codes kept 1 day past expiry, expired or revoked sessions 30 days). `modules/auth/cleanup.ts` is now a re-export from `@qc/db`, so `apps/api/src/jobs.ts` and `auth/index.ts` keep working unchanged. `cleanup.test.ts` is kept as is: it checks the re-export against rows made by the real sign-in and sign-out flow; the rule is also tested row by row in `@qc/db`. The worker schedules it daily at 03:00 Pakistan time (see `status/messaging.md`).
+- `@qc/api`: 610 tests in 30 files, typecheck, eslint and prettier clean for the lane's directories.
+
 ## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
 
 - Refresh grace (`auth-session-grace`): rotation moves the current hash into `previous_refresh_token_hash` and sets `rotated_at`. A match on the current hash rotates (compare-and-swap, up to three tries). A match on the previous hash within 10 s returns the very same pair: the next refresh token is derived deterministically (`sessionId.HMAC(refresh key, previous token)`), checked against the stored hash, and the access token is signed with `iat = rotated_at`, so no raw token is ever stored. A previous-hash match after 10 s is reuse and revokes the session. A token matching neither is `refresh_token_invalid` and revokes nothing. Tests cover the retry, reuse after the window, parallel refresh (both get the same pair), two tabs refreshing moments apart, and a suspended account.
@@ -32,7 +38,7 @@ Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; lane branch nam
 
 ## Blocked
 
-- Nothing blocking. `pnpm --filter @qc/api typecheck` and `test` currently fail only on api-core files in progress (`./modules` index missing, some `z.infer` type uses). The lane's own files typecheck clean.
+- Nothing. `pnpm --filter @qc/api typecheck` and `test` pass (2026-10-17).
 
 ## Interface for the api-core lane (all from `apps/api/src/auth/index.ts`)
 

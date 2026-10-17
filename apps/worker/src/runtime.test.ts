@@ -3,6 +3,9 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { tables } from './db';
 import {
+  AUTH_PURGE_CRON,
+  AUTH_PURGE_QUEUE,
+  AUTH_PURGE_TIMEZONE,
   AYAH_CRON,
   AYAH_QUEUE,
   AYAH_TIMEZONE,
@@ -16,7 +19,15 @@ import {
 } from './runtime';
 import { createTestDb, type TestDb } from './test/db';
 import { createHarness, pushDraft, type Harness } from './test/harness';
-import { seedDevice, seedOccurrence, seedRegistration, seedUser, seedWorld } from './test/seed';
+import {
+  seedAuthSession,
+  seedDevice,
+  seedOccurrence,
+  seedOtpChallenge,
+  seedRegistration,
+  seedUser,
+  seedWorld,
+} from './test/seed';
 
 /** Real pg-boss on in-process Postgres: the queue, retries, schedule and shutdown, no network. */
 
@@ -308,6 +319,67 @@ describe('pg-boss runtime', () => {
     await boss.send(AYAH_QUEUE, {});
     const lines = await until(done, (l) => l.length === before + 1);
     expect(lines.at(-1)!.fields).toMatchObject({ queued: 0, alreadyQueued: 1 });
+  });
+
+  it('registers the daily sign-in purge at 03:00 Pakistan time, once however often it starts', async () => {
+    await start();
+    await runtime!.stop({ timeoutMs: 5_000 });
+    boss = new PgBoss({ db: fromPglite(test.pg), backend: 'pglite', schedule: true });
+    boss.on('error', () => {});
+    await boss.start();
+    await start();
+    const schedules = (await boss.getSchedules()).filter((s) => s.name === AUTH_PURGE_QUEUE);
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0]).toMatchObject({
+      cron: AUTH_PURGE_CRON,
+      timezone: AUTH_PURGE_TIMEZONE,
+      key: 'daily',
+    });
+    expect(AUTH_PURGE_QUEUE).toBe('auth-purge');
+    expect(AUTH_PURGE_CRON).toBe('0 3 * * *');
+    expect(AUTH_PURGE_TIMEZONE).toBe('Asia/Karachi');
+  });
+
+  it('does not register the sign-in purge schedule when told not to', async () => {
+    await boss.unschedule(AUTH_PURGE_QUEUE, 'daily');
+    await start({ scheduleAuthPurge: false });
+    expect((await boss.getSchedules()).some((s) => s.name === AUTH_PURGE_QUEUE)).toBe(false);
+  });
+
+  it('purges on demand and when a job reaches its queue, keeping live sessions', async () => {
+    await boss.unschedule(AUTH_PURGE_QUEUE, 'daily');
+    const rt = await start({ scheduleAuthPurge: false });
+    const now = h.clock.now().getTime();
+    const day = 24 * 3_600_000;
+    const user = await seedUser(test.db);
+    await seedOtpChallenge(test.db, {
+      expiresAt: new Date(now - 2 * day),
+      consumedAt: new Date(now - 2 * day),
+    });
+    await seedAuthSession(test.db, { userId: user.id, expiresAt: new Date(now - 31 * day) });
+    await seedAuthSession(test.db, {
+      userId: user.id,
+      expiresAt: new Date(now + day),
+      revokedAt: new Date(now - 31 * day),
+    });
+    const live = await seedAuthSession(test.db, {
+      userId: user.id,
+      expiresAt: new Date(now + 30 * day),
+    });
+
+    expect(await rt.authPurgeNow()).toEqual({ challenges: 1, sessions: 2 });
+
+    await seedOtpChallenge(test.db, { expiresAt: new Date(now - 3 * day) });
+    const done = () => Promise.resolve(h.logger.lines.filter((l) => l.event === 'auth.purged'));
+    await boss.send(AUTH_PURGE_QUEUE, {});
+    const lines = await until(done, (l) => l.length === 2);
+    expect(lines.map((l) => l.fields)).toEqual([
+      { challenges: 1, sessions: 2 },
+      { challenges: 1, sessions: 0 },
+    ]);
+    const sessions = await test.db.select().from(tables.authSessions);
+    expect(sessions.map((s) => s.id)).toEqual([live.id]);
+    expect(await test.db.select().from(tables.otpChallenges)).toHaveLength(0);
   });
 
   it('stops cleanly: no further polling after stop', async () => {
