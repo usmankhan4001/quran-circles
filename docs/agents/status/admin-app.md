@@ -90,3 +90,9 @@ Nothing else blocking. Items below work around gaps and wait on the change reque
 
 - `docs/engineering/change-requests/2026-10-16-admin-app-kit-needs.md`: `Stepper`, date and time pickers, phone/chat/search icons.
 - `docs/engineering/change-requests/2026-10-16-admin-app-contract-notes.md`: `adminSessions.get` and `adminCircles.get`, a recipient count before sending, server-side template blanks, optional `en` in `LocalizedInput`, export the `Attendance` type, confirm phone fields and where recap/portion live, new i18n namespaces. Items 1, 2 and 5 applied in rc.2 and now used by the app; 3 and 4 deferred (the app still fills template blanks and copies Urdu-only text into `en`).
+
+## Findings from integration
+
+From the WP11 end-to-end run of the admin app's web export against the real API (details in `tests/e2e/FINDINGS.md`): posting an update and changing a session time both work end to end.
+
+- F-04 (low, open): `admin.signIn.phoneHelper` says "We send a code by text message", but the app requests `channel: 'whatsapp'` and staff codes go WhatsApp first.

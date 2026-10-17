@@ -86,3 +86,7 @@ WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or tra
 
 - [`docs/engineering/change-requests/2026-10-16-content-ui-kit-needs.md`](../../engineering/change-requests/2026-10-16-content-ui-kit-needs.md): six icons and a `lang` option on `ListItem`.
 - No contract change is needed: `bookmarks.*`, `readingPosition.*` and `config.get` were enough.
+
+## Findings from integration
+
+- F-09 (info, no action): in the end-to-end run the PWA's Home calls api.alquran.cloud for the ayah of the day (decision 0008). With outside hosts blocked, Home still renders. Noted for the offline and data-cost reviews. Details in `tests/e2e/FINDINGS.md`.

@@ -1,0 +1,3 @@
+# Everything the run produces goes under node_modules/.cache/qc-e2e; these are fallbacks.
+test-results/
+playwright-report/

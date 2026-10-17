@@ -5,6 +5,18 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run --passWithNoTests"
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:web": "playwright test --project=pwa --project=console --project=admin-app",
+    "stack": "tsx src/stack/cli.ts"
+  },
+  "dependencies": {
+    "@qc/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@types/pg": "8.23.1",
+    "pg": "8.23.1",
+    "tsx": "4.23.15"
   }
 }

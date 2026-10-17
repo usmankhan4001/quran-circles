@@ -108,3 +108,11 @@ Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the we
 - `docs/engineering/change-requests/2026-10-16-user-app-ui-kit-needs.md`
 - `docs/engineering/change-requests/2026-10-16-user-app-content-mount.md`
 - `docs/engineering/change-requests/2026-10-16-user-app-contract-notes.md`
+
+## Findings from integration
+
+From the WP11 end-to-end run of the PWA (web export, `EXPO_PUBLIC_API_URL` = real API) (details in `tests/e2e/FINDINGS.md`): find, code sign-in, registration, Journey, the feed, the manifest, the service worker's offline shell and deep links all work against the real API.
+
+- F-05 (medium, pending outside dependency): web push needs `EXPO_PUBLIC_VAPID_PUBLIC_KEY` and the worker's VAPID keys.
+- F-06 (low, open): this file names the maps key `EXPO_PUBLIC_GOOGLE_MAPS_KEY`; `src/platform/env.ts` reads `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`.
+- F-10 (low, open): offline, the banner shows only after an API call fails (`core/connectivity.ts`); on an offline start served from the cache it did not show in one run, so old data can show with no offline sign. `navigator.onLine` is not consulted.

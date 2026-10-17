@@ -47,3 +47,7 @@ Partly applied: admin-app-contract-notes (items 1, 2, 5; 3 and 4 deferred; 6 to 
 Deferred (Wave 4): push-delivery-ack.
 
 Not touched by this lane: auth-failure-reason, user-app-content-mount, and the ui-kit requests.
+
+## Findings from integration
+
+- F-07 (low, open): the `@qc/db` seed copies the fixtures, which are dated February 2027 (`FIXTURE_NOW`). A database seeded now has no sessions in the next months, so Home's "next session" and "this week" views are empty on staging until current sessions are created. The e2e flows create their own sessions through the admin API. Details in `tests/e2e/FINDINGS.md`.

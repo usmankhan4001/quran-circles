@@ -75,3 +75,10 @@ Branch: claude/peaceful-archimedes-ain95k
 ## Contract change requests
 
 - Applied in api-core 2026-10-17: `auth-failure-reason`, `api-core-contract-gaps` (items 1 to 3), `console-bulk-import`, `console-export-scope`, `console-user-lookup-handover`, `reminder-lead-setting`, `users-display-name`, `outbox-venue-and-provider-id`, `admin-app-contract-notes` (items 1 and 2), `console-contract-ergonomics` (item 4, resend).
+
+## Findings from integration
+
+From the WP11 end-to-end run against the real API (details in `tests/e2e/FINDINGS.md`):
+
+- F-01 (high, open): no supported way to create the first national admin; a fresh database cannot be administered. Needs an orchestrator decision (a CLI in `packages/db` or `apps/api`). The e2e suite inserts a pending national invite with SQL.
+- F-02 (medium, open): overlapping queries on one transaction client (`DeprecationWarning: Calling client.query() when the client is already executing a query`, an error from pg 9) during `POST /v1/registrations` and `POST /v1/admin/sessions/:id/schedule`. Candidates: `Promise.all` on the transaction handle in `modules/sessions/views.ts:62`, `modules/updates/publish.ts:209`, `modules/updates/reach.ts`. Not visible under PGlite.

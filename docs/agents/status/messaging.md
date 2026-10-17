@@ -44,3 +44,10 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 - Applied 2026-10-17: `outbox-venue-and-provider-id`, `reminder-lead-setting`.
 - `messaging-env-vars`: names are in `.env.example`; passing them to the `worker` and `api` services in the compose files (`infra/`) and the webhook reverse-proxy route still need infra work (not this lane).
 - `push-delivery-ack`: open.
+
+## Findings from integration
+
+From the WP11 end-to-end run with the real worker and fake providers (details in `tests/e2e/FINDINGS.md`):
+
+- F-03 (low, open): `reminders.reconciled` is logged twice per run (`reminders/reconcile.ts:348` and `runtime.ts:154`), so the log reads as if every reconcile ran twice. Reminders themselves were inserted, re-timed after a schedule change and sent once.
+- F-05 (medium, pending outside dependency): web push from the PWA cannot be exercised until the VAPID key pair exists; the flows use a fake `webpush` device.
