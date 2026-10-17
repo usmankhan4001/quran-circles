@@ -122,6 +122,8 @@ export function createApiClient(options: ClientOptions): ApiClient {
       }
       if (def.success.status === 204) return undefined;
       if (def.success.contentType === 'text/csv') return response.text();
+      if (def.success.contentType === 'application/octet-stream')
+        return new Uint8Array(await response.arrayBuffer());
       const data = (await response.json()) as unknown;
       if (!validate || !def.success.schema) return data;
       const checked = def.success.schema.safeParse(data);

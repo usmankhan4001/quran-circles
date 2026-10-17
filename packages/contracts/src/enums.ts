@@ -209,3 +209,43 @@ export type DailyAyahScope = z.infer<typeof DailyAyahScope>;
 export const AYAH_OF_THE_DAY_SOURCES = ['national', 'venue', 'circle', 'built_in'] as const;
 export const AyahOfTheDaySource = z.enum(AYAH_OF_THE_DAY_SOURCES);
 export type AyahOfTheDaySource = z.infer<typeof AyahOfTheDaySource>;
+
+// Posters (contract 1.0.0-rc.5, change request 2026-10-17-poster-renderer).
+
+/**
+ * Which languages a poster shows. `en_ur` and `ur_en` are bilingual: the first language leads (top,
+ * or the start side). The stored `posters.locale` is the leading language.
+ */
+export const POSTER_LANGUAGES = ['en', 'ur', 'en_ur', 'ur_en'] as const;
+export const PosterLanguage = z.enum(POSTER_LANGUAGES);
+export type PosterLanguage = z.infer<typeof PosterLanguage>;
+
+/** The only accent colours an editor can pick (D3). The renderer checks each against its text. */
+export const POSTER_ACCENTS = ['tanzeem', 'deep', 'night'] as const;
+export const PosterAccent = z.enum(POSTER_ACCENTS);
+export type PosterAccent = z.infer<typeof PosterAccent>;
+
+/** What a poster's QR code opens: registration (the default for posters) or the session page. */
+export const POSTER_QR_TARGETS = ['register', 'session'] as const;
+export const PosterQrTarget = z.enum(POSTER_QR_TARGETS);
+export type PosterQrTarget = z.infer<typeof PosterQrTarget>;
+
+/** Why a poster no longer matches its session: what it prints changed. */
+export const POSTER_OUT_OF_DATE_REASONS = ['time', 'venue'] as const;
+export const PosterOutOfDateReason = z.enum(POSTER_OUT_OF_DATE_REASONS);
+export type PosterOutOfDateReason = z.infer<typeof PosterOutOfDateReason>;
+
+/**
+ * Why a poster render failed (`posters.failure_code`), so a screen can say "shorten the title"
+ * instead of a bare "failed". `invalid_request` and `text_too_long` are not retried; the others are
+ * (`POSTER_FAILURE_RETRYABLE`).
+ */
+export const POSTER_FAILURE_CODES = [
+  'invalid_request',
+  'text_too_long',
+  'busy',
+  'render_timeout',
+  'render_failed',
+] as const;
+export const PosterFailureCode = z.enum(POSTER_FAILURE_CODES);
+export type PosterFailureCode = z.infer<typeof PosterFailureCode>;

@@ -317,6 +317,18 @@ export function buildSeedRows(options: SeedRowOptions = {}) {
     updatedAt: instant(a.updatedAt),
   }));
 
+  // The renderer's demo templates (contract `DEMO_POSTER_TEMPLATES`), with the fixture ids.
+  const posterTemplates: (typeof schema.posterTemplates.$inferInsert)[] =
+    fixtures.posterTemplates.map((t) => ({
+      id: t.id,
+      key: t.key,
+      nameEn: t.name.en,
+      nameUr: t.name.ur,
+      version: t.version,
+      formats: [...t.formats],
+      provisional: t.provisional,
+    }));
+
   return {
     provinces,
     cities,
@@ -331,6 +343,7 @@ export function buildSeedRows(options: SeedRowOptions = {}) {
     updates,
     messageTemplates,
     dailyAyahs,
+    posterTemplates,
   };
 }
 
@@ -359,6 +372,7 @@ export async function seedDatabase(
     [schema.updates, rows.updates],
     [schema.messageTemplates, rows.messageTemplates],
     [schema.dailyAyahs, rows.dailyAyahs],
+    [schema.posterTemplates, rows.posterTemplates],
   ];
 
   const tables = await db.transaction(async (tx) => {

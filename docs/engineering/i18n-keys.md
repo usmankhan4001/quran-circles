@@ -5,8 +5,8 @@ Owned by the contracts lane. Keys live in `packages/i18n/src/en.json` and `ur.js
 ## Structure
 
 - Flat dotted keys: `<namespace>.<name>`, lower camel case after the namespace, for example `registration.partySize.label`.
-- **One namespace per screen or feature:** `home`, `nearby`, `venue`, `session`, `registration`, `signIn`, `journey`, `quran`, `prayer`, `profile`, `updates`, `admin.registrants`, `admin.postUpdate`, `admin.schedule`, `admin.venueEditor`, `admin.circleEditor`, `admin.attendance`, `console.invites`, `console.import`, `console.exports`.
-- **Shared namespaces:** `app` (name), `tabs`, `ui` (generic controls such as Close and Try again), `errors` (one key per API error code, `errors.<code>`, owned by the contracts lane), `facilities` (the venue checklist), `sections` (women, men, family), `days` (weekday names), `notifications` (push titles and bodies).
+- **One namespace per screen or feature:** `home`, `nearby`, `venue`, `session`, `registration`, `signIn`, `journey`, `quran`, `prayer`, `profile`, `updates`, `admin.registrants`, `admin.postUpdate`, `admin.schedule`, `admin.venueEditor`, `admin.circleEditor`, `admin.attendance`, `console.invites`, `console.import`, `console.exports`, `admin.posters` and `console.posters` (the poster screens: template picker, out-of-date band, Regenerate).
+- **Shared namespaces:** `app` (name), `tabs`, `ui` (generic controls such as Close and Try again), `errors` (one key per API error code, `errors.<code>`, owned by the contracts lane), `facilities` (the venue checklist), `sections` (women, men, family), `days` (weekday names), `notifications` (push titles and bodies), `poster` (text printed on posters and their alt text, drawn by the renderer; contract 1.0.0-rc.5).
 - A key names what the text is for, not the English words: `registration.submit`, not `registration.registerNow`.
 - Never build a sentence by joining keys. One key per sentence, with placeholders.
 

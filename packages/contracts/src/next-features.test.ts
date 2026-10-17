@@ -968,6 +968,18 @@ describe('mock server, rc.4 endpoints', () => {
       expect((await del('mock-city', 5)).status).toBe(403);
       expect((await del('mock-city', 4)).status).toBe(204);
     });
+
+    it('answers not_found for an unknown pick, for every staff role (rc.4 changelog)', async () => {
+      const unknown = `/v1/admin/daily-ayahs/${fixtureId('dailyAyah', 999)}`;
+      for (const token of ['mock-staff', 'mock-city', 'mock-venue']) {
+        const r = await call('DELETE', unknown, token);
+        expect(r.status, token).toBe(404);
+        expect(ApiError.parse(r.data).error.code).toBe('not_found');
+      }
+      // No role at all still learns nothing.
+      expect((await call('DELETE', unknown, 'mock-user')).status).toBe(403);
+      expect((await call('DELETE', unknown)).status).toBe(401);
+    });
   });
 
   it('turns the rc.4 feature flags on in the mock config', async () => {

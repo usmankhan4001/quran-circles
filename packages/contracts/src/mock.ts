@@ -46,6 +46,8 @@ import {
 } from './reading';
 import { MEMORISATION_REVISE_AFTER_DAYS_DEFAULT } from './schemas/reading';
 import type { Role } from './enums';
+import type { Poster, PosterCreate } from './schemas/posters';
+import { posterLocaleOf, posterOutOfDate } from './posters';
 
 /**
  * A mock server generated from the API contract. It validates every request against the schemas,
@@ -168,6 +170,10 @@ const staffResource = (
   if (p.circleId) {
     const x = fx.circles.find((y) => y.id === p.circleId);
     return withActions(x ? { cityId: x.cityId, venueId: x.venueId } : null);
+  }
+  if (p.posterId) {
+    const x = fx.posters.find((y) => y.id === p.posterId);
+    return withActions(x ? sessionScope(x.sessionId) : null);
   }
   if (p.dailyAyahId) {
     const pick = fx.dailyAyahs.find((x) => x.id === p.dailyAyahId);
@@ -344,6 +350,27 @@ const importHandler = (kind: ImportKind) => (c: Ctx) => {
   };
   return { dryRun: body.dryRun, applied: !body.dryRun && counts.invalid === 0, counts, rows };
 };
+
+/** A stored poster as the list shows it: `outOfDate` worked out against the session now. */
+const posterView = (p: fx.FixturePoster): Poster => {
+  const current = fx.fixturePosterSnapshot(p.sessionId);
+  const reasons = current ? posterOutOfDate(p.sourceSnapshot, current) : [];
+  return { ...p, outOfDate: reasons.length > 0 ? { reasons } : null };
+};
+
+/** Stand-in files for `adminPosters.file`: a 1x1 PNG and a one-page PDF, no content. */
+const SAMPLE_PNG = Uint8Array.from(
+  atob(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+  ),
+  (ch) => ch.charCodeAt(0),
+);
+const SAMPLE_PDF = new TextEncoder().encode(
+  '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+    '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\n' +
+    'trailer<</Root 1 0 R>>\n%%EOF\n',
+);
 
 /** Pakistan is UTC+5 with no daylight saving. */
 const pakistanDate = (instant: string): string =>
@@ -741,6 +768,82 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
     };
     return entry;
   },
+  // The guard has already refused a known pick outside the caller's scope; an unknown id is
+  // not_found, as the endpoint's description says.
+  'adminDailyAyahs.delete': (c, id) =>
+    fx.dailyAyahs.some((x) => x.id === c.params.dailyAyahId) ? undefined : notFound(id),
+  'adminPosters.templates': () => ({ items: fx.posterTemplates }),
+  'adminPosters.list': (c, id) => {
+    if (!fx.sessions.some((s) => s.id === c.params.sessionId)) return notFound(id);
+    return {
+      items: fx.posters
+        .filter((p) => p.sessionId === c.params.sessionId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map(posterView),
+    };
+  },
+  'adminPosters.create': (c, id) => {
+    const snapshot = fx.fixturePosterSnapshot(c.params.sessionId!);
+    if (!snapshot) return notFound(id);
+    const b = c.body as PosterCreate;
+    // An unknown or inactive template is an unknown reference: not_found for staff.
+    const template = fx.posterTemplates.find((t) => t.key === b.templateKey);
+    if (!template) return notFound(id);
+    if (b.formats.some((f) => !template.formats.includes(f)))
+      return errorResponse('validation_failed', id, {
+        issues: [{ path: 'formats', code: 'invalid_value' }],
+      });
+    const items: Poster[] = b.formats.map((format, i) => ({
+      id: fx.fixtureId('poster', 900 + i),
+      sessionId: snapshot.sessionId,
+      templateKey: template.key,
+      format,
+      language: b.language,
+      locale: posterLocaleOf(b.language),
+      fields: b.fields,
+      status: 'queued',
+      failureCode: null,
+      altText: null,
+      fileUrl: null,
+      sourceSnapshot: snapshot,
+      outOfDate: null,
+      replacesPosterId: null,
+      createdAt: fx.FIXTURE_NOW,
+    }));
+    return { items };
+  },
+  'adminPosters.regenerate': (c, id) => {
+    const old = fx.posters.find((p) => p.id === c.params.posterId);
+    if (!old) return notFound(id);
+    if (old.status === 'queued') return errorResponse('conflict', id);
+    const fresh: Poster = {
+      ...old,
+      id: fx.fixtureId('poster', 950),
+      status: 'queued',
+      failureCode: null,
+      altText: null,
+      fileUrl: null,
+      sourceSnapshot: fx.fixturePosterSnapshot(old.sessionId)!,
+      outOfDate: null,
+      replacesPosterId: old.id,
+      createdAt: fx.FIXTURE_NOW,
+    };
+    return fresh;
+  },
+  'adminPosters.file': (c, id) => {
+    const p = fx.posters.find((x) => x.id === c.params.posterId);
+    if (!p) return notFound(id);
+    if (p.status !== 'ready') return errorResponse('conflict', id);
+    const pdf = p.format === 'print_a4' || p.format === 'print_a3';
+    const ext = pdf ? 'pdf' : 'png';
+    return new Response(pdf ? SAMPLE_PDF : SAMPLE_PNG, {
+      status: 200,
+      headers: {
+        'content-type': pdf ? 'application/pdf' : 'image/png',
+        'content-disposition': `attachment; filename="poster-${p.templateKey}-${p.format}.${ext}"`,
+      },
+    });
+  },
   'adminImport.venues': importHandler('venues'),
   'adminImport.coordinators': importHandler('coordinators'),
   'adminImport.sessions': importHandler('sessions'),
@@ -832,9 +935,14 @@ export function createMockHandler(options: MockOptions = {}): MockHandler {
       if (denied) return denied;
     }
 
-    if (def.success.status === 204) return new Response(null, { status: 204 });
-
     const handler = table[def.id];
+    // A 204 endpoint has no body to generate, but its handler still runs: it can refuse the
+    // request (not_found for an unknown id, for example). Anything else it returns is dropped.
+    if (def.success.status === 204) {
+      const result = handler ? handler(ctx, requestId) : undefined;
+      return result instanceof Response ? result : new Response(null, { status: 204 });
+    }
+
     const result = handler
       ? handler(ctx, requestId)
       : fakeFromSchema(def.success.schema!, seeded(def.id));

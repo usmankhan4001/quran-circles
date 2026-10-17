@@ -10,6 +10,8 @@ import type {
   MemorisationEntry,
   ReadingDay,
 } from './schemas/reading';
+import type { Poster, PosterSourceSnapshot, PosterTemplate } from './schemas/posters';
+import { DEMO_POSTER_TEMPLATES, posterSnapshotFromSession } from './posters';
 
 /**
  * Synthetic development data in the shape of the contract. No real people, venues or numbers.
@@ -33,6 +35,8 @@ const KIND = {
   role: '0d',
   challenge: '0e',
   dailyAyah: '0f',
+  poster: '10',
+  posterTemplate: '11',
 } as const;
 
 /** A stable, valid UUID for fixture number `n` of a kind. */
@@ -901,6 +905,141 @@ export const fixtureCommunityToday: CommunityToday = {
   pagesTogether: 3815,
 };
 
+// Posters (rc.5) --------------------------------------------------------------------------------
+
+/** The renderer's demo templates as `poster_templates` rows. The seed inserts these too. */
+export const posterTemplates: PosterTemplate[] = DEMO_POSTER_TEMPLATES.map((t, i) => ({
+  id: fixtureId('posterTemplate', i + 1),
+  key: t.key,
+  name: { ...t.name },
+  version: t.version,
+  formats: [...t.formats],
+  provisional: t.provisional,
+}));
+
+/** Fixture sessions carry no `updatedAt`; this stands in as their version on poster snapshots. */
+export const FIXTURE_SESSION_VERSION = '2027-02-01T00:00:00.000Z';
+
+/** The snapshot a poster made now from a fixture session would carry; null for an unknown id. */
+export const fixturePosterSnapshot = (sessionId: string): PosterSourceSnapshot | null => {
+  const session = sessions.find((s) => s.id === sessionId);
+  if (!session) return null;
+  const area = areas.find((a) => a.id === session.venue.areaId)?.name ?? null;
+  return posterSnapshotFromSession(session, FIXTURE_SESSION_VERSION, area);
+};
+
+/** A poster as stored: everything but `outOfDate`, which is worked out against the session now. */
+export type FixturePoster = Omit<Poster, 'outOfDate'>;
+
+const posterFile = (n: number) => `/v1/admin/posters/${fixtureId('poster', n)}/file`;
+const TARAWEEH_TITLE = { en: 'Taraweeh with Dora', ur: 'تراویح مع دورہ' };
+
+/**
+ * Posters of the Al-Noor Taraweeh session (session 1, Rawalpindi) and one of the Lahore session
+ * (session 5): a ready story, a ready A4 made when the session started at 20:30 (so it is out of
+ * date on time) with its regeneration queued, a failed one whose title did not fit, and a ready
+ * link preview. Synthetic text only.
+ */
+export const posters: FixturePoster[] = (() => {
+  const s1 = fixturePosterSnapshot(fixtureId('session', 1))!;
+  const s5 = fixturePosterSnapshot(fixtureId('session', 5))!;
+  const fields = {
+    title: TARAWEEH_TITLE,
+    accent: 'tanzeem' as const,
+    qrTarget: 'register' as const,
+  };
+  const alt = {
+    en: 'Poster: Taraweeh with Dora at Sample Masjid Al-Noor, every day at 9:00 pm.',
+    ur: 'پوسٹر: تراویح مع دورہ، نمونہ مسجد النور، روزانہ رات 9 بجے۔',
+  };
+  return [
+    {
+      id: fixtureId('poster', 1),
+      sessionId: s1.sessionId,
+      templateKey: 'cloud',
+      format: 'story',
+      language: 'en_ur',
+      locale: 'en',
+      fields,
+      status: 'ready',
+      failureCode: null,
+      altText: alt,
+      fileUrl: posterFile(1),
+      sourceSnapshot: s1,
+      replacesPosterId: null,
+      createdAt: '2027-02-14T09:00:00Z',
+    },
+    {
+      id: fixtureId('poster', 2),
+      sessionId: s1.sessionId,
+      templateKey: 'cloud',
+      format: 'print_a4',
+      language: 'en_ur',
+      locale: 'en',
+      fields,
+      status: 'ready',
+      failureCode: null,
+      altText: { ...alt, en: alt.en.replace('9:00', '8:30'), ur: alt.ur.replace('9', '8:30') },
+      fileUrl: posterFile(2),
+      sourceSnapshot: {
+        ...s1,
+        sessionVersion: '2027-01-20T00:00:00.000Z',
+        localStartTime: '20:30',
+      },
+      replacesPosterId: null,
+      createdAt: '2027-01-21T09:00:00Z',
+    },
+    {
+      id: fixtureId('poster', 3),
+      sessionId: s1.sessionId,
+      templateKey: 'night',
+      format: 'story',
+      language: 'ur',
+      locale: 'ur',
+      fields: { title: { ur: TARAWEEH_TITLE.ur }, accent: 'night', qrTarget: 'session' },
+      status: 'failed',
+      failureCode: 'text_too_long',
+      altText: null,
+      fileUrl: null,
+      sourceSnapshot: s1,
+      replacesPosterId: null,
+      createdAt: '2027-02-14T09:05:00Z',
+    },
+    {
+      id: fixtureId('poster', 4),
+      sessionId: s5.sessionId,
+      templateKey: 'night',
+      format: 'link_preview',
+      language: 'en',
+      locale: 'en',
+      fields: { title: { en: 'Dora in Lahore' }, accent: 'deep', qrTarget: 'register' },
+      status: 'ready',
+      failureCode: null,
+      altText: { en: 'Poster: Dora in Lahore at Sample Masjid Bilal.' },
+      fileUrl: posterFile(4),
+      sourceSnapshot: s5,
+      replacesPosterId: null,
+      createdAt: '2027-02-13T12:00:00Z',
+    },
+    {
+      id: fixtureId('poster', 5),
+      sessionId: s1.sessionId,
+      templateKey: 'cloud',
+      format: 'print_a4',
+      language: 'en_ur',
+      locale: 'en',
+      fields,
+      status: 'queued',
+      failureCode: null,
+      altText: null,
+      fileUrl: null,
+      sourceSnapshot: s1,
+      replacesPosterId: fixtureId('poster', 2),
+      createdAt: '2027-02-15T07:55:00Z',
+    },
+  ];
+})();
+
 export const fixtures = {
   provinces,
   cities,
@@ -915,4 +1054,6 @@ export const fixtures = {
   updates: fixtureUpdates,
   me: fixtureMe,
   dailyAyahs,
+  posterTemplates,
+  posters,
 };

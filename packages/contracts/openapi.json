@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Quran Circles API",
-    "version": "1.0.0-rc.4",
+    "version": "1.0.0-rc.5",
     "description": "Generated from packages/contracts. Times are UTC; show Pakistan time (UTC+5). Phone numbers are E.164. Errors carry a stable code and an i18n message key."
   },
   "servers": [
@@ -10490,6 +10490,1961 @@
         "x-auth": "staff",
         "x-scope-actions": [
           "daily_ayah.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/poster-templates": {
+      "get": {
+        "operationId": "adminPosters.templates",
+        "summary": "The poster templates staff can pick from",
+        "description": "The active rows of `poster_templates`, for every role that may make posters (checked like `poster.create` without a place). `provisional` marks a demo template that has not had its design approval; the final designs come later as new keys.",
+        "tags": [
+          "Admin"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          },
+                          "key": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_-]{0,39}$",
+                            "examples": [
+                              "cloud"
+                            ],
+                            "description": "Lower case letters, digits, - and _; at most 40"
+                          },
+                          "name": {
+                            "type": "object",
+                            "properties": {
+                              "en": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "ur": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "en",
+                              "ur"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "version": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 9007199254740991
+                          },
+                          "formats": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "story",
+                                "print_a4",
+                                "print_a3",
+                                "link_preview"
+                              ]
+                            }
+                          },
+                          "provisional": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "key",
+                          "name",
+                          "version",
+                          "formats",
+                          "provisional"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "poster.create"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/sessions/{sessionId}/posters": {
+      "post": {
+        "operationId": "adminPosters.create",
+        "summary": "Make posters for a session: one queued poster per format",
+        "description": "Checked with `poster.create` at the session's venue. The server builds the snapshot from the session as it is now (`posterSnapshotFromSession`, `sessionVersion` = the session's `updatedAt`), inserts one `posters` row per format with `status: 'queued'`, and enqueues one `poster-render` job (`PosterRenderJob`) for them. Editors type the title and details only: the date, time and venue come from the session, so a poster cannot disagree with it. A title is required in every language the poster shows (`{ path: \"fields.title.ur\", code: \"custom\" }`). An unknown or inactive `templateKey` is `not_found`, by the rule for unknown references; a format the template does not offer is validation_failed with `{ path: \"formats\", code: \"invalid_value\" }`. Answers 202 with the queued rows; poll `adminPosters.list` until they are `ready` or `failed`.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "templateKey": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{0,39}$",
+                    "examples": [
+                      "cloud"
+                    ],
+                    "description": "Lower case letters, digits, - and _; at most 40"
+                  },
+                  "language": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "ur",
+                      "en_ur",
+                      "ur_en"
+                    ]
+                  },
+                  "formats": {
+                    "minItems": 1,
+                    "maxItems": 4,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "story",
+                        "print_a4",
+                        "print_a3",
+                        "link_preview"
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "object",
+                        "properties": {
+                          "en": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "ur": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "details": {
+                        "type": "object",
+                        "properties": {
+                          "en": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 140
+                          },
+                          "ur": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 140
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "accent": {
+                        "default": "tanzeem",
+                        "type": "string",
+                        "enum": [
+                          "tanzeem",
+                          "deep",
+                          "night"
+                        ]
+                      },
+                      "qrTarget": {
+                        "default": "register",
+                        "type": "string",
+                        "enum": [
+                          "register",
+                          "session"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "title"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "templateKey",
+                  "language",
+                  "formats",
+                  "fields"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          },
+                          "sessionId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          },
+                          "templateKey": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_-]{0,39}$",
+                            "examples": [
+                              "cloud"
+                            ],
+                            "description": "Lower case letters, digits, - and _; at most 40"
+                          },
+                          "format": {
+                            "type": "string",
+                            "enum": [
+                              "story",
+                              "print_a4",
+                              "print_a3",
+                              "link_preview"
+                            ]
+                          },
+                          "language": {
+                            "type": "string",
+                            "enum": [
+                              "en",
+                              "ur",
+                              "en_ur",
+                              "ur_en"
+                            ]
+                          },
+                          "locale": {
+                            "type": "string",
+                            "enum": [
+                              "en",
+                              "ur"
+                            ]
+                          },
+                          "fields": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "object",
+                                "properties": {
+                                  "en": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                  },
+                                  "ur": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "details": {
+                                "type": "object",
+                                "properties": {
+                                  "en": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 140
+                                  },
+                                  "ur": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 140
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "accent": {
+                                "default": "tanzeem",
+                                "type": "string",
+                                "enum": [
+                                  "tanzeem",
+                                  "deep",
+                                  "night"
+                                ]
+                              },
+                              "qrTarget": {
+                                "default": "register",
+                                "type": "string",
+                                "enum": [
+                                  "register",
+                                  "session"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "accent",
+                              "qrTarget"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "ready",
+                              "failed"
+                            ]
+                          },
+                          "failureCode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_request",
+                                  "text_too_long",
+                                  "busy",
+                                  "render_timeout",
+                                  "render_failed"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "altText": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "en": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  },
+                                  "ur": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fileUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sourceSnapshot": {
+                            "type": "object",
+                            "properties": {
+                              "sessionId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              "sessionVersion": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "localStartTime": {
+                                "type": "string",
+                                "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                                "examples": [
+                                  "19:30"
+                                ],
+                                "description": "HH:MM, 24 hour clock"
+                              },
+                              "durationMinutes": {
+                                "type": "integer",
+                                "minimum": 5,
+                                "maximum": 600
+                              },
+                              "daysOfWeek": {
+                                "maxItems": 7,
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6
+                                }
+                              },
+                              "startsOn": {
+                                "type": "string",
+                                "format": "date",
+                                "examples": [
+                                  "2027-02-18"
+                                ]
+                              },
+                              "endsOn": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date",
+                                    "examples": [
+                                      "2027-02-18"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "timezone": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "venue": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "examples": [
+                                      "00000000-0000-4000-8000-000000000001"
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "object",
+                                    "properties": {
+                                      "en": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 160
+                                      },
+                                      "ur": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 160
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "en",
+                                      "ur"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "area": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "en": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 160
+                                          },
+                                          "ur": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 160
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "en",
+                                          "ur"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "area"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "sessionId",
+                              "sessionVersion",
+                              "localStartTime",
+                              "durationMinutes",
+                              "daysOfWeek",
+                              "startsOn",
+                              "endsOn",
+                              "timezone",
+                              "venue"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "outOfDate": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "reasons": {
+                                    "minItems": 1,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "enum": [
+                                        "time",
+                                        "venue"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "reasons"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "replacesPosterId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "examples": [
+                              "2027-02-18T01:15:00Z"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "sessionId",
+                          "templateKey",
+                          "format",
+                          "language",
+                          "locale",
+                          "fields",
+                          "status",
+                          "failureCode",
+                          "altText",
+                          "fileUrl",
+                          "sourceSnapshot",
+                          "outOfDate",
+                          "replacesPosterId",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "poster.create"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": false,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "adminPosters.list",
+        "summary": "Posters of a session, with status, file and whether each is out of date",
+        "description": "Checked with `poster.read` at the session's venue. Newest first. `outOfDate` compares each poster's `sourceSnapshot` with the session now (`posterOutOfDate`): `{ reasons: ['time'] }` when the time, days, timezone or one-off date changed, `'venue'` when the venue, its name or its area changed, null while it still matches. The console and the admin app show the out-of-date band and a Regenerate action from it. `fileUrl` is set once a poster is `ready`; `failureCode` once it has `failed`.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          },
+                          "sessionId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          },
+                          "templateKey": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_-]{0,39}$",
+                            "examples": [
+                              "cloud"
+                            ],
+                            "description": "Lower case letters, digits, - and _; at most 40"
+                          },
+                          "format": {
+                            "type": "string",
+                            "enum": [
+                              "story",
+                              "print_a4",
+                              "print_a3",
+                              "link_preview"
+                            ]
+                          },
+                          "language": {
+                            "type": "string",
+                            "enum": [
+                              "en",
+                              "ur",
+                              "en_ur",
+                              "ur_en"
+                            ]
+                          },
+                          "locale": {
+                            "type": "string",
+                            "enum": [
+                              "en",
+                              "ur"
+                            ]
+                          },
+                          "fields": {
+                            "type": "object",
+                            "properties": {
+                              "title": {
+                                "type": "object",
+                                "properties": {
+                                  "en": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                  },
+                                  "ur": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "details": {
+                                "type": "object",
+                                "properties": {
+                                  "en": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 140
+                                  },
+                                  "ur": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 140
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "accent": {
+                                "default": "tanzeem",
+                                "type": "string",
+                                "enum": [
+                                  "tanzeem",
+                                  "deep",
+                                  "night"
+                                ]
+                              },
+                              "qrTarget": {
+                                "default": "register",
+                                "type": "string",
+                                "enum": [
+                                  "register",
+                                  "session"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "title",
+                              "accent",
+                              "qrTarget"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "queued",
+                              "ready",
+                              "failed"
+                            ]
+                          },
+                          "failureCode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "invalid_request",
+                                  "text_too_long",
+                                  "busy",
+                                  "render_timeout",
+                                  "render_failed"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "altText": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "en": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  },
+                                  "ur": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "fileUrl": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sourceSnapshot": {
+                            "type": "object",
+                            "properties": {
+                              "sessionId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              "sessionVersion": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "localStartTime": {
+                                "type": "string",
+                                "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                                "examples": [
+                                  "19:30"
+                                ],
+                                "description": "HH:MM, 24 hour clock"
+                              },
+                              "durationMinutes": {
+                                "type": "integer",
+                                "minimum": 5,
+                                "maximum": 600
+                              },
+                              "daysOfWeek": {
+                                "maxItems": 7,
+                                "type": "array",
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6
+                                }
+                              },
+                              "startsOn": {
+                                "type": "string",
+                                "format": "date",
+                                "examples": [
+                                  "2027-02-18"
+                                ]
+                              },
+                              "endsOn": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "format": "date",
+                                    "examples": [
+                                      "2027-02-18"
+                                    ]
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "timezone": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "venue": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "examples": [
+                                      "00000000-0000-4000-8000-000000000001"
+                                    ]
+                                  },
+                                  "name": {
+                                    "type": "object",
+                                    "properties": {
+                                      "en": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 160
+                                      },
+                                      "ur": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 160
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "en",
+                                      "ur"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "area": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "en": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 160
+                                          },
+                                          "ur": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string",
+                                                "minLength": 1,
+                                                "maxLength": 160
+                                              },
+                                              {
+                                                "type": "null"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "required": [
+                                          "en",
+                                          "ur"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "area"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "sessionId",
+                              "sessionVersion",
+                              "localStartTime",
+                              "durationMinutes",
+                              "daysOfWeek",
+                              "startsOn",
+                              "endsOn",
+                              "timezone",
+                              "venue"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "outOfDate": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "reasons": {
+                                    "minItems": 1,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "enum": [
+                                        "time",
+                                        "venue"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "reasons"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "replacesPosterId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "examples": [
+                              "2027-02-18T01:15:00Z"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "sessionId",
+                          "templateKey",
+                          "format",
+                          "language",
+                          "locale",
+                          "fields",
+                          "status",
+                          "failureCode",
+                          "altText",
+                          "fileUrl",
+                          "sourceSnapshot",
+                          "outOfDate",
+                          "replacesPosterId",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "poster.read"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/posters/{posterId}/regenerate": {
+      "post": {
+        "operationId": "adminPosters.regenerate",
+        "summary": "Make a poster again from the session as it is now",
+        "description": "Checked with `poster.create` at the poster's session's venue. Same template, language, format and fields; a fresh snapshot; a new queued row with `replacesPosterId` set, and a `poster-render` job for it. The old poster stays until the new one is ready, then it is deleted with its file (by the worker). A poster that is still `queued` cannot be regenerated yet: `conflict`. Answers 202 with the new row.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "posterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "00000000-0000-4000-8000-000000000001"
+                      ]
+                    },
+                    "sessionId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "00000000-0000-4000-8000-000000000001"
+                      ]
+                    },
+                    "templateKey": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{0,39}$",
+                      "examples": [
+                        "cloud"
+                      ],
+                      "description": "Lower case letters, digits, - and _; at most 40"
+                    },
+                    "format": {
+                      "type": "string",
+                      "enum": [
+                        "story",
+                        "print_a4",
+                        "print_a3",
+                        "link_preview"
+                      ]
+                    },
+                    "language": {
+                      "type": "string",
+                      "enum": [
+                        "en",
+                        "ur",
+                        "en_ur",
+                        "ur_en"
+                      ]
+                    },
+                    "locale": {
+                      "type": "string",
+                      "enum": [
+                        "en",
+                        "ur"
+                      ]
+                    },
+                    "fields": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            "ur": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "details": {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 140
+                            },
+                            "ur": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 140
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "accent": {
+                          "default": "tanzeem",
+                          "type": "string",
+                          "enum": [
+                            "tanzeem",
+                            "deep",
+                            "night"
+                          ]
+                        },
+                        "qrTarget": {
+                          "default": "register",
+                          "type": "string",
+                          "enum": [
+                            "register",
+                            "session"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "accent",
+                        "qrTarget"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "queued",
+                        "ready",
+                        "failed"
+                      ]
+                    },
+                    "failureCode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "invalid_request",
+                            "text_too_long",
+                            "busy",
+                            "render_timeout",
+                            "render_failed"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "altText": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "en": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            },
+                            "ur": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "fileUrl": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "sourceSnapshot": {
+                      "type": "object",
+                      "properties": {
+                        "sessionId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        "sessionVersion": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "localStartTime": {
+                          "type": "string",
+                          "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                          "examples": [
+                            "19:30"
+                          ],
+                          "description": "HH:MM, 24 hour clock"
+                        },
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 5,
+                          "maximum": 600
+                        },
+                        "daysOfWeek": {
+                          "maxItems": 7,
+                          "type": "array",
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6
+                          }
+                        },
+                        "startsOn": {
+                          "type": "string",
+                          "format": "date",
+                          "examples": [
+                            "2027-02-18"
+                          ]
+                        },
+                        "endsOn": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "date",
+                              "examples": [
+                                "2027-02-18"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "timezone": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "venue": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "examples": [
+                                "00000000-0000-4000-8000-000000000001"
+                              ]
+                            },
+                            "name": {
+                              "type": "object",
+                              "properties": {
+                                "en": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 160
+                                },
+                                "ur": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 160
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "en",
+                                "ur"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "area": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "en": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 160
+                                    },
+                                    "ur": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string",
+                                          "minLength": 1,
+                                          "maxLength": 160
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "en",
+                                    "ur"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "area"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "sessionId",
+                        "sessionVersion",
+                        "localStartTime",
+                        "durationMinutes",
+                        "daysOfWeek",
+                        "startsOn",
+                        "endsOn",
+                        "timezone",
+                        "venue"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "outOfDate": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "reasons": {
+                              "minItems": 1,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "time",
+                                  "venue"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "reasons"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "replacesPosterId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "examples": [
+                        "2027-02-18T01:15:00Z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "sessionId",
+                    "templateKey",
+                    "format",
+                    "language",
+                    "locale",
+                    "fields",
+                    "status",
+                    "failureCode",
+                    "altText",
+                    "fileUrl",
+                    "sourceSnapshot",
+                    "outOfDate",
+                    "replacesPosterId",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error codes: conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "poster.create"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": false,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/posters/{posterId}/file": {
+      "get": {
+        "operationId": "adminPosters.file",
+        "summary": "Download a ready poster: a PNG or a PDF",
+        "description": "Checked with `poster.read` at the poster's session's venue. Answers the stored bytes with `Content-Type: image/png` (story, link preview) or `application/pdf` (A4, A3) and `Content-Disposition: attachment` with a file name. A poster that is not `ready` has no file yet: `conflict`.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "posterId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error codes: conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "poster.read"
         ],
         "x-rate-limit": "default",
         "x-idempotent": true,

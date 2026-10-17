@@ -4,7 +4,7 @@ import { endpoints, type EndpointId } from './endpoints';
 import { errorsFor, type EndpointDef } from './define';
 
 /** Bumped on a breaking change, with the lanes it affects. Frozen at Gate 1. */
-export const CONTRACT_VERSION = '1.0.0-rc.4';
+export const CONTRACT_VERSION = '1.0.0-rc.5';
 
 type Json = Record<string, unknown>;
 
@@ -79,17 +79,21 @@ const toOperation = (def: EndpointDef): Json => {
     ...(def.params ? parametersOf(def.params, 'path') : []),
     ...(def.query ? parametersOf(def.query, 'query') : []),
   ];
+  const binary = { schema: { type: 'string', format: 'binary' } };
   const successContent =
     def.success.status === 204
       ? undefined
-      : {
-          [def.success.contentType ?? 'application/json']: {
-            schema:
-              def.success.contentType === 'text/csv'
-                ? { type: 'string' }
-                : toSchema(def.success.schema!, 'output'),
-          },
-        };
+      : def.success.contentType === 'application/octet-stream'
+        ? // A file: the server answers the real type.
+          { 'image/png': binary, 'application/pdf': binary }
+        : {
+            [def.success.contentType ?? 'application/json']: {
+              schema:
+                def.success.contentType === 'text/csv'
+                  ? { type: 'string' }
+                  : toSchema(def.success.schema!, 'output'),
+            },
+          };
   const responses: Json = {
     [String(def.success.status)]: {
       description: def.success.status === 204 ? 'No content' : 'Success',

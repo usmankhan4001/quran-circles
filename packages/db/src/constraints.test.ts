@@ -1525,6 +1525,73 @@ describe('posters and legacy data', () => {
     expect(noSnapshot.code).toBe(NOT_NULL_VIOLATION);
   });
 
+  it('keeps the rc.5 poster columns consistent: language, failure code, alt text, replacement', async () => {
+    const [template] = await db
+      .insert(s.posterTemplates)
+      .values({ key: nextSlug('tpl'), nameEn: 'n', nameUr: 'n', formats: ['story'] })
+      .returning();
+    expect(template!.provisional).toBe(true);
+    const base = {
+      templateId: template!.id,
+      sessionId: world.session.id,
+      format: 'story' as const,
+      sourceSnapshot: { sessionId: world.session.id },
+    };
+    const [old] = await db
+      .insert(s.posters)
+      .values({ ...base, locale: 'ur', language: 'ur_en' })
+      .returning();
+    expect(old).toMatchObject({ failureCode: null, altText: null, replacesPosterId: null });
+    // The leading language must be the locale.
+    const mismatch = await violation(
+      db.insert(s.posters).values({ ...base, locale: 'en', language: 'ur_en' }),
+    );
+    expect(mismatch).toEqual({ code: CHECK_VIOLATION, constraint: 'posters_language_locale_chk' });
+    // A failure code only on a failed poster.
+    const queuedWithCode = await violation(
+      db.insert(s.posters).values({ ...base, locale: 'en', failureCode: 'text_too_long' }),
+    );
+    expect(queuedWithCode.constraint).toBe('posters_failure_code_status_chk');
+    const [failed] = await db
+      .insert(s.posters)
+      .values({ ...base, locale: 'en', status: 'failed', failureCode: 'text_too_long' })
+      .returning();
+    expect(failed!.failureCode).toBe('text_too_long');
+    // Alt text is an object of sentences, never a bare string.
+    const notObject = await violation(
+      test.pg.query(
+        `INSERT INTO posters (template_id, session_id, format, locale, source_snapshot, alt_text)
+         VALUES ($1, $2, 'story', 'en', '{}', '"just text"')`,
+        [template!.id, world.session.id],
+      ),
+    );
+    expect(notObject.constraint).toBe('posters_alt_text_object_chk');
+    const [fresh] = await db
+      .insert(s.posters)
+      .values({
+        ...base,
+        locale: 'ur',
+        language: 'ur_en',
+        status: 'ready',
+        altText: { en: 'Poster', ur: 'پوسٹر' },
+        replacesPosterId: old!.id,
+      })
+      .returning();
+    expect(fresh!.altText).toEqual({ en: 'Poster', ur: 'پوسٹر' });
+    const dangling = await violation(
+      db.insert(s.posters).values({
+        ...base,
+        locale: 'en',
+        replacesPosterId: '00000000-0000-4000-8000-00000000dead',
+      }),
+    );
+    expect(dangling.code).toBe(FOREIGN_KEY_VIOLATION);
+    // Deleting the replaced poster (the worker's swap) leaves the new one in place.
+    await db.delete(s.posters).where(eq(s.posters.id, old!.id));
+    const [after] = await db.select().from(s.posters).where(eq(s.posters.id, fresh!.id));
+    expect(after!.replacesPosterId).toBeNull();
+  });
+
   it('tags legacy registrations with the season and refuses a repeated source row', async () => {
     const row = (sourceId: string, seasonTag?: string) =>
       db.insert(s.legacyRegistrations).values({

@@ -116,6 +116,15 @@ export const ACTIONS = {
     ALL_STAFF,
   ),
 
+  // Posters (rc.5): checked at the session's venue. "Admins and coordinators in scope can make
+  // posters" (product decision).
+  'poster.create': staff(
+    'Make or regenerate a poster for a session at a venue',
+    'venue',
+    ALL_STAFF,
+  ),
+  'poster.read': staff("List a session's posters and download their files", 'venue', ALL_STAFF),
+
   // People and roles
   'role.list': staff('List role assignments and invites in scope', 'any', CITY_UP),
   'role.assign_national_admin': staff('Invite or assign a national admin', 'national', NATIONAL),

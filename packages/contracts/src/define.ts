@@ -30,7 +30,11 @@ export interface EndpointDef {
   success: {
     status: 200 | 201 | 202 | 204;
     schema?: z.ZodType;
-    contentType?: 'application/json' | 'text/csv';
+    /**
+     * `application/octet-stream`: a file (the server sets the real type, such as `image/png` or
+     * `application/pdf`); the schema checks for bytes and the typed client returns a `Uint8Array`.
+     */
+    contentType?: 'application/json' | 'text/csv' | 'application/octet-stream';
   };
   /** Domain errors only. Common errors are added by `errorsFor`. */
   errors: readonly ErrorCode[];

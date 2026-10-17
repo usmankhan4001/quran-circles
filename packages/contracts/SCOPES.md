@@ -54,6 +54,8 @@ Staff are also attendees. A revoked assignment never counts. `own data` means th
 | `update.list_admin` | List updates posted in scope | any | — | — | own venue | own city | everywhere |
 | `template.read` | Read approved message templates | any | — | — | own venue | own city | everywhere |
 | `daily_ayah.manage` | Set the ayah of the day: national picks, or picks for venues and circles | venue | — | — | own venue | venues in own city | everywhere |
+| `poster.create` | Make or regenerate a poster for a session at a venue | venue | — | — | own venue | venues in own city | everywhere |
+| `poster.read` | List a session's posters and download their files | venue | — | — | own venue | venues in own city | everywhere |
 | `role.list` | List role assignments and invites in scope | any | — | — | — | own city | everywhere |
 | `role.assign_national_admin` | Invite or assign a national admin | national | — | — | — | — | everywhere |
 | `role.assign_city_coordinator` | Invite or assign a city coordinator | city | — | — | — | — | everywhere |

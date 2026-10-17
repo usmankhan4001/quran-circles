@@ -74,6 +74,13 @@ import {
   ReadingDaysResponse,
 } from './schemas/reading';
 import {
+  Poster,
+  PosterCreate,
+  PosterFileBytes,
+  PostersResponse,
+  PosterTemplatesResponse,
+} from './schemas/posters';
+import {
   RefreshBody,
   RequestCodeBody,
   RequestCodeResponse,
@@ -891,6 +898,86 @@ export const endpoints = {
     actions: ['daily_ayah.manage'],
     params: id('dailyAyahId'),
     success: noContent,
+  }),
+
+  // Admin: posters (rc.5)
+  'adminPosters.templates': endpoint({
+    id: 'adminPosters.templates',
+    method: 'GET',
+    path: '/v1/admin/poster-templates',
+    summary: 'The poster templates staff can pick from',
+    description:
+      'The active rows of `poster_templates`, for every role that may make posters (checked like `poster.create` without a place). ' +
+      '`provisional` marks a demo template that has not had its design approval; the final designs come later as new keys.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['poster.create'],
+    success: json(200, PosterTemplatesResponse),
+  }),
+  'adminPosters.create': endpoint({
+    id: 'adminPosters.create',
+    method: 'POST',
+    path: '/v1/admin/sessions/{sessionId}/posters',
+    summary: 'Make posters for a session: one queued poster per format',
+    description:
+      "Checked with `poster.create` at the session's venue. The server builds the snapshot from the session as it is now (`posterSnapshotFromSession`, `sessionVersion` = the session's `updatedAt`), inserts one `posters` row per format with `status: 'queued'`, and enqueues one `poster-render` job (`PosterRenderJob`) for them. " +
+      'Editors type the title and details only: the date, time and venue come from the session, so a poster cannot disagree with it. ' +
+      'A title is required in every language the poster shows (`{ path: "fields.title.ur", code: "custom" }`). ' +
+      'An unknown or inactive `templateKey` is `not_found`, by the rule for unknown references; a format the template does not offer is validation_failed with `{ path: "formats", code: "invalid_value" }`. ' +
+      'Answers 202 with the queued rows; poll `adminPosters.list` until they are `ready` or `failed`.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['poster.create'],
+    params: id('sessionId'),
+    body: PosterCreate,
+    success: json(202, PostersResponse),
+    errors: ['not_found'],
+    idempotent: false,
+  }),
+  'adminPosters.list': endpoint({
+    id: 'adminPosters.list',
+    method: 'GET',
+    path: '/v1/admin/sessions/{sessionId}/posters',
+    summary: 'Posters of a session, with status, file and whether each is out of date',
+    description:
+      "Checked with `poster.read` at the session's venue. Newest first. `outOfDate` compares each poster's `sourceSnapshot` with the session now (`posterOutOfDate`): `{ reasons: ['time'] }` when the time, days, timezone or one-off date changed, `'venue'` when the venue, its name or its area changed, null while it still matches. " +
+      'The console and the admin app show the out-of-date band and a Regenerate action from it. `fileUrl` is set once a poster is `ready`; `failureCode` once it has `failed`.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['poster.read'],
+    params: id('sessionId'),
+    success: json(200, PostersResponse),
+  }),
+  'adminPosters.regenerate': endpoint({
+    id: 'adminPosters.regenerate',
+    method: 'POST',
+    path: '/v1/admin/posters/{posterId}/regenerate',
+    summary: 'Make a poster again from the session as it is now',
+    description:
+      "Checked with `poster.create` at the poster's session's venue. Same template, language, format and fields; a fresh snapshot; a new queued row with `replacesPosterId` set, and a `poster-render` job for it. " +
+      'The old poster stays until the new one is ready, then it is deleted with its file (by the worker). A poster that is still `queued` cannot be regenerated yet: `conflict`. Answers 202 with the new row.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['poster.create'],
+    params: id('posterId'),
+    success: json(202, Poster),
+    errors: ['conflict'],
+    idempotent: false,
+  }),
+  'adminPosters.file': endpoint({
+    id: 'adminPosters.file',
+    method: 'GET',
+    path: '/v1/admin/posters/{posterId}/file',
+    summary: 'Download a ready poster: a PNG or a PDF',
+    description:
+      "Checked with `poster.read` at the poster's session's venue. Answers the stored bytes with `Content-Type: image/png` (story, link preview) or `application/pdf` (A4, A3) and `Content-Disposition: attachment` with a file name. " +
+      'A poster that is not `ready` has no file yet: `conflict`.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['poster.read'],
+    params: id('posterId'),
+    success: { status: 200, schema: PosterFileBytes, contentType: 'application/octet-stream' },
+    errors: ['conflict'],
   }),
 
   // Admin: roles and invites

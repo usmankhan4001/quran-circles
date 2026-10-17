@@ -12,7 +12,7 @@ import {
   migrationStatus,
 } from './migrate';
 import { parseRollbackArgs } from './cli/args';
-import { createEmptyDb, resetDb } from './test/helpers';
+import { buildWorld, createEmptyDb, resetDb } from './test/helpers';
 
 // One PGlite for the whole file: booting costs seconds, resetting costs milliseconds.
 const shared = createEmptyDb();
@@ -442,7 +442,7 @@ describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
        INSERT INTO consents (user_id, channel, purpose, source)
          VALUES ('00000000-0000-4000-8000-0a0000000901', 'push', 'session_reminders', 'test');`,
     );
-    expect(await migrateUp(test.exec)).toEqual([NAME]);
+    expect(await migrateUp(test.exec, { dir: upTo(9) })).toEqual([NAME]);
     const profile = await test.exec.query(
       `SELECT profession, daily_goal_unit, daily_goal_amount, memorisation_revise_after_days FROM profiles`,
     );
@@ -464,7 +464,7 @@ describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
     const tablesBefore = await publicTables(test);
     const columnsBefore = await columns(test);
     const indexesBefore = await publicIndexes(test);
-    await migrateUp(test.exec);
+    await migrateUp(test.exec, { dir: upTo(9) });
     expect((await publicTables(test)).filter((t) => !tablesBefore.includes(t))).toEqual(NEW_TABLES);
     const added = (await columns(test)).filter((c) => !columnsBefore.includes(c));
     expect(added.filter((c) => c.startsWith('profiles.'))).toEqual([
@@ -479,7 +479,7 @@ describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
     expect(added.filter((c) => /text|translation|arabic/.test(c))).toEqual([]);
     expect(await purposeCheck(test)).toContain('ayah_daily');
 
-    expect(await migrateDown(test.exec)).toEqual([NAME]);
+    expect(await migrateDown(test.exec, { dir: upTo(9) })).toEqual([NAME]);
     expect(await publicTables(test)).toEqual(tablesBefore);
     expect(await columns(test)).toEqual(columnsBefore);
     expect(await publicIndexes(test)).toEqual(indexesBefore);
@@ -495,7 +495,7 @@ describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
 
   it('rolls back with feature data in place: removes it and the ayah_daily preferences only', async () => {
     const test = await freshDb();
-    await migrateUp(test.exec);
+    await migrateUp(test.exec, { dir: upTo(9) });
     await test.exec.exec(
       `INSERT INTO users (id, phone_e164, phone_verified_at, display_name)
          VALUES ('00000000-0000-4000-8000-0a0000000902', '+923000000902', now(), 'Reader');
@@ -511,7 +511,7 @@ describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
          ('00000000-0000-4000-8000-0a0000000902', 'push', 'ayah_daily', 'test'),
          ('00000000-0000-4000-8000-0a0000000902', 'push', 'session_reminders', 'test');`,
     );
-    expect(await migrateDown(test.exec)).toEqual([NAME]);
+    expect(await migrateDown(test.exec, { dir: upTo(9) })).toEqual([NAME]);
     const consents = await test.exec.query(`SELECT purpose FROM consents`);
     expect(consents.rows).toEqual([{ purpose: 'session_reminders' }]);
     const users = await test.exec.query(`SELECT display_name FROM users`);
@@ -523,7 +523,120 @@ describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
       ),
     ).rejects.toThrow(/consents_purpose_chk/);
     // And forward again cleanly.
-    expect(await migrateUp(test.exec)).toEqual([NAME]);
+    expect(await migrateUp(test.exec, { dir: upTo(9) })).toEqual([NAME]);
+  });
+});
+
+describe('migration 0010: posters (contract 1.0.0-rc.5)', () => {
+  const NAME = '0010_posters';
+  const upTo = (count: number) => prefixDir(count);
+  const columns = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    const { rows } = await test.exec.query<{ c: string }>(
+      `SELECT table_name || '.' || column_name AS c FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name <> '${MIGRATIONS_TABLE}' ORDER BY 1`,
+    );
+    return rows.map((r) => r.c);
+  };
+  const constraints = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    const { rows } = await test.exec.query<{ conname: string }>(
+      `SELECT conname FROM pg_constraint
+        WHERE conrelid IN ('posters'::regclass, 'poster_templates'::regclass) AND contype IN ('c', 'f', 'u', 'p')
+        ORDER BY conname`,
+    );
+    return rows.map((r) => r.conname);
+  };
+  /** One template and one poster, made before 0010. Returns the session id. */
+  const posterBefore = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    // Places and sessions have not changed since 0009, so the typed factory still fits.
+    const world = await buildWorld(test);
+    await test.exec.query(
+      `INSERT INTO poster_templates (id, key, name_en, name_ur, formats)
+         VALUES ('00000000-0000-4000-8000-0a0000001007', 'cloud', 'Cloud', 'ہلکا', '{story}')`,
+    );
+    await test.exec.query(
+      `INSERT INTO posters (template_id, session_id, format, locale, source_snapshot, status, storage_key)
+         VALUES ('00000000-0000-4000-8000-0a0000001007', $1, 'story', 'en', '{}', 'ready', 'posters/x.png')`,
+      [world.session.id],
+    );
+    return world.session.id;
+  };
+
+  it('is the tenth migration', () => {
+    expect(listMigrations()[9]?.name).toBe(NAME);
+  });
+
+  it('applies on top of 0009 with posters in place and keeps them, with the new columns empty', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(9) });
+    await posterBefore(test);
+    expect(await migrateUp(test.exec, { dir: upTo(10) })).toEqual([NAME]);
+    const posters = await test.exec.query(
+      `SELECT status, storage_key, language, failure_code, alt_text, replaces_poster_id FROM posters`,
+    );
+    expect(posters.rows).toEqual([
+      {
+        status: 'ready',
+        storage_key: 'posters/x.png',
+        language: null,
+        failure_code: null,
+        alt_text: null,
+        replaces_poster_id: null,
+      },
+    ]);
+    const templates = await test.exec.query(`SELECT key, provisional FROM poster_templates`);
+    expect(templates.rows).toEqual([{ key: 'cloud', provisional: true }]);
+  });
+
+  it('adds exactly the columns and constraints it promises, and takes them away again', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(9) });
+    const tablesBefore = await publicTables(test);
+    const columnsBefore = await columns(test);
+    const constraintsBefore = await constraints(test);
+    const indexesBefore = await publicIndexes(test);
+    await migrateUp(test.exec, { dir: upTo(10) });
+    expect(await publicTables(test)).toEqual(tablesBefore);
+    expect((await columns(test)).filter((c) => !columnsBefore.includes(c))).toEqual([
+      'poster_templates.provisional',
+      'posters.alt_text',
+      'posters.failure_code',
+      'posters.language',
+      'posters.replaces_poster_id',
+    ]);
+    expect((await constraints(test)).filter((c) => !constraintsBefore.includes(c))).toEqual([
+      'posters_alt_text_object_chk',
+      'posters_failure_code_chk',
+      'posters_failure_code_status_chk',
+      'posters_language_chk',
+      'posters_language_locale_chk',
+      'posters_replaces_poster_id_posters_id_fk',
+    ]);
+    expect(await publicIndexes(test)).toEqual(indexesBefore);
+
+    expect(await migrateDown(test.exec, { dir: upTo(10) })).toEqual([NAME]);
+    expect(await columns(test)).toEqual(columnsBefore);
+    expect(await constraints(test)).toEqual(constraintsBefore);
+  });
+
+  it('rolls back with rc.5 poster data in place: keeps the posters, drops the new fields', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(9) });
+    const sessionId = await posterBefore(test);
+    await migrateUp(test.exec, { dir: upTo(10) });
+    await test.exec.query(
+      `INSERT INTO posters (template_id, session_id, format, locale, language, source_snapshot, status, failure_code)
+         VALUES ('00000000-0000-4000-8000-0a0000001007', $1, 'story', 'ur', 'ur_en', '{}', 'failed', 'text_too_long')`,
+      [sessionId],
+    );
+    await test.exec.exec(
+      `INSERT INTO posters (template_id, session_id, format, locale, language, source_snapshot, alt_text, replaces_poster_id)
+         SELECT template_id, session_id, 'story', 'en', 'en', '{}', '{"en":"Poster"}', id FROM posters WHERE storage_key = 'posters/x.png';`,
+    );
+    expect(await migrateDown(test.exec, { dir: upTo(10) })).toEqual([NAME]);
+    const kept = await test.exec.query<{ n: number }>(`SELECT count(*)::int AS n FROM posters`);
+    expect(kept.rows).toEqual([{ n: 3 }]);
+    // And forward again cleanly.
+    expect(await migrateUp(test.exec, { dir: upTo(10) })).toEqual([NAME]);
   });
 });
 

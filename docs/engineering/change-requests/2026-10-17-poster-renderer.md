@@ -1,5 +1,21 @@
 # Change request: posters (WP16) in the API, the worker and the contract
 
+Status: **accepted and implemented by the contracts lane on 2026-10-17** as contract 1.0.0-rc.5 with database migration 0010 (`packages/contracts/CHANGELOG.md`). Items 1, 2, 3 (except share cards) and 5 are in the contract; items 4, 6 and 7 and the share cards are for the lanes named under "Still to do".
+
+Choices made while implementing (the owner said the final poster designs come later and the renderer's templates are the demo templates for now):
+
+- **Template ids are open.** `PosterTemplateKey` is a lower-case slug (`^[a-z][a-z0-9_-]{0,39}$`), not the enum `'cloud' | 'night'`. `DEMO_POSTER_TEMPLATES` lists `cloud` and `night` (all four formats, `provisional: true`); the dev seed inserts them as `poster_templates` rows. A final design is a new key plus a new renderer template, with no contract change. The renderer must keep refusing a key it has no template for (its test for `'custom'` moves to its own registry check).
+- **Shapes identical to the renderer's** for the snapshot, fields, request and response (checked schema by schema against `apps/poster-renderer/src`); names are prefixed: `PosterSourceSnapshot`, `posterOutOfDate`, `posterSnapshotFromSession`, `posterLanguagesOf`, `RendererRenderRequest`, `RendererRenderResponse`, `RendererErrorResponse`. `PosterAccent` is the renderer's `Accent`.
+- **Templates endpoint** is guarded by `poster.create` (any role that may make posters somewhere; the API uses `ctx.qualify`). It returns `provisional`, so migration 0010 adds `poster_templates.provisional` (boolean, default true).
+- **Two more poster columns than proposed**, both needed by the endpoints as specified: `posters.language` (regenerate must reuse the language, and `locale` alone cannot tell `en` from `en_ur`) and `posters.replaces_poster_id` (so the worker knows which old row and file to delete when a regeneration is ready). Checks: `failure_code` only on failed rows; `language`'s leading language equals `locale`; `alt_text` is a JSON object.
+- **Failure codes** are the renderer's `RenderFailure` values: `invalid_request`, `text_too_long`, `busy`, `render_timeout`, `render_failed` (`POSTER_FAILURE_CODES`, `POSTER_FAILURE_RETRYABLE`, `posterFailureFromRenderer`).
+- **Errors.** Unknown or inactive `templateKey`: `not_found` (the rule for unknown references, ADR 0011). A format the template does not offer: `validation_failed` on `formats`. Regenerating a poster that is still queued, or downloading one that is not ready: `conflict`. A session or poster outside the caller's scope: `forbidden`.
+- **File endpoint** answers the bytes with 200 (`image/png` or `application/pdf`); a new success content type `application/octet-stream` in the registry. `Poster.fileUrl` may be that path or a signed URL, so the platform's storage choice does not change the contract.
+- **Queue payload** `PosterRenderJob { posterIds }` and `POSTER_RENDER_QUEUE = 'poster-render'` are in the contract so the API and the worker share them.
+- **i18n:** `i18n-keys.md` names the `poster`, `admin.posters` and `console.posters` namespaces; the keys themselves are added by the lanes that use them.
+
+Still to do (other lanes): api-core serves the five endpoints; messaging adds the `poster-render` queue; platform adds `RENDERER_URL`, `RENDERER_TOKEN`, storage and the service; console and admin-app build the poster screens; renderer imports the shared schemas and deletes its copies; i18n keys for `poster.*`; user-app picks the share-card option (a public `og:image` route would be a new change request).
+
 Requested by: renderer
 Contract: API (new endpoints and schemas), scopes (new actions), messages (deep link: none new), i18n keys (`poster.*`), schema (two small columns)
 What I need: the API and the worker to drive the renderer (`apps/poster-renderer`), so that admins and coordinators in scope can make posters and see when one is out of date. The renderer is built and tested; today only `pnpm --filter @qc/poster-renderer render:sample` drives it, with synthetic data. The contract has `POSTER_FORMATS`, `POSTER_STATUSES` and the `poster_templates` / `posters` tables, but no endpoints, request or response shapes, scope actions or queue.

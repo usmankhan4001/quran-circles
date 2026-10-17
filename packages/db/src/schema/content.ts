@@ -1,6 +1,23 @@
 import { sql } from 'drizzle-orm';
-import { boolean, index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
-import { CONTENT_STATUSES, LOCALES, POSTER_FORMATS, POSTER_STATUSES } from '@qc/contracts';
+import {
+  boolean,
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  uuid,
+  type AnyPgColumn,
+} from 'drizzle-orm/pg-core';
+import {
+  CONTENT_STATUSES,
+  LOCALES,
+  POSTER_FAILURE_CODES,
+  POSTER_FORMATS,
+  POSTER_LANGUAGES,
+  POSTER_STATUSES,
+  type PosterAltText,
+} from '@qc/contracts';
 import { createdAt, enumArrayCheck, enumCheck, pk, rawCheck, tstz, updatedAt } from './_helpers';
 import { users } from './people';
 import { sessions } from './programs';
@@ -19,6 +36,8 @@ export const posterTemplates = pgTable(
       .notNull()
       .default(sql`'{}'::jsonb`),
     isActive: boolean('is_active').notNull().default(true),
+    /** A demo template without its human design approval yet (migration 0010). */
+    provisional: boolean('provisional').notNull().default(true),
   },
   () => [
     enumArrayCheck('poster_templates', 'formats', POSTER_FORMATS),
@@ -49,12 +68,31 @@ export const posters = pgTable(
     storageKey: text('storage_key'),
     status: text('status', { enum: POSTER_STATUSES }).notNull().default('queued'),
     createdAt: createdAt(),
+    // Migration 0010 (contract 1.0.0-rc.5). Null on rows made before it.
+    /** Which languages the poster shows; `locale` is the leading one. Needed to regenerate it. */
+    language: text('language', { enum: POSTER_LANGUAGES }),
+    /** Why the render failed, so a screen can say "shorten the title". Only on failed rows. */
+    failureCode: text('failure_code', { enum: POSTER_FAILURE_CODES }),
+    /** The renderer's plain sentence per language, for the share sheet and the preview tag. */
+    altText: jsonb('alt_text').$type<PosterAltText>(),
+    /** The poster this one regenerates; the worker deletes that one once this one is ready. */
+    replacesPosterId: uuid('replaces_poster_id').references((): AnyPgColumn => posters.id, {
+      onDelete: 'set null',
+    }),
   },
   (t) => [
     index('posters_session_idx').on(t.sessionId),
     enumCheck('posters', 'format', POSTER_FORMATS),
     enumCheck('posters', 'locale', LOCALES),
     enumCheck('posters', 'status', POSTER_STATUSES),
+    enumCheck('posters', 'language', POSTER_LANGUAGES),
+    enumCheck('posters', 'failure_code', POSTER_FAILURE_CODES),
+    rawCheck('posters_failure_code_status_chk', `"failure_code" IS NULL OR "status" = 'failed'`),
+    rawCheck('posters_language_locale_chk', `"language" IS NULL OR left("language", 2) = "locale"`),
+    rawCheck(
+      'posters_alt_text_object_chk',
+      `"alt_text" IS NULL OR jsonb_typeof("alt_text") = 'object'`,
+    ),
   ],
 );
 

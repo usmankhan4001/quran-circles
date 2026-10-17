@@ -31,8 +31,8 @@ const UUID = '00000000-0000-4000-8000-000000000001';
 const UUID_2 = '00000000-0000-4000-8000-000000000002';
 
 describe('contract version', () => {
-  it('is the fourth release candidate', () => {
-    expect(CONTRACT_VERSION).toBe('1.0.0-rc.4');
+  it('is the fifth release candidate', () => {
+    expect(CONTRACT_VERSION).toBe('1.0.0-rc.5');
   });
 });
 

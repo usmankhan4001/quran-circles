@@ -4,7 +4,7 @@ import { errorsFor } from './define';
 import { ENDPOINT_IDS, endpoints } from './endpoints';
 import { ApiError, ERROR_CODES } from './errors';
 import { fakeFromSchema, seeded } from './fake';
-import { createMockHandler } from './mock';
+import { createMockHandler, type MockHandler } from './mock';
 import * as fx from './fixtures';
 import { fixtureId, importExamples } from './fixtures';
 import { SignInResponse } from './schemas/auth';
@@ -27,6 +27,10 @@ function validRequest(d: EndpointDef, extra: Record<string, string> = {}): Reque
     if (k === 'occurrenceId') params[k] = fixtureId('occurrence', 101);
     if (k === 'circleId') params[k] = fixtureId('circle', 1);
     if (k === 'slug') params[k] = 'about';
+    // A national pick, which the national admin token may remove.
+    if (k === 'dailyAyahId') params[k] = fixtureId('dailyAyah', 1);
+    // A ready poster, so the file and regenerate handlers find it.
+    if (k === 'posterId') params[k] = fixtureId('poster', 1);
   }
   const path = d.path.replace(/\{(\w+)\}/g, (_m, n: string) => params[n]!);
   const url = new URL(`${BASE}${path}`);
@@ -47,7 +51,18 @@ function validRequest(d: EndpointDef, extra: Record<string, string> = {}): Reque
     if ('sessionId' in sample) sample.sessionId = fixtureId('session', 1);
     // A day read may only be recorded for today or yesterday: let the date default to today.
     if (d.id === 'readingDays.record') delete sample.date;
-    body = JSON.stringify(sample);
+    // A poster needs a template that exists and a title in each language it shows, which a
+    // generated body cannot know.
+    body = JSON.stringify(
+      d.id === 'adminPosters.create'
+        ? {
+            templateKey: 'cloud',
+            language: 'en_ur',
+            formats: ['story'],
+            fields: { title: { en: 'A', ur: 'ب' } },
+          }
+        : sample,
+    );
   }
   return new Request(url, { method: d.method, headers, body });
 }
@@ -63,6 +78,13 @@ describe('mock server, every endpoint', () => {
       if (d.success.contentType === 'text/csv') {
         expect(response.headers.get('content-type')).toContain('text/csv');
         expect(typeof (await response.text())).toBe('string');
+        return;
+      }
+      if (d.success.contentType === 'application/octet-stream') {
+        expect(response.headers.get('content-type')).toMatch(/^(image\/png|application\/pdf)$/);
+        const bytes = new Uint8Array(await response.arrayBuffer());
+        expect(d.success.schema!.safeParse(bytes).success).toBe(true);
+        expect(bytes.length).toBeGreaterThan(0);
         return;
       }
       const data = (await response.json()) as unknown;
@@ -182,6 +204,32 @@ describe('mock server, behaviour with realistic data', () => {
       items: { id: string }[];
     };
     expect(second.items.length).toBeGreaterThan(0);
+  });
+
+  it('runs a registered handler for a 204 endpoint: its error stands, anything else is 204', async () => {
+    const followId = '00000000-0000-4000-8000-00000000f011';
+    const del = (handler: MockHandler) =>
+      handler(
+        new Request(`${BASE}/v1/me/follows/${followId}`, {
+          method: 'DELETE',
+          headers: { authorization: 'Bearer mock-user' },
+        }),
+      );
+    const refusing = createMockHandler({
+      handlers: {
+        'follows.delete': (c, requestId) =>
+          new Response(JSON.stringify({ seen: c.params.followId, requestId }), { status: 404 }),
+      },
+    });
+    const refused = await del(refusing);
+    expect(refused.status).toBe(404);
+    expect(await refused.json()).toMatchObject({ seen: followId });
+    const chatty = createMockHandler({ handlers: { 'follows.delete': () => ({ ignored: true }) } });
+    const ok = await del(chatty);
+    expect(ok.status).toBe(204);
+    expect(await ok.text()).toBe('');
+    // Without a handler a 204 endpoint answers 204, as before.
+    expect((await del(mock)).status).toBe(204);
   });
 
   it('returns not_found for an unknown session and an unknown route', async () => {

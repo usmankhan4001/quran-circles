@@ -1,5 +1,56 @@
 # Contract changelog
 
+## 1.0.0-rc.5 (2026-10-17)
+
+Posters (WP16), from the change request `docs/engineering/change-requests/2026-10-17-poster-renderer.md`, accepted with the choices listed there. Database migration 0010 goes with it. Additive only: no endpoint, field, error code or scope action is removed or renamed, and no new error code. Also fixes a mock bug (below).
+
+### New endpoints (90 to 95 operations)
+
+| Endpoint                  | Call                                           | Auth  | Action          | Success                       |
+| ------------------------- | ---------------------------------------------- | ----- | --------------- | ----------------------------- |
+| `adminPosters.templates`  | `GET /v1/admin/poster-templates`               | staff | `poster.create` | 200 `PosterTemplatesResponse` |
+| `adminPosters.create`     | `POST /v1/admin/sessions/{sessionId}/posters`  | staff | `poster.create` | 202 `PostersResponse`         |
+| `adminPosters.list`       | `GET /v1/admin/sessions/{sessionId}/posters`   | staff | `poster.read`   | 200 `PostersResponse`         |
+| `adminPosters.regenerate` | `POST /v1/admin/posters/{posterId}/regenerate` | staff | `poster.create` | 202 `Poster`                  |
+| `adminPosters.file`       | `GET /v1/admin/posters/{posterId}/file`        | staff | `poster.read`   | 200 PNG or PDF bytes          |
+
+- **Templates.** `PosterTemplate { id, key, name { en, ur }, version, formats, provisional }`: the active `poster_templates` rows, for any role that holds `poster.create` somewhere (the API checks the role, not a place). Template keys are open (`PosterTemplateKey`, lower-case slug up to 40 characters), not a closed list: the renderer's own templates (`DEMO_POSTER_TEMPLATES`: `cloud`, `night`, all four formats, provisional) are the demo templates until the final designs, which arrive as new keys with no contract change.
+- **Make.** Body `PosterCreate { templateKey, language: en | ur | en_ur | ur_en, formats (1 to 4, no repeats), fields: PosterFields }`. A title is required in every language shown (issue `fields.title.<locale>`, code `custom`). The server builds the snapshot from the session (`posterSnapshotFromSession`, `sessionVersion` = the session's `updatedAt`), inserts one queued `posters` row per format and enqueues one `poster-render` job (`PosterRenderJob { posterIds }`, queue `POSTER_RENDER_QUEUE`). Unknown or inactive template key: `not_found` (rule for unknown references). A format the template does not offer: `validation_failed` with `{ path: 'formats', code: 'invalid_value' }`.
+- **List.** `Poster { id, sessionId, templateKey, format, language, locale, fields, status, failureCode, altText, fileUrl, sourceSnapshot, outOfDate, replacesPosterId, createdAt }`, newest first. `outOfDate` is `{ reasons: ('time' | 'venue')[] }` or null, from `posterOutOfDate(row.sourceSnapshot, snapshot of the session now)`. `fileUrl` is set when `ready` (the `adminPosters.file` path, or a short-lived signed URL, as the storage allows); `failureCode` when `failed`.
+- **Regenerate.** Same template, language, format and fields; a fresh snapshot; a new queued row with `replacesPosterId`. The worker deletes the old row and its file once the new one is ready. A poster still `queued`: `conflict`.
+- **File.** The stored bytes, `image/png` (story, link preview) or `application/pdf` (A4, A3), `Content-Disposition: attachment`. Not `ready`: `conflict`. New success content type `application/octet-stream` in `EndpointDef` (OpenAPI lists `image/png` and `application/pdf`, binary); the typed client returns a `Uint8Array`.
+
+### Shared with the renderer and the worker
+
+Moved from `apps/poster-renderer/src/` with the same JSON shapes (checked schema for schema against the renderer's copies): `PosterSourceSnapshot` (= `SourceSnapshot`), `posterOutOfDate` (= `outOfDate`, its tests moved too), `posterSnapshotFromSession` (= `snapshotFromSession`), `PosterFields` (title max 80, details max 140, control and bidi override characters refused), `PosterLanguage`, `PosterAccent` (`tanzeem`, `deep`, `night`), `PosterQrTarget`, `posterLanguagesOf` (= `languagesOf`), `RendererRenderRequest` (= `RenderRequest`), `RendererRenderResponse` (= `renderBody`'s JSON), `RendererErrorResponse`. One difference: `templateId` is a `PosterTemplateKey`, not the enum `cloud | night`; the renderer keeps refusing a key it has no template for. New helpers for the worker: `POSTER_FAILURE_CODES` (`invalid_request`, `text_too_long`, `busy`, `render_timeout`, `render_failed`), `POSTER_FAILURE_RETRYABLE` (only `busy`, `render_timeout`, `render_failed` are retried), `posterFailureFromRenderer(status, code)`, `posterStorageKey(sessionId, cacheKey, contentType)` (`posters/<session>/<cache key>.<png|pdf>`, as `runPosterJob`).
+
+### Scopes
+
+Two new actions; `SCOPES.md` regenerated.
+
+| Action          | Level | Who                                                                                                     |
+| --------------- | ----- | ------------------------------------------------------------------------------------------------------- |
+| `poster.create` | venue | national admin everywhere; city coordinator for venues in their city; venue coordinator for their venue |
+| `poster.read`   | venue | the same                                                                                                |
+
+Checked at the session's venue (for `posterId` routes, the poster's session's venue). A known session or poster outside the caller's scope is `forbidden`.
+
+### Database (migration 0010)
+
+`posters.language` (poster language, check against `POSTER_LANGUAGES`; its leading language must equal `locale`), `posters.failure_code` (check against `POSTER_FAILURE_CODES`; only on `failed` rows), `posters.alt_text` (jsonb object), `posters.replaces_poster_id` (self reference, set null on delete), `poster_templates.provisional` (boolean, default true). All poster columns are nullable, so rows made before 0010 stay valid. The rollback drops the new columns and keeps the poster rows. The development seed inserts the two demo templates.
+
+### Mock
+
+Handlers and fixtures for every poster endpoint: `posterTemplates` (the demo templates), `posters` (synthetic: a ready story, a ready A4 made at an older start time so it is out of date on time, a failed one with `text_too_long`, a ready Lahore link preview, and a queued regeneration), `fixturePosterSnapshot`. Scope-checked per role; `adminPosters.file` answers a stand-in 1x1 PNG or one-page PDF.
+
+**Fixed:** `createMockHandler` answered every 204 endpoint before looking up its handler, so `adminDailyAyahs.delete` for an unknown id answered 204 instead of `not_found` (rc.4 says `not_found`). Registered handlers now run for 204 endpoints too: a `Response` they return stands, anything else becomes 204; endpoints without a handler answer 204 as before. `adminDailyAyahs.delete` has a handler that answers `not_found` for an unknown pick.
+
+### Not in this version
+
+- The `poster.*` wording (printed text and alt text) and the poster screen keys belong to `@qc/i18n` and the lanes that use them; `i18n-keys.md` now names the `poster`, `admin.posters` and `console.posters` namespaces.
+- `RENDERER_URL` / `RENDERER_TOKEN`, the poster file storage and the container are the platform lane's; the `poster-render` queue handler is the messaging lane's.
+- Share cards (WP17): the user-app lane chooses between `adminPosters.create` with `link_preview` and a public `og:image` route; a public route would be a new change request.
+
 ## 1.0.0-rc.4 (2026-10-17)
 
 The next features decided with the owner (`docs/product/features-next.md`), from the change request `docs/engineering/change-requests/2026-10-17-next-features.md`, accepted by the orchestrator as proposed (items 1 to 7). Database migration 0009 goes with it. Additive only: no endpoint, field, error code or scope action is removed or renamed, and no new error code. New response fields are optional in the TypeScript type only (the server always sends them), so rc.3 payloads, fixtures and hand-written test data still parse and typecheck. Quran text is never stored or returned: an ayah is a surah and an ayah number.
