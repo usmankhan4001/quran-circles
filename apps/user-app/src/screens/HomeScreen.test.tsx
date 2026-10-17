@@ -20,6 +20,7 @@ import {
   renderScreen,
   waitFor,
 } from '../test/harness';
+import { ayahOfTheDay } from '../features/home/ayah';
 import { HomeScreen } from './HomeScreen';
 
 const en = messages.en;
@@ -88,30 +89,36 @@ describe('HomeScreen', () => {
     expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
   });
 
-  it('asks a signed-out person to sign in for updates, and returns here afterwards', async () => {
+  it('keeps updates behind the bell and the Updates shortcut, with no feed on Home', async () => {
     const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
-    fireEvent.click(await view.findByTestId('home-sign-in'));
-    expect(view.world.nav.last()).toEqual({
-      type: 'go',
-      route: { name: 'signIn', returnTo: { name: 'home' } },
-    });
+    fireEvent.click(await view.findByTestId('home-also-updates'));
+    expect(view.world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
+    fireEvent.click(view.getByTestId('home-bell'));
+    expect(view.world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
     expect(view.world.http.callsTo('GET /v1/updates')).toHaveLength(0);
-    expect(view.queryByTestId('home-unread')).toBeNull();
+    expect(view.queryByTestId('home-updates')).toBeNull();
+    expect(view.getByTestId('home-also-updates').getAttribute('aria-label')).toBe(
+      en['updates.title'],
+    );
   });
 
-  it('shows the updates feed with the unread count when signed in, and opens an update', async () => {
+  it('shows the unread count on the Updates shortcut when signed in', async () => {
     const world = await createWorld({ signedIn: true, cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
     const unread = fixtures.updates.filter((u) => !u.isRead).length;
-    await waitFor(() => expect(view.getByTestId('home-unread').textContent).toBe(String(unread)));
-    const withSession = fixtures.updates.find((u) => u.sessionId)!;
-    fireEvent.click(await view.findByTestId(`update-${withSession.id}`));
-    expect(world.nav.last()).toEqual({
-      type: 'go',
-      route: { name: 'session', sessionId: withSession.sessionId },
-    });
-    fireEvent.click(view.getByTestId('home-updates-all'));
-    expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
+    await waitFor(() =>
+      expect(view.getByTestId('home-also-updates').getAttribute('aria-label')).toBe(
+        `${en['updates.title']}, ${en['ui.unread'].replace('{count}', String(unread))}`,
+      ),
+    );
+  });
+
+  it('opens the Quran tab from the Quran, Prayer times and Qibla shortcuts', async () => {
+    const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
+    for (const key of ['quran', 'prayer', 'qibla']) {
+      fireEvent.click(await view.findByTestId(`home-also-${key}`));
+      expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
+    }
   });
 
   it('puts the session the person registered for first', async () => {
@@ -131,40 +138,113 @@ describe('HomeScreen', () => {
     });
   });
 
-  it('shows placeholders for prayer and reading until the content package provides cards', async () => {
+  it('shows a prayer placeholder until the content package provides the strip', async () => {
     const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
     fireEvent.click(await view.findByTestId('home-prayer-placeholder'));
     expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
-    expect(view.getByTestId('home-reading-placeholder')).toBeTruthy();
+    // Reading lives behind the Quran shortcut now, not as a card.
+    expect(view.queryByTestId('home-reading-placeholder')).toBeNull();
   });
 
-  it('mounts the content package cards when it provides them', async () => {
+  it('mounts the prayer strip and the ayah words when the content package provides them', async () => {
+    const asked: { surah: number; ayah: number }[] = [];
     const view = await renderScreen(<HomeScreen />, {
       cityId: CITY_RAWALPINDI.id,
       content: {
-        NextPrayerCard: ({ onPress }) => (
-          <Pressable onPress={onPress} testID="prayer-card">
-            <Text>Next prayer card</Text>
+        PrayerStrip: ({ onPress }) => (
+          <Pressable onPress={onPress} testID="prayer-strip">
+            <Text>Prayer strip</Text>
           </Pressable>
         ),
-        ContinueReadingCard: ({ onOpen }) => (
-          <Pressable onPress={() => onOpen({ surah: 18, ayah: 10 })} testID="reading-card">
-            <Text>Continue reading card</Text>
-          </Pressable>
-        ),
+        AyahText: (place) => {
+          asked.push(place);
+          return <Text testID="ayah-words">Ayah words</Text>;
+        },
       },
     });
-    expect(await view.findByText('Next prayer card')).toBeTruthy();
-    expect(view.getByText('Continue reading card')).toBeTruthy();
+    expect(await view.findByText('Prayer strip')).toBeTruthy();
     expect(view.queryByTestId('home-prayer-placeholder')).toBeNull();
-    expect(view.queryByTestId('home-reading-placeholder')).toBeNull();
-    fireEvent.click(view.getByTestId('prayer-card'));
+    fireEvent.click(view.getByTestId('prayer-strip'));
     expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
-    fireEvent.click(view.getByTestId('reading-card'));
+    const ayah = view.getByTestId('home-ayah');
+    expect(within(ayah).getByTestId('ayah-words')).toBeTruthy();
+    expect(asked.at(-1)).toEqual(ayahOfTheDay(NOW));
+  });
+
+  it('shows only the reference on the ayah card when there are no words to show', async () => {
+    const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
+    const ayah = await view.findByTestId('home-ayah');
+    const place = ayahOfTheDay(NOW);
+    expect(
+      within(ayah).getByText(
+        en['home.ayah.reference']
+          .replace('{surah}', String(place.surah))
+          .replace('{ayah}', String(place.ayah)),
+      ),
+    ).toBeTruthy();
+    fireEvent.click(within(ayah).getByTestId('home-ayah-read'));
     expect(view.world.nav.last()).toEqual({
       type: 'tab',
-      route: { name: 'quran', reader: { surah: 18, ayah: 10, at: NOW.getTime() } },
+      route: { name: 'quran', reader: { ...place, at: NOW.getTime() } },
     });
+  });
+
+  describe('next circle card (H4)', () => {
+    it('shows the big start time, the day with a countdown, the section and directions', async () => {
+      const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
+      const view = await renderScreen(<HomeScreen />, { world });
+      await view.findByTestId('home-lead-card');
+      expect(view.getByTestId('home-lead-time').textContent).not.toBe('');
+      const day = view.getByTestId('home-lead-countdown').textContent ?? '';
+      expect(day).toMatch(/in \d+ (minute|hour|day)s?|Starting now/);
+      expect(view.getByTestId('home-lead-section')).toBeTruthy();
+      fireEvent.click(view.getByTestId('home-lead-directions'));
+      expect(world.opened.at(-1)).toContain('https://www.google.com/maps/search/');
+      // Not registered: the second button opens the session.
+      fireEvent.click(view.getByTestId('home-lead-details'));
+      expect(world.nav.last()).toMatchObject({ type: 'go', route: { name: 'session' } });
+      expect(view.queryByTestId('home-lead-registration')).toBeNull();
+    });
+
+    it('offers My registration for the session the person registered for', async () => {
+      const reg = registrationFor(SESSIONS.circle);
+      const world = await createWorld({
+        signedIn: true,
+        cityId: CITY_RAWALPINDI.id,
+        mock: {
+          handlers: { 'registrations.listMine': () => ({ items: [reg], nextCursor: null }) },
+        },
+      });
+      const view = await renderScreen(<HomeScreen />, { world });
+      await view.findByTestId('home-your-next');
+      fireEvent.click(view.getByTestId('home-lead-registration'));
+      expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
+    });
+
+    it('sits half on the green header, as a white raised card', async () => {
+      const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
+      const header = await view.findByTestId('screen-header');
+      expect(within(header).getByTestId('home-lead-card')).toBeTruthy();
+    });
+  });
+
+  it('says how far each picture card is from the chosen area', async () => {
+    const view = await renderScreen(<HomeScreen />, {
+      cityId: CITY_RAWALPINDI.id,
+      areaId: AREA_SADDAR.id,
+    });
+    const near = await view.findByTestId('home-near');
+    const km = en['home.distance.km'].split('{distance}');
+    const metres = en['home.distance.metres'].split('{distance}');
+    await waitFor(() =>
+      expect(
+        within(near).getAllByText(
+          (text) =>
+            (text.startsWith(km[0]!) && text.endsWith(km[1]!)) ||
+            (text.startsWith(metres[0]!) && text.endsWith(metres[1]!)),
+        ).length,
+      ).toBeGreaterThan(0),
+    );
   });
 
   describe('Hijri date in the green header', () => {
@@ -305,8 +385,8 @@ describe('HomeScreen', () => {
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
       expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
-      // "Updates" is the section title, the bell and a tile of "Also in the app".
-      expect(view.getAllByText(words['home.updates.title']).length).toBeGreaterThan(0);
+      // "Updates" is a round shortcut of "Also in the app".
+      expect(view.getAllByText(words['updates.title']).length).toBeGreaterThan(0);
       expect(view.getByText(words['home.season.doraTitle'])).toBeTruthy();
       expect(view.getByText(words['home.also.title'])).toBeTruthy();
       expect(view.getByText(words['home.ayah.title'])).toBeTruthy();

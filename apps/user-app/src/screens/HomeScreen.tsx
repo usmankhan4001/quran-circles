@@ -1,15 +1,16 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
-  Badge,
   Button,
   Card,
   EmptyState,
+  Icon,
   Text,
   formatNumber,
   minTouchTarget,
   radii,
   spacing,
   useTheme,
+  type IconName,
 } from '@qc/ui';
 import { NextCircleCard } from '../components/NextCircleCard';
 import { ProfileButton } from '../components/ProfileButton';
@@ -17,8 +18,7 @@ import { QueryBoundary } from '../components/QueryBoundary';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { Section } from '../components/Section';
 import { SessionCard } from '../components/SessionCard';
-import { UpdateItem } from '../components/UpdateItem';
-import { distanceParts, nearestMetres } from '../core/distance';
+import { distanceParts, haversineMetres, nearestMetres } from '../core/distance';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { ayahOfTheDay } from '../features/home/ayah';
 import { HIJRI_MONTH_KEYS, hijriToday } from '../features/home/hijri';
@@ -31,22 +31,22 @@ import { occurrenceAsSession } from '../features/home/occurrence';
 import { useMyRegistrations } from '../features/journey/hooks';
 import { describeOccurrence } from '../features/nearby/schedule';
 import { useOrigin } from '../features/nearby/useOrigin';
-import { useUnreadCount, useUpdatesFeed } from '../features/updates/hooks';
+import { useUnreadCount } from '../features/updates/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useAuthState, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useCities } from '../features/places/usePlaces';
 import { GlassButton } from '../ui/GlassButton';
-import { Glyph, type GlyphName } from '../ui/Glyph';
 import { MapPreviewCard } from '../ui/MapPreviewCard';
 import { PictureCard } from '../ui/PictureCard';
 import { SearchButton } from '../ui/SearchButton';
+import { Shortcut } from '../ui/Shortcut';
+import { venueMapUrl } from '../features/session/links';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.xl },
   list: { gap: spacing.md },
-  small: { gap: spacing.md },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   grow: { flex: 1 },
   filter: {
@@ -56,41 +56,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  carousel: { gap: spacing.md, paddingBottom: spacing.sm },
-  picture: { width: 200 },
+  carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   rule: { height: 3, width: spacing.xxl, borderRadius: 2 },
   ayah: { gap: spacing.md },
-  also: { flexDirection: 'row', gap: spacing.sm },
-  tile: {
-    flex: 1,
-    minHeight: minTouchTarget + spacing.xl,
-    borderRadius: radii.section,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    padding: spacing.sm,
-  },
-  updatesHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  shortcuts: { flexDirection: 'row', gap: spacing.sm },
 });
+
+/** Width of a picture card in the "near you" row (H4). */
+const PICTURE_WIDTH = 176;
 
 export function HomeScreen() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const theme = useTheme();
   const c = theme.colors;
-  const { content, now } = useServices();
+  const { content, now, openUrl } = useServices();
   const { status } = useAuthState();
   const prefs = usePreferences();
   const config = useAppConfig();
   const next = useNextNearYou();
   const registrations = useMyRegistrations();
   const unread = useUnreadCount();
-  const feed = useUpdatesFeed(3);
   const cities = useCities();
   // The same "near me" point as Nearby: the chosen area's centre, no phone location needed.
   const origin = useOrigin();
-  const { NextPrayerCard, ContinueReadingCard } = content;
+  const { PrayerStrip, AyahText } = content;
 
   const mine = registrations.data ? nextRegisteredOccurrence(registrations.data, now()) : undefined;
   const leadingProgram = config.seasonMode === 'dora' ? 'dora' : 'circles';
@@ -108,6 +99,12 @@ export function HomeScreen() {
         year: formatNumber(hijri.year, locale),
       })
     : null;
+  const distanceText = (metres: number) => {
+    const parts = distanceParts(metres, locale);
+    return parts.unit === 'km'
+      ? t('home.distance.km', { distance: parts.value })
+      : t('home.distance.metres', { distance: parts.value });
+  };
   // Worked out on the phone from the area centre; without one the card keeps the plain count.
   const nearest =
     origin && items
@@ -116,22 +113,21 @@ export function HomeScreen() {
           items.map((o) => o.session.venue),
         )
       : null;
-  const mapTitle = (count: number) => {
-    if (nearest === null) return t('home.map.count', { count });
-    const parts = distanceParts(nearest, locale);
-    const distance =
-      parts.unit === 'km'
-        ? t('home.distance.km', { distance: parts.value })
-        : t('home.distance.metres', { distance: parts.value });
-    return t('home.map.countNearest', { count, distance });
-  };
+  const mapTitle = (count: number) =>
+    nearest === null
+      ? t('home.map.count', { count })
+      : t('home.map.countNearest', { count, distance: distanceText(nearest) });
+  const unreadCount = status === 'signedIn' ? unread : 0;
 
   const heroCard = mine ? (
     <View testID="home-your-next">
       <NextCircleCard
         session={mine.registration.session}
         eyebrow={t('home.nextSession.title')}
+        now={now()}
         onPress={() => nav.go({ name: 'session', sessionId: mine.registration.sessionId })}
+        onDirections={() => void openUrl(venueMapUrl(mine.registration.session.venue))}
+        onRegistration={() => nav.tab({ name: 'journey' })}
         testID="home-lead-card"
       />
     </View>
@@ -139,42 +135,44 @@ export function HomeScreen() {
     <NextCircleCard
       session={occurrenceAsSession(lead)}
       eyebrow={t('home.nextSession.near')}
+      now={now()}
       onPress={() => nav.go({ name: 'session', sessionId: lead.sessionId })}
+      onDirections={() => void openUrl(venueMapUrl(lead.session.venue))}
       testID="home-lead-card"
     />
   ) : null;
 
-  const alsoTiles: {
+  const shortcuts: {
     key: string;
-    glyph: GlyphName;
+    icon: IconName;
     label: string;
     onPress: () => void;
     count?: number;
   }[] = [
     {
       key: 'quran',
-      glyph: 'book',
+      icon: 'book',
       label: t('home.also.quran'),
       onPress: () => nav.tab({ name: 'quran' }),
     },
     {
       key: 'prayer',
-      glyph: 'prayer',
+      icon: 'prayer',
       label: t('home.prayer.title'),
       onPress: () => nav.tab({ name: 'quran' }),
     },
     {
       key: 'qibla',
-      glyph: 'route',
+      icon: 'route',
       label: t('home.also.qibla'),
       onPress: () => nav.tab({ name: 'quran' }),
     },
     {
       key: 'updates',
-      glyph: 'bell',
+      icon: 'bell',
       label: t('updates.title'),
       onPress: () => nav.go({ name: 'updates' }),
-      ...(status === 'signedIn' && unread > 0 ? { count: unread } : {}),
+      ...(unreadCount > 0 ? { count: unreadCount } : {}),
     },
   ];
 
@@ -186,13 +184,13 @@ export function HomeScreen() {
       actions={
         <View style={styles.actions}>
           <GlassButton
-            glyph="bell"
+            icon="bell"
             accessibilityLabel={
-              status === 'signedIn' && unread > 0
-                ? `${t('updates.title')}, ${t('ui.unread', { count: unread })}`
+              unreadCount > 0
+                ? `${t('updates.title')}, ${t('ui.unread', { count: unreadCount })}`
                 : t('updates.title')
             }
-            count={status === 'signedIn' ? unread : 0}
+            count={unreadCount}
             onPress={() => nav.go({ name: 'updates' })}
             testID="home-bell"
           />
@@ -219,19 +217,20 @@ export function HomeScreen() {
             onPress={() => nav.tab({ name: 'nearby' })}
             style={[styles.filter, { backgroundColor: c.accent }]}
           >
-            <Glyph name="filter" size={22} color={c.textOnAccent} />
+            <Icon name="filter" size={22} color={c.textOnAccent} />
           </Pressable>
         </View>
 
-        {items && items.length > 0 ? (
-          <MapPreviewCard
-            pins={items.length}
-            title={mapTitle(items.length)}
-            caption={t('home.map.open')}
-            onPress={() => nav.tab({ name: 'nearby' })}
-            testID="home-map"
-          />
-        ) : null}
+        {PrayerStrip ? (
+          <PrayerStrip onPress={() => nav.tab({ name: 'quran' })} />
+        ) : (
+          <Card onPress={() => nav.tab({ name: 'quran' })} testID="home-prayer-placeholder">
+            <Text variant="label">{t('home.prayer.title')}</Text>
+            <Text variant="caption" color="textSecondary">
+              {t('home.prayer.placeholder')}
+            </Text>
+          </Card>
+        )}
 
         <Section
           title={
@@ -288,15 +287,22 @@ export function HomeScreen() {
                         const session = occurrenceAsSession(o);
                         const title = l(session.title);
                         const when = describeOccurrence(o, session.timezone, locale);
+                        const distance = origin
+                          ? distanceText(haversineMetres(origin, session.venue))
+                          : undefined;
                         return (
-                          <View key={o.id} style={styles.picture}>
-                            <PictureCard
-                              title={title.text}
-                              caption={`${l(session.venue.name).text}${t('schedule.separator')}${when}`}
-                              onPress={() => nav.go({ name: 'session', sessionId: o.sessionId })}
-                              testID={`home-near-${o.id}`}
-                            />
-                          </View>
+                          <PictureCard
+                            key={o.id}
+                            seed={session.venue.id}
+                            width={PICTURE_WIDTH}
+                            title={title.text}
+                            caption={`${l(session.venue.name).text}${t('schedule.separator')}${when}`}
+                            section={session.section}
+                            sectionLabel={t(`sections.${session.section}`)}
+                            {...(distance ? { distance } : {})}
+                            onPress={() => nav.go({ name: 'session', sessionId: o.sessionId })}
+                            testID={`home-near-${o.id}`}
+                          />
                         );
                       })}
                     </ScrollView>
@@ -319,14 +325,28 @@ export function HomeScreen() {
           </QueryBoundary>
         </Section>
 
+        {items && items.length > 0 ? (
+          <MapPreviewCard
+            pins={items.length}
+            title={mapTitle(items.length)}
+            caption={t('home.map.open')}
+            onPress={() => nav.tab({ name: 'nearby' })}
+            testID="home-map"
+          />
+        ) : null}
+
         <Card testID="home-ayah">
           <View style={styles.ayah}>
             <View style={[styles.rule, { backgroundColor: c.decoration }]} aria-hidden />
             <Text variant="eyebrow" color="textSecondary">
               {t('home.ayah.title')}
             </Text>
-            <Text variant="title3">
-              {t('home.ayah.reference', { surah: ayah.surah, ayah: ayah.ayah })}
+            {AyahText ? <AyahText surah={ayah.surah} ayah={ayah.ayah} /> : null}
+            <Text variant="label" color="textSecondary">
+              {t('home.ayah.reference', {
+                surah: formatNumber(ayah.surah, locale),
+                ayah: formatNumber(ayah.ayah, locale),
+              })}
             </Text>
             <Button
               variant="secondary"
@@ -343,115 +363,24 @@ export function HomeScreen() {
         </Card>
 
         <Section title={t('home.also.title')} testID="home-also">
-          <View style={styles.also}>
-            {alsoTiles.map((tile) => (
-              <Pressable
-                key={tile.key}
-                role="button"
-                aria-label={
-                  tile.count
-                    ? `${tile.label}, ${t('ui.unread', { count: tile.count })}`
-                    : tile.label
-                }
-                testID={`home-also-${tile.key}`}
-                onPress={tile.onPress}
-                style={({ pressed }) => [
-                  styles.tile,
-                  { backgroundColor: pressed ? c.accentSubtle : c.surface },
-                  theme.mode === 'light' ? undefined : { borderWidth: 1, borderColor: c.border },
-                ]}
-              >
-                <Glyph name={tile.glyph} size={26} color={c.accent} />
-                <Text variant="caption" align="center" decorative>
-                  {tile.label}
-                </Text>
-              </Pressable>
+          <View style={styles.shortcuts}>
+            {shortcuts.map((item) => (
+              <Shortcut
+                key={item.key}
+                icon={item.icon}
+                label={item.label}
+                {...(item.count
+                  ? {
+                      count: item.count,
+                      accessibilityLabel: `${item.label}, ${t('ui.unread', { count: item.count })}`,
+                    }
+                  : {})}
+                onPress={item.onPress}
+                testID={`home-also-${item.key}`}
+              />
             ))}
           </View>
         </Section>
-
-        <Section
-          title={t('home.updates.title')}
-          testID="home-updates"
-          action={
-            status === 'signedIn' ? (
-              <View style={styles.updatesHead}>
-                <Badge count={unread} testID="home-unread" />
-                <Button
-                  variant="tertiary"
-                  label={t('home.updates.seeAll')}
-                  onPress={() => nav.go({ name: 'updates' })}
-                  testID="home-updates-all"
-                />
-              </View>
-            ) : undefined
-          }
-        >
-          {status !== 'signedIn' ? (
-            <Card variant="flat">
-              <View style={styles.list}>
-                <Text variant="body">{t('home.updates.signedOut')}</Text>
-                <Button
-                  variant="secondary"
-                  label={t('home.updates.signIn')}
-                  onPress={() => nav.go({ name: 'signIn', returnTo: { name: 'home' } })}
-                  testID="home-sign-in"
-                />
-              </View>
-            </Card>
-          ) : (
-            <QueryBoundary query={feed}>
-              {() =>
-                feed.items.length === 0 ? (
-                  <Text variant="body" color="textSecondary">
-                    {t('home.updates.empty')}
-                  </Text>
-                ) : (
-                  <View style={styles.list}>
-                    {feed.items.slice(0, 3).map((update) => (
-                      <UpdateItem
-                        key={update.id}
-                        update={update}
-                        onPress={() =>
-                          update.sessionId
-                            ? nav.go({ name: 'session', sessionId: update.sessionId })
-                            : nav.go({ name: 'updates' })
-                        }
-                      />
-                    ))}
-                  </View>
-                )
-              }
-            </QueryBoundary>
-          )}
-        </Section>
-
-        <View style={styles.small}>
-          {NextPrayerCard ? (
-            <NextPrayerCard onPress={() => nav.tab({ name: 'quran' })} />
-          ) : (
-            <Card onPress={() => nav.tab({ name: 'quran' })} testID="home-prayer-placeholder">
-              <Text variant="label">{t('home.prayer.title')}</Text>
-              <Text variant="caption" color="textSecondary">
-                {t('home.prayer.placeholder')}
-              </Text>
-            </Card>
-          )}
-          {ContinueReadingCard ? (
-            <ContinueReadingCard
-              onOpen={(place) =>
-                nav.tab({ name: 'quran', reader: { ...place, at: now().getTime() } })
-              }
-            />
-          ) : (
-            <Card onPress={() => nav.tab({ name: 'quran' })} testID="home-reading-placeholder">
-              <Text variant="label">{t('home.reading.title')}</Text>
-              <Text variant="caption" color="textSecondary">
-                {t('home.reading.placeholder')}
-              </Text>
-            </Card>
-          )}
-        </View>
       </View>
     </ScreenFrame>
   );

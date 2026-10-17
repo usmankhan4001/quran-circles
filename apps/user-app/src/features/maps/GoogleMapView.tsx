@@ -76,7 +76,13 @@ export function GoogleMapView(props: MapViewProps) {
         const bounds = new google.maps.LatLngBounds();
         for (const marker of markers) {
           const position = { lat: marker.lat, lng: marker.lng };
-          const pin = new google.maps.Marker({ position, map, title: marker.title });
+          const count = marker.count ?? 1;
+          const pin = new google.maps.Marker({
+            position,
+            map,
+            title: marker.title,
+            ...(count > 1 ? { label: String(count) } : {}),
+          });
           pin.addListener('click', () => onSelect(marker.id));
           bounds.extend(position);
         }

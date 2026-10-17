@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, elevation, radii, spacing, useTheme } from '@qc/ui';
-import { Glyph } from './Glyph';
+import { MapPin } from './MapPin';
 
 export interface MapPreviewCardProps {
   /** How many places to mark. */
@@ -36,7 +36,7 @@ const SPOTS = [
 /**
  * The map card of Home (H4): a calm picture of a map with the places marked, that opens the
  * real map on Nearby. It is drawn, not a map: no tiles are loaded on Home.
- * TODO(kit): replace with the @qc/ui map pieces when the ui lane exports them.
+ * TODO(kit): replace with the @qc/ui map pieces when the ui lane builds them.
  */
 export function MapPreviewCard({ pins, title, caption, onPress, testID }: MapPreviewCardProps) {
   const theme = useTheme();
@@ -83,7 +83,7 @@ export function MapPreviewCard({ pins, title, caption, onPress, testID }: MapPre
       />
       {SPOTS.slice(0, Math.max(1, Math.min(pins, SPOTS.length))).map((spot, index) => (
         <View key={index} aria-hidden style={[styles.pin, spot]}>
-          <Glyph name="pin" size={28} color={c.accent} />
+          <MapPin size={24} selected={index === 0} />
         </View>
       ))}
       <View style={[styles.caption, { backgroundColor: c.surface }]}>

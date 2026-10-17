@@ -24,6 +24,13 @@ const styles = StyleSheet.create({
     borderRadius: radii.section,
   },
   text: { flex: 1 },
+  badge: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   button: {
     width: minTouchTarget,
@@ -36,8 +43,8 @@ const styles = StyleSheet.create({
 });
 
 /**
- * The people counter of the registration sheet (D10): a minus, the number, a plus, on the
- * leaf tint. TODO(kit): replace with @qc/ui Stepper when the ui lane exports it.
+ * The people counter of the registration sheet (D10, R2): the people icon, a minus, the
+ * number, a plus, on the leaf tint. TODO(kit): replace with @qc/ui Stepper when the ui lane exports it.
  */
 export function Stepper({
   label,
@@ -61,6 +68,9 @@ export function Stepper({
       aria-label={label}
       style={[styles.row, { backgroundColor: c.accentSubtle }]}
     >
+      <View style={[styles.badge, { backgroundColor: c.surface }]}>
+        <Icon name="people" size={22} color={c.accent} />
+      </View>
       <View style={styles.text}>
         <Text variant="label" color="textOnAccentSubtle">
           {label}

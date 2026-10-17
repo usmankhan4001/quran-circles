@@ -5,28 +5,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderScreen } from '../test/harness';
 import { ChoiceCards } from './ChoiceCards';
 import { GlassButton } from './GlassButton';
-import { Glyph, type GlyphName } from './Glyph';
+import { MapPin } from './MapPin';
 import { MapPreviewCard } from './MapPreviewCard';
-import { PhotoBlock } from './PhotoBlock';
+import { MasjidLineArt } from './MasjidLineArt';
 import { SearchButton } from './SearchButton';
+import { SectionIcon } from './SectionIcon';
+import { Shortcut } from './Shortcut';
 import { PictureCard } from './PictureCard';
 import { Stepper } from './Stepper';
+import { VenueArt, artIndex } from './VenueArt';
 import { tabIcon } from './tabIcons';
-
-const GLYPHS: GlyphName[] = [
-  'home',
-  'pin',
-  'book',
-  'calendar',
-  'search',
-  'clock',
-  'bell',
-  'people',
-  'route',
-  'prayer',
-  'filter',
-  'user',
-];
+import { MATRIX } from '../test/harness';
 
 describe('Stepper', () => {
   function stepper(value: number, onChange: (n: number) => void) {
@@ -118,24 +107,34 @@ describe('ChoiceCards', () => {
 });
 
 describe('small pieces', () => {
-  it('PictureCard names itself from its words and opens on press', async () => {
+  it('PictureCard names itself from its words, shows the distance on the art, and opens on press', async () => {
     const onPress = vi.fn();
     const view = await renderScreen(
       <PictureCard
+        seed="venue-1"
         title="Masjid Al-Noor"
         caption="Tonight 9:00 pm"
+        distance="1.2 km"
+        section="family"
+        sectionLabel="Family"
         onPress={onPress}
         testID="pic"
       />,
     );
     expect(view.getByTestId('pic').getAttribute('aria-label')).toBe(
-      'Masjid Al-Noor, Tonight 9:00 pm',
+      'Masjid Al-Noor, Tonight 9:00 pm, Family, 1.2 km',
     );
+    expect(view.getByText('1.2 km')).toBeTruthy();
     fireEvent.click(view.getByTestId('pic'));
     expect(onPress).toHaveBeenCalledOnce();
   });
 
-  it('MapPreviewCard marks the places and opens the map on press', async () => {
+  it('PictureCard without a press is not a button', async () => {
+    const view = await renderScreen(<PictureCard seed="v" title="Masjid" testID="pic" />);
+    expect(view.getByTestId('pic').getAttribute('role')).toBeNull();
+  });
+
+  it('MapPreviewCard marks the places with green pins and opens the map on press', async () => {
     const onPress = vi.fn();
     const view = await renderScreen(
       <MapPreviewCard
@@ -146,9 +145,25 @@ describe('small pieces', () => {
         testID="map"
       />,
     );
-    expect(view.getAllByTestId('glyph-pin')).toHaveLength(3);
+    expect(view.getByTestId('map').getAttribute('aria-label')).toBe(
+      '3 circles near you, Open the map',
+    );
     fireEvent.click(view.getByTestId('map'));
     expect(onPress).toHaveBeenCalledOnce();
+  });
+
+  it('MapPin shows the number of circles when there is more than one', async () => {
+    const many = await renderScreen(<MapPin count={4} testID="pin" />);
+    expect(many.getByTestId('pin').textContent).toBe('4');
+    expect(many.getByTestId('pin').getAttribute('aria-hidden')).toBe('true');
+    many.unmount();
+    const one = await renderScreen(<MapPin testID="pin" />);
+    expect(one.getByTestId('pin').textContent).toBe('');
+  });
+
+  it('MapPin writes the count in Urdu digits on an Urdu screen', async () => {
+    const view = await renderScreen(<MapPin count={4} selected testID="pin" />, { locale: 'ur' });
+    expect(view.getByTestId('pin').textContent).not.toBe('');
   });
 
   it('SearchButton opens the search elsewhere when pressed', async () => {
@@ -165,7 +180,7 @@ describe('small pieces', () => {
     const onPress = vi.fn();
     const view = await renderScreen(
       <GlassButton
-        glyph="bell"
+        icon="bell"
         accessibilityLabel="Updates"
         count={3}
         onPress={onPress}
@@ -178,15 +193,78 @@ describe('small pieces', () => {
     expect(onPress).toHaveBeenCalledOnce();
   });
 
-  it('PhotoBlock is decoration and shows a mark when there is no photo', async () => {
-    const view = await renderScreen(<PhotoBlock testID="photo" />);
-    expect(view.getByTestId('photo').getAttribute('aria-hidden')).toBe('true');
-    expect(view.getByTestId('glyph-home')).toBeTruthy();
+  it('Shortcut is a named round button, with the unread count when there is one', async () => {
+    const onPress = vi.fn();
+    const view = await renderScreen(
+      <Shortcut
+        icon="bell"
+        label="Updates"
+        count={2}
+        accessibilityLabel="Updates, 2 unread"
+        onPress={onPress}
+        testID="sc"
+      />,
+    );
+    expect(view.getByTestId('sc').getAttribute('aria-label')).toBe('Updates, 2 unread');
+    expect(view.getByTestId('badge-count')).toBeTruthy();
+    fireEvent.click(view.getByTestId('sc'));
+    expect(onPress).toHaveBeenCalledOnce();
   });
 
-  it.each(GLYPHS)('Glyph %s draws and hides from screen readers', async (name) => {
-    const view = await renderScreen(<Glyph name={name} />);
-    expect(view.getByTestId(`glyph-${name}`).getAttribute('aria-hidden')).toBe('true');
+  it.each(MATRIX)(
+    'VenueArt is decoration and draws in $name',
+    async ({ locale, color, textSize }) => {
+      const view = await renderScreen(
+        <VenueArt seed="venue-1" height={92} testID="art">
+          <></>
+        </VenueArt>,
+        { locale, color, textSize },
+      );
+      const art = view.getByTestId('art');
+      expect(art.getAttribute('aria-hidden')).toBe('true');
+      expect(art.style.height).toBe('92px');
+    },
+  );
+
+  it('VenueArt keeps one colouring per place', () => {
+    expect(artIndex('venue-1')).toBe(artIndex('venue-1'));
+    const seen = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((x) => artIndex(x)));
+    expect(seen.size).toBeGreaterThan(1);
+    for (const index of seen) expect(index).toBeLessThan(4);
+  });
+
+  it.each(['women', 'men', 'family'] as const)(
+    'SectionIcon draws %s as decoration',
+    async (section) => {
+      const view = await renderScreen(
+        <div data-testid="wrap">
+          <SectionIcon section={section} color="currentColor" />
+        </div>,
+      );
+      const icon = view.getByTestId('wrap').firstElementChild as HTMLElement;
+      expect(icon.getAttribute('aria-hidden')).toBe('true');
+    },
+  );
+
+  it('MasjidLineArt is decoration', async () => {
+    const view = await renderScreen(<MasjidLineArt testID="masjid" />);
+    expect(view.getByTestId('masjid').getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('ChoiceCards draw each option picture', async () => {
+    const view = await renderScreen(
+      <ChoiceCards
+        options={[
+          { value: 'women', label: 'Women', icon: () => <span data-testid="icon-women" /> },
+          { value: 'men', label: 'Men', icon: () => <span data-testid="icon-men" /> },
+        ]}
+        value="women"
+        onChange={vi.fn()}
+        accessibilityLabel="Section"
+      />,
+    );
+    expect(view.getByTestId('icon-women')).toBeTruthy();
+    expect(view.getByTestId('icon-men')).toBeTruthy();
   });
 
   it('every tab has an icon', async () => {
@@ -205,6 +283,15 @@ describe('screen code', () => {
       return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
     });
   }
+
+  it('draws icons with the kit Icon: the local Glyph and photo block are gone', () => {
+    const root = join(__dirname, '..');
+    const files = ['screens', 'components', 'ui', 'features'].flatMap((d) =>
+      sourceFiles(join(root, d)),
+    );
+    const offenders = files.filter((f) => /ui\/(Glyph|PhotoBlock)'/.test(readFileSync(f, 'utf8')));
+    expect(offenders).toEqual([]);
+  });
 
   it('uses theme colours only: no hex or rgb colours in screens, components or the local kit pieces', () => {
     const root = join(__dirname, '..');

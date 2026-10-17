@@ -3,6 +3,35 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Showcase gaps closed (2026-10-17 evening)
+
+Against "Gap list: built apps against the drawings" in `docs/design/redesign-handoff.md` (user-app rows). Only `apps/user-app/**`, `packages/i18n` (user-app keys) and this file were edited.
+
+- Header: on scrolling pages the kit `HeroHeader` (default `fade` shape with the pattern) now scrolls away inside the page; a compact green row (title, back) appears once it has gone (`screen-compact-header`). Sheets keep a fixed `rounded` header; pages whose content scrolls by itself keep a fixed header. Night uses the kit's `heroEnd` fade (web; native keeps the solid green until the kit has a gradient view).
+- Home next circle: a white raised card half on the green (`NextCircleCard`): big start time (`countdown` text), day and "in 25 minutes / 3 hours / 2 days" (`home.countdown.*`), the portion being read, the section with its picture, and two buttons: Directions (maps link) and My registration (Journey) when registered, otherwise See details.
+- Home circles near you: picture cards with drawn venue art (`ui/VenueArt`, theme colours, a stable colouring per venue), the distance from the chosen area on the art, name, time and section under it. Same cards for the nearest places on the Nearby map.
+- Home extras: the Updates feed and the next prayer / continue reading cards are gone from Home; a row of round shortcuts (Quran, Prayer times, Qibla, Updates with the unread count) and today's prayers in the kit `PrayerStrip`, built by a new `PrayerStrip` content mount (city chosen in the prayer view; asks for a city until then).
+- Ayah of the day: a new `AyahText` content mount reads the ayah through `@qc/content`'s own source and cache (the reader's path): the Arabic in the Quran font, and the Urdu translation on an Urdu screen. English shows the Arabic and the reference (no English translation source exists). Offline with nothing cached, or the source down: the reference only. No Quran text was added to the repo; tests use placeholder words.
+- Icons: the local `Glyph` and `PhotoBlock` are deleted; every icon is the kit `Icon` (tabs, bell, search, filter, profile tiles, registration summary, shortcuts). A test fails if either file comes back.
+- Urdu times: `formatClockTime`, `formatLocalTime` and `formatDateTime` wrap the time run in a first-strong isolate on Urdu screens, so "9:30 PM" keeps its order inside right-to-left text; the date around it stays right to left.
+- Nearby: one chip row under the search in the green header: city (opens a city sheet, kept in preferences), area, day, Women / Men / Family toggles and Filters (n). Only time, language and programme still show as removable chips under the header. Map pins are drawn green pins with the number of circles at each place (`ui/MapPin`; list-only map and phones; the web Google map labels the pin with the count).
+- Session and venue: the top is the drawn place (230 dp) with a dark fade, round glass back and share buttons, and the title over a fade into the green. Share uses the system share sheet (`platform/share.ts`); where there is none a toast says so.
+- Registration: Women / Men / Family cards carry a picture each (`ui/SectionIcon`); the people stepper has the people icon.
+- Quran tab: one title. The app now builds the tab from `@qc/content`'s exported screens (`QuranIndexScreen`, `QuranReaderScreen`, `PrayerTimesScreen`) and its saved view, under the app header, instead of `QuranPrayerTab`, which adds a second large title.
+- Updates: each card shows its kind as a picture in a tinted square (clock, cross, star, bell) and ends with "Go to session" when it has one.
+- Sign-in: a line-drawn masjid in the green top (`ui/MasjidLineArt`).
+- i18n keys added to `en.json` and `ur.json` together (Urdu draft): `home.countdown.now`, `home.countdown.minutes/hours/days.one/other`, `home.next.myRegistration`, `home.ayah.source`, `session.share`, `session.share.message`, `session.share.unavailable`, `updates.goToSession`.
+- New local pieces marked `TODO(kit)`: `VenueArt`, `MapPin`, `SectionIcon`, `Shortcut`, `MasjidLineArt` (plus the existing `GlassButton`, `PictureCard`, `MapPreviewCard`, `ChoiceCards`, `Stepper`, `SearchButton`).
+- Tests: 670 passing in 42 files (was 612). New: scroll-away header and compact row, photo top with share, chip row, pin counts, next-circle card, shortcuts, prayer strip and ayah words through the real package with a made-up source answer, Urdu time isolation, kind icons, sign-in art, section pictures, and the 16-combination matrix for the photo top and venue art. Typecheck, eslint and prettier pass on the changed files.
+
+Still open (needs data or another lane):
+
+- Venue photos: the contracts have no photo field. Needs `photoUrl` (or an image id) on `VenueSummary` and `Venue`, upload and storage in the admin app and API, and permission from the masjid to publish the picture. Until then the drawn art stands in.
+- Ayah translation in English: no English edition is fetched or licensed. Needs a chosen English translation with a licence that allows showing it in the app, added to `@qc/content`'s source.
+- Urdu translation (Maududi from api.alquran.cloud) and the Arabic (Tanzil, CC BY 3.0) are shown from the online source as the reader shows them; the Tanzil credit and the Urdu translation's rights still need confirming (content lane, WP18). Home fetches the whole surah for one ayah (large for Al-Baqarah); a single-ayah call in `@qc/content` would save data.
+- Quran list StarNumber, Arabic surah name styling, offline mark, and star ayah-end marks in the reader live in `@qc/content` (content lane).
+- Kit pieces not built: map pins, stepper, choice cards, shortcut, picture card, gradient view for native fades.
+
 ## Owner decisions, 2026-10-17 afternoon (digest "Further decisions")
 
 - "Ask for a circle near you" (end of the Nearby list) and "Request a circle near me" (empty Nearby list) show only when `featureFlags.circle_requests` from `config.get` is on. Flags come for the city being browsed (`preferences.cityId`, the same city Nearby lists); until `config.get` has answered once for that city (or when it fails with no saved copy) they are off. Tests: on, off, a city change both ways, and a failed `config.get`.

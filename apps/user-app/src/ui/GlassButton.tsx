@@ -1,9 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Badge, minTouchTarget, radii, useTheme } from '@qc/ui';
-import { Glyph, type GlyphName } from './Glyph';
+import { Badge, Icon, minTouchTarget, radii, useTheme, type IconName } from '@qc/ui';
 
 export interface GlassButtonProps {
-  glyph: GlyphName;
+  icon: IconName;
   /** Required: a picture alone has no name for a screen reader. */
   accessibilityLabel: string;
   onPress: () => void;
@@ -25,11 +24,11 @@ const styles = StyleSheet.create({
 
 /**
  * A round-cornered glass button for the green header, such as the bell. Same look as the kit's
- * `IconButton variant="onHero"`, with a picture the kit icon set does not have yet.
- * TODO(kit): replace with IconButton onHero and a bell icon when the ui lane adds them.
+ * `IconButton variant="onHero"`, with an unread count on the corner, which the kit button has
+ * not got. TODO(kit): replace with IconButton onHero when it gains a count.
  */
 export function GlassButton({
-  glyph,
+  icon,
   accessibilityLabel,
   onPress,
   count = 0,
@@ -47,7 +46,7 @@ export function GlassButton({
         { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
       ]}
     >
-      <Glyph name={glyph} size={22} color={c.textOnHero} />
+      <Icon name={icon} size={22} color={c.textOnHero} />
       {count > 0 ? (
         <View style={styles.badge}>
           <Badge count={count} decorative />

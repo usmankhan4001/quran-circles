@@ -51,6 +51,28 @@ describe('dates and times', () => {
     expect(localDateOf(late, 'Asia/Karachi')).toBe('2027-02-16');
   });
 
+  it('keeps the time left to right on an Urdu screen ("9:30 PM" stays in that order)', () => {
+    const FSI = '\u2068';
+    const PDI = '\u2069';
+    const clock = formatClockTime(INSTANT, 'Asia/Karachi', 'ur');
+    expect(clock.startsWith(FSI)).toBe(true);
+    expect(clock.endsWith(PDI)).toBe(true);
+    expect(clock.slice(1, -1)).toMatch(/^9:30\s?\S+$/);
+    expect(formatLocalTime('21:00', 'ur')).toContain(FSI);
+    // A date and time isolates only the time, so the date reads right to left around it.
+    const both = formatDateTime(INSTANT, 'Asia/Karachi', 'ur');
+    const start = both.indexOf(FSI);
+    const end = both.indexOf(PDI);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(both.slice(start + 1, end)).toMatch(/9:30/);
+    expect(both.slice(start + 1, end)).not.toMatch(/15/);
+  });
+
+  it('leaves English times as they are', () => {
+    expect(formatClockTime(INSTANT, 'Asia/Karachi', 'en')).not.toContain('\u2068');
+    expect(formatDateTime(INSTANT, 'Asia/Karachi', 'en')).not.toContain('\u2068');
+  });
+
   it('falls back to Pakistan time for a time zone it does not know', () => {
     expect(formatClockTime(INSTANT, 'Not/AZone', 'en')).toMatch(/9:30/);
   });

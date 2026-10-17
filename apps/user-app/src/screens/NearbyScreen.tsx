@@ -5,13 +5,15 @@ import {
   Card,
   Chip,
   EmptyState,
+  ListItem,
   SegmentedControl,
   SearchField,
-  Select,
+  Sheet,
   Skeleton,
   Text,
   spacing,
 } from '@qc/ui';
+import { SECTIONS } from '@qc/contracts';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { ProfileButton } from '../components/ProfileButton';
 import { ScreenFrame } from '../components/ScreenFrame';
@@ -28,6 +30,7 @@ import {
 } from '../features/nearby/filters';
 import { markersFromSessions } from '../features/nearby/markers';
 import { useOrigin } from '../features/nearby/useOrigin';
+import { distanceParts, haversineMetres } from '../core/distance';
 import { useSessionList } from '../features/nearby/useSessions';
 import { useAreas, useCities } from '../features/places/usePlaces';
 import { useI18n } from '../i18n/I18nProvider';
@@ -40,12 +43,13 @@ import { PictureCard } from '../ui/PictureCard';
 const styles = StyleSheet.create({
   stack: { gap: spacing.lg },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  grow: { flex: 1 },
   list: { gap: spacing.md },
-  carousel: { gap: spacing.md, paddingBottom: spacing.sm },
-  nearest: { width: 180 },
+  carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
+  chipRow: { gap: spacing.sm, paddingVertical: spacing.xxs },
+  hero: { gap: spacing.md },
 });
+
+const NEAREST_WIDTH = 176;
 
 type ViewMode = 'list' | 'map';
 
@@ -65,6 +69,7 @@ export function NearbyScreen() {
   const [mode, setMode] = useState<ViewMode>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [showAreas, setShowAreas] = useState(false);
+  const [showCities, setShowCities] = useState(false);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
 
   const list = useSessionList(filters, { origin });
@@ -76,10 +81,23 @@ export function NearbyScreen() {
     [list.items, locale, t],
   );
 
-  const cityOptions = [
-    { value: '', label: t('nearby.city.all') },
-    ...(cities.data ?? []).map((c) => ({ value: c.id, label: l(c.name).text })),
-  ];
+  const selectedCity = cities.data?.find((c) => c.id === prefs.cityId);
+  const distanceText = (to: { lat: number; lng: number }) => {
+    if (!origin) return undefined;
+    const parts = distanceParts(haversineMetres(origin, to), locale);
+    return parts.unit === 'km'
+      ? t('home.distance.km', { distance: parts.value })
+      : t('home.distance.metres', { distance: parts.value });
+  };
+  const dayLabel =
+    local.days.length > 0
+      ? local.days.map((day) => t(DAY_KEYS[day] ?? 'days.sun')).join(t('schedule.separator'))
+      : t('nearby.filters.day');
+  const chooseCity = (cityId: string | null) => {
+    void prefs.update({ cityId, areaId: null });
+    setLocal((f) => ({ ...f, areaId: null }));
+    setShowCities(false);
+  };
   const selectedArea = areas.data?.find((a) => a.id === filters.areaId);
   const count = activeFilterCount(filters);
   const selectedSessions = list.items.filter((s) => s.venueId === selectedVenue);
@@ -91,7 +109,7 @@ export function NearbyScreen() {
       title={t('tabs.nearby')}
       actions={<ProfileButton />}
       hero={
-        <>
+        <View style={styles.hero}>
           <SearchField
             accessibilityLabel={t('nearby.search.label')}
             placeholder={t('nearby.search.placeholder')}
@@ -99,6 +117,49 @@ export function NearbyScreen() {
             onChangeText={(q) => setLocal((f) => ({ ...f, q }))}
             testID="nearby-search"
           />
+          {/* One row of chips under the search (N2): where, when and who, then the rest. */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+            testID="nearby-chips"
+          >
+            <Chip
+              label={selectedCity ? l(selectedCity.name).text : t('nearby.city.all')}
+              onPress={() => setShowCities(true)}
+              testID="nearby-city"
+            />
+            <Chip
+              label={selectedArea ? l(selectedArea.name).text : t('nearby.area.button')}
+              selected={Boolean(selectedArea)}
+              onPress={() => setShowAreas(true)}
+              testID="nearby-area-button"
+            />
+            <Chip
+              label={dayLabel}
+              selected={local.days.length > 0}
+              onPress={() => setShowFilters(true)}
+              testID="nearby-day"
+            />
+            {SECTIONS.map((section) => (
+              <Chip
+                key={section}
+                label={t(`sections.${section}`)}
+                selected={local.section === section}
+                onPress={() =>
+                  setLocal((f) => ({ ...f, section: f.section === section ? null : section }))
+                }
+                testID={`nearby-section-${section}`}
+              />
+            ))}
+            <Chip
+              label={
+                count > 0 ? t('nearby.filters.buttonCount', { count }) : t('nearby.filters.open')
+              }
+              onPress={() => setShowFilters(true)}
+              testID="nearby-filters-button"
+            />
+          </ScrollView>
           <SegmentedControl<ViewMode>
             accessibilityLabel={t('nearby.view.label')}
             value={mode}
@@ -109,69 +170,18 @@ export function NearbyScreen() {
             ]}
             testID="nearby-view"
           />
-        </>
+        </View>
       }
       testID="nearby-screen"
     >
       <View style={styles.stack}>
-        <Select
-          label={t('nearby.city.label')}
-          options={cityOptions}
-          value={prefs.cityId ?? ''}
-          onChange={(value) => {
-            void prefs.update({ cityId: value === '' ? null : value, areaId: null });
-            setLocal((f) => ({ ...f, areaId: null }));
-          }}
-          testID="nearby-city"
-        />
-        <View style={styles.row}>
-          <View style={styles.grow}>
-            <Button
-              variant="secondary"
-              fullWidth
-              label={selectedArea ? l(selectedArea.name).text : t('nearby.area.button')}
-              onPress={() => setShowAreas(true)}
-              testID="nearby-area-button"
-            />
-          </View>
-          <View style={styles.grow}>
-            <Button
-              variant="secondary"
-              fullWidth
-              label={
-                count > 0 ? t('nearby.filters.buttonCount', { count }) : t('nearby.filters.open')
-              }
-              onPress={() => setShowFilters(true)}
-              testID="nearby-filters-button"
-            />
-          </View>
-        </View>
-
-        {count > 0 ? (
+        {/* Filters the chip row does not show by name, each with a way to take it off. */}
+        {local.timeBand || local.language || local.program ? (
           <View style={styles.chips} testID="active-filters">
-            {selectedArea ? (
-              <Chip
-                label={l(selectedArea.name).text}
-                onRemove={() => setLocal((f) => ({ ...f, areaId: null }))}
-              />
-            ) : null}
-            {local.days.map((day) => (
-              <Chip
-                key={`day-${day}`}
-                label={t(DAY_KEYS[day] ?? 'days.sun')}
-                onRemove={() => setLocal((f) => ({ ...f, days: f.days.filter((d) => d !== day) }))}
-              />
-            ))}
             {local.timeBand ? (
               <Chip
                 label={t(`nearby.time.${local.timeBand}`)}
                 onRemove={() => setLocal((f) => ({ ...f, timeBand: null }))}
-              />
-            ) : null}
-            {local.section ? (
-              <Chip
-                label={t(`sections.${local.section}`)}
-                onRemove={() => setLocal((f) => ({ ...f, section: null }))}
               />
             ) : null}
             {local.language ? (
@@ -260,17 +270,21 @@ export function NearbyScreen() {
                   contentContainerStyle={styles.carousel}
                   testID="map-nearest"
                 >
-                  {markers.slice(0, 6).map((marker) => (
-                    <View key={marker.id} style={styles.nearest}>
+                  {markers.slice(0, 6).map((marker) => {
+                    const distance = distanceText(marker);
+                    return (
                       <PictureCard
+                        key={marker.id}
+                        seed={marker.id}
+                        width={NEAREST_WIDTH}
                         title={marker.title}
                         {...(marker.subtitle ? { caption: marker.subtitle } : {})}
-                        height={140}
+                        {...(distance ? { distance } : {})}
                         onPress={() => setSelectedVenue(marker.id)}
                         testID={`map-nearest-${marker.id}`}
                       />
-                    </View>
-                  ))}
+                    );
+                  })}
                 </ScrollView>
                 <Card variant="flat">
                   <Text variant="body" color="textSecondary">
@@ -323,6 +337,35 @@ export function NearbyScreen() {
         )}
       </View>
 
+      <Sheet
+        visible={showCities}
+        onClose={() => setShowCities(false)}
+        title={t('nearby.city.label')}
+        testID="city-sheet"
+      >
+        <View role="radiogroup" aria-label={t('nearby.city.label')}>
+          <ListItem
+            title={t('nearby.city.all')}
+            role="radio"
+            checked={!prefs.cityId}
+            chevron={false}
+            onPress={() => chooseCity(null)}
+            testID="city-option-all"
+          />
+          {(cities.data ?? []).map((city) => (
+            <ListItem
+              key={city.id}
+              title={l(city.name).text}
+              role="radio"
+              checked={prefs.cityId === city.id}
+              selected={prefs.cityId === city.id}
+              chevron={false}
+              onPress={() => chooseCity(city.id)}
+              testID={`city-option-${city.id}`}
+            />
+          ))}
+        </View>
+      </Sheet>
       <AreaPickerSheet
         visible={showAreas}
         onClose={() => setShowAreas(false)}

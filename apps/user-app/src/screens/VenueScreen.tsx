@@ -12,7 +12,8 @@ import { venueMapUrl, venuePhoneUrl } from '../features/session/links';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useServices } from '../providers/services';
-import { PhotoBlock } from '../ui/PhotoBlock';
+import { shareText } from '../platform/share';
+import { useToast } from '../providers/Toasts';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.xl },
@@ -29,12 +30,22 @@ export function VenueScreen({ venueId }: { venueId: string }) {
   const sessions = useVenueSessions(venueId);
   const { follow, toggle } = useIsFollowing(venueId);
   const title = venue.data ? l(venue.data.name).text : t('venue.title');
+  const toast = useToast();
+  const share = async () => {
+    if (!venue.data) return;
+    const shared = await shareText(`${title} ${venueMapUrl(venue.data)}`);
+    if (!shared) toast.show(t('session.share.unavailable'), 'info');
+  };
 
   return (
     <ScreenFrame
       title={title}
       onBack={() => nav.back()}
-      hero={<PhotoBlock testID="venue-photo" />}
+      photo={{
+        seed: venueId,
+        testID: 'venue-photo',
+        ...(venue.data ? { onShare: () => void share() } : {}),
+      }}
       testID="venue-screen"
     >
       <QueryBoundary query={venue}>

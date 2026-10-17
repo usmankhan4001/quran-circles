@@ -3,7 +3,10 @@ import type { Locale } from '@qc/contracts';
 import { pickLocalized } from '../../i18n/localized';
 import type { MapMarker } from '../maps/types';
 
-/** One pin per venue, titled with the venue and subtitled with how many sessions it has here. */
+/**
+ * One pin per venue, titled with the venue, subtitled with how many sessions it has here, and
+ * carrying that count for the pin.
+ */
 export function markersFromSessions(
   sessions: readonly Session[],
   locale: Locale,
@@ -21,5 +24,6 @@ export function markersFromSessions(
     lng: session.venue.lng,
     title: pickLocalized(session.venue.name, locale).text,
     subtitle: subtitle(count, pickLocalized(session.title, locale).text),
+    count,
   }));
 }

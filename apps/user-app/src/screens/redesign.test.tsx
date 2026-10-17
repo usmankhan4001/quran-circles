@@ -1,6 +1,6 @@
 import { fireEvent, within } from '@testing-library/react';
 import { FIXTURE_NOW, fixtures } from '@qc/contracts/fixtures';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
 import {
   AREA_SADDAR,
@@ -236,6 +236,48 @@ describe('Session and venue (S1)', () => {
   });
 });
 
+describe('Session and venue top (S1)', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(window.navigator, 'share');
+  });
+
+  it('draws the place, not a photo placeholder, with back and share buttons on it', async () => {
+    const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
+    const header = await view.findByTestId('screen-header');
+    expect(within(header).getByTestId('session-photo').getAttribute('aria-hidden')).toBe('true');
+    expect(await within(header).findByTestId('screen-share')).toBeTruthy();
+    expect(within(header).getByLabelText(en['ui.back'])).toBeTruthy();
+  });
+
+  it('shares the session with its venue and time through the system share', async () => {
+    const share = vi.fn(async () => undefined);
+    Object.defineProperty(window.navigator, 'share', { value: share, configurable: true });
+    const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
+    fireEvent.click(await view.findByTestId('screen-share'));
+    await waitFor(() => expect(share).toHaveBeenCalledOnce());
+    const sent = (share.mock.calls[0] as unknown as [{ text: string }])[0].text;
+    expect(sent).toContain(SESSIONS.taraweeh.title.en);
+    expect(sent).toContain(SESSIONS.taraweeh.venue.name.en);
+    expect(sent).toContain('https://www.google.com/maps/search/');
+  });
+
+  it('says so when the device cannot share', async () => {
+    const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
+    fireEvent.click(await view.findByTestId('screen-share'));
+    expect(await view.findByText(en['session.share.unavailable'])).toBeTruthy();
+  });
+
+  it('shares a venue too', async () => {
+    const share = vi.fn(async () => undefined);
+    Object.defineProperty(window.navigator, 'share', { value: share, configurable: true });
+    const view = await renderScreen(<VenueScreen venueId={noor.id} />);
+    fireEvent.click(await view.findByTestId('screen-share'));
+    await waitFor(() => expect(share).toHaveBeenCalledOnce());
+    const sent = (share.mock.calls[0] as unknown as [{ text: string }])[0].text;
+    expect(sent).toContain(noor.name.en);
+  });
+});
+
 describe('Registration (R2)', () => {
   async function open(session = SESSIONS.taraweeh) {
     const world = await createWorld({ signedIn: true, cityId: CITY_RAWALPINDI.id });
@@ -283,6 +325,15 @@ describe('Registration (R2)', () => {
       'true',
     );
     expect(view.getByTestId('registration-section-fixed')).toBeTruthy();
+  });
+
+  it('draws a picture on each section card', async () => {
+    const { view } = await open();
+    for (const s of ['women', 'men', 'family']) {
+      const card = view.getByTestId(`registration-section-${s}`);
+      expect(card.querySelector('[aria-hidden="true"]')).not.toBeNull();
+      expect(card.textContent).toContain(en[`sections.${s}` as 'sections.women']);
+    }
   });
 
   it('counts the people with the stepper and sends the number', async () => {
@@ -371,6 +422,29 @@ describe('Profile, Updates and Sign-in (B)', () => {
       type: 'go',
       route: { name: 'session', sessionId: withSession.sessionId },
     });
+  });
+
+  it('marks each update with a picture of its kind, and says "Go to session" when it has one', async () => {
+    const world = await createWorld({ signedIn: true });
+    const view = await renderScreen(<UpdatesScreen />, { world });
+    for (const update of fixtures.updates) {
+      expect(await view.findByTestId(`update-${update.id}-kind`)).toBeTruthy();
+      const card = view.getByTestId(`update-${update.id}`);
+      if (update.sessionId) {
+        expect(view.getByTestId(`update-${update.id}-open`).textContent).toBe(
+          en['updates.goToSession'],
+        );
+        expect(card.getAttribute('aria-label')).toContain(en['updates.goToSession']);
+      } else {
+        expect(view.queryByTestId(`update-${update.id}-open`)).toBeNull();
+      }
+    }
+  });
+
+  it('draws a line masjid in the green top of sign-in', async () => {
+    const view = await renderScreen(<SignInScreen />);
+    const header = view.getByTestId('screen-header');
+    expect(within(header).getByTestId('sign-in-art').getAttribute('aria-hidden')).toBe('true');
   });
 
   it('takes the sign-in code in boxed cells and accepts digits only', async () => {

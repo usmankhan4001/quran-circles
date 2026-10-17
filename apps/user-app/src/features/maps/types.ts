@@ -6,6 +6,8 @@ export interface MapMarker {
   lng: number;
   title: string;
   subtitle?: string;
+  /** How many circles are at the place; drawn on the pin when more than one. */
+  count?: number;
 }
 
 export interface MapViewProps {

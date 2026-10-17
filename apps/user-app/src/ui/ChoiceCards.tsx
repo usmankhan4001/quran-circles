@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
 
@@ -6,6 +7,8 @@ export interface ChoiceOption<T extends string> {
   label: string;
   /** A choice that is not offered fades and cannot be picked. */
   disabled?: boolean;
+  /** A picture above the label, drawn in the colour the card gives it. Decoration. */
+  icon?: (color: string) => ReactNode;
 }
 
 export interface ChoiceCardsProps<T extends string> {
@@ -30,11 +33,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   tick: { height: 20, justifyContent: 'center' },
+  icon: { height: 32, justifyContent: 'center' },
 });
 
 /**
- * Women, Men or Family as three cards (D10, R2). The chosen one fills green with a white
- * tick; one that is not offered fades. Each card is a radio, with the group named.
+ * Women, Men or Family as three cards (D10, R2), each with its picture. The chosen one fills
+ * green with a white tick; one that is not offered fades. Each card is a radio, with the group named.
  * TODO(kit): replace with the @qc/ui choice cards when the ui lane exports them.
  */
 export function ChoiceCards<T extends string>({
@@ -68,6 +72,7 @@ export function ChoiceCards<T extends string>({
               },
             ]}
           >
+            {option.icon ? <View style={styles.icon}>{option.icon(c[textColor])}</View> : null}
             <View style={styles.tick}>
               {selected ? <Icon name="check" size={18} color={c[textColor]} /> : null}
             </View>

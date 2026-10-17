@@ -25,4 +25,15 @@ export interface ContentModules {
   NextPrayerCard?: ComponentType<{ onPress?: () => void }>;
   /** Small Home card: continue reading where the person stopped. */
   ContinueReadingCard?: ComponentType<{ onOpen: (place: QuranPlace) => void }>;
+  /**
+   * Home's prayer strip (H4): today's five prayers for the city chosen in the prayer view, the
+   * next one marked. Without a city it asks for one.
+   */
+  PrayerStrip?: ComponentType<{ onPress?: () => void }>;
+  /**
+   * The words of one ayah for Home's ayah card: the Arabic, and the Urdu translation on an Urdu
+   * screen. They come from the same online source and on-device cache as the reader; nothing
+   * is drawn while they load or when they cannot be had, so the card keeps just the reference.
+   */
+  AyahText?: ComponentType<QuranPlace>;
 }

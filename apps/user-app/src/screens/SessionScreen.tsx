@@ -16,7 +16,8 @@ import { describePortion } from '../features/session/portion';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useServices } from '../providers/services';
-import { PhotoBlock } from '../ui/PhotoBlock';
+import { shareText } from '../platform/share';
+import { useToast } from '../providers/Toasts';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.xl },
@@ -34,12 +35,28 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
   const venue = useVenue(session.data?.venueId ?? null);
   const occurrences = useSessionOccurrences(sessionId, toInstant(now()));
   const mine = useMyRegistrations();
+  const toast = useToast();
+  const share = async (s: Session) => {
+    const message = t('session.share.message', {
+      title: l(s.title).text,
+      venue: l(s.venue.name).text,
+      when: s.nextOccurrence
+        ? describeOccurrence(s.nextOccurrence, s.timezone, locale)
+        : describeSchedule(s, t, locale),
+    });
+    const shared = await shareText(`${message} ${venueMapUrl(s.venue)}`);
+    if (!shared) toast.show(t('session.share.unavailable'), 'info');
+  };
 
   return (
     <ScreenFrame
       title={session.data ? l(session.data.title).text : t('session.title')}
       onBack={() => nav.back()}
-      hero={<PhotoBlock testID="session-photo" />}
+      photo={{
+        seed: session.data?.venueId ?? sessionId,
+        testID: 'session-photo',
+        ...(session.data ? { onShare: () => void share(session.data!) } : {}),
+      }}
       testID="session-screen"
       footer={
         session.data ? (

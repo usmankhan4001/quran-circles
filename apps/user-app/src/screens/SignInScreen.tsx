@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, CodeField, Text, TextField, spacing } from '@qc/ui';
 import { ScreenFrame } from '../components/ScreenFrame';
+import { MasjidLineArt } from '../ui/MasjidLineArt';
 import { errorMessageKey } from '../core/errors';
 import { useSignIn } from '../features/auth/useSignIn';
 import { useI18n } from '../i18n/I18nProvider';
@@ -37,7 +38,12 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
             : undefined;
 
   return (
-    <ScreenFrame title={t('signIn.title')} onBack={() => nav.back()} testID="sign-in-screen">
+    <ScreenFrame
+      title={t('signIn.title')}
+      onBack={() => nav.back()}
+      hero={<MasjidLineArt height={120} testID="sign-in-art" />}
+      testID="sign-in-screen"
+    >
       <Card>
         <View style={styles.stack}>
           {flow.step === 'phone' ? (

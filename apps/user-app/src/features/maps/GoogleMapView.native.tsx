@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { MapPin } from '../../ui/MapPin';
 import { ListOnlyMapView } from './ListOnlyMapView';
 import { centerOf, type MapViewProps } from './types';
 
@@ -33,7 +34,9 @@ export function GoogleMapView(props: MapViewProps) {
             title={marker.title}
             description={marker.subtitle}
             onPress={() => onSelect(marker.id)}
-          />
+          >
+            <MapPin count={marker.count ?? 1} selected={marker.id === props.selectedId} />
+          </Marker>
         ))}
       </MapView>
     </View>

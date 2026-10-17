@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Avatar,
   Button,
+  Icon,
   ListItem,
   SegmentedControl,
   Switch,
@@ -12,6 +13,7 @@ import {
   radii,
   spacing,
   useTheme,
+  type IconName,
   type TextSizeStep,
 } from '@qc/ui';
 import type { Locale } from '@qc/contracts';
@@ -37,7 +39,6 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthState, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
-import { Glyph, type GlyphName } from '../ui/Glyph';
 
 const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', gap: spacing.sm },
@@ -60,22 +61,22 @@ function QuickTiles() {
   const { t } = useI18n();
   const nav = useNav();
   const c = useTheme().colors;
-  const tiles: { key: string; glyph: GlyphName; label: string; onPress: () => void }[] = [
+  const tiles: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
     {
       key: 'journey',
-      glyph: 'calendar',
+      icon: 'calendar',
       label: t('tabs.myJourney'),
       onPress: () => nav.tab({ name: 'journey' }),
     },
     {
       key: 'updates',
-      glyph: 'bell',
+      icon: 'bell',
       label: t('updates.title'),
       onPress: () => nav.go({ name: 'updates' }),
     },
     {
       key: 'help',
-      glyph: 'people',
+      icon: 'people',
       label: t('profile.support.help'),
       onPress: () => nav.go({ name: 'page', slug: 'faq' }),
     },
@@ -94,7 +95,7 @@ function QuickTiles() {
             { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
           ]}
         >
-          <Glyph name={tile.glyph} size={24} color={c.textOnHero} />
+          <Icon name={tile.icon} size={24} color={c.textOnHero} />
           <Text variant="caption" color="textOnHero" align="center" decorative>
             {tile.label}
           </Text>

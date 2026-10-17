@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
-import { Glyph } from './Glyph';
+import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
 
 export interface SearchButtonProps {
   /** The name a screen reader says. */
@@ -44,7 +43,7 @@ export function SearchButton({ label, placeholder, onPress, testID }: SearchButt
         },
       ]}
     >
-      <Glyph name="search" size={22} color={c.textSecondary} />
+      <Icon name="search" size={22} color={c.textSecondary} />
       <View style={styles.grow}>
         <Text variant="body" color="textSecondary" numberOfLines={1}>
           {placeholder}

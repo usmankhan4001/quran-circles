@@ -1,11 +1,12 @@
 import { StyleSheet, View } from 'react-native';
 import { Card, Text, spacing } from '@qc/ui';
 import { ltrRun } from '@qc/ui';
+import { MapPin } from '../../ui/MapPin';
 import type { MapViewProps } from './types';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1 },
 });
 
@@ -35,6 +36,11 @@ export function ListOnlyMapView({
           testID={`map-marker-${marker.id}`}
         >
           <View style={styles.row}>
+            <MapPin
+              count={marker.count ?? 1}
+              selected={marker.id === selectedId}
+              testID={`map-pin-${marker.id}`}
+            />
             <View style={styles.text}>
               <Text variant="label">{marker.title}</Text>
               {marker.subtitle ? (

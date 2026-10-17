@@ -1,6 +1,7 @@
 import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
+import { fixtures } from '@qc/contracts/fixtures';
 import { CITY_RAWALPINDI, SESSIONS } from '../test/factories';
 import {
   MATRIX,
@@ -13,6 +14,11 @@ import {
 import { NearbyScreen } from './NearbyScreen';
 
 const en = messages.en;
+
+/** How many of the listed sessions are at one venue, as the pins count them. */
+function SESSIONS_AT(venueId: string): number {
+  return fixtures.sessions.filter((x) => x.venueId === venueId).length;
+}
 const ur = messages.ur;
 
 describe('NearbyScreen', () => {
@@ -138,6 +144,79 @@ describe('NearbyScreen', () => {
       const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
       expect(new URLSearchParams(last.search).get('q')).toBe('Noor');
     });
+  });
+
+  describe('one chip row under the search (N2)', () => {
+    it('holds the city, area, day, the three sections and the filters', async () => {
+      const view = await renderScreen(<NearbyScreen />);
+      await view.findByTestId('nearby-list');
+      const header = view.getByTestId('screen-header');
+      const chips = within(header).getByTestId('nearby-chips');
+      for (const id of [
+        'nearby-city',
+        'nearby-area-button',
+        'nearby-day',
+        'nearby-section-women',
+        'nearby-section-men',
+        'nearby-section-family',
+        'nearby-filters-button',
+      ]) {
+        expect(within(chips).getByTestId(id)).toBeTruthy();
+      }
+    });
+
+    it('turns a section on and off from its chip, and asks the server for it', async () => {
+      const view = await renderScreen(<NearbyScreen />);
+      await view.findByTestId('nearby-list');
+      const women = view.getByTestId('nearby-section-women');
+      fireEvent.click(women);
+      await waitFor(() => {
+        const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
+        expect(new URLSearchParams(last.search).get('section')).toBe('women');
+      });
+      expect(view.getByTestId('nearby-section-women').getAttribute('aria-checked')).toBe('true');
+      fireEvent.click(view.getByTestId('nearby-section-women'));
+      // Off again: the list without a section comes back (from the saved answer).
+      await waitFor(() =>
+        expect(view.getByTestId('nearby-section-women').getAttribute('aria-checked')).toBe('false'),
+      );
+      expect(await view.findByTestId('nearby-list')).toBeTruthy();
+    });
+
+    it('chooses the city from a sheet, and keeps it for next time', async () => {
+      const view = await renderScreen(<NearbyScreen />);
+      await view.findByTestId('nearby-list');
+      fireEvent.click(view.getByTestId('nearby-city'));
+      fireEvent.click(await view.findByTestId(`city-option-${CITY_RAWALPINDI.id}`));
+      await waitFor(() => {
+        const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
+        expect(new URLSearchParams(last.search).get('cityId')).toBe(CITY_RAWALPINDI.id);
+      });
+      expect(view.world.services.preferences.get().cityId).toBe(CITY_RAWALPINDI.id);
+      expect(view.getByTestId('nearby-city').textContent).toContain(CITY_RAWALPINDI.name.en);
+    });
+
+    it('opens the day choice from the Day chip and names the days picked', async () => {
+      const view = await renderScreen(<NearbyScreen />);
+      await view.findByTestId('nearby-list');
+      fireEvent.click(view.getByTestId('nearby-day'));
+      fireEvent.click(await view.findByTestId('filter-day-2'));
+      fireEvent.click(view.getByTestId('filters-apply'));
+      await waitFor(() =>
+        expect(view.getByTestId('nearby-day').textContent).toContain(en['days.tue']),
+      );
+    });
+  });
+
+  it('draws green pins on the map with the number of circles at each place', async () => {
+    const view = await renderScreen(<NearbyScreen />);
+    await view.findByTestId('nearby-list');
+    fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
+    await view.findByTestId('map-list-only');
+    const pin = view.getByTestId(`map-pin-${SESSIONS.taraweeh.venueId}`);
+    expect(pin.getAttribute('aria-hidden')).toBe('true');
+    const here = SESSIONS_AT(SESSIONS.taraweeh.venueId);
+    expect(pin.textContent).toBe(here > 1 ? String(here) : '');
   });
 
   describe.each(MATRIX)('in $name', ({ locale, color, textSize }) => {

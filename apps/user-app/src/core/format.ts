@@ -1,5 +1,5 @@
 import type { Locale } from '@qc/contracts';
-import { defaultNumerals } from '@qc/ui';
+import { defaultNumerals, isolate } from '@qc/ui';
 
 /**
  * Dates and times are formatted here, with the active language, and passed to translations as
@@ -29,10 +29,40 @@ function formatter(
   return f;
 }
 
+const TIME_PARTS: ReadonlySet<Intl.DateTimeFormatPartTypes> = new Set([
+  'hour',
+  'minute',
+  'dayPeriod',
+]);
+
+/**
+ * Formats with the time kept left to right in Urdu. The clock ("4:30 PM") is Latin, so inside
+ * a right-to-left line the bidi algorithm would show it as "PM 4:30"; wrapping that run in an
+ * isolate keeps it in reading order. English lines are left to right already and stay as they are.
+ */
+function formatKeepingTime(f: Intl.DateTimeFormat, date: Date, locale: Locale): string {
+  if (locale !== 'ur') return f.format(date);
+  const parts = f.formatToParts(date);
+  const first = parts.findIndex((p) => TIME_PARTS.has(p.type));
+  if (first === -1) return f.format(date);
+  let last = first;
+  parts.forEach((p, i) => {
+    if (TIME_PARTS.has(p.type)) last = i;
+  });
+  const join = (from: number, to: number) =>
+    parts
+      .slice(from, to)
+      .map((p) => p.value)
+      .join('');
+  return `${join(0, first)}${isolate(join(first, last + 1))}${join(last + 1, parts.length)}`;
+}
+
 /** "7:30 pm" for an instant, in the session's own time zone (Pakistan time by default). */
 export function formatClockTime(instant: string, timeZone: string, locale: Locale): string {
-  return formatter(locale, timeZone, { hour: 'numeric', minute: '2-digit' }).format(
+  return formatKeepingTime(
+    formatter(locale, timeZone, { hour: 'numeric', minute: '2-digit' }),
     new Date(instant),
+    locale,
   );
 }
 
@@ -40,7 +70,11 @@ export function formatClockTime(instant: string, timeZone: string, locale: Local
 export function formatLocalTime(hhmm: string, locale: Locale): string {
   const [h = '0', m = '0'] = hhmm.split(':');
   const date = new Date(Date.UTC(2000, 0, 1, Number(h), Number(m)));
-  return formatter(locale, 'UTC', { hour: 'numeric', minute: '2-digit' }).format(date);
+  return formatKeepingTime(
+    formatter(locale, 'UTC', { hour: 'numeric', minute: '2-digit' }),
+    date,
+    locale,
+  );
 }
 
 /** "Thu, 18 Feb" for an instant, in the session's time zone. */
@@ -101,11 +135,15 @@ export function toLocalDigits(value: number, locale: Locale): string {
 
 /** "Thu, 18 Feb, 9:00 pm" for an instant, in the session's time zone. */
 export function formatDateTime(instant: string, timeZone: string, locale: Locale): string {
-  return formatter(locale, timeZone, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(instant));
+  return formatKeepingTime(
+    formatter(locale, timeZone, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+    }),
+    new Date(instant),
+    locale,
+  );
 }

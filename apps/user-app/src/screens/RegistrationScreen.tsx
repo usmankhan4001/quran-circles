@@ -28,7 +28,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useAuthState } from '../providers/hooks';
 import { ChoiceCards } from '../ui/ChoiceCards';
-import { Glyph } from '../ui/Glyph';
+import { SectionIcon } from '../ui/SectionIcon';
 import { Stepper } from '../ui/Stepper';
 
 const styles = StyleSheet.create({
@@ -60,7 +60,7 @@ function SheetSummary({ session }: { session: Session }) {
   return (
     <View style={styles.summary} testID="registration-summary">
       <View style={styles.summaryLine}>
-        <Glyph name="pin" size={18} color={c.textOnHero} />
+        <Icon name="pin" size={18} color={c.textOnHero} />
         <View style={styles.grow}>
           <Text variant="body" color="textOnHero" lang={venue.lang}>
             {venue.text}
@@ -68,7 +68,7 @@ function SheetSummary({ session }: { session: Session }) {
         </View>
       </View>
       <View style={styles.summaryLine}>
-        <Glyph name="clock" size={18} color={c.textOnHero} />
+        <Icon name="clock" size={18} color={c.textOnHero} />
         <View style={styles.grow}>
           <Text variant="body" color="textOnHero">
             {when}
@@ -208,6 +208,7 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
             value: x,
             label: t(`sections.${x}`),
             disabled: !sections.includes(x),
+            icon: (color: string) => <SectionIcon section={x} size={28} color={color} />,
           }))}
           testID="registration-section"
         />
