@@ -12,7 +12,7 @@ import {
 
 const depsOf = <K extends EndpointId>(ctx: HandlerCtx<K>): PosterDeps => ({
   db: ctx.db,
-  runtime: posterRuntimeFor(ctx.deps.db),
+  runtime: posterRuntimeFor(ctx.deps),
   logger: ctx.deps.logger,
   now: ctx.now,
   guard: ctx,

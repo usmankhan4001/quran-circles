@@ -14,10 +14,9 @@ import {
   type PosterTemplate,
 } from '@qc/contracts';
 import { schema } from '@qc/db';
-import type { Db } from '../db';
 import { TEST_PRINCIPAL_HEADER } from '../middleware/test-auth';
 import { pgBossPosterQueue, unwiredPosterQueue } from '../modules/posters/queue';
-import { posterRuntimeFor, providePosterRuntime } from '../modules/posters/runtime';
+import { posterRuntimeFor } from '../modules/posters/runtime';
 import {
   DEFAULT_POSTER_STORAGE_DIR,
   localDiskPosterStorage,
@@ -694,17 +693,16 @@ describe('poster render queue', () => {
   });
 
   it('falls back to the POSTER_STORAGE_DIR store and a refusing queue for an app nobody wired', () => {
-    // The handle is only a key here; a handle nothing was provided for.
-    const runtime = posterRuntimeFor({} as unknown as Db);
+    const runtime = posterRuntimeFor({});
     expect(runtime.queue).toBe(unwiredPosterQueue);
-    expect(posterRuntimeFor(h.db).queue).toBe(h.posterQueue);
+    const wired = { queue: h.posterQueue, storage: h.posterStorage };
+    expect(posterRuntimeFor({ posters: wired })).toBe(wired);
   });
 
   it('marks posters failed when the server has wired no queue', async () => {
-    // A second app on its own database, given the queue a server gets when nothing was wired.
-    const bare = await createHarness();
+    // A second app on its own database, built with no `posters`, as a server that wired nothing.
+    const bare = await createHarness({ posterQueue: null });
     try {
-      providePosterRuntime(bare.db, { queue: unwiredPosterQueue, storage: bare.posterStorage });
       const boss = await bare.nationalAdmin();
       await seedPosterTemplates(bare);
       const s = await createSession(bare, { venueId: bare.world.venueA1, as: boss });

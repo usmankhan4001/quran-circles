@@ -73,7 +73,7 @@ embedded as `data:` URLs, under the three rules above. Fonts are copied unmodifi
 ## Consequences
 
 - The renderer needs a browser image (about 300 MB larger than the api image) with its own memory
-  and concurrency limits; see `docs/agents/status/renderer.md` and `apps/poster-renderer/Dockerfile`.
+  and concurrency limits; see `docs/agents/status/renderer.md` and `infra/docker/poster-renderer.Dockerfile`.
 - The Urdu wording on posters is a draft that a native speaker reviews before release, like all
   Urdu in the apps.
 - A human still approves the first templates by eye in Urdu, English and mixed (brief, definition

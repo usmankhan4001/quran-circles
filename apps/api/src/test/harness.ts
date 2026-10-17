@@ -22,8 +22,11 @@ import { createLogger } from '../middleware/logger';
 import { MemoryRateLimiter } from '../middleware/rate-limit';
 import { TEST_PRINCIPAL_HEADER, testPrincipalMiddleware } from '../middleware/test-auth';
 import type { ApiConfig, AppEnv } from '../modules/shared/context';
-import { memoryPosterQueue, type MemoryPosterQueue } from '../modules/posters/queue';
-import { providePosterRuntime } from '../modules/posters/runtime';
+import {
+  memoryPosterQueue,
+  type MemoryPosterQueue,
+  type PosterQueue,
+} from '../modules/posters/queue';
 import {
   localDiskPosterStorage,
   resolvePosterPath,
@@ -126,6 +129,11 @@ const unique = (prefix: string) => `${prefix}-${++counter}`;
 
 export interface HarnessOptions {
   config?: Partial<ApiConfig>;
+  /**
+   * The queue the app sends poster jobs to, with the harness's temp store. Default the in-memory
+   * `h.posterQueue`; null leaves `posters` out of the app, as a server that wired nothing.
+   */
+  posterQueue?: PosterQueue | null;
 }
 
 /**
@@ -182,7 +190,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const posterStorageDir = mkdtempSync(join(tmpdir(), 'qc-api-posters-'));
   const posterQueue = memoryPosterQueue();
   const posterStorage = localDiskPosterStorage(posterStorageDir);
-  providePosterRuntime(db, { queue: posterQueue, storage: posterStorage });
+  const appQueue = options.posterQueue === undefined ? posterQueue : options.posterQueue;
   const app = createApp({
     db,
     now: clock.now,
@@ -190,6 +198,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     rateLimiter: limiter,
     principalMiddleware: testPrincipalMiddleware(),
     ...(options.config ? { config: options.config } : {}),
+    ...(appQueue ? { posters: { queue: appQueue, storage: posterStorage } } : {}),
   });
 
   const headers = (o: CallOptions): Record<string, string> => {

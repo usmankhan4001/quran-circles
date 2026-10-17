@@ -48,6 +48,7 @@ export function createApp(options: AppOptions): Hono<AppEnv> {
     db: options.db,
     principalMiddleware: options.principalMiddleware,
     ...(options.authFailure ? { authFailure: options.authFailure } : {}),
+    ...(options.posters ? { posters: options.posters } : {}),
     now: options.now ?? (() => new Date()),
     logger: options.logger ?? createLogger(),
     rateLimiter: options.rateLimiter ?? new MemoryRateLimiter(),

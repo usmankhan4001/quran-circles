@@ -11,7 +11,7 @@ export interface PosterQueue {
 
 /**
  * The part of a pg-boss instance the API uses. `PgBoss#send(name, data)` has this shape, so a
- * `PgBoss` can be passed as is without the API depending on pg-boss.
+ * `PgBoss` can be passed as is (`sender.ts` starts the server's) and tests can pass a stand-in.
  */
 export interface PosterJobSender {
   send(name: string, data: object): Promise<string | null>;

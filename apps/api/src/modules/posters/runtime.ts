@@ -1,4 +1,4 @@
-import type { Db } from '../../db';
+import type { AppDeps } from '../shared/context';
 import { unwiredPosterQueue, type PosterQueue } from './queue';
 import { posterStorageFromEnv, type PosterStorage } from './storage';
 
@@ -8,23 +8,12 @@ export interface PosterRuntime {
   queue: PosterQueue;
 }
 
-const provided = new WeakMap<object, PosterRuntime>();
-
 /**
- * Sets the poster store and queue for the app built on this database handle. The server calls it
- * with the real ones (`localDiskPosterStorage(POSTER_STORAGE_DIR)` or the platform's store, and
- * `pgBossPosterQueue(boss)`); the test harness with a temp folder and an in-memory queue.
- * Keyed by the handle so two apps in one process (tests) never share a queue.
+ * The runtime for an app: `AppDeps.posters` (the server passes `localDiskPosterStorage(...)` and
+ * `pgBossPosterQueue(boss)` to `createApp`; the test harness a temp folder and an in-memory queue),
+ * else the store from `POSTER_STORAGE_DIR` and a queue that refuses every job, so a server that was
+ * never wired marks new posters failed rather than leaving them queued.
  */
-export function providePosterRuntime(db: Db, runtime: PosterRuntime): void {
-  provided.set(db, runtime);
-}
-
-/**
- * The runtime for an app: what was provided, else the store from `POSTER_STORAGE_DIR` and a queue
- * that refuses every job (so a server that was never wired marks new posters failed rather than
- * leaving them queued).
- */
-export function posterRuntimeFor(db: Db): PosterRuntime {
-  return provided.get(db) ?? { storage: posterStorageFromEnv(), queue: unwiredPosterQueue };
+export function posterRuntimeFor(deps: Pick<AppDeps, 'posters'>): PosterRuntime {
+  return deps.posters ?? { storage: posterStorageFromEnv(), queue: unwiredPosterQueue };
 }

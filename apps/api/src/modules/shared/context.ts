@@ -7,6 +7,7 @@ import type {
   PrincipalMiddleware,
 } from '../../middleware/auth-adapter';
 import type { RateLimitBucket } from '@qc/contracts';
+import type { PosterRuntime } from '../posters/runtime';
 
 export interface AppEnv {
   Variables: AuthVariables & { requestId: string };
@@ -41,6 +42,11 @@ export interface AppDeps {
    * to stop. Defaults to `unauthenticated` when not supplied.
    */
   authFailure?: AuthFailureReader;
+  /**
+   * The poster file store and render queue. Left out, the store comes from `POSTER_STORAGE_DIR`
+   * and the queue refuses every job, so new posters come back `failed` (`posterRuntimeFor`).
+   */
+  posters?: PosterRuntime;
 }
 
 /** What the modules that post updates and queue messages need from the request. */
