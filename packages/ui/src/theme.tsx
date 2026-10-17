@@ -1,9 +1,11 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
 import { directionForLocale, type Direction, type Locale } from './direction';
 import { t as translate, type UiMessageKey } from './i18n';
 import { semanticColors, type ColorMode, type SemanticColors } from './semantic-colors';
 import {
+  fontStack,
+  fontTokenFor,
   textScale,
   typeStyle,
   type Script,
@@ -23,7 +25,10 @@ export interface Theme {
   reduceMotion: boolean;
   /** The script text is set in by default: Urdu in Urdu mode, Latin otherwise. */
   script: Script;
-  /** Resolves a type role into a text style for the theme, or for a given script. */
+  /**
+   * Resolves a type role into a text style for the theme, or for a given script. On the web the
+   * font is a stack with fallbacks (`fontFallbacks`); on iOS and Android it is the family name.
+   */
   type: (role: TypeRole, script?: Script) => TypeStyle;
   /** Built-in strings of the kit, in the theme's locale. */
   t: (key: UiMessageKey, params?: Record<string, string | number>) => string;
@@ -53,7 +58,11 @@ export function createTheme(options: ThemeOptions = {}): Theme {
     colors: semanticColors[mode],
     reduceMotion: options.reduceMotion ?? false,
     script,
-    type: (role, s) => typeStyle(role, s ?? script, textSize),
+    type: (role, s) => {
+      const style = typeStyle(role, s ?? script, textSize);
+      if (Platform.OS !== 'web') return style;
+      return { ...style, fontFamily: fontStack(fontTokenFor(s ?? script)) };
+    },
     t: (key, params) => translate(locale, key, params),
   };
 }

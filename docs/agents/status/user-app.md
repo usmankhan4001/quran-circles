@@ -3,6 +3,11 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Fonts and credits (2026-10-17, font bundling)
+
+- Fonts load at start-up with `expo-font` (`src/fonts/appFonts.ts`, called from `src/app/_layout.tsx` next to `loadServices`): Figtree 400 to 800, Mehr Nastaliq Web, KFGQPC Uthmanic Script HAFS, from `@qc/ui/font-sources`. Faces use `display: swap` on the web. Loading never rejects and stops waiting after 3 s, so a missing font only means a fallback font. The web export bundles all seven files unmodified.
+- New screen About and credits (`src/screens/CreditsScreen.tsx`, route `credits`, `/credits`), reached from Profile, Support, "About and credits". It lists Figtree (OFL 1.1), Mehr Nastaliq Web (Mehr Type / CSaLT, ITU Punjab, CC BY-SA 4.0, licence link), KFGQPC Uthmanic Script HAFS, the Tanzil Project (link to tanzil.net) and both Maududi translations. Strings: `credits.*` (Urdu draft). Tests across the 16-combination matrix.
+
 ## Showcase gaps closed (2026-10-17 evening)
 
 Against "Gap list: built apps against the drawings" in `docs/design/redesign-handoff.md` (user-app rows). Only `apps/user-app/**`, `packages/i18n` (user-app keys) and this file were edited.
@@ -20,6 +25,7 @@ Against "Gap list: built apps against the drawings" in `docs/design/redesign-han
 - Quran tab: one title. The app now builds the tab from `@qc/content`'s exported screens (`QuranIndexScreen`, `QuranReaderScreen`, `PrayerTimesScreen`) and its saved view, under the app header, instead of `QuranPrayerTab`, which adds a second large title.
 - Updates: each card shows its kind as a picture in a tinted square (clock, cross, star, bell) and ends with "Go to session" when it has one.
 - Sign-in: a line-drawn masjid in the green top (`ui/MasjidLineArt`).
+- Venue art is now drawn Quran art (owner, 2026-10-17): `ui/VenueArt` draws an open mushaf on a rehal with an eight-point star medallion behind it, plain page lines and no letters, theme colours only, same props and per-venue colouring; tests in `ui/VenueArt.test.tsx` (15). The sign-in masjid is unchanged.
 - i18n keys added to `en.json` and `ur.json` together (Urdu draft): `home.countdown.now`, `home.countdown.minutes/hours/days.one/other`, `home.next.myRegistration`, `home.ayah.source`, `session.share`, `session.share.message`, `session.share.unavailable`, `updates.goToSession`.
 - New local pieces marked `TODO(kit)`: `VenueArt`, `MapPin`, `SectionIcon`, `Shortcut`, `MasjidLineArt` (plus the existing `GlassButton`, `PictureCard`, `MapPreviewCard`, `ChoiceCards`, `Stepper`, `SearchButton`).
 - Tests: 670 passing in 42 files (was 612). New: scroll-away header and compact row, photo top with share, chip row, pin counts, next-circle card, shortcuts, prayer strip and ayah words through the real package with a made-up source answer, Urdu time isolation, kind icons, sign-in art, section pictures, and the 16-combination matrix for the photo top and venue art. Typecheck, eslint and prettier pass on the changed files.

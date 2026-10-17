@@ -154,7 +154,7 @@ describe('redesign tokens as CSS variables', () => {
       expect(dark[name], name).toBeTruthy();
     }
     expect(light['--font-sans']).toMatch(/Figtree/);
-    expect(light['--font-urdu']).toMatch(/Nastaleeq/);
+    expect(light['--font-urdu']).toMatch(/^'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', serif$/);
   });
 
   it('turns shadows off and uses a hairline instead at night', () => {
@@ -217,7 +217,7 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
     expect(current.map((a) => a.textContent)).toEqual([text('console.nav.sessions', locale)]);
   });
 
-  it('keeps the focus order: skip link, menu, who is signed in, display settings, then the page', async () => {
+  it('keeps the focus order: skip link, menu, who is signed in, display settings, the page, then the credits', async () => {
     const { user } = renderConsole({ role: 'national', locale, path: '/sessions' });
     await shellReady(locale);
     await screen.findByRole('table');
@@ -233,6 +233,7 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
       else if (el.closest('.shell-user')) order.push('user');
       else if (el.closest('.shell-bar')) order.push('tools');
       else if (el.closest('main')) order.push('main');
+      else if (el.closest('.credits')) order.push('credits');
       else order.push('other');
     }
     const firstOf = (name: string) => order.indexOf(name);
@@ -243,7 +244,7 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
     expect(firstOf('tools')).toBeLessThan(firstOf('main'));
     // Each group is one run, never interleaved.
     const collapsed = order.filter((name, i) => name !== order[i - 1]);
-    expect(collapsed).toEqual(['skip', 'nav', 'user', 'tools', 'main']);
+    expect(collapsed).toEqual(['skip', 'nav', 'user', 'tools', 'main', 'credits']);
   });
 });
 

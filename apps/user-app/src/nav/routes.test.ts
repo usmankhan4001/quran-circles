@@ -11,6 +11,7 @@ const routes: Route[] = [
   { name: 'quran', reader: { surah: 2, ayah: 255 } },
   { name: 'quran', reader: { surah: 18, ayah: 1, at: 1800000000000 } },
   { name: 'profile' },
+  { name: 'credits' },
   { name: 'updates' },
   { name: 'signIn' },
   { name: 'signIn', returnTo: { name: 'register', sessionId: ID, occurrenceId: 'occ 1' } },

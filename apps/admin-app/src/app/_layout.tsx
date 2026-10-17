@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Font from 'expo-font';
 import { config } from '../config';
+import { FontGate } from '../fonts/FontGate';
 import { NavigationContext, type Navigation } from '../navigation/NavigationContext';
 import { AppProviders } from '../shell/AppProviders';
 import { AuthGate } from '../shell/AuthGate';
@@ -21,13 +23,15 @@ export default function RootLayout() {
     [router],
   );
   return (
-    <AppProviders baseUrl={config.apiBaseUrl} tokenStore={tokenStore} prefsStore={prefsStore}>
-      <StatusBar style="auto" />
-      <NavigationContext.Provider value={navigation}>
-        <AuthGate prefsStore={prefsStore}>
-          <Stack screenOptions={{ headerShown: false }} />
-        </AuthGate>
-      </NavigationContext.Provider>
-    </AppProviders>
+    <FontGate load={Font.loadAsync}>
+      <AppProviders baseUrl={config.apiBaseUrl} tokenStore={tokenStore} prefsStore={prefsStore}>
+        <StatusBar style="auto" />
+        <NavigationContext.Provider value={navigation}>
+          <AuthGate prefsStore={prefsStore}>
+            <Stack screenOptions={{ headerShown: false }} />
+          </AuthGate>
+        </NavigationContext.Provider>
+      </AppProviders>
+    </FontGate>
   );
 }

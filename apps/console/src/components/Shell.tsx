@@ -8,6 +8,7 @@ import { useTheme, type ThemeChoice } from '../theme';
 import type { TextSizeStep } from '../lib/ui-tokens';
 import { Icon, PatternLayer, type IconName } from './icons';
 import { Button, SelectField } from './ui';
+import { CreditsFooter } from './Credits';
 
 const ROLE_KEYS = {
   national_admin: 'console.roles.national_admin',
@@ -144,6 +145,7 @@ export function Shell() {
         <main id="main" className="shell-main" tabIndex={-1}>
           <Outlet />
         </main>
+        <CreditsFooter />
       </div>
     </div>
   );

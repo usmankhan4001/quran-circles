@@ -83,21 +83,43 @@ export const colors = {
 
 /**
  * Font families (D4). Figtree for Latin text and for every number, a true Nastaliq for Urdu,
- * and a Quranic face for Quran text only. The apps bundle the files; licences are confirmed
- * before release (docs/design/redesign-decisions.md, open questions).
+ * and a Quranic face for Quran text only. The values are the family names the apps register
+ * the bundled files under (`@qc/ui/font-sources`), so they match the fonts' own names.
+ *
+ * Urdu is Mehr Nastaliq Web (CC BY-SA 4.0). Jameel Noori Nastaleeq is not bundled: it has no
+ * redistribution licence. Licences and checksums: `assets/fonts/LICENSES.md`.
  */
 export const fonts = {
   sans: 'Figtree',
-  urdu: 'Jameel Noori Nastaleeq',
+  urdu: 'Mehr Nastaliq Web',
   quran: 'KFGQPC Uthmanic Script HAFS',
 } as const;
+export type FontToken = keyof typeof fonts;
 
-/** Fallbacks in order, for the web and for the catalog before the files are bundled. */
+/**
+ * Fallbacks in order, used where a font stack is possible (the web, the console, the catalog).
+ * On iOS and Android a family that has not loaded falls back to the system font by itself.
+ */
 export const fontFallbacks = {
   sans: ['Figtree', 'system-ui', 'sans-serif'],
-  urdu: ['Jameel Noori Nastaleeq', 'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', 'serif'],
+  urdu: ['Mehr Nastaliq Web', 'Noto Nastaliq Urdu', 'serif'],
   quran: ['KFGQPC Uthmanic Script HAFS', 'serif'],
-} as const;
+} as const satisfies Record<FontToken, readonly string[]>;
+
+/** The font token for a script. */
+export function fontTokenFor(script: Script): FontToken {
+  return script === 'latin' ? 'sans' : script;
+}
+
+/** A CSS `font-family` value for a font token: each family name quoted, generic names bare. */
+export function fontStack(token: FontToken): string {
+  const generic = new Set(['serif', 'sans-serif', 'system-ui', 'monospace']);
+  return fontFallbacks[token].map((name) => (generic.has(name) ? name : `"${name}"`)).join(', ');
+}
+
+/** Figtree weights the type roles use (and `Text strong`, 700). Only these files ship. */
+export const sansWeights = ['400', '500', '600', '700', '800'] as const;
+export type SansWeight = (typeof sansWeights)[number];
 
 /** App-wide text size steps the person can choose in Profile. 1 is the default. */
 export const textScale = [1, 1.15, 1.3, 1.5] as const;
@@ -241,7 +263,7 @@ export function typeStyle(role: TypeRole, script: Script, step: TextSizeStep = 0
   const scale = textScale[step];
   const fontSize = Math.round(spec.size * scriptSizeFactor[script] * scale);
   return {
-    fontFamily: fonts[script === 'latin' ? 'sans' : script],
+    fontFamily: fonts[fontTokenFor(script)],
     fontSize,
     lineHeight: Math.round(fontSize * lineHeightRatio[script]),
     // Nastaliq and Quran fonts have one weight. A synthesised bold looks broken, so emphasise

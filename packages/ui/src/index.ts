@@ -70,3 +70,5 @@ export { StarNumber } from './components/StarNumber';
 export type { StarNumberProps } from './components/StarNumber';
 export { ConfirmSheet } from './components/ConfirmSheet';
 export type { ConfirmSheetProps } from './components/ConfirmSheet';
+export { creditGroups, creditLinks } from './credits';
+export type { CreditEntry, CreditGroup, CreditKey, CreditLink } from './credits';

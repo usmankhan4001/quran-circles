@@ -4,6 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import * as Notifications from 'expo-notifications';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
+import * as Font from 'expo-font';
 import { createDeviceServices } from '../bootstrap';
 import { loadServices } from '../providers/createServices';
 import { AppProviders } from '../providers/AppProviders';
@@ -13,6 +14,7 @@ import type { Navigator } from '../nav/NavProvider';
 import { routeToHref } from '../nav/routes';
 import { ReminderSync } from '../providers/ReminderSync';
 import { registerServiceWorker } from '../platform/serviceWorker';
+import { loadAppFonts } from '../fonts/appFonts';
 
 // One set of services for the life of the page or the app process.
 let services: AppServices | null = null;
@@ -97,7 +99,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     let active = true;
-    void loadServices(app).finally(() => {
+    // The bundled fonts load alongside the saved choices. Font loading never rejects and stops
+    // waiting after a few seconds, so a missing font only means a fallback font.
+    void Promise.allSettled([loadServices(app), loadAppFonts(Font.loadAsync)]).then(() => {
       if (active) setReady(true);
     });
     registerServiceWorker();
@@ -107,7 +111,7 @@ export default function RootLayout() {
   }, [app]);
 
   // Nothing is drawn until the saved language and sign-in are read, so the first screen
-  // never flashes in the wrong language or as signed out.
+  // never flashes in the wrong language or as signed out, or in the wrong font.
   if (!ready) return <View style={{ flex: 1 }} />;
   return (
     <SafeAreaProvider>

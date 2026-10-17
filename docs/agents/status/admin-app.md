@@ -22,6 +22,7 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - Tests: 435 passing in 33 files (Vitest + testing-library, react-native-web in jsdom). Unit tests for forms, scope rules per role, error-code mapping (every contract code has an `errors.*` key in both languages), refresh, storage, time, phone, templates. Render tests per screen against an in-memory backend built on `createMockHandler` (no network), in four language/colour/size combinations, with the role matrix (venue, city, admin, multi-role) and the 403 path. Three consecutive full runs were stable.
 - Checks run: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `pnpm exec eslint apps/admin-app`, `pnpm exec prettier --check apps/admin-app` all pass. `expo export --platform web` bundles (output to a scratch folder, not the repo). No native or store build was made.
 - Fixed along the way: Places showed another venue's row when a person with two venue roles worked as one of them (now narrowed to the working venue); the attendance form could be overwritten by its own late load (now starts from the loaded data).
+- Places venue art is now drawn Quran art (owner, 2026-10-17): `components/VenueArt` draws an open mushaf on a rehal with an eight-point star behind it, plain page lines and no letters, theme colours only, same props and per-venue variant; tests in `components/VenueArt.test.tsx` (15).
 
 ## Redesign pass (2026-10-17, layout A)
 
@@ -59,6 +60,10 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - i18n (en and ur together, Urdu draft): `admin.home.nextSection`, `admin.home.coming`, `admin.home.quickActions`, `admin.home.postShort`, `admin.home.changeTimeShort`, `admin.places.circleCount.one/other`, `admin.venueEditor.circles.title/help/empty`. Nothing removed.
 - Tests: 534 passing in 33 files (was 494). New: next card (time, coming, portion, the four routes, today vs another day, none when no coming date, scope never leaks another venue), quick actions for venue, city, admin and multi-role, `nextOf`, LTR/RTL x light/dark x sizes for the card with the Urdu time mark, venue art and circle counts, count failure, empty Places case, venue page circles per role, ordering, empty, retry, not on create, combos; occurrence and attendance not-available and retry; tick list count and clear; Urdu time in the attendance header; `ltrRun` unit test; tab icons from the kit.
 - Checks: `pnpm --filter @qc/admin-app typecheck`, `test`, `pnpm exec eslint apps/admin-app`, `prettier --check` on changed files pass; `expo export --platform web` bundles to a scratch folder.
+
+## Fonts (2026-10-17, font bundling)
+
+- `src/fonts/FontGate.tsx` wraps the root layout and loads the bundled fonts with `expo-font` (`src/fonts/appFonts.ts`: Figtree 400 to 800, Mehr Nastaliq Web, KFGQPC Uthmanic Script HAFS from `@qc/ui/font-sources`). It draws the app once they load, on failure at once, and after 3 s at the latest. The web export bundles all seven files unmodified.
 
 ## In progress
 

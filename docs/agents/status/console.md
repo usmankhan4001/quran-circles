@@ -68,6 +68,11 @@ Drawn but with no data or API behind it (left out, not invented):
 - i18n: 39 keys added to `en.json` and `ur.json` together (Urdu draft): `console.import.issue.invalidReference/areaNotInCity/alreadyThere`, `console.import.refused.*`, `failed.nothingSaved`, `serverChecked`, `importing`, `confirm.allOrNothing`; `console.exports.intro.scoped`, `allVenues`, `filter.from/to`, `dates.*`, `venue.required`, `tooMany`, `sessionHint`, `savedRows.*`; `console.invites.resent`, `filter.*`, `form.rejected`, `handover.mode.*`, `handover.person.hintExisting`, `handover.nobodyYet`, `handover.inviteWarning`, `handover.sendInvite`, `handoverInvited`; `console.settings.lead.*`.
 - 229 tests in 13 files, no skips. Typecheck, eslint, prettier and build clean (build has Vite's existing chunk size warning).
 
+## Fonts and credits (2026-10-17, font bundling)
+
+- `src/main.tsx` imports `@fontsource/figtree` 400 to 800; `src/fonts.css` declares Mehr Nastaliq Web and KFGQPC Uthmanic Script HAFS from the kit's `packages/ui/assets/fonts`, which Vite copies into the build unchanged (the KFGQPC OTF is never converted). `--font-urdu` is now Mehr Nastaliq Web, Noto Nastaliq Urdu, serif.
+- A credits footer (`src/components/Credits.tsx`, under every signed-in page, collapsed `details`) lists the same credits as the user app (`creditGroups` from `@qc/ui`). The focus-order test now ends with the credits.
+
 ## In progress
 
 - Nothing.

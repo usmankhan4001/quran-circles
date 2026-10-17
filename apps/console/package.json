@@ -11,6 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@fontsource/figtree": "5.3.0",
     "@qc/contracts": "workspace:*",
     "@qc/i18n": "workspace:*",
     "react": "19.3.1",

@@ -1,0 +1,24 @@
+/*
+ * The two fonts the shared kit bundles (packages/ui/assets/fonts, licences in LICENSES.md next to
+ * them), served by the console as static files. Vite copies each file into the build unchanged.
+ * Figtree comes from @fontsource/figtree, imported in main.tsx.
+ *
+ * KFGQPC Uthmanic Script HAFS: its licence forbids modifying the file, so it is served as the
+ * original OTF, never subset or converted to WOFF2.
+ */
+@font-face {
+  font-family: 'Mehr Nastaliq Web';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../../packages/ui/assets/fonts/MehrNastaliqWeb-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'KFGQPC Uthmanic Script HAFS';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../../packages/ui/assets/fonts/KFGQPCUthmanicScriptHAFS-Regular.otf')
+    format('opentype');
+}

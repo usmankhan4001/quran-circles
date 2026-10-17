@@ -410,6 +410,12 @@ function SupportSection() {
           divider
           testID="profile-about"
         />
+        <ListItem
+          title={t('credits.open')}
+          onPress={() => nav.go({ name: 'credits' })}
+          divider
+          testID="profile-credits"
+        />
       </View>
       <Text variant="caption" color="textSecondary" testID="profile-version">
         {t('profile.support.version', { version: appVersion })}

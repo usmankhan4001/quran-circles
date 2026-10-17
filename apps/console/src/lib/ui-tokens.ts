@@ -31,3 +31,8 @@ export {
   ltrRun,
   type Direction,
 } from '../../../../packages/ui/src/direction';
+export {
+  creditGroups,
+  type CreditEntry,
+  type CreditGroup,
+} from '../../../../packages/ui/src/credits';
