@@ -89,6 +89,10 @@ Chosen by the owner on 2026-10-17 from [Buttons](https://claude.ai/artifact/Hukd
 
 Chosen by the owner on 2026-10-17 from [Text fields](https://claude.ai/artifact/F3KpcvHrUmPRQxEmHGfTQf). White field with a 1 px border, radius 14, 60 tall, the label small at the top inside the field (66 tall in Urdu so Nastaliq has room). Focus is a 2 px green border with a green label; error is a 2 px terracotta border with the message and a warning icon below. Search and the 6-digit code have no inside label (52 tall, search is pill-shaped). Phone numbers stay left-to-right with a +92 prefix, even in Urdu. Disabled fields are filled grey with a lock.
 
+### D10. Choices: solid (C1)
+
+Chosen by the owner on 2026-10-17 from [Choices](https://claude.ai/artifact/H9ZPTz7xKgQdipP93t2QUS). A chosen item fills with Tanzeem green and white text, matching the main button. Chips are 40 tall with radius 12 and a tick when chosen; the map or list switch sits in a grey track; toggles are green when on; tick boxes are rounded squares (radius 7); radios are rings with a green centre; tick and pick-one lists sit in white cards with dividers. Women, Men and Family cards (radius 18) fill green with a white tick when chosen and fade when a section is not offered. The people counter sits on a leaf tint with white minus and plus buttons.
+
 ## Open questions
 
 - Owner review of the component set.
