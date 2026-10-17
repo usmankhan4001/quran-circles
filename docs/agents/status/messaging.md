@@ -3,6 +3,20 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by the lane)
 
+## Done (2026-10-17: morning ayah push, contract 1.0.0-rc.4, migration 0009)
+
+- Joint change with contracts (cleared by the orchestrator): `PushData.type` gains `ayah_of_the_day` (`packages/contracts/src/messages.ts`, one test in `messages.test.ts`, CHANGELOG line under rc.4; the rc.4 "Not in this version" bullet removed). `openapi.json` and `SCOPES.md` are unchanged by the generator (checked), so not regenerated. Nothing else in contracts touched.
+- `@qc/messaging`: `PUSH_TYPE_PURPOSE.ayah_of_the_day = 'ayah_daily'`. The send gate therefore treats it like any push: no consent row means on, a revoked `push`/`ayah_daily` row stops it at send time, other purposes do not. Tests: four gate rows plus a check that every contract push type maps to a real purpose.
+- i18n: `notifications.ayah.title` and `notifications.ayah.body` (`{surah}`, `{ayah}`, Western digits) added to en and ur with two small insertions after `notifications.reminder.body`. Urdu is a draft under the file's `_meta.status` marker.
+- Worker: `runMorningAyah` (`apps/worker/src/ayah/morning.ts`) on queue `ayah-daily`, cron `30 6 * * *` Asia/Karachi (06:30 Pakistan time), key `daily`, singleton, `missed: 'once'`; `runtime.ayahNow()` for tests; `scheduleAyah: false` turns the schedule off.
+  - Audience: active account, at least one device not revoked, `ayah_of_the_day` flag on (the city's own row wins, then the global row, then off; the city comes from the profile's area, the API's `resolveFlags` rule), and `consentGranted('push', 'ayah_daily', rows)`.
+  - Ayah: `resolveDailyAyah` with all the person's follows (venues and circles, whatever their alerts setting) and that date's `daily_ayahs`. Link: `quran` deep link (web origin when `PUBLIC_WEB_BASE` is set). Key `ayah_daily:<date>:<userId>:push`, `collapseKey` `ayah_daily`, TTL 6 hours, `venue_id` null, `city_id` the person's city.
+  - Keyset pages of 500 people, one `INSERT ... ON CONFLICT DO NOTHING` per page. A run that starts at or after 12:00 Pakistan time queues nothing (a make-up run after an outage would otherwise send a "morning" ayah in the evening). If the flag is off everywhere the run stops before reading people.
+  - One log line per run, `ayah_daily.run`, counts only (`candidates`, `queued`, `alreadyQueued`, `flagOff`, `consentOff`, `skipped`). The date is not logged because the safe logger redacts `YYYY-MM-DD` as phone-shaped.
+  - Tests (15 in `morning.test.ts`, 3 in `runtime.test.ts`): built-in ayah in both languages, web origin, follow resolution (one followed pick, two followed picks fall back to national, a pick for another day ignored), flag off or missing, city override both ways, consent no row / revoked / re-granted / other purpose revoked, no device / revoked device / suspended account, duplicate run and next day, paging, a database failure mid-run and a clean retry, the noon cutoff, log content, end to end send once, blocked at send time after the person turned it off or lost the last device, schedule registered once at 06:30 Asia/Karachi, schedule off, a queue job.
+- `purgeStaleAuthRows` is **not** scheduled: it lives in `apps/api/src/modules/auth/cleanup.ts` (re-exported by `apps/api/src/jobs.ts`), and apps never import apps. See the change request below.
+- Tests: `@qc/contracts` 1706, `@qc/messaging` 197, `@qc/worker` 121, all passing; typecheck, eslint and prettier clean for the three packages and the i18n files; `@qc/i18n` parity tests pass.
+
 ## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
 
 - Worker runs the occurrence top-up (`topUpAllOccurrences` from `@qc/db`) on the `occurrences-top-up` queue, cron `30 0 * * *` Asia/Karachi (key `daily`, `missed: 'once'`, singleton queue), horizon `OCCURRENCE_HORIZON_DAYS` (default 90), logging counts only; `runtime.topUpNow()` for tests. `OCCURRENCE_HORIZON_DAYS` still needs adding to `.env.example` and the compose files (platform).
@@ -33,6 +47,8 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 
 ## Questions for the orchestrator
 
+- Morning ayah time: 06:30 Pakistan time, with a noon cutoff for make-up runs. Confirm, or name another time.
+- Morning ayah audience follows all of a person's follows, whatever their per-place alerts setting (alerts are for that place's sessions). Confirm.
 - Reminder audience: I include followers of a circle who have alerts on, as well as registrants. Confirm, or limit to registrants.
 - Does the WhatsApp daily cap (Wave 4) apply to `critical` templates? The gate currently exempts them.
 - Which SMS gateway? `HttpSmsProvider` is a generic JSON stand-in.
@@ -44,6 +60,7 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 - Applied 2026-10-17: `outbox-venue-and-provider-id`, `reminder-lead-setting`.
 - `messaging-env-vars`: names are in `.env.example`; passing them to the `worker` and `api` services in the compose files (`infra/`) and the webhook reverse-proxy route still need infra work (not this lane).
 - `push-delivery-ack`: open.
+- `auth-purge-to-db` (new, for auth-scopes and contracts): move `purgeStaleAuthRows` (no HTTP dependency, takes a db and a time) into `@qc/db` jobs next to `topUpAllOccurrences`, keeping the API's re-export. The worker then schedules it daily (proposed `0 3 * * *` Asia/Karachi on an `auth-purge` queue, counts-only log line). Until then nothing removes spent sign-in codes and dead sessions.
 
 ## Findings from integration
 

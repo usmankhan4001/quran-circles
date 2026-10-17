@@ -20,4 +20,6 @@ export const PUSH_TYPE_PURPOSE: Record<PushPayload['data']['type'], ConsentPurpo
   session_cancelled: 'registration_updates',
   waitlist_promoted: 'registration_updates',
   circle_opened: 'announcements',
+  /** The morning ayah push (rc.4). On by default: no consent row means on, a revoked row means off. */
+  ayah_of_the_day: 'ayah_daily',
 };

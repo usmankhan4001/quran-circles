@@ -3,6 +3,9 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { tables } from './db';
 import {
+  AYAH_CRON,
+  AYAH_QUEUE,
+  AYAH_TIMEZONE,
   RECONCILE_QUEUE,
   SEND_QUEUE,
   TOP_UP_CRON,
@@ -264,6 +267,47 @@ describe('pg-boss runtime', () => {
     const lines = await until(done, (l) => l.length === 2);
     expect(lines[1]!.fields).toEqual({ sessions: 1, occurrencesAdded: 0, horizonDays: 90 });
     expect(await count()).toBe(13);
+  });
+
+  it('registers the morning ayah at 06:30 Pakistan time, once however often it starts', async () => {
+    await start();
+    await runtime!.stop({ timeoutMs: 5_000 });
+    boss = new PgBoss({ db: fromPglite(test.pg), backend: 'pglite', schedule: true });
+    boss.on('error', () => {});
+    await boss.start();
+    await start();
+    const schedules = (await boss.getSchedules()).filter((s) => s.name === AYAH_QUEUE);
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0]).toMatchObject({ cron: AYAH_CRON, timezone: AYAH_TIMEZONE, key: 'daily' });
+    expect(AYAH_CRON).toBe('30 6 * * *');
+    expect(AYAH_TIMEZONE).toBe('Asia/Karachi');
+  });
+
+  it('does not register the morning ayah schedule when told not to', async () => {
+    await boss.unschedule(AYAH_QUEUE, 'daily');
+    await start({ scheduleAyah: false });
+    expect((await boss.getSchedules()).some((s) => s.name === AYAH_QUEUE)).toBe(false);
+  });
+
+  it('queues the morning ayah on demand and when a job reaches its queue, once per person', async () => {
+    h.clock.set(new Date('2026-11-02T01:30:00Z')); // 06:30 in Pakistan
+    // No schedule here, so a make-up run cannot race the on-demand one.
+    await boss.unschedule(AYAH_QUEUE, 'daily');
+    const rt = await start({ webBase: 'https://example.org', scheduleAyah: false });
+    await test.db
+      .insert(tables.featureFlags)
+      .values({ key: 'ayah_of_the_day', cityId: null, enabled: true });
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    expect(await rt.ayahNow()).toMatchObject({ date: '2026-11-02', queued: 1 });
+    const row = await h.rowByKey(`ayah_daily:2026-11-02:${user.id}:push`);
+    expect(JSON.stringify(row?.payload)).toContain('https://example.org/quran?surah=');
+
+    const done = () => Promise.resolve(h.logger.lines.filter((l) => l.event === 'ayah_daily.run'));
+    const before = (await done()).length;
+    await boss.send(AYAH_QUEUE, {});
+    const lines = await until(done, (l) => l.length === before + 1);
+    expect(lines.at(-1)!.fields).toMatchObject({ queued: 0, alreadyQueued: 1 });
   });
 
   it('stops cleanly: no further polling after stop', async () => {

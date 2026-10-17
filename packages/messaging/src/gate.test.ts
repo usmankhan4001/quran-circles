@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { TEMPLATES, TEMPLATE_KEYS, type TemplateKey } from '@qc/contracts';
+import {
+  CONSENT_PURPOSES,
+  PushData,
+  TEMPLATES,
+  TEMPLATE_KEYS,
+  type TemplateKey,
+} from '@qc/contracts';
 import { evaluateGate, type ConsentFact, type GateBlockReason, type GateInput } from './gate';
+import { PUSH_TYPE_PURPOSE } from './purpose';
 
 const NOW = new Date('2026-11-01T10:00:00Z');
 const VENUE = '00000000-0000-4000-8000-0000000000a1';
@@ -198,6 +205,59 @@ const rows: Row[] = [
     }),
     expected: 'allow',
   },
+  // The morning ayah push: on by default (no row), off once revoked, other purposes do not touch it
+  {
+    name: 'ayah push with no consent rows is on by default',
+    input: base({
+      channel: 'push',
+      template: null,
+      pushType: 'ayah_of_the_day',
+      venueId: null,
+      workingPushDevices: 1,
+    }),
+    expected: 'allow',
+  },
+  {
+    name: 'ayah push after the person turned the morning ayah off',
+    input: base({
+      channel: 'push',
+      template: null,
+      pushType: 'ayah_of_the_day',
+      venueId: null,
+      workingPushDevices: 1,
+      consents: [
+        consent({
+          channel: 'push',
+          purpose: 'ayah_daily',
+          revokedAt: new Date('2026-10-10T00:00:00Z'),
+        }),
+      ],
+    }),
+    expected: 'push_opted_out',
+  },
+  {
+    name: 'ayah push is not stopped by turning reminders off',
+    input: base({
+      channel: 'push',
+      template: null,
+      pushType: 'ayah_of_the_day',
+      venueId: null,
+      workingPushDevices: 1,
+      consents: [consent({ channel: 'push', revokedAt: new Date('2026-10-10T00:00:00Z') })],
+    }),
+    expected: 'allow',
+  },
+  {
+    name: 'ayah push with no working device',
+    input: base({
+      channel: 'push',
+      template: null,
+      pushType: 'ayah_of_the_day',
+      venueId: null,
+      workingPushDevices: 0,
+    }),
+    expected: 'no_working_push',
+  },
   {
     name: 'push without a user',
     input: base({
@@ -286,5 +346,19 @@ describe('send gate', () => {
         expect(decision, `${key} over ${channel}`).toEqual({ allow: true });
       }
     }
+  });
+});
+
+describe('push purposes', () => {
+  it('maps every push type in the contract to a consent purpose', () => {
+    const types = PushData.shape.type.options;
+    expect(Object.keys(PUSH_TYPE_PURPOSE).sort()).toEqual([...types].sort());
+    for (const type of types) expect(CONSENT_PURPOSES).toContain(PUSH_TYPE_PURPOSE[type]);
+  });
+
+  it('puts the morning ayah push under ayah_daily, apart from reminders and announcements', () => {
+    expect(PUSH_TYPE_PURPOSE.ayah_of_the_day).toBe('ayah_daily');
+    const others = Object.entries(PUSH_TYPE_PURPOSE).filter(([t]) => t !== 'ayah_of_the_day');
+    expect(others.map(([, p]) => p)).not.toContain('ayah_daily');
   });
 });

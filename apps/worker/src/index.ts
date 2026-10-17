@@ -9,5 +9,6 @@ export * from './outbox/dispatcher';
 export * from './reminders/format';
 export * from './reminders/reconcile';
 export * from './occurrences/top-up';
+export * from './ayah/morning';
 export * from './whatsapp/apply';
 export * from './whatsapp/handler';

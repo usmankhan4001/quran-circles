@@ -32,6 +32,7 @@ The next features decided with the owner (`docs/product/features-next.md`), from
 - Feature flags (Gate 4: each feature behind a flag): `reading_days`, `community_today`, `ayah_of_the_day`, `memorisation`, `read_along` (`NEXT_FEATURE_FLAGS`, in `FEATURE_FLAGS`). Off unless a `feature_flags` row turns them on, like every flag. In `AppConfig.featureFlags` they are optional in the type only; read them with `featureOn(flags, key)` (missing is off). The API's flag resolver already covers new keys.
 - `DeepLink` gains `{ type: 'quran', surah, ayah }`, built as `/quran?surah=…&ayah=…` (the user app's existing reader route) and parsed back.
 - New vocabularies: `READING_DAY_SOURCES`, `READING_DAY_CLIENT_SOURCES`, `DAILY_GOAL_UNITS`, `MEMORISATION_STATUSES`, `DAILY_AYAH_SCOPES`, `AYAH_OF_THE_DAY_SOURCES`. Helpers: `pakistanDate`, `addDays`, `readingDayDateIssue`, `readingRangeIssue`, `resolveDailyAyah`, `builtInAyahFor`, `needsRevision`, `dailyAyahResource`.
+- `PushData.type` gains `ayah_of_the_day` (joint change with the messaging lane, which maps it to the consent purpose `ayah_daily` in `PUSH_TYPE_PURPOSE`): the worker's morning ayah push, with a `quran` deep link. No other push field changes.
 - Mock server: handlers for every new endpoint from new fixtures (`dailyAyahs`, `fixtureReadingDays`, `fixtureMemorisation`, `fixtureCommunityToday`, all synthetic); the rc.4 flags are on in the mock config; staff picks are scope-checked per role. `fixtureMe.profile` has `dailyGoal: null` and `memorisationReviseAfterDays: null`.
 
 ### Scopes
@@ -54,7 +55,6 @@ Tables `reading_days` (unique user, day, source; cascade on user delete), `commu
 
 ### Not in this version
 
-- `PushData.type` `ayah_of_the_day`: adding it breaks `@qc/messaging` (`PUSH_TYPE_PURPOSE` is an exhaustive record), so it lands as a small joint change with the messaging lane's mapping `ayah_of_the_day -> ayah_daily`, before the worker's morning job sends anything.
 - Push and Home wording (English and Urdu draft) belongs to `@qc/i18n` and the apps.
 
 ## 1.0.0-rc.3 (2026-10-17)

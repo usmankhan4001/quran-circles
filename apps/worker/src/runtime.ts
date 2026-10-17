@@ -5,6 +5,7 @@ import type { Clock, Db } from './db';
 import { createDispatcher, type SendJob, type SendQueue } from './outbox/dispatcher';
 import { processJob, type ProcessorDeps } from './outbox/processor';
 import { runOccurrenceTopUp } from './occurrences/top-up';
+import { runMorningAyah, type AyahJobSummary } from './ayah/morning';
 import { reconcileReminders, type ReconcileSummary } from './reminders/reconcile';
 
 export const SEND_QUEUE = 'outbox-send';
@@ -14,6 +15,10 @@ export const TOP_UP_QUEUE = 'occurrences-top-up';
 /** 00:30 every day in Pakistan time, after the date has turned over. */
 export const TOP_UP_CRON = '30 0 * * *';
 export const TOP_UP_TIMEZONE = 'Asia/Karachi';
+export const AYAH_QUEUE = 'ayah-daily';
+/** 06:30 every day in Pakistan time: after Fajr for most of the year, before the working day. */
+export const AYAH_CRON = '30 6 * * *';
+export const AYAH_TIMEZONE = 'Asia/Karachi';
 
 export interface RuntimeOptions {
   db: Db;
@@ -32,6 +37,8 @@ export interface RuntimeOptions {
   scheduleReminders?: boolean;
   /** Run the occurrence top-up on a schedule (daily). Default true. */
   scheduleTopUp?: boolean;
+  /** Queue the morning ayah push on a schedule (daily, 06:30 Pakistan time). Default true. */
+  scheduleAyah?: boolean;
   /** How many days ahead the top-up keeps occurrences. Default 90, the API's value. */
   occurrenceHorizonDays?: number;
   webBase?: string;
@@ -44,6 +51,8 @@ export interface Runtime {
   reconcileNow(): Promise<ReconcileSummary>;
   /** One occurrence top-up now. */
   topUpNow(): Promise<TopUpSummary>;
+  /** One morning ayah run now. */
+  ayahNow(): Promise<AyahJobSummary>;
   /** Stops the loops and waits for in-flight work. Does not close the database. */
   stop(options?: { timeoutMs?: number; close?: boolean }): Promise<void>;
 }
@@ -61,7 +70,9 @@ export interface Runtime {
  * - a cron job reconciles reminder rows every minute;
  * - a cron job tops up recurring sessions' occurrences once a day (00:30 Pakistan time). A missed
  *   run (the worker was down) is made up once on start; the job is idempotent, so a duplicate run
- *   adds nothing.
+ *   adds nothing;
+ * - a cron job queues the morning ayah push once a day (06:30 Pakistan time). A missed run is made
+ *   up once on start, but only before noon Pakistan time; rows are idempotent per person and date.
  */
 export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
   const { boss, logger } = options;
@@ -90,6 +101,16 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     policy: 'singleton',
     retryLimit: 3,
     retryDelay: 300,
+    retryBackoff: true,
+    expireInSeconds: 900,
+    retentionSeconds: 2 * 24 * 3600,
+    deleteAfterSeconds: 7 * 24 * 3600,
+  });
+
+  await boss.createQueue(AYAH_QUEUE, {
+    policy: 'singleton',
+    retryLimit: 3,
+    retryDelay: 120,
     retryBackoff: true,
     expireInSeconds: 900,
     retentionSeconds: 2 * 24 * 3600,
@@ -182,6 +203,30 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     );
   }
 
+  const ayah = (): Promise<AyahJobSummary> =>
+    runMorningAyah({
+      db: options.db,
+      logger,
+      now: options.now,
+      ...(options.webBase ? { webBase: options.webBase } : {}),
+    });
+  await boss.work(
+    AYAH_QUEUE,
+    { pollingIntervalSeconds: Math.max(pollingIntervalSeconds, 5) },
+    async () => {
+      // `runMorningAyah` logs its one line per run.
+      await ayah();
+    },
+  );
+  if (options.scheduleAyah ?? true) {
+    await boss.schedule(
+      AYAH_QUEUE,
+      AYAH_CRON,
+      {},
+      { key: 'daily', tz: AYAH_TIMEZONE, missed: 'once' },
+    );
+  }
+
   // The poll loop. One pass at a time; a slow pass delays the next instead of overlapping it.
   const intervalMs = options.dispatchIntervalMs ?? 5_000;
   let stopped = false;
@@ -207,6 +252,7 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     dispatchNow: () => dispatcher.tick(),
     reconcileNow: reconcile,
     topUpNow: topUp,
+    ayahNow: ayah,
     async stop(stopOptions = {}) {
       stopped = true;
       if (timer) clearTimeout(timer);

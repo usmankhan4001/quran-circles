@@ -429,6 +429,8 @@
   "notifications.waitlistPromoted.title": "ایک نشست خالی ہو گئی",
   "notifications.reminder.title": "نشست کی یاد دہانی",
   "notifications.reminder.body": "{venueName} میں {sessionTitle}، {when}",
+  "notifications.ayah.title": "آج کی آیت",
+  "notifications.ayah.body": "سورہ نمبر {surah}، آیت {ayah}۔ پڑھنے کے لیے ٹیپ کریں۔",
   "console.shell.appTitle": "قرآن سرکلز کنسول",
   "console.shell.skipToContent": "مرکزی مواد پر جائیں",
   "console.shell.navLabel": "مرکزی مینو",

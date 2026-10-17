@@ -267,6 +267,8 @@ export const PushData = z.object({
     'session_cancelled',
     'waitlist_promoted',
     'circle_opened',
+    /** rc.4: the morning ayah push. Its deep link is a `quran` link to the day's ayah. */
+    'ayah_of_the_day',
   ]),
   /** A deep link built by `buildDeepLink`. */
   deepLink: z.string(),

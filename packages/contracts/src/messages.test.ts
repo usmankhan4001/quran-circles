@@ -110,6 +110,21 @@ describe('outbox and push payloads', () => {
     expect(PushPayload.parse(push).ttlSeconds).toBe(6 * 3600);
   });
 
+  it('accepts the morning ayah push with a quran deep link, and still refuses unknown push types', () => {
+    const deepLink = buildDeepLink({ type: 'quran', surah: 2, ayah: 255 });
+    const ayah = {
+      title: 'Ayah of the day',
+      body: 'Surah 2, ayah 255',
+      data: { type: 'ayah_of_the_day' as const, deepLink },
+    };
+    expect(PushPayload.parse(ayah).data).toEqual({ type: 'ayah_of_the_day', deepLink });
+    expect(parseDeepLink(deepLink)).toEqual({ type: 'quran', surah: 2, ayah: 255 });
+    expect(OutboxPayload.safeParse({ channel: 'push', push: ayah }).success).toBe(true);
+    expect(
+      PushPayload.safeParse({ ...ayah, data: { ...ayah.data, type: 'ayah_of_the_week' } }).success,
+    ).toBe(false);
+  });
+
   it('accepts push, WhatsApp template and SMS payloads', () => {
     expect(OutboxPayload.safeParse({ channel: 'push', push }).success).toBe(true);
     expect(

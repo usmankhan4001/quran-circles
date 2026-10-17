@@ -428,6 +428,8 @@
   "notifications.waitlistPromoted.title": "A seat opened up",
   "notifications.reminder.title": "Session reminder",
   "notifications.reminder.body": "{sessionTitle} at {venueName}, {when}",
+  "notifications.ayah.title": "Ayah of the day",
+  "notifications.ayah.body": "Surah {surah}, ayah {ayah}. Tap to read it.",
   "console.shell.appTitle": "Quran Circles console",
   "console.shell.skipToContent": "Skip to main content",
   "console.shell.navLabel": "Main menu",
