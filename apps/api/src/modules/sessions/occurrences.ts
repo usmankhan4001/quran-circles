@@ -1,76 +1,25 @@
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, eq, gte } from 'drizzle-orm';
+import {
+  horizonDate,
+  insertPlanned,
+  planOccurrences,
+  topUpOccurrences,
+  type PlannedOccurrence,
+  type ScheduleSpec,
+} from '@qc/db';
 import { schema, type Db } from '../../db';
-import { addDays, compareDates, dayOfWeek, localToUtc, utcToLocalDate } from '../shared/time';
+import { compareDates, utcToLocalDate } from '../shared/time';
 
 const { occurrences } = schema;
 
-/** The parts of a session that decide when its occurrences fall. */
-export interface ScheduleSpec {
-  kind: 'recurring' | 'one_off';
-  localStartTime: string;
-  durationMinutes: number;
-  daysOfWeek: readonly number[];
-  startsOn: string;
-  endsOn: string | null;
-  timezone: string;
-}
-
-export interface PlannedOccurrence {
-  /** Local calendar date in the session's timezone. */
-  date: string;
-  startsAt: Date;
-  endsAt: Date;
-}
-
-/** Hard stop so a bad schedule can never create thousands of rows. */
-const MAX_PLANNED = 400;
-
 /**
- * The dated instances of a schedule between two local dates, inclusive. A recurring session
- * repeats on its days of the week; a one-off lecture has a single date (its `startsOn`).
+ * The planner (`planOccurrences`, `horizonDate`, `insertPlanned`) and the lazy per-session
+ * `topUpOccurrences` live in `@qc/db`, shared with the worker's daily job, so the API and the
+ * worker always plan the same dates. What stays here is API-only: creating a new session's
+ * occurrences, schedule changes and cancellation.
  */
-export function planOccurrences(
-  spec: ScheduleSpec,
-  fromDate: string,
-  toDate: string,
-): PlannedOccurrence[] {
-  const make = (date: string): PlannedOccurrence => {
-    const startsAt = localToUtc(date, spec.localStartTime, spec.timezone);
-    return { date, startsAt, endsAt: new Date(startsAt.getTime() + spec.durationMinutes * 60_000) };
-  };
-  if (spec.kind === 'one_off') {
-    const d = spec.startsOn;
-    return compareDates(d, fromDate) >= 0 && compareDates(d, toDate) <= 0 ? [make(d)] : [];
-  }
-  const out: PlannedOccurrence[] = [];
-  let date = compareDates(spec.startsOn, fromDate) >= 0 ? spec.startsOn : fromDate;
-  const last = spec.endsOn && compareDates(spec.endsOn, toDate) < 0 ? spec.endsOn : toDate;
-  const days = new Set(spec.daysOfWeek);
-  while (compareDates(date, last) <= 0 && out.length < MAX_PLANNED) {
-    if (days.has(dayOfWeek(date))) out.push(make(date));
-    date = addDays(date, 1);
-  }
-  return out;
-}
-
-export function horizonDate(now: Date, timezone: string, horizonDays: number): string {
-  return addDays(utcToLocalDate(now, timezone), horizonDays);
-}
-
-/** Inserts planned occurrences; ones that already exist at the same instant are left alone. */
-export async function insertPlanned(
-  db: Db,
-  sessionId: string,
-  planned: readonly PlannedOccurrence[],
-): Promise<number> {
-  if (planned.length === 0) return 0;
-  const inserted = await db
-    .insert(occurrences)
-    .values(planned.map((p) => ({ sessionId, startsAt: p.startsAt, endsAt: p.endsAt })))
-    .onConflictDoNothing({ target: [occurrences.sessionId, occurrences.startsAt] })
-    .returning({ id: occurrences.id });
-  return inserted.length;
-}
+export { horizonDate, insertPlanned, planOccurrences, topUpOccurrences };
+export type { PlannedOccurrence, ScheduleSpec };
 
 /**
  * Creates the occurrences of a new session, from its start (or today) to the horizon. A session in
@@ -90,33 +39,6 @@ export async function materializeSession(
       ? planOccurrences(spec, spec.startsOn, spec.startsOn)
       : planOccurrences(spec, from, horizonDate(now, spec.timezone, horizonDays));
   return insertPlanned(db, sessionId, planned);
-}
-
-/**
- * Keeps a recurring session's occurrences ahead of the horizon. It only adds dates after the
- * latest one that exists, so an occurrence that was moved or cancelled by hand is never recreated.
- * Safe to call often; the worker also calls it daily.
- */
-export async function topUpOccurrences(
-  db: Db,
-  sessionId: string,
-  spec: ScheduleSpec,
-  now: Date,
-  horizonDays: number,
-): Promise<number> {
-  if (spec.kind !== 'recurring') return 0;
-  const [latest] = await db
-    .select({ startsAt: occurrences.startsAt })
-    .from(occurrences)
-    .where(eq(occurrences.sessionId, sessionId))
-    .orderBy(desc(occurrences.startsAt))
-    .limit(1);
-  const today = utcToLocalDate(now, spec.timezone);
-  const after = latest ? addDays(utcToLocalDate(latest.startsAt, spec.timezone), 1) : spec.startsOn;
-  const from = compareDates(after, today) > 0 ? after : today;
-  const to = horizonDate(now, spec.timezone, horizonDays);
-  if (compareDates(from, to) > 0) return 0;
-  return insertPlanned(db, sessionId, planOccurrences(spec, from, to));
 }
 
 export interface ScheduleChangeResult {

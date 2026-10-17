@@ -1,7 +1,23 @@
 # Status: api-core
 
-Updated: 2026-10-17
+Updated: 2026-10-17 (rc.4)
 Branch: claude/peaceful-archimedes-ain95k
+
+## Done (2026-10-17: contract 1.0.0-rc.4, migration 0009)
+
+- The ten new endpoints are served by `apps/api/src/modules/reading/` (`days.ts`, `daily-ayahs.ts`, `memorisation.ts`, `routes.ts`); the registry (90 operations) minus `auth.*` is now fully mounted.
+- `readingDays.record`: the date is checked with `readingDayDateIssue` against the server clock (today or yesterday in Pakistan; default today via `pakistanDate`). One transaction: lock the person's `users` row (`FOR NO KEY UPDATE`, so two writes for one person cannot both count as the first of the day, and FK inserts elsewhere are not blocked), upsert `(user, day, source)` keeping `greatest()` pages and ayahs, then one `community_days` insert-or-increment statement adding 1 reader on the person's first row of that date and the pages increase (never a decrease). Answers the whole day. An account that no longer exists answers `unauthenticated` and writes nothing.
+- `readingDays.list`: `readingRangeIssue` (`invalid_range` on `from`, `too_big` on `to`), own rows only, grouped by date, sources in `READING_DAY_SOURCES` order, totals summed, days without rows left out.
+- `adminAttendance.put`: each entry with a `registrationId` whose registration still has a user adds an `attendance` row for `pakistanDate(occurrence.startsAt)` through the same helper (same community rules), inside the attendance transaction, user rows locked in sorted id order. Typed names and anonymised registrations add nothing. Choice: an occurrence whose Pakistan date is after today adds nothing (nobody has attended it yet). Removing a name on a later save leaves the day (the totals only ever grow).
+- `community.today`: today's row or zeros, `cache-control: public, max-age=60`.
+- `ayahOfTheDay.get`: loads the date's national picks plus venue/circle picks for the followed ids only, then `resolveDailyAyah`.
+- `adminDailyAyahs.put`: unknown venue or circle is `ctx.unknownRef` (`not_found` for holders of `daily_ayah.manage`, `forbidden` otherwise), then `ctx.authorize('daily_ayah.manage', dailyAyahResource(scope, place))`. Upsert by date, scope and place under a transaction-scoped advisory lock (Drizzle cannot target the expression unique index in `onConflict`). Records `set_by`. One `daily_ayah.set` audit row per change (meta: date, scope type, circle id, surah, ayah, replaced); a repeat with the same ayah changes nothing and writes no audit row.
+- `adminDailyAyahs.delete`: unknown id `ctx.missing` (staff 404, outsiders 403), else authorised like put for the pick's scope (out of scope 403); one `daily_ayah.delete` audit row.
+- `adminDailyAyahs.list`: `ctx.scope('daily_ayah.manage')` (no staff role: 403); national picks for every staff caller, venue and circle picks where the city or venue is in the filter. Filters `scopeType`, `venueId` (venue picks and circle picks at that venue), `circleId`. Choice: an unknown or out-of-scope `venueId`/`circleId` filter returns an empty list, because the contract lists no `not_found` for this endpoint (no params). Ordered by date, then national, venue, circle.
+- `memorisation.list|put|delete`: put is one upsert; `markRevised` stamps now; `memorised` sets `coalesce(last_revised_at, now)` so only a never-revised surah is stamped; other statuses keep the stamp. Delete is always 204. `reviseAfterDays` comes from the profile, else 14.
+- `me.get`/`me.update` map `dailyGoal` (both columns or neither; null clears) and `memorisationReviseAfterDays`. `me.delete` deletes the user row, so `reading_days` and `memorisation` go by cascade; `community_days` stays (test covers both).
+- Debt paid: `modules/sessions/occurrences.ts` no longer copies the planner; `planOccurrences`, `horizonDate`, `insertPlanned`, `topUpOccurrences` and the types come from `@qc/db` (re-exported for the existing callers). Schedule change, materialise and cancel stay in the API.
+- Tests: new `src/test/reading.test.ts` (36: record, date rule incl. Pakistan midnight, community counting, list ranges and own-data-only for every staff role, attendance days incl. refused saves and future occurrences, ayah rule, picks by every role incl. unknown places, audit, list scoping and filters, delete, memorisation stamping, profile fields, account deletion). Scope matrix: six new scenarios (list; put national, venue, circle; delete venue and national pick) against all eight caller kinds. `@qc/api` 604 passing in 29 files (was 558 passing and 4 failing); typecheck, eslint and prettier clean on `apps/api`.
 
 ## Done (2026-10-17: after rc.3, session end date issue code)
 
@@ -18,7 +34,7 @@ Branch: claude/peaceful-archimedes-ain95k
 
 ## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
 
-- Daily occurrence top-up moved to `@qc/db` (`packages/db/src/jobs/`); `modules/sessions/top-up.ts` and `jobs.ts` re-export `topUpAllOccurrences`, and the worker now runs it daily. The lazy per-session path still uses `modules/sessions/occurrences.ts`, a copy of the package's planner (switching it to `@qc/db` is a follow-up).
+- Daily occurrence top-up moved to `@qc/db` (`packages/db/src/jobs/`); `modules/sessions/top-up.ts` and `jobs.ts` re-export `topUpAllOccurrences`, and the worker now runs it daily. The lazy per-session path still uses `modules/sessions/occurrences.ts`, a copy of the package's planner (switching it to `@qc/db` is a follow-up; done in the rc.4 session).
 - Settings: `reminderLeadMinutes {dora, circles}` (default 60 each) stored under `reminder_lead_minutes`, the key the worker reads. A PATCH with one program merges with the stored value.
 - `users.display_name` is nullable: nothing writes the `-` placeholder any more; readers treat null, blank and a legacy `-` as no name (`modules/shared/names.ts`).
 - Circles: `adminCircles.decide` takes no note and audits `{}`; `adminCircles.update` accepts `status` `published` <-> `archived` only (anything else is `validation_failed` `{path: 'status', code: 'invalid_transition'}`); `adminCircles.get` returns the list entry, `not_found` outside the caller's list scope.
@@ -66,6 +82,8 @@ Branch: claude/peaceful-archimedes-ain95k
 
 ## Questions for the orchestrator
 
+- Auth lane: `modules/auth/me.ts` `loadMe` (the `Me` in the sign-in response) does not send `profile.dailyGoal` or `profile.memorisationReviseAfterDays`. They are optional in the type so it still parses, but the rc.4 changelog says the server always sends them; `me.get` does. The auth-scopes lane should add the two fields (same mapping as `modules/me/profile.ts`).
+- The `reading_days`, `community_today`, `ayah_of_the_day` and `memorisation` flags are not enforced by the API: the contract has no error code for a feature that is off, so the endpoints always answer and the apps hide the features by flag. Say if the API should refuse instead (that needs a contract change).
 - `purgeStaleAuthRows` (`apps/api/src/jobs.ts`) is still not scheduled by the worker; it would need the same move into a shared package.
 - The lazy per-session `topUpOccurrences` on the public occurrences view and `insertSession` still ignore a season's last day (pre-existing); only the daily job caps at it.
 - Import duplicate keys follow the contract text and the mock (venue: city + English name, case-insensitive; session: venue + English title + kind + start time + days or date; coordinator: number + role + place, or a person who already holds it), not the brief's wording (venue by city + area + name, session by venue + weekday + time). Say if the brief's keys are wanted.

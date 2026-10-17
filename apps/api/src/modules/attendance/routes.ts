@@ -22,6 +22,7 @@ export const attendanceHandlers = (): Handlers => ({
         id: found.occurrence.id,
         sessionId: found.occurrence.sessionId,
         status: found.occurrence.status,
+        startsAt: found.occurrence.startsAt,
         venueId: found.venueId,
         cityId: found.cityId,
       },

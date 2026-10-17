@@ -53,6 +53,11 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
       education: profile?.education ?? null,
       priorReading: profile?.priorReading ?? null,
       preferredLanguage: profile?.preferredLanguage ?? null,
+      dailyGoal:
+        profile?.dailyGoalUnit && profile.dailyGoalAmount !== null
+          ? { unit: profile.dailyGoalUnit, amount: profile.dailyGoalAmount }
+          : null,
+      memorisationReviseAfterDays: profile?.memorisationReviseAfterDays ?? null,
     },
     roles: assignments.map((a) => ({
       id: a.id,
@@ -90,6 +95,13 @@ export async function updateMe(db: Db, userId: string, patch: ProfileUpdate): Pr
     if (patch.priorReading !== undefined) profileSet.priorReading = patch.priorReading;
     if (patch.preferredLanguage !== undefined)
       profileSet.preferredLanguage = patch.preferredLanguage;
+    if (patch.dailyGoal !== undefined) {
+      // Both columns or neither (profiles_daily_goal_shape_chk); null clears the goal.
+      profileSet.dailyGoalUnit = patch.dailyGoal?.unit ?? null;
+      profileSet.dailyGoalAmount = patch.dailyGoal?.amount ?? null;
+    }
+    if (patch.memorisationReviseAfterDays !== undefined)
+      profileSet.memorisationReviseAfterDays = patch.memorisationReviseAfterDays;
     if (Object.keys(profileSet).length) {
       await tx
         .insert(profiles)
@@ -164,8 +176,9 @@ export async function deleteAccount(db: Db, userId: string, now: Date): Promise<
 
     await tx.delete(coordinatorInvites).where(eq(coordinatorInvites.phoneE164, user.phoneE164));
     await tx.delete(otpChallenges).where(eq(otpChallenges.phoneE164, user.phoneE164));
-    // Profile, devices, follows, consents, bookmarks, reading position, circle requests, feed
-    // read marks, role assignments and sign-in sessions go with the user row (cascade).
+    // Profile, devices, follows, consents, bookmarks, reading position, reading days,
+    // memorisation, circle requests, feed read marks, role assignments and sign-in sessions go
+    // with the user row (cascade). The national `community_days` totals hold no user id and stay.
     await tx.delete(users).where(eq(users.id, userId));
   });
 }

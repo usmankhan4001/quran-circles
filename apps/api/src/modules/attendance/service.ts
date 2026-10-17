@@ -1,8 +1,10 @@
 import { asc, eq, inArray } from 'drizzle-orm';
+import { pakistanDate } from '@qc/contracts';
 import type { Attendance } from '../shared/types';
 import { schema, type Db } from '../../db';
 import { venueScope, writeAudit } from '../shared/audit';
 import { invalid } from '../shared/errors';
+import { addReadingDay } from '../reading/days';
 
 const { attendance, occurrences, registrations } = schema;
 
@@ -53,6 +55,7 @@ export async function saveAttendance(
     id: string;
     sessionId: string;
     status: 'scheduled' | 'cancelled' | 'done';
+    startsAt: Date;
     venueId: string;
     cityId: string;
   },
@@ -68,6 +71,9 @@ export async function saveAttendance(
   }
   const total = input.entries.reduce((sum, e) => sum + e.count, 0);
   if (total > input.headcount) invalid('headcount', 'below_entries');
+
+  // People marked present through their registration (not typed names, not anonymised rows).
+  const attendedUserIds = new Set<string>();
 
   await db.transaction(async (tx) => {
     // Serialise saves for one occurrence so two coordinators cannot interleave their rows.
@@ -85,7 +91,11 @@ export async function saveAttendance(
       const ok = new Set(valid.map((r) => r.id));
       // The registration must belong to this occurrence's session.
       const ofSession = await tx
-        .select({ id: registrations.id, sessionId: registrations.sessionId })
+        .select({
+          id: registrations.id,
+          sessionId: registrations.sessionId,
+          userId: registrations.userId,
+        })
         .from(registrations)
         .where(inArray(registrations.id, registrationIds));
       const matching = new Set(
@@ -96,6 +106,7 @@ export async function saveAttendance(
           invalid(`entries.${i}.registrationId`);
         }
       });
+      for (const r of ofSession) if (r.userId) attendedUserIds.add(r.userId);
     }
 
     await tx.delete(attendance).where(eq(attendance.occurrenceId, occ.id));
@@ -123,6 +134,17 @@ export async function saveAttendance(
       scope: venueScope({ id: occ.venueId, cityId: occ.cityId }),
       meta: { headcount: input.headcount, entries: input.entries.length },
     });
+
+    // Each named registrant gets an `attendance` day read for the occurrence's Pakistan date, with
+    // the same national count as a day read from the app. Not for an occurrence still ahead: no
+    // one has attended it yet. Taking a name off later leaves the day (totals only ever grow).
+    // Sorted, so two saves that share people lock their user rows in the same order.
+    const day = pakistanDate(occ.startsAt);
+    if (day <= pakistanDate(now)) {
+      for (const userId of [...attendedUserIds].sort()) {
+        await addReadingDay(tx, { userId, day, source: 'attendance', pages: 0, ayahs: 0, now });
+      }
+    }
   });
   return readAttendance(db, occ.id);
 }

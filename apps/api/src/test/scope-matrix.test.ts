@@ -37,6 +37,9 @@ interface Fixture {
   inviteId: string;
   assignmentId: string;
   handoverTargetUserId: string;
+  /** Ayah of the day picks: one for the fixture's venue, one national. */
+  venueDailyAyahId: string;
+  nationalDailyAyahId: string;
   /** The venue every scenario acts on, and its city. */
   venueId: string;
   cityId: string;
@@ -479,6 +482,67 @@ const SPECS: ScenarioSpec[] = [
     }),
   },
   {
+    id: 'adminDailyAyahs.list',
+    label: 'list',
+    action: 'daily_ayah.manage',
+    target: 'any',
+    // A list of a venue-level action: every holder of the action may list (national picks to all,
+    // place picks in scope), so the oracle is "holds it somewhere", not `can` with no place.
+    oracle: (principal) => holdsAny(principal, ['daily_ayah.manage']),
+    request: () => ({ query: { from: '2026-10-01', to: '2026-10-31' } }),
+  },
+  {
+    id: 'adminDailyAyahs.put',
+    label: 'national pick',
+    action: 'daily_ayah.manage',
+    target: 'national',
+    request: () => ({
+      body: { date: '2026-10-21', scope: { type: 'national' }, surah: 2, ayah: 255 },
+    }),
+  },
+  {
+    id: 'adminDailyAyahs.put',
+    label: 'venue pick',
+    action: 'daily_ayah.manage',
+    target: 'venue',
+    request: (fx) => ({
+      body: {
+        date: '2026-10-21',
+        scope: { type: 'venue', venueId: fx.venueId },
+        surah: 1,
+        ayah: 1,
+      },
+    }),
+  },
+  {
+    id: 'adminDailyAyahs.put',
+    label: 'circle pick (checked at its venue)',
+    action: 'daily_ayah.manage',
+    target: 'venue',
+    request: (fx) => ({
+      body: {
+        date: '2026-10-21',
+        scope: { type: 'circle', circleId: fx.circleId },
+        surah: 112,
+        ayah: 1,
+      },
+    }),
+  },
+  {
+    id: 'adminDailyAyahs.delete',
+    label: 'venue pick',
+    action: 'daily_ayah.manage',
+    target: 'venue',
+    request: (fx) => ({ params: { dailyAyahId: fx.venueDailyAyahId } }),
+  },
+  {
+    id: 'adminDailyAyahs.delete',
+    label: 'national pick',
+    action: 'daily_ayah.manage',
+    target: 'national',
+    request: (fx) => ({ params: { dailyAyahId: fx.nationalDailyAyahId } }),
+  },
+  {
     id: 'adminAudit.list',
     label: 'list',
     action: 'audit.read',
@@ -573,6 +637,21 @@ async function build(): Promise<{
     })
     .returning();
   const target = await h.person();
+  const [venuePick] = await h.db
+    .insert(schema.dailyAyahs)
+    .values({
+      day: '2026-10-20',
+      scopeType: 'venue',
+      cityId: world.cityA.id,
+      venueId: world.venueA1,
+      surah: 94,
+      ayah: 5,
+    })
+    .returning();
+  const [nationalPick] = await h.db
+    .insert(schema.dailyAyahs)
+    .values({ day: '2026-10-20', scopeType: 'national', surah: 13, ayah: 28 })
+    .returning();
   const fx: Fixture = {
     sessionId: session.id,
     occurrenceId,
@@ -581,6 +660,8 @@ async function build(): Promise<{
     inviteId: invite!.id,
     assignmentId: assignment!.id,
     handoverTargetUserId: target.userId,
+    venueDailyAyahId: venuePick!.id,
+    nationalDailyAyahId: nationalPick!.id,
     venueId: world.venueA1,
     cityId: world.cityA.id,
   };
