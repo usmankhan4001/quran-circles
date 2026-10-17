@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
-import { ThemeProvider, Text, createTheme, textScale, useTheme } from './index';
+import { ThemeProvider, Text, createTheme, fonts, textScale, useTheme } from './index';
 import { t } from './i18n';
 import { renderThemed } from './test/utils';
 
@@ -60,8 +60,8 @@ describe('theme', () => {
 
   it('resolves type roles for the theme', () => {
     const theme = createTheme({ locale: 'ur', textSize: 3 });
-    expect(theme.type('body').fontFamily).toBe('Gulzar');
-    expect(theme.type('body', 'latin').fontFamily).toBe('DM Sans');
+    expect(theme.type('body').fontFamily).toBe(fonts.urdu);
+    expect(theme.type('body', 'latin').fontFamily).toBe(fonts.sans);
   });
 });
 

@@ -6,7 +6,8 @@ export const colorModes: readonly ColorMode[] = ['light', 'dark', 'highContrast'
 
 /**
  * Meaning-based colours. Components use these, never raw palette values.
- * `highContrast` is a light theme with black text, white surfaces and strong borders.
+ * `light` is the day look (D3), `dark` is the night green after Isha, and `highContrast` is a
+ * light theme with black text, white surfaces and strong borders.
  */
 export interface SemanticColors {
   background: string;
@@ -57,35 +58,35 @@ export interface SemanticColors {
   disabledBackground: string;
   disabledText: string;
 
-  /** Gold. Decoration only (rules, ornaments, illustrations). Never used for text. */
+  /** Mushaf gilt. Decoration and Quran moments only (rules, ornaments, progress). Never used for text. */
   decoration: string;
 }
 
 const light: SemanticColors = {
-  background: colors.brand.parchment,
+  background: colors.brand.cloud,
   surface: colors.white,
   surfaceRaised: colors.white,
-  surfaceMuted: colors.slate[100],
-  scrim: 'rgba(15, 23, 42, 0.5)',
+  surfaceMuted: colors.grey[100],
+  scrim: 'rgba(10, 30, 18, 0.45)',
 
-  text: colors.brand.slate,
-  textSecondary: colors.slate[600],
-  textMuted: '#566274',
-  textAccent: colors.emerald[900],
+  text: colors.brand.ink,
+  textSecondary: colors.grey[700],
+  textMuted: colors.grey[600],
+  textAccent: colors.brand.tanzeem,
   textDanger: colors.red[700],
-  textSuccess: colors.green[800],
-  textWarning: colors.amber[800],
+  textSuccess: colors.brand.tanzeem,
+  textWarning: colors.gold[700],
 
-  accent: colors.emerald[900],
-  accentPressed: colors.emerald[950],
+  accent: colors.brand.tanzeem,
+  accentPressed: colors.brand.deep,
   textOnAccent: colors.white,
-  accentSubtle: colors.emerald[100],
-  textOnAccentSubtle: colors.emerald[900],
+  accentSubtle: colors.brand.leaf,
+  textOnAccentSubtle: colors.brand.deep,
 
-  success: colors.green[800],
+  success: colors.brand.tanzeem,
   textOnSuccess: colors.white,
-  successSubtle: colors.green[100],
-  textOnSuccessSubtle: colors.green[900],
+  successSubtle: colors.brand.leaf,
+  textOnSuccessSubtle: colors.brand.deep,
 
   danger: colors.red[700],
   dangerPressed: colors.red[800],
@@ -93,95 +94,96 @@ const light: SemanticColors = {
   dangerSubtle: colors.red[100],
   textOnDangerSubtle: colors.red[900],
 
-  warning: colors.amber[800],
+  warning: colors.gold[700],
   textOnWarning: colors.white,
-  warningSubtle: colors.amber[100],
-  textOnWarningSubtle: colors.amber[900],
+  warningSubtle: colors.gold[100],
+  textOnWarningSubtle: colors.gold[800],
 
-  border: colors.slate[200],
-  borderStrong: colors.slate[500],
-  focus: colors.blue[700],
+  border: colors.grey[200],
+  borderStrong: colors.grey[500],
+  focus: colors.brand.deep,
 
-  skeleton: colors.slate[200],
-  disabledBackground: colors.slate[200],
-  disabledText: colors.slate[600],
+  skeleton: colors.grey[200],
+  disabledBackground: colors.grey[200],
+  disabledText: colors.grey[600],
 
-  decoration: colors.brand.gold,
+  decoration: colors.brand.gilt,
 };
 
+/** Night (D2, D6): the night green page after Isha, lighter green surfaces, gilt for highlights. */
 const dark: SemanticColors = {
-  background: colors.brand.slate,
-  surface: colors.slate[800],
-  surfaceRaised: '#273548',
-  surfaceMuted: '#1a2538',
-  scrim: 'rgba(2, 6, 23, 0.7)',
+  background: colors.brand.night,
+  surface: colors.night.surface,
+  surfaceRaised: colors.night.raised,
+  surfaceMuted: colors.night.muted,
+  scrim: 'rgba(3, 10, 6, 0.7)',
 
-  text: colors.slate[50],
-  textSecondary: colors.slate[300],
-  textMuted: '#a3b1c6',
-  textAccent: colors.emerald[300],
+  text: colors.night.text,
+  textSecondary: colors.night.textSecondary,
+  textMuted: colors.night.textMuted,
+  textAccent: colors.green[300],
   textDanger: colors.red[300],
-  textSuccess: colors.green[400],
-  textWarning: colors.amber[400],
+  textSuccess: colors.green[300],
+  textWarning: colors.gold[300],
 
-  accent: colors.emerald[400],
-  accentPressed: colors.emerald[300],
-  textOnAccent: colors.emerald[950],
-  accentSubtle: colors.emerald[900],
-  textOnAccentSubtle: colors.emerald[200],
+  accent: colors.green[300],
+  accentPressed: colors.green[200],
+  textOnAccent: colors.green[975],
+  accentSubtle: colors.green[800],
+  textOnAccentSubtle: colors.green[100],
 
-  success: colors.green[400],
-  textOnSuccess: colors.green[950],
-  successSubtle: colors.green[900],
-  textOnSuccessSubtle: colors.green[200],
+  success: colors.green[300],
+  textOnSuccess: colors.green[975],
+  successSubtle: colors.green[800],
+  textOnSuccessSubtle: colors.green[100],
 
-  danger: colors.red[400],
-  dangerPressed: colors.red[300],
+  danger: colors.red[300],
+  dangerPressed: colors.red[100],
   textOnDanger: colors.red[950],
   dangerSubtle: colors.red[900],
-  textOnDangerSubtle: colors.red[200],
+  textOnDangerSubtle: colors.red[100],
 
-  warning: colors.amber[400],
-  textOnWarning: colors.amber[950],
-  warningSubtle: colors.amber[900],
-  textOnWarningSubtle: colors.amber[200],
+  warning: colors.gold[300],
+  textOnWarning: colors.gold[950],
+  warningSubtle: colors.gold[900],
+  textOnWarningSubtle: colors.gold[100],
 
-  border: colors.slate[700],
-  borderStrong: colors.slate[400],
-  focus: colors.blue[300],
+  border: colors.night.border,
+  borderStrong: colors.grey[400],
+  focus: colors.gold[300],
 
-  skeleton: colors.slate[700],
-  disabledBackground: colors.slate[700],
-  disabledText: colors.slate[300],
+  skeleton: colors.night.border,
+  disabledBackground: colors.night.border,
+  disabledText: colors.night.textSecondary,
 
-  decoration: colors.brand.gold,
+  decoration: colors.brand.gilt,
 };
 
 const highContrast: SemanticColors = {
   background: colors.white,
   surface: colors.white,
   surfaceRaised: colors.white,
-  surfaceMuted: colors.slate[100],
+  surfaceMuted: colors.grey[100],
   scrim: 'rgba(0, 0, 0, 0.75)',
 
   text: colors.black,
-  textSecondary: '#1f2937',
-  textMuted: '#2f3b4c',
-  textAccent: colors.emerald[950],
+  textSecondary: colors.grey[900],
+  textMuted: colors.grey[800],
+  textAccent: colors.green[800],
   textDanger: colors.red[900],
-  textSuccess: colors.green[900],
-  textWarning: colors.amber[900],
+  textSuccess: colors.green[800],
+  textWarning: colors.gold[900],
 
-  accent: colors.emerald[950],
-  accentPressed: colors.black,
+  accent: colors.green[800],
+  accentPressed: colors.green[975],
   textOnAccent: colors.white,
-  accentSubtle: colors.emerald[100],
-  textOnAccentSubtle: colors.emerald[950],
+  accentSubtle: colors.brand.leaf,
+  textOnAccentSubtle: colors.green[975],
 
-  success: colors.green[900],
+  success: colors.green[800],
   textOnSuccess: colors.white,
-  successSubtle: colors.green[100],
-  textOnSuccessSubtle: colors.green[950],
+  successSubtle: colors.brand.leaf,
+  textOnSuccessSubtle: colors.green[975],
 
   danger: colors.red[900],
   dangerPressed: colors.red[950],
@@ -189,20 +191,20 @@ const highContrast: SemanticColors = {
   dangerSubtle: colors.red[100],
   textOnDangerSubtle: colors.red[950],
 
-  warning: colors.amber[900],
+  warning: colors.gold[900],
   textOnWarning: colors.white,
-  warningSubtle: colors.amber[100],
-  textOnWarningSubtle: colors.amber[950],
+  warningSubtle: colors.gold[100],
+  textOnWarningSubtle: colors.gold[950],
 
   border: colors.black,
   borderStrong: colors.black,
-  focus: colors.blue[900],
+  focus: colors.green[975],
 
-  skeleton: colors.slate[300],
-  disabledBackground: colors.slate[200],
-  disabledText: colors.slate[600],
+  skeleton: colors.grey[300],
+  disabledBackground: colors.grey[200],
+  disabledText: colors.grey[700],
 
-  decoration: colors.brand.gold,
+  decoration: colors.brand.gilt,
 };
 
 export const semanticColors: Record<ColorMode, SemanticColors> = { light, dark, highContrast };

@@ -4,78 +4,99 @@
  * Raw values live here. Components never use raw colours: they read the semantic colours for
  * the current mode from `semantic-colors.ts` through `useTheme()`.
  *
- * Starting values come from the V1 app (tailwind.config.js, index.css). A human reviews this
- * file as part of the design review (docs/design/principles.md).
+ * Values follow the redesign agreed with the owner (docs/design/redesign-decisions.md, D3 to D13).
  */
 export const colors = {
   brand: {
-    emerald: '#064e3b',
-    /** Decoration only. Never use gold for text: it fails contrast on parchment. */
-    gold: '#d4af37',
-    parchment: '#fdfcf6',
-    slate: '#0f172a',
-  },
-  emerald: {
-    50: '#ecfdf5',
-    100: '#d1fae5',
-    200: '#a7f3d0',
-    300: '#6ee7b7',
-    400: '#34d399',
-    800: '#065f46',
-    900: '#064e3b',
-    950: '#022c22',
-  },
-  slate: {
-    50: '#f8fafc',
-    100: '#f1f5f9',
-    200: '#e2e8f0',
-    300: '#cbd5e1',
-    400: '#94a3b8',
-    500: '#64748b',
-    600: '#475569',
-    700: '#334155',
-    800: '#1e293b',
-    900: '#0f172a',
-  },
-  red: {
-    100: '#fee2e2',
-    200: '#fecaca',
-    300: '#fca5a5',
-    400: '#f87171',
-    700: '#b91c1c',
-    800: '#991b1b',
-    900: '#7f1d1d',
-    950: '#450a0a',
+    /** Tanzeem-e-Islami green: every main action, selected states, the brand (D3). */
+    tanzeem: '#226836',
+    deep: '#154a27',
+    /** The page colour after Isha. */
+    night: '#0c2a17',
+    leaf: '#e5f0e8',
+    cloud: '#f7fbf9',
+    mist: '#dbe7e6',
+    /** Mushaf gilt. Quran moments and decoration only; never body text. */
+    gilt: '#b8913a',
+    /** Terracotta for unread counts and errors. White text needs the deeper `red[700]`. */
+    alert: '#c4563f',
+    ink: '#16201a',
   },
   green: {
-    100: '#dcfce7',
-    200: '#bbf7d0',
-    400: '#4ade80',
-    800: '#166534',
-    900: '#14532d',
-    950: '#052e16',
+    50: '#f2f8f4',
+    100: '#e5f0e8',
+    200: '#c6dfcd',
+    300: '#8fd3a5',
+    400: '#5fb87d',
+    500: '#3d9e5c',
+    600: '#2d8048',
+    700: '#226836',
+    800: '#154a27',
+    900: '#0f3a20',
+    950: '#0c2a17',
+    975: '#06160c',
   },
-  amber: {
-    100: '#fef3c7',
-    200: '#fde68a',
-    400: '#fbbf24',
-    800: '#92400e',
-    900: '#78350f',
-    950: '#451a03',
+  /** Green-tinted greys, so neutrals sit with the brand green. */
+  grey: {
+    50: '#f7fbf9',
+    100: '#eef4f1',
+    200: '#dfe8e3',
+    300: '#c5d2ca',
+    400: '#9fb3a6',
+    500: '#6f7f75',
+    600: '#56635b',
+    700: '#4a5a50',
+    800: '#2c3a31',
+    900: '#16201a',
   },
-  blue: {
-    300: '#93c5fd',
-    700: '#1d4ed8',
-    900: '#1e3a8a',
+  /** Night surfaces, lighter as they rise. */
+  night: {
+    surface: '#123520',
+    raised: '#184228',
+    muted: '#0f301c',
+    border: '#24543a',
+    text: '#eaf3ed',
+    textSecondary: '#c4d6ca',
+    textMuted: '#a6bdae',
+  },
+  red: {
+    100: '#fbe7e2',
+    300: '#f0a38f',
+    600: '#c4563f',
+    700: '#b4472f',
+    800: '#963a26',
+    900: '#6e2a1b',
+    950: '#3a150d',
+  },
+  gold: {
+    100: '#fbf1d6',
+    300: '#e4c46d',
+    500: '#b8913a',
+    700: '#7a5a10',
+    800: '#6b4e0e',
+    900: '#4a3608',
+    950: '#2a1f05',
   },
   white: '#ffffff',
   black: '#000000',
 } as const;
 
+/**
+ * Font families (D4). Figtree for Latin text and for every number, a true Nastaliq for Urdu,
+ * and a Quranic face for Quran text only. The apps bundle the files; licences are confirmed
+ * before release (docs/design/redesign-decisions.md, open questions).
+ */
 export const fonts = {
-  sans: 'DM Sans',
-  urdu: 'Gulzar',
-  quran: 'AlMushaf',
+  sans: 'Figtree',
+  urdu: 'Jameel Noori Nastaleeq',
+  quran: 'KFGQPC Uthmanic Script HAFS',
+} as const;
+
+/** Fallbacks in order, for the web and for the catalog before the files are bundled. */
+export const fontFallbacks = {
+  sans: ['Figtree', 'system-ui', 'sans-serif'],
+  urdu: ['Jameel Noori Nastaleeq', 'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', 'serif'],
+  quran: ['KFGQPC Uthmanic Script HAFS', 'serif'],
 } as const;
 
 /** App-wide text size steps the person can choose in Profile. 1 is the default. */
@@ -106,12 +127,18 @@ export type SpacingToken = keyof typeof spacing;
 /** Horizontal gutter of a screen. */
 export const screenGutter = spacing.lg;
 
+/** Corners (D6, D8 to D13): tags 8, chips and small buttons 12, fields 14, buttons 16, section cards 18, cards 22, dialogs 26, sheets 28. */
 export const radii = {
   none: 0,
   sm: 8,
   md: 12,
+  field: 14,
   lg: 16,
+  section: 18,
+  card: 22,
   xl: 24,
+  dialog: 26,
+  sheet: 28,
   pill: 999,
 } as const;
 export type RadiusToken = keyof typeof radii;
@@ -122,9 +149,12 @@ export type RadiusToken = keyof typeof radii;
  */
 export const elevation = {
   none: undefined,
-  low: '0px 1px 3px rgba(15, 23, 42, 0.12)',
-  medium: '0px 4px 12px rgba(15, 23, 42, 0.16)',
-  high: '0px 12px 32px rgba(15, 23, 42, 0.24)',
+  /** Resting cards (D11): two soft layers in green-black. */
+  low: '0px 1px 2px rgba(10, 30, 18, 0.06), 0px 8px 22px rgba(10, 30, 18, 0.07)',
+  /** The main button's soft green shadow (D8). */
+  medium: '0px 6px 16px rgba(34, 104, 54, 0.22)',
+  /** Floating: sheets, the tab bar and map cards. */
+  high: '0px 14px 34px rgba(10, 30, 18, 0.18)',
 } as const;
 export type ElevationToken = keyof typeof elevation;
 
@@ -139,7 +169,18 @@ export const motion = {
 } as const;
 
 export type TypeRole =
-  'display' | 'title1' | 'title2' | 'title3' | 'bodyLarge' | 'body' | 'label' | 'caption' | 'quran';
+  | 'countdown'
+  | 'time'
+  | 'display'
+  | 'title1'
+  | 'title2'
+  | 'title3'
+  | 'bodyLarge'
+  | 'body'
+  | 'label'
+  | 'caption'
+  | 'eyebrow'
+  | 'quran';
 
 /** The script a piece of text is set in. It decides the font and the line height. */
 export type Script = 'latin' | 'urdu' | 'quran';
@@ -147,34 +188,39 @@ export type Script = 'latin' | 'urdu' | 'quran';
 interface TypeRoleSpec {
   /** Size in dp at text size step 0, for Latin text. */
   size: number;
-  weight: '400' | '500' | '700';
+  weight: '400' | '500' | '600' | '700' | '800';
   letterSpacing: number;
 }
 
+/** Type scale (D5). Big times and countdowns are Figtree figures in both languages. */
 export const typeRoles: Record<TypeRole, TypeRoleSpec> = {
-  display: { size: 34, weight: '700', letterSpacing: -0.4 },
-  title1: { size: 28, weight: '700', letterSpacing: -0.2 },
-  title2: { size: 24, weight: '700', letterSpacing: 0 },
-  title3: { size: 20, weight: '500', letterSpacing: 0 },
-  bodyLarge: { size: 18, weight: '400', letterSpacing: 0 },
+  countdown: { size: 56, weight: '600', letterSpacing: -1 },
+  time: { size: 40, weight: '600', letterSpacing: -0.5 },
+  display: { size: 32, weight: '800', letterSpacing: -0.4 },
+  title1: { size: 26, weight: '700', letterSpacing: -0.2 },
+  title2: { size: 22, weight: '700', letterSpacing: 0 },
+  title3: { size: 18, weight: '700', letterSpacing: 0 },
+  bodyLarge: { size: 17, weight: '400', letterSpacing: 0 },
   body: { size: 16, weight: '400', letterSpacing: 0 },
-  label: { size: 16, weight: '500', letterSpacing: 0 },
-  caption: { size: 14, weight: '400', letterSpacing: 0.1 },
+  label: { size: 15, weight: '600', letterSpacing: 0 },
+  /** 14, not D5's 13: captions stay at the accessibility floor (docs/design/accessibility.md). */
+  caption: { size: 14, weight: '500', letterSpacing: 0.1 },
+  eyebrow: { size: 12, weight: '700', letterSpacing: 0.8 },
   quran: { size: 28, weight: '400', letterSpacing: 0 },
 };
 
 /**
- * Line height as a multiple of the font size. Gulzar (Nastaliq) has tall ascenders and deep
- * descenders, so it needs far more room than Latin text. AlMushaf needs the most, because of
- * stacked diacritics.
+ * Line height as a multiple of the font size. Nastaliq has tall ascenders and deep descenders,
+ * so it needs far more room than Latin text (D5: 2.0 to 2.2). Quran text needs the most,
+ * because of stacked diacritics.
  */
 export const lineHeightRatio: Record<Script, number> = {
   latin: 1.4,
-  urdu: 1.95,
+  urdu: 2.1,
   quran: 2.2,
 };
 
-/** Gulzar looks smaller than DM Sans at the same size, so Urdu text is set a little larger. */
+/** Nastaliq looks smaller than Figtree at the same size, so Urdu text is set a little larger (D5). */
 export const scriptSizeFactor: Record<Script, number> = {
   latin: 1,
   urdu: 1.1,
@@ -185,7 +231,7 @@ export interface TypeStyle {
   fontFamily: string;
   fontSize: number;
   lineHeight: number;
-  fontWeight: '400' | '500' | '700';
+  fontWeight: '400' | '500' | '600' | '700' | '800';
   letterSpacing: number;
 }
 

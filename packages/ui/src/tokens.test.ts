@@ -47,20 +47,25 @@ describe('contrast helper', () => {
 describe('brand tokens meet WCAG AA for body text', () => {
   const AA = 4.5;
 
-  it('slate text on parchment', () => {
-    expect(contrastRatio(colors.brand.slate, colors.brand.parchment)).toBeGreaterThanOrEqual(AA);
+  it('ink text on cloud', () => {
+    expect(contrastRatio(colors.brand.ink, colors.brand.cloud)).toBeGreaterThanOrEqual(AA);
   });
 
-  it('white text on emerald', () => {
-    expect(contrastRatio(colors.white, colors.brand.emerald)).toBeGreaterThanOrEqual(AA);
+  it('white text on Tanzeem green', () => {
+    expect(contrastRatio(colors.white, colors.brand.tanzeem)).toBeGreaterThanOrEqual(AA);
   });
 
-  it('emerald text on parchment', () => {
-    expect(contrastRatio(colors.brand.emerald, colors.brand.parchment)).toBeGreaterThanOrEqual(AA);
+  it('Tanzeem green text on cloud', () => {
+    expect(contrastRatio(colors.brand.tanzeem, colors.brand.cloud)).toBeGreaterThanOrEqual(AA);
   });
 
-  it('gold on parchment fails body text contrast, which is why gold is decoration only', () => {
-    expect(contrastRatio(colors.brand.gold, colors.brand.parchment)).toBeLessThan(AA);
+  it('gilt on cloud fails body text contrast, which is why gilt is decoration only', () => {
+    expect(contrastRatio(colors.brand.gilt, colors.brand.cloud)).toBeLessThan(AA);
+  });
+
+  it('white on the raw alert terracotta fails, which is why danger fills use the deeper red', () => {
+    expect(contrastRatio(colors.white, colors.brand.alert)).toBeLessThan(AA);
+    expect(contrastRatio(colors.white, colors.red[700])).toBeGreaterThanOrEqual(AA);
   });
 });
 
@@ -87,8 +92,8 @@ describe.each(colorModes)('semantic colours in %s mode', (mode) => {
     for (const p of textPairs) expect(p.min).toBe(textContrastMin(mode));
   });
 
-  it('never uses gold for text or fills', () => {
-    const gold = colors.brand.gold.toLowerCase();
+  it('never uses gilt for text or fills', () => {
+    const gold = colors.brand.gilt.toLowerCase();
     for (const [name, value] of Object.entries(set)) {
       if (name === 'decoration') continue;
       expect(String(value).toLowerCase(), name).not.toBe(gold);
@@ -107,13 +112,13 @@ describe('semantic colours across modes', () => {
   });
 
   it('keeps the brand colours in light mode', () => {
-    expect(semanticColors.light.background).toBe(colors.brand.parchment);
-    expect(semanticColors.light.accent).toBe(colors.brand.emerald);
-    expect(semanticColors.light.text).toBe(colors.brand.slate);
+    expect(semanticColors.light.background).toBe(colors.brand.cloud);
+    expect(semanticColors.light.accent).toBe(colors.brand.tanzeem);
+    expect(semanticColors.light.text).toBe(colors.brand.ink);
   });
 
-  it('puts the dark background on the brand slate', () => {
-    expect(semanticColors.dark.background).toBe(colors.brand.slate);
+  it('puts the dark background on the night green', () => {
+    expect(semanticColors.dark.background).toBe(colors.brand.night);
   });
 
   it('makes high contrast stronger than light for primary text', () => {
@@ -165,7 +170,7 @@ describe('type scale', () => {
     expect(typeStyle('quran', 'quran').fontFamily).toBe(fonts.quran);
   });
 
-  it('gives Gulzar more line height than Latin, and the Quran font the most', () => {
+  it('gives Nastaliq more line height than Latin, and the Quran font the most', () => {
     expect(lineHeightRatio.urdu).toBeGreaterThan(lineHeightRatio.latin);
     expect(lineHeightRatio.quran).toBeGreaterThan(lineHeightRatio.urdu);
   });
