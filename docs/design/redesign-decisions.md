@@ -93,6 +93,10 @@ Chosen by the owner on 2026-10-17 from [Text fields](https://claude.ai/artifact/
 
 Chosen by the owner on 2026-10-17 from [Choices](https://claude.ai/artifact/H9ZPTz7xKgQdipP93t2QUS). A chosen item fills with Tanzeem green and white text, matching the main button. Chips are 40 tall with radius 12 and a tick when chosen; the map or list switch sits in a grey track; toggles are green when on; tick boxes are rounded squares (radius 7); radios are rings with a green centre; tick and pick-one lists sit in white cards with dividers. Women, Men and Family cards (radius 18) fill green with a white tick when chosen and fade when a section is not offered. The people counter sits on a leaf tint with white minus and plus buttons.
 
+### D11. Cards: raised (K1)
+
+Chosen by the owner on 2026-10-17 from [Cards](https://claude.ai/artifact/ASLSHHQN2caYbQhX3VcnLK). White cards, corner radius 22, padding 14, no border, a soft two-layer shadow (0 1 2 and 0 8 22 at low green-black opacity). At night the shadow is replaced by a 1 px light hairline. Inside a card: eyebrow in green caps, title 17/700, muted 13 line, big time 28/600 on the trailing side, status tags radius 8 (leaf for good, gold for Quran and time changes, terracotta for problems), dividers as 1 px hairlines. Thumbnails radius 16; date blocks on leaf tint.
+
 ## Open questions
 
 - Owner review of the component set.
