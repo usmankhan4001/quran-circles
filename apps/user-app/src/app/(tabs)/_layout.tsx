@@ -5,6 +5,7 @@ import { useI18n } from '../../i18n/I18nProvider';
 import { useUnreadCount } from '../../features/updates/hooks';
 import { useInsets } from '../../providers/insets';
 import { TAB_ROUTES, type TabRoute } from '../../nav/routes';
+import { tabIcon } from '../../ui/tabIcons';
 
 const LABELS: Record<
   TabRoute,
@@ -30,10 +31,11 @@ function BottomTabs({
   const items: TabItem[] = TAB_ROUTES.map((key) => ({
     key,
     label: t(LABELS[key]),
+    icon: tabIcon(key),
     ...(key === 'home' && unread > 0 ? { badge: { count: unread } } : {}),
   }));
   return (
-    <View style={{ paddingBottom: insets.bottom, backgroundColor: theme.colors.surface }}>
+    <View style={{ paddingBottom: insets.bottom, backgroundColor: theme.colors.background }}>
       <TabBar
         items={items}
         activeKey={activeKey}
@@ -61,8 +63,8 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="nearby" />
-      <Tabs.Screen name="journey" />
       <Tabs.Screen name="quran" />
+      <Tabs.Screen name="journey" />
     </Tabs>
   );
 }

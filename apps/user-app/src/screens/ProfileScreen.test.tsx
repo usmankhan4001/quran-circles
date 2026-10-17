@@ -4,7 +4,14 @@ import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { TOKENS_KEY } from '../auth/session';
 import { followFor } from '../test/factories';
-import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  MATRIX,
+  createWorld,
+  directionOf,
+  expectGreenHeader,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { ProfileScreen } from './ProfileScreen';
 
 const en = messages.en;
@@ -160,7 +167,7 @@ describe('ProfileScreen', () => {
     fireEvent.click(view.getByTestId('profile-delete'));
     expect(await view.findByTestId('delete-sheet')).toBeTruthy();
     expect(world.http.callsTo('DELETE /v1/me')).toHaveLength(0);
-    fireEvent.click(view.getByTestId('confirm-cancel'));
+    fireEvent.click(view.getByTestId('delete-sheet-cancel'));
     await waitFor(() => expect(view.queryByTestId('delete-sheet')).toBeNull());
     expect(world.http.callsTo('DELETE /v1/me')).toHaveLength(0);
     expect(world.services.auth.getState().status).toBe('signedIn');
@@ -169,7 +176,7 @@ describe('ProfileScreen', () => {
   it('deletes the account after confirming, then clears everything on the device', async () => {
     const { world, view } = await open();
     fireEvent.click(view.getByTestId('profile-delete'));
-    fireEvent.click(await view.findByTestId('confirm-ok'));
+    fireEvent.click(await view.findByTestId('delete-sheet-confirm'));
     await waitFor(() => expect(world.http.callsTo('DELETE /v1/me')).toHaveLength(1));
     expect(world.http.callsTo('DELETE /v1/me')[0]!.body).toEqual({ confirm: true });
     await waitFor(() => expect(world.services.auth.getState().status).toBe('signedOut'));
@@ -181,8 +188,8 @@ describe('ProfileScreen', () => {
     const { world, view } = await open();
     world.http.failNext('DELETE /v1/me', 'internal_error');
     fireEvent.click(view.getByTestId('profile-delete'));
-    fireEvent.click(await view.findByTestId('confirm-ok'));
-    expect(await view.findByText(en['errors.internal_error'])).toBeTruthy();
+    fireEvent.click(await view.findByTestId('delete-sheet-confirm'));
+    expect(await view.findByText(en['errors.internal_error'], { exact: false })).toBeTruthy();
     expect(world.services.auth.getState().status).toBe('signedIn');
   });
 
@@ -208,6 +215,7 @@ describe('ProfileScreen', () => {
       await view.findByTestId('profile-account');
       await view.findByTestId(`alerts-${FOLLOW.id}`);
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
       expect(view.getByText(words['profile.language.title'])).toBeTruthy();
       expect(view.getByText(words['profile.account.delete'])).toBeTruthy();

@@ -1,10 +1,11 @@
 import { act, render, renderHook, waitFor, type RenderResult } from '@testing-library/react';
+import { expect } from 'vitest';
 import type { ReactElement, ReactNode } from 'react';
 import type { ErrorCode, Locale, Tokens } from '@qc/contracts';
 import { createMockHandler, type MockOptions } from '@qc/contracts/mock';
 import { ERROR_CODES, makeApiError } from '@qc/contracts';
 import { FIXTURE_NOW, fixtures } from '@qc/contracts/fixtures';
-import { textSizeSteps, type TextSizeStep } from '@qc/ui';
+import { semanticColors, textSizeSteps, type TextSizeStep } from '@qc/ui';
 import { TOKENS_KEY } from '../auth/session';
 import type { ColorPreference } from '../core/preferences';
 import { MemoryStore } from '../core/storage';
@@ -287,6 +288,33 @@ export const MATRIX = (['en', 'ur'] as const).flatMap((locale) =>
     })),
   ),
 );
+
+function rgb(hex: string): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+}
+
+/**
+ * The green header (D12, B) paints with the `hero` and `textOnHero` tokens of the colour mode
+ * in use. Returns the two colours it found and the two it should have, so a test can compare.
+ */
+export function greenHeaderColors(container: HTMLElement, color: 'light' | 'dark') {
+  const header = container.querySelector<HTMLElement>('[data-testid="screen-header"]');
+  const title = header?.querySelector<HTMLElement>('[role="heading"]') ?? null;
+  return {
+    background: header?.style.backgroundColor ?? null,
+    text: title?.style.color ?? null,
+    expectedBackground: rgb(semanticColors[color].hero),
+    expectedText: rgb(semanticColors[color].textOnHero),
+  };
+}
+
+/** Asserts the green header uses the `hero` and `textOnHero` colours of the colour mode. */
+export function expectGreenHeader(container: HTMLElement, color: 'light' | 'dark'): void {
+  const found = greenHeaderColors(container, color);
+  expect(found.background).toBe(found.expectedBackground);
+  expect(found.text).toBe(found.expectedText);
+}
 
 /** The text-direction attribute react-native-web sets on the themed root. */
 export function directionOf(container: HTMLElement): string | null {

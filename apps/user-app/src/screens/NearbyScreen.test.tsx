@@ -2,7 +2,14 @@ import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { CITY_RAWALPINDI, SESSIONS } from '../test/factories';
-import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  MATRIX,
+  createWorld,
+  directionOf,
+  expectGreenHeader,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { NearbyScreen } from './NearbyScreen';
 
 const en = messages.en;
@@ -138,6 +145,7 @@ describe('NearbyScreen', () => {
       const view = await renderScreen(<NearbyScreen />, { locale, color, textSize });
       await view.findByTestId('nearby-list');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       expect(view.getByText((locale === 'ur' ? ur : en)['tabs.nearby'])).toBeTruthy();
       const first =
         locale === 'ur'

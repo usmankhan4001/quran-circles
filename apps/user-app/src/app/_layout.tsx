@@ -82,7 +82,10 @@ function Shell({ app }: { app: AppServices }) {
     <AppProviders services={app} navigator={navigator}>
       <SafeInsets>
         <ReminderSync />
-        <Stack screenOptions={{ headerShown: false, animation: 'default' }} />
+        <Stack screenOptions={{ headerShown: false, animation: 'default' }}>
+          {/* R2: registration is a sheet that rises over the session page. */}
+          <Stack.Screen name="register/[sessionId]" options={{ presentation: 'modal' }} />
+        </Stack>
       </SafeInsets>
     </AppProviders>
   );

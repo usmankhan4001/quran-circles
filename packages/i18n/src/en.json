@@ -1257,5 +1257,14 @@
   "journey.summary.upcoming": "Upcoming",
   "journey.summary.waiting": "On the waiting list",
   "journey.summary.following": "Following",
-  "session.days.everyDay": "Every day"
+  "session.days.everyDay": "Every day",
+  "admin.places.searchVenues": "Search venues",
+  "admin.places.searchCircles": "Search circles",
+  "admin.circleEditor.reject.body": "The circle stays hidden. The venue coordinator can change it and send it again.",
+  "admin.circleEditor.whoFor": "Language and section",
+  "admin.signIn.heading": "Sign in with your phone",
+  "admin.postUpdate.sendBy": "Send by",
+  "admin.postUpdate.message": "Your message",
+  "admin.venueEditor.details": "Name and address",
+  "admin.venueEditor.contact": "Contact"
 }

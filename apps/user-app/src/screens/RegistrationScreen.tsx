@@ -6,15 +6,14 @@ import {
   Checkbox,
   Icon,
   ListItem,
-  SegmentedControl,
   Select,
   Text,
   TextField,
-  formatNumber,
+  radii,
   spacing,
   useTheme,
 } from '@qc/ui';
-import type { Registration, Section, Session } from '@qc/contracts';
+import { SECTIONS, type Registration, type Section, type Session } from '@qc/contracts';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { ReminderToggle } from '../components/ReminderToggle';
@@ -22,18 +21,63 @@ import { ScreenFrame } from '../components/ScreenFrame';
 import { errorMessageKey } from '../core/errors';
 import { allowedSections, MAX_PARTY_SIZE, isWaitlisted } from '../features/registration/form';
 import { useRegistration } from '../features/registration/useRegistration';
-import { describeSchedule } from '../features/nearby/schedule';
+import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
 import { useSession } from '../features/nearby/useSessions';
 import { useAreas, useCities } from '../features/places/usePlaces';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useAuthState } from '../providers/hooks';
+import { ChoiceCards } from '../ui/ChoiceCards';
+import { Glyph } from '../ui/Glyph';
+import { Stepper } from '../ui/Stepper';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.lg },
   center: { alignItems: 'center', gap: spacing.md },
   actions: { gap: spacing.sm },
+  group: { gap: spacing.sm },
+  summary: { gap: spacing.xs },
+  summaryLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  grow: { flex: 1 },
+  alert: { gap: spacing.sm, padding: spacing.md, borderRadius: radii.section },
+  tick: {
+    width: 72,
+    height: 72,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
+
+/** The session in a few lines inside the green top of the sheet, so the person knows what they are joining. */
+function SheetSummary({ session }: { session: Session }) {
+  const { t, l, locale } = useI18n();
+  const c = useTheme().colors;
+  const venue = l(session.venue.name);
+  const when = session.nextOccurrence
+    ? describeOccurrence(session.nextOccurrence, session.timezone, locale)
+    : describeSchedule(session, t, locale);
+  return (
+    <View style={styles.summary} testID="registration-summary">
+      <View style={styles.summaryLine}>
+        <Glyph name="pin" size={18} color={c.textOnHero} />
+        <View style={styles.grow}>
+          <Text variant="body" color="textOnHero" lang={venue.lang}>
+            {venue.text}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.summaryLine}>
+        <Glyph name="clock" size={18} color={c.textOnHero} />
+        <View style={styles.grow}>
+          <Text variant="body" color="textOnHero">
+            {when}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export function RegistrationScreen({
   sessionId,
@@ -61,6 +105,8 @@ export function RegistrationScreen({
     <ScreenFrame
       title={session.data ? l(session.data.title).text : t('registration.title')}
       onBack={() => nav.back()}
+      sheet
+      {...(session.data ? { hero: <SheetSummary session={session.data} /> } : {})}
       testID="registration-screen"
     >
       <QueryBoundary query={session}>
@@ -86,6 +132,7 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
   const cities = useCities();
   const areas = useAreas(flow.form.cityId);
   const [showAreas, setShowAreas] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
     if (flow.signInRequired) {
@@ -104,10 +151,6 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
   const sections = allowedSections(session);
   const area = areas.data?.find((a) => a.id === flow.form.areaId);
   const cityOptions = (cities.data ?? []).map((c) => ({ value: c.id, label: l(c.name).text }));
-  const partyOptions = Array.from({ length: MAX_PARTY_SIZE }, (_, i) => ({
-    value: String(i + 1),
-    label: formatNumber(i + 1, locale),
-  }));
   const failure = flow.error;
 
   return (
@@ -138,12 +181,14 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
       />
 
       <View>
-        <ListItem
-          title={t('registration.area.label')}
-          subtitle={area ? l(area.name).text : t('registration.area.placeholder')}
-          onPress={() => setShowAreas(true)}
-          testID="registration-area"
-        />
+        <Card padding="xs">
+          <ListItem
+            title={t('registration.area.label')}
+            subtitle={area ? l(area.name).text : t('registration.area.placeholder')}
+            onPress={() => setShowAreas(true)}
+            testID="registration-area"
+          />
+        </Card>
         {flow.problems.area ? (
           <Text variant="caption" color="textDanger" testID="registration-area-problem">
             {t(flow.problems.area)}
@@ -151,39 +196,47 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
         ) : null}
       </View>
 
-      {sections.length > 1 ? (
-        <View>
-          <Text variant="label">{t('registration.section.label')}</Text>
-          <SegmentedControl<Section>
-            accessibilityLabel={t('registration.section.label')}
-            value={flow.form.section ?? sections[0]!}
-            onChange={(section) => flow.setForm({ section })}
-            options={sections.map((s) => ({ value: s, label: t(`sections.${s}`) }))}
-            testID="registration-section"
-          />
-          {flow.problems.section ? (
-            <Text variant="caption" color="textDanger">
-              {t(flow.problems.section)}
-            </Text>
-          ) : null}
-        </View>
-      ) : (
-        <Text variant="body" color="textSecondary" testID="registration-section-fixed">
-          {t('registration.section.fixed', { section: t(`sections.${sections[0] ?? 'family'}`) })}
-        </Text>
-      )}
+      <View style={styles.group}>
+        <Text variant="label">{t('registration.section.label')}</Text>
+        {/* A family session takes women, men or the family; a single-section session offers
+            only its own, and the others fade (D10). */}
+        <ChoiceCards<Section>
+          accessibilityLabel={t('registration.section.label')}
+          value={flow.form.section}
+          onChange={(section) => flow.setForm({ section })}
+          options={SECTIONS.map((x) => ({
+            value: x,
+            label: t(`sections.${x}`),
+            disabled: !sections.includes(x),
+          }))}
+          testID="registration-section"
+        />
+        {sections.length === 1 ? (
+          <Text variant="body" color="textSecondary" testID="registration-section-fixed">
+            {t('registration.section.fixed', { section: t(`sections.${sections[0] ?? 'family'}`) })}
+          </Text>
+        ) : null}
+        {flow.problems.section ? (
+          <Text variant="caption" color="textDanger">
+            {t(flow.problems.section)}
+          </Text>
+        ) : null}
+      </View>
 
-      <Select
+      <Stepper
         label={t('registration.partySize.label')}
         helper={t('registration.partySize.help')}
-        required
-        options={partyOptions}
-        value={String(flow.form.partySize)}
-        onChange={(value) => flow.setForm({ partySize: Number(value) })}
+        value={flow.form.partySize}
+        min={1}
+        max={MAX_PARTY_SIZE}
+        onChange={(partySize) => flow.setForm({ partySize })}
+        decreaseLabel={t('registration.partySize.decrease')}
+        increaseLabel={t('registration.partySize.increase')}
+        locale={locale}
         testID="registration-party"
       />
 
-      <Card variant="flat">
+      <Card>
         <Checkbox
           label={t('registration.consent.whatsapp')}
           description={t('registration.consent.help')}
@@ -194,8 +247,12 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
       </Card>
 
       {failure && !flow.signInRequired ? (
-        <View role="alert" testID="registration-error" style={styles.actions}>
-          <Text variant="body" color="textDanger" strong>
+        <View
+          role="alert"
+          testID="registration-error"
+          style={[styles.alert, { backgroundColor: theme.colors.dangerSubtle }]}
+        >
+          <Text variant="body" color="textOnDangerSubtle" strong>
             {t(errorMessageKey(failure.code))}
           </Text>
           {failure.code === 'already_registered' ? (
@@ -238,7 +295,9 @@ function Confirmation({ registration, session }: { registration: Registration; s
   return (
     <View style={styles.stack} testID="registration-confirmation">
       <View style={styles.center}>
-        <Icon name="success" size={48} color={theme.colors.success} />
+        <View style={[styles.tick, { backgroundColor: theme.colors.successSubtle }]}>
+          <Icon name="success" size={40} color={theme.colors.success} />
+        </View>
         <Text variant="title2" align="center" heading={2}>
           {waitlisted ? t('registration.waitlist.title') : t('registration.success.title')}
         </Text>
@@ -253,7 +312,7 @@ function Confirmation({ registration, session }: { registration: Registration; s
           {waitlisted ? t('registration.waitlist.body') : t('registration.success.body')}
         </Text>
       </View>
-      <Card variant="flat">
+      <Card>
         <Text variant="label" lang={l(session.title).lang}>
           {l(session.title).text}
         </Text>

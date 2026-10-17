@@ -1,23 +1,26 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Card, Text, spacing } from '@qc/ui';
+import { Card, SessionCard as KitSessionCard, spacing } from '@qc/ui';
 import type { Session } from '@qc/contracts';
 import { useI18n } from '../i18n/I18nProvider';
-import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
+import { describeWhenParts } from '../features/nearby/schedule';
 
 export interface SessionCardProps {
   session: Session;
   onPress?: () => void;
-  /** Extra content under the facts: a status, a button. */
+  /** Extra content under the card: a status, a switch, a button. It sits in its own card. */
   footer?: ReactNode;
   /** Shows the next dated occurrence instead of the repeating schedule. */
   emphasis?: 'schedule' | 'next';
   testID?: string;
 }
 
-const styles = StyleSheet.create({ stack: { gap: spacing.xs } });
+const styles = StyleSheet.create({ stack: { gap: spacing.sm }, footer: { gap: spacing.sm } });
 
-/** A session as a card: title, venue, when, and who it is for. Used on Nearby, Home and My Journey. */
+/**
+ * A session as a card: it fills the kit's `SessionCard` from a session of the API. The kit card
+ * has no slot for extra controls, so a footer goes in a card of its own right under it.
+ */
 export function SessionCard({
   session,
   onPress,
@@ -28,43 +31,40 @@ export function SessionCard({
   const { t, l, locale } = useI18n();
   const title = l(session.title);
   const venue = l(session.venue.name);
-  const when =
-    emphasis === 'next' && session.nextOccurrence
-      ? describeOccurrence(session.nextOccurrence, session.timezone, locale)
-      : describeSchedule(session, t, locale);
+  const { time, day } = describeWhenParts(session, t, locale, emphasis === 'next');
   const registration = session.registration;
-  const facts = [t(`sections.${session.section}`), t(`profile.language.${session.language}`)].join(
-    t('schedule.separator'),
-  );
-  return (
-    <Card
-      testID={testID ?? `session-card-${session.id}`}
+  const tag =
+    session.status === 'cancelled'
+      ? { label: t('session.cancelled'), kind: 'alert' as const }
+      : registration.enabled && registration.full
+        ? { label: t('session.full'), kind: 'gilt' as const }
+        : undefined;
+  const card = (
+    <KitSessionCard
+      title={title.text}
+      place={venue.text}
+      time={time}
+      day={day}
+      eyebrow={t(`programs.${session.program}`)}
+      details={[t(`sections.${session.section}`), t(`profile.language.${session.language}`)].join(
+        t('schedule.separator'),
+      )}
+      {...(tag ? { tag } : {})}
+      {...(registration.enabled && !registration.full && registration.capacity !== null
+        ? { seats: { taken: registration.seatsTaken ?? 0, capacity: registration.capacity } }
+        : {})}
       onPress={onPress}
-      accessibilityLabel={`${title.text}, ${venue.text}, ${when}`}
-    >
-      <View style={styles.stack}>
-        <Text variant="title3" lang={title.lang}>
-          {title.text}
-        </Text>
-        <Text variant="body" color="textSecondary" lang={venue.lang}>
-          {venue.text}
-        </Text>
-        <Text variant="body">{when}</Text>
-        <Text variant="caption" color="textSecondary">
-          {facts}
-        </Text>
-        {registration.enabled && registration.full ? (
-          <Text variant="caption" color="textWarning" strong>
-            {t('session.full')}
-          </Text>
-        ) : null}
-        {session.status === 'cancelled' ? (
-          <Text variant="caption" color="textDanger" strong>
-            {t('session.cancelled')}
-          </Text>
-        ) : null}
-        {footer}
-      </View>
-    </Card>
+      accessibilityLabel={`${title.text}, ${venue.text}, ${day} ${time}`}
+      testID={testID ?? `session-card-${session.id}`}
+    />
+  );
+  if (!footer) return card;
+  return (
+    <View style={styles.stack}>
+      {card}
+      <Card>
+        <View style={styles.footer}>{footer}</View>
+      </Card>
+    </View>
   );
 }

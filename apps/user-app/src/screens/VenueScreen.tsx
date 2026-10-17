@@ -12,6 +12,7 @@ import { venueMapUrl, venuePhoneUrl } from '../features/session/links';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useServices } from '../providers/services';
+import { PhotoBlock } from '../ui/PhotoBlock';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.xl },
@@ -30,13 +31,18 @@ export function VenueScreen({ venueId }: { venueId: string }) {
   const title = venue.data ? l(venue.data.name).text : t('venue.title');
 
   return (
-    <ScreenFrame title={title} onBack={() => nav.back()} testID="venue-screen">
+    <ScreenFrame
+      title={title}
+      onBack={() => nav.back()}
+      hero={<PhotoBlock testID="venue-photo" />}
+      testID="venue-screen"
+    >
       <QueryBoundary query={venue}>
         {(v) => {
           const address = l(v.address);
           return (
             <View style={styles.stack}>
-              <Card variant="flat">
+              <Card>
                 <Text variant="bodyLarge" lang={address.lang}>
                   {address.text}
                 </Text>
@@ -73,7 +79,7 @@ export function VenueScreen({ venueId }: { venueId: string }) {
                 />
               </View>
 
-              <Section title={t('venue.facilities.title')}>
+              <Section title={t('venue.facilities.title')} card>
                 <FacilitiesChecklist facilities={v.facilities} />
               </Section>
 

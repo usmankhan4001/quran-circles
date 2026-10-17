@@ -5,6 +5,7 @@ import {
   MATRIX,
   createWorld,
   directionOf,
+  expectGreenHeader,
   renderScreen,
   signInHandlers,
   waitFor,
@@ -123,6 +124,7 @@ describe('SignInScreen', () => {
     it('draws the first step', async () => {
       const view = await renderScreen(<SignInScreen />, { locale, color, textSize });
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       expect(view.getByText((locale === 'ur' ? ur : en)['signIn.phone.intro'])).toBeTruthy();
       expect(view.getByTestId('send-code')).toBeTruthy();
     });

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Avatar,
   Button,
-  Card,
   ListItem,
   SegmentedControl,
   Switch,
   Text,
   TextField,
   textSizeSteps,
+  radii,
   spacing,
+  useTheme,
   type TextSizeStep,
 } from '@qc/ui';
 import type { Locale } from '@qc/contracts';
@@ -36,13 +37,72 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthState, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
+import { Glyph, type GlyphName } from '../ui/Glyph';
 
 const styles = StyleSheet.create({
+  tiles: { flexDirection: 'row', gap: spacing.sm },
+  tile: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.section,
+  },
   stack: { gap: spacing.xl },
   account: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   grow: { flex: 1 },
   gap: { gap: spacing.md },
 });
+
+/** The quick tiles the profile opens with (B): the places a person comes here to reach. */
+function QuickTiles() {
+  const { t } = useI18n();
+  const nav = useNav();
+  const c = useTheme().colors;
+  const tiles: { key: string; glyph: GlyphName; label: string; onPress: () => void }[] = [
+    {
+      key: 'journey',
+      glyph: 'calendar',
+      label: t('tabs.myJourney'),
+      onPress: () => nav.tab({ name: 'journey' }),
+    },
+    {
+      key: 'updates',
+      glyph: 'bell',
+      label: t('updates.title'),
+      onPress: () => nav.go({ name: 'updates' }),
+    },
+    {
+      key: 'help',
+      glyph: 'people',
+      label: t('profile.support.help'),
+      onPress: () => nav.go({ name: 'page', slug: 'faq' }),
+    },
+  ];
+  return (
+    <View style={styles.tiles} testID="profile-tiles">
+      {tiles.map((tile) => (
+        <Pressable
+          key={tile.key}
+          role="button"
+          aria-label={tile.label}
+          testID={`profile-tile-${tile.key}`}
+          onPress={tile.onPress}
+          style={({ pressed }) => [
+            styles.tile,
+            { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
+          ]}
+        >
+          <Glyph name={tile.glyph} size={24} color={c.textOnHero} />
+          <Text variant="caption" color="textOnHero" align="center" decorative>
+            {tile.label}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 export function ProfileScreen() {
   const { t } = useI18n();
@@ -50,7 +110,12 @@ export function ProfileScreen() {
   const { status } = useAuthState();
 
   return (
-    <ScreenFrame title={t('profile.title')} onBack={() => nav.back()} testID="profile-screen">
+    <ScreenFrame
+      title={t('profile.title')}
+      onBack={() => nav.back()}
+      hero={<QuickTiles />}
+      testID="profile-screen"
+    >
       <View style={styles.stack}>
         <AccountSection signedIn={status === 'signedIn'} />
         <PreferencesSections />
@@ -91,24 +156,20 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
 
   if (!signedIn) {
     return (
-      <Section title={t('profile.account.title')}>
-        <Card variant="flat">
-          <View style={styles.gap}>
-            <Text variant="body">{t('profile.account.signedOut')}</Text>
-            <Button
-              label={t('profile.account.signIn')}
-              fullWidth
-              onPress={() => nav.go({ name: 'signIn', returnTo: { name: 'profile' } })}
-              testID="profile-sign-in"
-            />
-          </View>
-        </Card>
+      <Section title={t('profile.account.title')} card>
+        <Text variant="body">{t('profile.account.signedOut')}</Text>
+        <Button
+          label={t('profile.account.signIn')}
+          fullWidth
+          onPress={() => nav.go({ name: 'signIn', returnTo: { name: 'profile' } })}
+          testID="profile-sign-in"
+        />
       </Section>
     );
   }
 
   return (
-    <Section title={t('profile.account.title')} testID="profile-account">
+    <Section title={t('profile.account.title')} testID="profile-account" card>
       <View style={styles.account}>
         <Avatar name={me?.displayName ?? t('profile.guestName')} size="lg" />
         <View style={styles.grow}>
@@ -188,7 +249,7 @@ function PreferencesSections() {
 
   return (
     <>
-      <Section title={t('profile.language.title')}>
+      <Section title={t('profile.language.title')} card>
         <SegmentedControl<Locale>
           accessibilityLabel={t('profile.language.title')}
           value={prefs.locale}
@@ -204,7 +265,7 @@ function PreferencesSections() {
         />
       </Section>
 
-      <Section title={t('profile.textSize.title')}>
+      <Section title={t('profile.textSize.title')} card>
         <SegmentedControl<`${TextSizeStep}`>
           accessibilityLabel={t('profile.textSize.title')}
           value={`${prefs.textSize}`}
@@ -220,7 +281,7 @@ function PreferencesSections() {
         </Text>
       </Section>
 
-      <Section title={t('profile.appearance.title')}>
+      <Section title={t('profile.appearance.title')} card>
         <SegmentedControl<ColorPreference>
           accessibilityLabel={t('profile.appearance.title')}
           value={prefs.color}
@@ -274,7 +335,7 @@ function AlertsSections() {
 
   return (
     <>
-      <Section title={t('profile.notifications.title')} testID="profile-notifications">
+      <Section title={t('profile.notifications.title')} testID="profile-notifications" card>
         <Switch
           label={t('profile.push.label')}
           description={
@@ -295,7 +356,7 @@ function AlertsSections() {
         />
       </Section>
 
-      <Section title={t('profile.alerts.title')} testID="profile-alerts">
+      <Section title={t('profile.alerts.title')} testID="profile-alerts" card>
         <QueryBoundary query={follows}>
           {(items) =>
             items.length === 0 ? (
@@ -334,7 +395,7 @@ function SupportSection() {
   const nav = useNav();
   const { appVersion } = useServices();
   return (
-    <Section title={t('profile.support')} testID="profile-support">
+    <Section title={t('profile.support')} testID="profile-support" card>
       <View>
         <ListItem
           title={t('profile.support.help')}

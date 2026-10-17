@@ -2,7 +2,14 @@ import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS, registrationFor } from '../test/factories';
-import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  MATRIX,
+  createWorld,
+  directionOf,
+  expectGreenHeader,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { SessionScreen } from './SessionScreen';
 
 const en = messages.en;
@@ -118,6 +125,7 @@ describe('SessionScreen', () => {
       });
       await view.findByTestId('facilities');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
       expect(view.getByText(words['session.register'])).toBeTruthy();
       expect(view.getByText(words['venue.facilities.title'])).toBeTruthy();

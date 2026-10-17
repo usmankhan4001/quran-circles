@@ -1,7 +1,7 @@
 import { Text } from 'react-native';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
-import { MATRIX, directionOf, renderScreen } from '../test/harness';
+import { MATRIX, directionOf, expectGreenHeader, renderScreen } from '../test/harness';
 import { ContentPageScreen } from './ContentPageScreen';
 import { QuranPrayerScreen } from './QuranPrayerScreen';
 
@@ -41,6 +41,7 @@ describe('QuranPrayerScreen', () => {
     it('draws the fallback', async () => {
       const view = await renderScreen(<QuranPrayerScreen />, { locale, color, textSize });
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       expect(view.getByText((locale === 'ur' ? ur : en)['quran.unavailable.title'])).toBeTruthy();
     });
   });

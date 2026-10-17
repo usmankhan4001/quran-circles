@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Header, Icon, Text, screenGutter, spacing, useTheme } from '@qc/ui';
+import { Banner, HeroHeader, IconButton, screenGutter, spacing, useTheme } from '@qc/ui';
 import { useI18n } from '../i18n/I18nProvider';
 import { useOffline } from '../providers/hooks';
 import { useInsets } from '../providers/insets';
@@ -10,39 +10,46 @@ export interface ScreenFrameProps {
   subtitle?: string;
   onBack?: () => void;
   actions?: ReactNode;
-  /** `large` is for the top of a tab. */
-  variant?: 'regular' | 'large';
+  /** What sits inside the green header under the title (a lead card, a search, a switch). */
+  hero?: ReactNode;
+  /**
+   * The screen is a sheet over another page (D13, R2): the green top has a handle and a close
+   * button instead of a back arrow, and the body is raised.
+   */
+  sheet?: boolean;
   children: ReactNode;
   /** Content kept below the scrolling area, for the main action of a form. */
   footer?: ReactNode;
   /** False when the content scrolls by itself (a long list such as the Quran reader). */
   scroll?: boolean;
+  /** Leaves out the page gutter, for content that runs edge to edge. */
+  flush?: boolean;
   testID?: string;
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  body: { padding: screenGutter, gap: spacing.lg },
+  body: { padding: screenGutter, gap: spacing.lg, paddingBottom: spacing.huge },
+  flush: { gap: spacing.lg, paddingBottom: spacing.huge },
   footer: { padding: screenGutter, borderTopWidth: 1 },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: screenGutter,
-    paddingVertical: spacing.sm,
-  },
+  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginTop: spacing.sm },
 });
 
-/** The frame of every screen: header, an offline note when the server cannot be reached, scrolling body. */
+/**
+ * The frame of every screen: the green header (B), an offline note when the server cannot be
+ * reached, scrolling body, and an optional bar for the main action.
+ */
 export function ScreenFrame({
   title,
   subtitle,
   onBack,
   actions,
-  variant = 'regular',
+  hero,
+  sheet,
   children,
   footer,
   scroll = true,
+  flush,
   testID,
 }: ScreenFrameProps) {
   const theme = useTheme();
@@ -50,34 +57,40 @@ export function ScreenFrame({
   const offline = useOffline();
   const insets = useInsets();
   const c = theme.colors;
+  const close =
+    sheet && onBack ? (
+      <IconButton
+        icon="close"
+        variant="onHero"
+        accessibilityLabel={t('ui.close')}
+        onPress={onBack}
+        testID="sheet-close"
+      />
+    ) : null;
   return (
-    <View
-      testID={testID}
-      style={[styles.root, { backgroundColor: c.background, paddingTop: insets.top }]}
-    >
-      <Header
+    <View testID={testID} style={[styles.root, { backgroundColor: c.background }]}>
+      {/* The status bar area is green too, so the header reaches the top edge. */}
+      <View style={{ backgroundColor: c.hero, paddingTop: insets.top }}>
+        {sheet ? (
+          <View style={[styles.handle, { backgroundColor: c.heroGlassPressed }]} aria-hidden />
+        ) : null}
+      </View>
+      <HeroHeader
+        testID="screen-header"
         title={title}
         {...(subtitle ? { subtitle } : {})}
-        {...(onBack ? { onBack } : {})}
-        {...(actions ? { actions } : {})}
-        variant={variant}
-      />
+        {...(onBack && !sheet ? { onBack } : {})}
+        {...(close ? { actions: close } : actions ? { actions } : {})}
+      >
+        {hero}
+      </HeroHeader>
       {offline ? (
-        <View
-          testID="offline-banner"
-          role="status"
-          style={[styles.banner, { backgroundColor: c.warningSubtle }]}
-        >
-          <Icon name="warning" size={20} color={c.textOnWarningSubtle} />
-          <Text variant="caption" color="textOnWarningSubtle">
-            {t('ui.offlineTitle')}
-          </Text>
-        </View>
+        <Banner kind="offline" title={t('ui.offlineTitle')} testID="offline-banner" />
       ) : null}
       {scroll ? (
         <ScrollView
           style={styles.root}
-          contentContainerStyle={styles.body}
+          contentContainerStyle={flush ? styles.flush : styles.body}
           keyboardShouldPersistTaps="handled"
         >
           {children}

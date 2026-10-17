@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Button, Card, ListItem, Text, spacing } from '@qc/ui';
+import { Button, Card, ListItem, SeatMeter, Tag, Text, spacing } from '@qc/ui';
 import type { Registration, Session } from '@qc/contracts';
 import { registerState } from '../features/session/registerState';
 import { FacilitiesChecklist } from '../components/FacilitiesChecklist';
@@ -16,10 +16,12 @@ import { describePortion } from '../features/session/portion';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useServices } from '../providers/services';
+import { PhotoBlock } from '../ui/PhotoBlock';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.xl },
   facts: { gap: spacing.xs },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   actions: { gap: spacing.sm },
 });
 
@@ -37,6 +39,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
     <ScreenFrame
       title={session.data ? l(session.data.title).text : t('session.title')}
       onBack={() => nav.back()}
+      hero={<PhotoBlock testID="session-photo" />}
       testID="session-screen"
       footer={
         session.data ? (
@@ -60,18 +63,16 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
           const onlineUrl = circle?.onlineLink ? safeWebUrl(circle.onlineLink) : null;
           return (
             <View style={styles.stack}>
-              <Card variant="flat">
+              <Card>
                 <View style={styles.facts}>
+                  <View style={styles.tags}>
+                    <Tag label={t(`sections.${s.section}`)} />
+                    <Tag label={t(`profile.language.${s.language}`)} kind="neutral" />
+                    <Tag label={t(`programs.${s.program}`)} kind="neutral" />
+                  </View>
                   <Text variant="bodyLarge">{describeSchedule(s, t, locale)}</Text>
                   <Text variant="body" color="textSecondary">
                     {t('session.duration', { count: s.durationMinutes })}
-                  </Text>
-                  <Text variant="body" color="textSecondary">
-                    {[
-                      t(`sections.${s.section}`),
-                      t(`profile.language.${s.language}`),
-                      t(`programs.${s.program}`),
-                    ].join(t('schedule.separator'))}
                   </Text>
                   {s.status === 'cancelled' ? (
                     <Text variant="body" color="textDanger" strong>
@@ -87,15 +88,17 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 </Text>
               ) : null}
 
-              <ListItem
-                title={venueName.text}
-                subtitle={t('session.openVenue')}
-                onPress={() => nav.go({ name: 'venue', venueId: s.venueId })}
-                testID="session-venue"
-              />
+              <Card padding="xs">
+                <ListItem
+                  title={venueName.text}
+                  subtitle={t('session.openVenue')}
+                  onPress={() => nav.go({ name: 'venue', venueId: s.venueId })}
+                  testID="session-venue"
+                />
+              </Card>
 
               {circle ? (
-                <Section title={t('session.circle')}>
+                <Section title={t('session.circle')} card>
                   <Text variant="body" lang={l(circle.name).lang}>
                     {l(circle.name).text}
                   </Text>
@@ -115,7 +118,12 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 </Section>
               ) : null}
 
-              <Section title={t('session.registration')}>
+              <Section title={t('session.registration')} card>
+                {s.registration.enabled &&
+                s.registration.capacity !== null &&
+                s.registration.seatsTaken !== null ? (
+                  <SeatMeter taken={s.registration.seatsTaken} capacity={s.registration.capacity} />
+                ) : null}
                 <Text variant="body" testID="session-registration-info">
                   {!s.registration.enabled
                     ? t('session.registration.notNeeded')
@@ -129,7 +137,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 </Text>
               </Section>
 
-              <Section title={t('session.upcoming')}>
+              <Section title={t('session.upcoming')} card>
                 <QueryBoundary query={occurrences}>
                   {(items) =>
                     items.length === 0 ? (
@@ -162,7 +170,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
               </Section>
 
               {venue.data ? (
-                <Section title={t('venue.facilities.title')}>
+                <Section title={t('venue.facilities.title')} card>
                   <FacilitiesChecklist facilities={venue.data.facilities} />
                 </Section>
               ) : null}

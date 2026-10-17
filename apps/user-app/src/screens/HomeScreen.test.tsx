@@ -4,7 +4,15 @@ import { Pressable, Text } from 'react-native';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { CITY_RAWALPINDI, SESSIONS, registrationFor } from '../test/factories';
-import { MATRIX, NOW, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  MATRIX,
+  NOW,
+  createWorld,
+  directionOf,
+  expectGreenHeader,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { HomeScreen } from './HomeScreen';
 
 const en = messages.en;
@@ -164,9 +172,14 @@ describe('HomeScreen', () => {
       const view = await renderScreen(<HomeScreen />, { world });
       await view.findByTestId('home-lead-card');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
-      expect(view.getByText(words['home.updates.title'])).toBeTruthy();
+      // "Updates" is the section title, the bell and a tile of "Also in the app".
+      expect(view.getAllByText(words['home.updates.title']).length).toBeGreaterThan(0);
       expect(view.getByText(words['home.season.doraTitle'])).toBeTruthy();
+      expect(view.getByText(words['home.also.title'])).toBeTruthy();
+      expect(view.getByText(words['home.ayah.title'])).toBeTruthy();
+      expect(view.getByTestId('home-search')).toBeTruthy();
     });
   });
 });

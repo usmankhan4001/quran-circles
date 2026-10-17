@@ -18,7 +18,8 @@ export type Route =
 
 export type RouteName = Route['name'];
 
-export const TAB_ROUTES = ['home', 'nearby', 'journey', 'quran'] as const;
+/** The tabs in the order of the bar (D12): Home, Nearby, Quran, Journey. */
+export const TAB_ROUTES = ['home', 'nearby', 'quran', 'journey'] as const;
 export type TabRoute = (typeof TAB_ROUTES)[number];
 
 export function routeToHref(route: Route): string {

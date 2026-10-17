@@ -1,15 +1,15 @@
 import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
   Chip,
   EmptyState,
   SegmentedControl,
+  SearchField,
   Select,
   Skeleton,
   Text,
-  TextField,
   spacing,
 } from '@qc/ui';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
@@ -35,6 +35,7 @@ import { useNav } from '../nav/NavProvider';
 import { usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
+import { PictureCard } from '../ui/PictureCard';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.lg },
@@ -42,6 +43,8 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
   grow: { flex: 1 },
   list: { gap: spacing.md },
+  carousel: { gap: spacing.md, paddingBottom: spacing.sm },
+  nearest: { width: 180 },
 });
 
 type ViewMode = 'list' | 'map';
@@ -86,18 +89,31 @@ export function NearbyScreen() {
   return (
     <ScreenFrame
       title={t('tabs.nearby')}
-      variant="large"
       actions={<ProfileButton />}
+      hero={
+        <>
+          <SearchField
+            accessibilityLabel={t('nearby.search.label')}
+            placeholder={t('nearby.search.placeholder')}
+            value={local.q}
+            onChangeText={(q) => setLocal((f) => ({ ...f, q }))}
+            testID="nearby-search"
+          />
+          <SegmentedControl<ViewMode>
+            accessibilityLabel={t('nearby.view.label')}
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'list', label: t('nearby.view.list') },
+              { value: 'map', label: t('nearby.view.map') },
+            ]}
+            testID="nearby-view"
+          />
+        </>
+      }
       testID="nearby-screen"
     >
       <View style={styles.stack}>
-        <TextField
-          label={t('nearby.search.label')}
-          placeholder={t('nearby.search.placeholder')}
-          value={local.q}
-          onChangeText={(q) => setLocal((f) => ({ ...f, q }))}
-          testID="nearby-search"
-        />
         <Select
           label={t('nearby.city.label')}
           options={cityOptions}
@@ -173,17 +189,6 @@ export function NearbyScreen() {
           </View>
         ) : null}
 
-        <SegmentedControl<ViewMode>
-          accessibilityLabel={t('nearby.view.label')}
-          value={mode}
-          onChange={setMode}
-          options={[
-            { value: 'list', label: t('nearby.view.list') },
-            { value: 'map', label: t('nearby.view.map') },
-          ]}
-          testID="nearby-view"
-        />
-
         {list.offline ? (
           <Text variant="caption" color="textSecondary" testID="saved-copy-note">
             {t('app.savedCopy')}
@@ -248,11 +253,31 @@ export function NearbyScreen() {
                 />
               </View>
             ) : (
-              <Card variant="flat">
-                <Text variant="body" color="textSecondary">
-                  {t('nearby.map.hint')}
-                </Text>
-              </Card>
+              <View style={styles.list}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.carousel}
+                  testID="map-nearest"
+                >
+                  {markers.slice(0, 6).map((marker) => (
+                    <View key={marker.id} style={styles.nearest}>
+                      <PictureCard
+                        title={marker.title}
+                        {...(marker.subtitle ? { caption: marker.subtitle } : {})}
+                        height={140}
+                        onPress={() => setSelectedVenue(marker.id)}
+                        testID={`map-nearest-${marker.id}`}
+                      />
+                    </View>
+                  ))}
+                </ScrollView>
+                <Card variant="flat">
+                  <Text variant="body" color="textSecondary">
+                    {t('nearby.map.hint')}
+                  </Text>
+                </Card>
+              </View>
             )}
           </View>
         ) : (
@@ -275,6 +300,22 @@ export function NearbyScreen() {
                 testID="nearby-load-more"
               />
             ) : null}
+            <Card testID="nearby-ask">
+              <View style={styles.list}>
+                <Text variant="title3" heading={2}>
+                  {t('nearby.ask.title')}
+                </Text>
+                <Text variant="body" color="textSecondary">
+                  {t('nearby.ask.body')}
+                </Text>
+                <Button
+                  variant="secondary"
+                  label={t('nearby.ask.action')}
+                  onPress={() => toast.show(t('nearby.request.soon'), 'info')}
+                  testID="nearby-ask-action"
+                />
+              </View>
+            </Card>
           </View>
         )}
       </View>

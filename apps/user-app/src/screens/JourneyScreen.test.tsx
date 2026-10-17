@@ -3,7 +3,14 @@ import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS, followFor, registrationFor } from '../test/factories';
-import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  MATRIX,
+  createWorld,
+  directionOf,
+  expectGreenHeader,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { JourneyScreen } from './JourneyScreen';
 
 const en = messages.en;
@@ -94,7 +101,7 @@ describe('JourneyScreen', () => {
     fireEvent.click(await view.findByTestId(`cancel-${REG_ID}`));
     expect(await view.findByTestId('cancel-sheet')).toBeTruthy();
     expect(world.http.callsTo('POST /v1/registrations')).toHaveLength(0);
-    fireEvent.click(view.getByTestId('confirm-cancel'));
+    fireEvent.click(view.getByTestId('cancel-sheet-cancel'));
     await waitFor(() => expect(view.queryByTestId('cancel-sheet')).toBeNull());
     expect(world.http.callsTo('POST /v1/registrations')).toHaveLength(0);
   });
@@ -103,7 +110,7 @@ describe('JourneyScreen', () => {
     const world = await createWorld({ signedIn: true, mock: mine() });
     const view = await renderScreen(<JourneyScreen />, { world });
     fireEvent.click(await view.findByTestId(`cancel-${REG_ID}`));
-    fireEvent.click(await view.findByTestId('confirm-ok'));
+    fireEvent.click(await view.findByTestId('cancel-sheet-confirm'));
     await waitFor(() =>
       expect(world.http.callsTo(`POST /v1/registrations/${REG_ID}/cancel`)).toHaveLength(1),
     );
@@ -115,8 +122,10 @@ describe('JourneyScreen', () => {
     world.http.failNext('POST /v1/registrations', 'internal_error');
     const view = await renderScreen(<JourneyScreen />, { world });
     fireEvent.click(await view.findByTestId(`cancel-${REG_ID}`));
-    fireEvent.click(await view.findByTestId('confirm-ok'));
-    expect(await view.findByText(en[`errors.internal_error` as keyof typeof en])).toBeTruthy();
+    fireEvent.click(await view.findByTestId('cancel-sheet-confirm'));
+    expect(
+      await view.findByText(en[`errors.internal_error` as keyof typeof en], { exact: false }),
+    ).toBeTruthy();
     expect(view.getByTestId('cancel-sheet')).toBeTruthy();
   });
 
@@ -147,6 +156,7 @@ describe('JourneyScreen', () => {
       const view = await renderScreen(<JourneyScreen />, { world });
       await view.findByTestId(`registration-${REG_ID}`);
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
       expect(view.getByText(words['journey.registrations.title'])).toBeTruthy();
       expect(view.getByText(words['journey.status.confirmed'])).toBeTruthy();

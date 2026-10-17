@@ -46,7 +46,7 @@ export function UpdatesScreen() {
                     testID="mark-all-read"
                   />
                 ) : null}
-                <View>
+                <View style={styles.stack}>
                   {feed.items.map((update) => (
                     <UpdateItem
                       key={update.id}

@@ -2,7 +2,14 @@ import { fireEvent } from '@testing-library/react';
 import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
-import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  MATRIX,
+  createWorld,
+  directionOf,
+  expectGreenHeader,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { UpdatesScreen } from './UpdatesScreen';
 
 const en = messages.en;
@@ -94,6 +101,7 @@ describe('UpdatesScreen', () => {
       });
       await view.findByTestId(`update-${unreadOne.id}`);
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       expect(view.getByText((locale === 'ur' ? ur : en)['updates.title'])).toBeTruthy();
     });
   });

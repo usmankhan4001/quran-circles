@@ -1258,5 +1258,14 @@
   "journey.summary.upcoming": "آنے والے",
   "journey.summary.waiting": "انتظار کی فہرست میں",
   "journey.summary.following": "فالو کیے ہوئے",
-  "session.days.everyDay": "ہر روز"
+  "session.days.everyDay": "ہر روز",
+  "admin.places.searchVenues": "مقامات تلاش کریں",
+  "admin.places.searchCircles": "حلقے تلاش کریں",
+  "admin.circleEditor.reject.body": "حلقہ چھپا رہے گا۔ مقام کے منتظم اسے بدل کر دوبارہ بھیج سکتے ہیں۔",
+  "admin.circleEditor.whoFor": "زبان اور حصہ",
+  "admin.signIn.heading": "اپنے فون سے سائن ان کریں",
+  "admin.postUpdate.sendBy": "ذریعہ",
+  "admin.postUpdate.message": "آپ کا پیغام",
+  "admin.venueEditor.details": "نام اور پتہ",
+  "admin.venueEditor.contact": "رابطہ"
 }

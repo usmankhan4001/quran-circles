@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, EmptyState, ListItem, Text, spacing } from '@qc/ui';
+import { Button, EmptyState, ListItem, Text, formatNumber, radii, spacing, useTheme } from '@qc/ui';
 import type { Registration } from '@qc/contracts';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 import { ProfileButton } from '../components/ProfileButton';
@@ -22,10 +22,55 @@ import { useAuthState } from '../providers/hooks';
 import { useToast } from '../providers/Toasts';
 
 const styles = StyleSheet.create({
+  stats: { flexDirection: 'row', gap: spacing.sm },
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: spacing.xxs,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.section,
+  },
   stack: { gap: spacing.xl },
   list: { gap: spacing.lg },
   footer: { gap: spacing.md, marginTop: spacing.md },
 });
+
+/** The three numbers at the top of My Journey (J1), on the glass of the green header. */
+function JourneySummary() {
+  const { t, locale } = useI18n();
+  const c = useTheme().colors;
+  const registrations = useMyRegistrations();
+  const follows = useMyFollows();
+  const confirmed = registrations.data?.filter((r) => r.status === 'confirmed').length ?? 0;
+  const waiting = registrations.data?.filter((r) => r.status === 'waitlisted').length ?? 0;
+  const following = follows.data?.length ?? 0;
+  const stats = [
+    { key: 'upcoming', value: confirmed, label: t('journey.summary.upcoming') },
+    { key: 'waiting', value: waiting, label: t('journey.summary.waiting') },
+    { key: 'following', value: following, label: t('journey.summary.following') },
+  ] as const;
+  return (
+    <View style={styles.stats} testID="journey-summary">
+      {stats.map((stat) => (
+        <View
+          key={stat.key}
+          accessible
+          aria-label={`${stat.label}: ${formatNumber(stat.value, locale)}`}
+          style={[styles.stat, { backgroundColor: c.heroGlass }]}
+          testID={`journey-stat-${stat.key}`}
+        >
+          <Text variant="title1" color="textOnHero" decorative>
+            {formatNumber(stat.value, locale)}
+          </Text>
+          <Text variant="caption" color="textOnHero" align="center" decorative>
+            {stat.label}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export function JourneyScreen() {
   const { t } = useI18n();
@@ -35,8 +80,8 @@ export function JourneyScreen() {
   return (
     <ScreenFrame
       title={t('tabs.myJourney')}
-      variant="large"
       actions={<ProfileButton />}
+      {...(status === 'signedIn' ? { hero: <JourneySummary /> } : {})}
       testID="journey-screen"
     >
       {status !== 'signedIn' ? (
@@ -141,7 +186,7 @@ function JourneyContent() {
         </QueryBoundary>
       </Section>
 
-      <Section title={t('journey.followed.title')} testID="journey-follows">
+      <Section title={t('journey.followed.title')} testID="journey-follows" card>
         <QueryBoundary query={follows}>
           {(items) =>
             items.length === 0 ? (

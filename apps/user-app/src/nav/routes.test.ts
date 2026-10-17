@@ -62,3 +62,10 @@ describe('routes', () => {
     });
   });
 });
+
+describe('tabs', () => {
+  it('are in the order of the bar: Home, Nearby, Quran, Journey', async () => {
+    const { TAB_ROUTES } = await import('./routes');
+    expect([...TAB_ROUTES]).toEqual(['home', 'nearby', 'quran', 'journey']);
+  });
+});

@@ -3,7 +3,7 @@ import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS } from '../test/factories';
-import { MATRIX, directionOf, renderScreen, waitFor } from '../test/harness';
+import { MATRIX, directionOf, expectGreenHeader, renderScreen, waitFor } from '../test/harness';
 import { VenueScreen } from './VenueScreen';
 
 const en = messages.en;
@@ -93,6 +93,7 @@ describe('VenueScreen', () => {
       });
       await view.findByTestId('facilities');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
+      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
       expect(view.getByText(words['facilities.wuduArea'])).toBeTruthy();
       expect(view.getAllByText(words['facilities.available']).length).toBe(4);

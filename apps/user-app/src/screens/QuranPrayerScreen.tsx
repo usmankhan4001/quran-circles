@@ -27,12 +27,7 @@ export function QuranPrayerScreen({ reader }: { reader?: ReaderRequest }) {
     );
   }
   return (
-    <ScreenFrame
-      title={t('tabs.quranPrayer')}
-      variant="large"
-      actions={<ProfileButton />}
-      testID="quran-screen"
-    >
+    <ScreenFrame title={t('tabs.quranPrayer')} actions={<ProfileButton />} testID="quran-screen">
       <EmptyState
         icon="info"
         title={t('quran.unavailable.title')}
