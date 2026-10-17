@@ -81,6 +81,10 @@ Urdu has one weight; emphasis comes from size and colour.
 
 Button (primary, tonal, outline, quiet, danger; pressed, loading, disabled), IconButton (tonal, filled, glass, plain), TextField, CodeField, SearchField, SegmentedControl, Chip, Stepper, Switch, Checkbox, Tag (ok, gilt, alert, neutral, strong), Badge, Avatar, VenueMark, SeatMeter, ProgressRing, DateStrip, SessionCard (featured, compact), FactGrid, ListRow, UpdateRow, SurahRow, ResumeCard, SkyHeader, PrayerStrip, TopBar, TabBar, Banner, Toast, EmptyState, Skeleton, Sheet, ConfirmSheet, MapView, MapPin, MapCluster.
 
+### D8. Buttons: soft rounded (A)
+
+Chosen by the owner on 2026-10-17 from [Buttons](https://claude.ai/artifact/HukdzsoECQXcpjkMCeEvvH). Rounded rectangles, corner radius 16 (12 on the small size), solid Tanzeem green for the main action with a soft green shadow, leaf tint for the second action, a 1.5 green outline, text-only, and a terracotta outline for careful actions. Sizes 36 (inside cards only), 48 and 56. States: pressed (darker, 98% scale), focused (2 px ring, 3 px gap), disabled (40%), loading (rotating eight-point star). Icon buttons 44 square, same radius. Pill, mihrab-arch, tile, mushaf-frame and lantern shapes were rejected.
+
 ## Open questions
 
 - Owner review of the component set.
