@@ -46,7 +46,7 @@ export function Stepper({
     <View style={large ? styles.big : styles.row}>
       <RoundButton
         testID={testID ? `${testID}-decrease` : undefined}
-        glyph="minus"
+        icon="minus"
         size={large ? 'large' : 'regular'}
         accessibilityLabel={t('admin.common.decrease', { label })}
         disabled={value <= min}
@@ -64,7 +64,7 @@ export function Stepper({
       </View>
       <RoundButton
         testID={testID ? `${testID}-increase` : undefined}
-        glyph="plus"
+        icon="plus"
         size={large ? 'large' : 'regular'}
         accessibilityLabel={t('admin.common.increase', { label })}
         disabled={value >= max}

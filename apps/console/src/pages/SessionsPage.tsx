@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { SESSION_STATUSES, can, type AdminSession, type SessionStatus } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
@@ -6,18 +6,26 @@ import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { usePaged } from '../api/hooks';
 import {
+  AddLink,
   Badge,
   DataTable,
   EmptyState,
   ErrorState,
   LoadMore,
   Loading,
+  NoMatch,
   PageHeader,
+  SearchField,
   SelectField,
+  StatRow,
+  TableCard,
   type BadgeTone,
   type Column,
 } from '../components/ui';
 import { useI18n } from '../i18n';
+import { sessionStats } from '../lib/kpis';
+import { canSomewhere, isNavAllowed } from '../lib/permissions';
+import { filterBySearch } from '../lib/search';
 
 export const SESSION_STATUS_KEYS = {
   draft: 'console.sessions.status.draft',
@@ -52,6 +60,7 @@ export default function SessionsPage() {
   const [cityId, setCityId] = useState('');
   const [venueId, setVenueId] = useState('');
   const [status, setStatus] = useState<SessionStatus | ''>('');
+  const [query, setQuery] = useState('');
 
   const list = usePaged(
     (cursor) =>
@@ -66,6 +75,22 @@ export default function SessionsPage() {
       }),
     [api, cityId, venueId, status],
   );
+
+  const loaded = list.status === 'ready' ? list.items : [];
+  const stats = useMemo(() => sessionStats(loaded, Date.now()), [loaded]);
+  const rows = useMemo(
+    () =>
+      filterBySearch(loaded, query, (s) => [
+        s.title,
+        s.venue.name,
+        s.circle?.name,
+        s.circle?.teacherName,
+        dir.cityName(s.cityId),
+      ]),
+    [loaded, query, dir],
+  );
+  // Sessions are added through the bulk import; the console has no single-session form yet.
+  const canAdd = isNavAllowed(principal, 'import') && canSomewhere(principal, 'session.create');
 
   const venueOptions = dir.venues
     .filter((v) => !cityId || v.cityId === cityId)
@@ -138,59 +163,99 @@ export default function SessionsPage() {
   return (
     <div className="page">
       <PageHeader title={t('console.sessions.title')} intro={t('console.sessions.intro')} />
-      <div className="filters" role="group" aria-label={t('console.shell.filters')}>
-        <SelectField
-          id="filter-city"
-          label={t('console.shell.filter.city')}
-          value={cityId}
-          placeholder={t('console.shell.filter.all')}
-          onChange={(e) => {
-            setCityId(e.target.value);
-            setVenueId('');
-          }}
-          options={dir.cities.map((c) => ({ value: c.id, label: localized(c.name) }))}
-        />
-        <SelectField
-          id="filter-venue"
-          label={t('console.shell.filter.venue')}
-          value={venueId}
-          placeholder={t('console.shell.filter.all')}
-          onChange={(e) => setVenueId(e.target.value)}
-          options={venueOptions}
-        />
-        <SelectField
-          id="filter-status"
-          label={t('console.shell.filter.status')}
-          value={status}
-          placeholder={t('console.shell.filter.all')}
-          onChange={(e) => setStatus(e.target.value as SessionStatus | '')}
-          options={SESSION_STATUSES.map((s) => ({ value: s, label: t(SESSION_STATUS_KEYS[s]) }))}
-        />
-      </div>
-      {list.status === 'loading' ? <Loading /> : null}
-      {list.status === 'error' ? <ErrorState error={list.error} onRetry={list.reload} /> : null}
-      {list.status === 'ready' && list.items.length === 0 ? (
-        <EmptyState
-          title={t('console.sessions.empty.title')}
-          body={t('console.sessions.empty.body')}
+      {list.status === 'ready' ? (
+        <StatRow
+          label={t('console.kpi.label')}
+          partial={list.hasMore}
+          stats={[
+            { id: 'total', label: t('console.sessions.kpi.total'), value: stats.total },
+            { id: 'week', label: t('console.sessions.kpi.thisWeek'), value: stats.thisWeek },
+            { id: 'full', label: t('console.sessions.kpi.full'), value: stats.full },
+            {
+              id: 'waiting',
+              label: t('console.sessions.kpi.waiting'),
+              value: stats.waitingApproval,
+              tone: 'notice',
+            },
+          ]}
         />
       ) : null}
-      {list.status === 'ready' && list.items.length > 0 ? (
-        <>
+      <TableCard
+        search={
+          <SearchField
+            id="sessions-search"
+            label={t('console.sessions.search')}
+            value={query}
+            onChange={setQuery}
+          />
+        }
+        filtersLabel={t('console.shell.filters')}
+        filters={
+          <>
+            <SelectField
+              id="filter-city"
+              label={t('console.shell.filter.city')}
+              value={cityId}
+              placeholder={t('console.shell.filter.all')}
+              onChange={(e) => {
+                setCityId(e.target.value);
+                setVenueId('');
+              }}
+              options={dir.cities.map((c) => ({ value: c.id, label: localized(c.name) }))}
+            />
+            <SelectField
+              id="filter-venue"
+              label={t('console.shell.filter.venue')}
+              value={venueId}
+              placeholder={t('console.shell.filter.all')}
+              onChange={(e) => setVenueId(e.target.value)}
+              options={venueOptions}
+            />
+            <SelectField
+              id="filter-status"
+              label={t('console.shell.filter.status')}
+              value={status}
+              placeholder={t('console.shell.filter.all')}
+              onChange={(e) => setStatus(e.target.value as SessionStatus | '')}
+              options={SESSION_STATUSES.map((s) => ({
+                value: s,
+                label: t(SESSION_STATUS_KEYS[s]),
+              }))}
+            />
+          </>
+        }
+        action={
+          canAdd ? <AddLink to="/import?kind=sessions">{t('console.sessions.add')}</AddLink> : null
+        }
+      >
+        {list.status === 'loading' ? <Loading /> : null}
+        {list.status === 'error' ? <ErrorState error={list.error} onRetry={list.reload} /> : null}
+        {list.status === 'ready' && list.items.length === 0 ? (
+          <EmptyState
+            title={t('console.sessions.empty.title')}
+            body={t('console.sessions.empty.body')}
+          />
+        ) : null}
+        {list.status === 'ready' && list.items.length > 0 && rows.length === 0 ? (
+          <NoMatch query={query} partial={list.hasMore} />
+        ) : null}
+        {list.status === 'ready' && rows.length > 0 ? (
           <DataTable
             caption={t('console.sessions.title')}
             columns={columns}
-            rows={list.items}
+            rows={rows}
             rowKey={(s) => s.id}
           />
+        ) : null}
+        {list.status === 'ready' ? (
           <LoadMore
             hasMore={list.hasMore}
             loading={list.loadingMore}
             onLoadMore={list.loadMore}
             error={list.moreError}
           />
-        </>
-      ) : null}
+        ) : null}
+      </TableCard>
     </div>
   );
 }

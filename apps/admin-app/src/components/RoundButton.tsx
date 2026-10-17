@@ -1,9 +1,9 @@
 import { Pressable } from 'react-native';
 import { minTouchTarget, radii, useTheme } from '@qc/ui';
-import { Glyph, type GlyphName } from './glyphs';
+import { AppIcon, type AppIconName } from './glyphs';
 
 export interface RoundButtonProps {
-  glyph: GlyphName;
+  icon: AppIconName;
   /** Required: an icon alone has no name. Use the person's name here, never a number. */
   accessibilityLabel: string;
   onPress: () => void;
@@ -14,11 +14,11 @@ export interface RoundButtonProps {
 }
 
 /**
- * A round tinted button with a drawn icon: call and message on a person's row, and the stepper.
+ * A round tinted button with a line icon: call and message on a person's row, and the stepper.
  * TODO(kit): replace with @qc/ui IconButton once it takes the kit's phone and chat icons.
  */
 export function RoundButton({
-  glyph,
+  icon,
   accessibilityLabel,
   onPress,
   disabled,
@@ -49,8 +49,8 @@ export function RoundButton({
       })}
     >
       {({ pressed }) => (
-        <Glyph
-          name={glyph}
+        <AppIcon
+          name={icon}
           color={disabled ? colors.disabledText : pressed ? colors.textOnAccent : colors.accent}
           size={22}
         />

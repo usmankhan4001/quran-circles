@@ -163,10 +163,16 @@ describe('inviting a coordinator', () => {
       handlers: data,
     });
     await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
-    const dialog = await screen.findByRole('dialog', { name: text('console.invites.new') });
-    await user.click(within(dialog).getByRole('button', { name: text('console.invites.send') }));
-    expect(within(dialog).getByText(text('console.invites.form.role.required'))).toBeTruthy();
-    expect(within(dialog).getByText(text('console.phone.error.empty'))).toBeTruthy();
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
+    // The invite button in the table card moves focus to the form beside the table.
+    expect(document.activeElement).toBe(
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
+    );
+    // The form is part of the page, not a dialog.
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
+    expect(within(form).getByText(text('console.invites.form.role.required'))).toBeTruthy();
+    expect(within(form).getByText(text('console.phone.error.empty'))).toBeTruthy();
     expect(writes(calls)).toEqual([]);
   });
 
@@ -177,17 +183,17 @@ describe('inviting a coordinator', () => {
       handlers: data,
     });
     await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
-    const dialog = await screen.findByRole('dialog');
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
     await user.selectOptions(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
       'national_admin',
     );
     await user.type(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '051 2345678',
     );
-    await user.click(within(dialog).getByRole('button', { name: text('console.invites.send') }));
-    expect(within(dialog).getByText(text('console.phone.error.notMobile'))).toBeTruthy();
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
+    expect(within(form).getByText(text('console.phone.error.notMobile'))).toBeTruthy();
     expect(writes(calls)).toEqual([]);
   });
 
@@ -201,22 +207,30 @@ describe('inviting a coordinator', () => {
       },
     });
     await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
-    const dialog = await screen.findByRole('dialog');
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
     await user.selectOptions(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
       'city_coordinator',
     );
     await user.selectOptions(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.scope.city'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.scope.city'))),
       rawalpindi!.id,
     );
     await user.type(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '0300 0000071',
     );
-    expect(within(dialog).getByText('Will be saved as +92 300 0000071.')).toBeTruthy();
-    await user.click(within(dialog).getByRole('button', { name: text('console.invites.send') }));
+    expect(within(form).getByText('Will be saved as +92 300 0000071.')).toBeTruthy();
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
     expect(await screen.findByText(text('console.invites.sent'))).toBeTruthy();
+    // The form clears, ready for the next invite.
+    expect(
+      (
+        within(form).getByLabelText(
+          new RegExp(text('console.invites.phone.label')),
+        ) as HTMLInputElement
+      ).value,
+    ).toBe('');
     const sent = find(calls, 'POST', '/v1/admin/invites');
     expect(sent).toHaveLength(1);
     expect(sent[0]?.body).toEqual({
@@ -236,21 +250,21 @@ describe('inviting a coordinator', () => {
       },
     });
     await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
-    const dialog = await screen.findByRole('dialog');
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
     await user.selectOptions(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
       'city_coordinator',
     );
-    const city = within(dialog).getByLabelText(new RegExp(text('console.invites.scope.city')));
+    const city = within(form).getByLabelText(new RegExp(text('console.invites.scope.city')));
     await user.selectOptions(city, rawalpindi!.id);
     await user.type(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '0300 0000073',
     );
-    await user.click(within(dialog).getByRole('button', { name: text('console.invites.send') }));
-    expect(await within(dialog).findByText(text('console.invites.form.rejected'))).toBeTruthy();
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
+    expect(await within(form).findByText(text('console.invites.form.rejected'))).toBeTruthy();
     expect(city.getAttribute('aria-invalid')).toBe('true');
-    expect(within(dialog).getByText(text('errors.validation_failed'))).toBeTruthy();
+    expect(within(form).getByText(text('errors.validation_failed'))).toBeTruthy();
   });
 
   it('maps a server error code to its errors.* message', async () => {
@@ -260,24 +274,24 @@ describe('inviting a coordinator', () => {
       handlers: { ...data, 'adminRoles.invite': errorResponse('role_already_assigned') },
     });
     await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
-    const dialog = await screen.findByRole('dialog');
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
     await user.selectOptions(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
       'national_admin',
     );
     await user.type(
-      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '0300 0000072',
     );
-    await user.click(within(dialog).getByRole('button', { name: text('console.invites.send') }));
-    expect(await within(dialog).findByText(text('errors.role_already_assigned'))).toBeTruthy();
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
+    expect(await within(form).findByText(text('errors.role_already_assigned'))).toBeTruthy();
   });
 
   it('offers a city coordinator only the roles they may give, inside their own city', async () => {
     const { user } = renderConsole({ role: 'city', path: '/coordinators', handlers: data });
     await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
-    const dialog = await screen.findByRole('dialog');
-    const role = within(dialog).getByLabelText(
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
+    const role = within(form).getByLabelText(
       new RegExp(text('console.invites.role.label')),
     ) as HTMLSelectElement;
     const options = within(role)
@@ -285,7 +299,7 @@ describe('inviting a coordinator', () => {
       .map((o) => (o as HTMLOptionElement).value)
       .filter(Boolean);
     expect(options).toEqual(['venue_coordinator']);
-    const venue = await within(dialog).findByLabelText(
+    const venue = await within(form).findByLabelText(
       new RegExp(text('console.invites.scope.venue')),
     );
     const venues = within(venue)
@@ -533,15 +547,24 @@ describe('invite status and resend', () => {
     });
     const table = await screen.findByRole('table', { name: text('console.invites.list.title') });
     expect(within(table).getAllByRole('row')).toHaveLength(4);
-    const filter = screen.getByLabelText(text('console.invites.filter.label'));
-    await user.selectOptions(filter, 'accepted');
+    const filter = screen.getByRole('group', { name: text('console.invites.filter.label') });
+    const all = within(filter).getByRole('button', { name: text('console.invites.filter.all') });
+    expect(all.getAttribute('aria-pressed')).toBe('true');
+    const acceptedButton = within(filter).getByRole('button', {
+      name: text('console.invites.status.accepted'),
+    });
+    await user.click(acceptedButton);
+    expect(acceptedButton.getAttribute('aria-pressed')).toBe('true');
+    expect(all.getAttribute('aria-pressed')).toBe('false');
     const narrowed = screen.getByRole('table', { name: text('console.invites.list.title') });
     expect(
       within(narrowed)
         .getAllByRole('rowheader')
         .map((r) => r.textContent),
     ).toEqual(['Test Accepted']);
-    await user.selectOptions(filter, 'revoked');
+    await user.click(
+      within(filter).getByRole('button', { name: text('console.invites.status.revoked') }),
+    );
     expect(screen.getByText(text('console.invites.filter.empty'))).toBeTruthy();
   });
 

@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { messages } from '@qc/i18n';
+import { iconNames } from '@qc/ui';
 import { describe, expect, it } from 'vitest';
 
 const root = __dirname;
@@ -58,6 +59,17 @@ describe('colours', () => {
     const frame = files.find((f) => f.path === 'components/Screen.tsx')!;
     expect(frame.text).toMatch(/import \{[^}]*\bHeroHeader\b[^}]*\} from '@qc\/ui'/);
     expect(files.some((f) => f.path === 'components/HeroHeader.tsx')).toBe(false);
+  });
+
+  it('draws locally only the icons the kit line set does not have', () => {
+    const glyphs = files.find((f) => f.path === 'components/glyphs.tsx')!;
+    for (const name of iconNames) {
+      expect(glyphs.text, name).not.toContain(`case '${name}'`);
+    }
+    // Only AppIcon draws a glyph; screens never pick the local drawing over the kit icon.
+    for (const f of files.filter((x) => x.path !== 'components/glyphs.tsx')) {
+      expect(f.text, f.path).not.toMatch(/<Glyph\b/);
+    }
   });
 
   it('uses the kit pieces that replaced the local stand-ins', () => {

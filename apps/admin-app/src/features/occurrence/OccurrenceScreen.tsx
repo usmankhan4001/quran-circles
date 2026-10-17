@@ -88,7 +88,7 @@ export function OccurrenceScreen({
           <Text>{t('errors.forbidden')}</Text>
         </Card>
       ) : (
-        <QueryBoundary query={query} testID="occurrence-data">
+        <QueryBoundary query={query} testID="occurrence-data" notFoundIsNotAvailable>
           {(occurrence) => <OccurrenceFlow occurrence={occurrence} now={now} />}
         </QueryBoundary>
       )}

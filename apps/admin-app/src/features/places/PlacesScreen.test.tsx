@@ -131,3 +131,61 @@ describe('PlacesScreen circles', () => {
     await waitFor(() => expect(screen.getByText('No circles yet')).toBeTruthy());
   });
 });
+
+describe('PlacesScreen venue picture cards', () => {
+  it('draws venue art on each card, since venues have no photo yet', async () => {
+    renderScreen(<PlacesScreen />, { backend: createBackend({ me: meFor('venue') }) });
+    const card = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(within(card).getByTestId(`venue-${ids.venueAlNoor}-art`)).toBeTruthy();
+    // Decoration only.
+    expect(
+      within(card).getByTestId(`venue-${ids.venueAlNoor}-art`).getAttribute('aria-hidden'),
+    ).toBe('true');
+  });
+
+  it('says how many circles meet at each venue, counted from the circles in scope', async () => {
+    const backend = createBackend({ me: meFor('city') });
+    renderScreen(<PlacesScreen />, { backend });
+    const card = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    const count = backend.state.circles.filter((c) => c.venueId === ids.venueAlNoor).length;
+    expect(within(card).getByText(count === 1 ? '1 circle' : `${count} circles`)).toBeTruthy();
+    // A venue with no circle says so.
+    const empty = backend.state.venues.find(
+      (v) =>
+        v.cityId === ids.cityRawalpindi && !backend.state.circles.some((c) => c.venueId === v.id),
+    )!;
+    expect(within(screen.getByTestId(`venue-${empty.id}`)).getByText('0 circles')).toBeTruthy();
+  });
+
+  it('still lists the venues when the circle count cannot load', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.failWith('adminCircles.list', 'service_unavailable');
+    renderScreen(<PlacesScreen />, { backend });
+    const card = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(within(card).queryByText(/circles?$/)).toBeNull();
+  });
+
+  it('shows the venue coordinator their venue, not the empty state, when the list holds it', async () => {
+    renderScreen(<PlacesScreen />, { backend: createBackend({ me: meFor('venue') }) });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(screen.queryByText('No venues yet')).toBeNull();
+  });
+
+  it('shows the empty state when the server sends no venue the working role can use', async () => {
+    // What the raw contract mock does today: its venue list is generated, so no id matches the
+    // coordinator's venue. The screen says so plainly instead of breaking.
+    const backend = createBackend({
+      me: meFor('venue'),
+      handlers: {
+        'adminVenues.list': () => ({
+          items: [
+            { ...createBackend().state.venues[3]!, id: '00000000-0000-4000-8000-000000000001' },
+          ],
+          nextCursor: null,
+        }),
+      },
+    });
+    renderScreen(<PlacesScreen />, { backend });
+    expect(await screen.findByText('No venues yet')).toBeTruthy();
+  });
+});

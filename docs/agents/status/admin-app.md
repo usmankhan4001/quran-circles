@@ -1,6 +1,6 @@
 # Status: admin-app
 
-Updated: 2026-10-17 (contract rc.2 pass)
+Updated: 2026-10-17 (drawing gap pass)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -47,13 +47,31 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - Tests: 494 passing in 33 files (was 452 in 34; `find.test.ts` went with the code it tested). New: not-available for every session screen and the circle editor, one `adminSessions.get` call and no list call, drafts through the admin read, recipient count (debounce, text changes do not ask again, singular, failure, cancel, final count from the post, never sends), archive per role (venue, city, admin), cancel, refusal, multi-role, no archive on pending/archived, server refusal on another venue, field marking on five forms, LTR/RTL x light/dark x text size for the session page (loaded and not available), the circle editor edit/archived states and the post update count and confirm sheet.
 - Checks: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `pnpm exec eslint apps/admin-app`, `pnpm exec prettier --check` on touched paths pass; `expo export --platform web` bundles to a scratch folder.
 
+## Drawing gap pass (2026-10-17, gap list in `docs/design/redesign-handoff.md`)
+
+- Today: the next session (earliest coming date in the working scope) is a big card: start time in a tinted block (Today or the date under it), title, venue and section, the portion being read (book icon) when the date has one, and how many are coming. Under it four quick actions as drawn: Registrants (for today's date when the session is today), Attendance (the next date), Post update (about this session), Change time. Each shows only when `sessionAbilities` allows it. The other sessions follow as `SessionCard`s. The general "Post an update" moved to a bell button on the green header (`today-post-update`). New: `features/home/NextSessionCard.tsx`, `components/ActionTile.tsx` (TODO(kit)), `nextOf()`.
+- Places: venues are picture cards with drawn venue art (`components/VenueArt.tsx`, theme colours only, decoration; no photo field in contracts), status tag on the art, address and "N circles" (counted from `adminCircles.list`; the card still shows when the count fails).
+- Places empty for the venue coordinator: cause is the contract mock, not the app (see Blocked). The app is right to narrow to the working venue; it now has a test for the empty case.
+- Circle editor from the venue page: the venue page has a "Circles here" card listing the venue's circles (waiting ones first, status tag) that open the circle editor, and "New circle" (`routes.newCircle(venueId)`) when `can(..., 'circle.create', venue)`. Tested for venue, city, admin and multi-role.
+- Occurrence and attendance: the error in the mock is the contract mock (see Blocked). App-side: when the date is not in the session's list, both screens now say "not available" (no retry) instead of "Something went wrong"; other failures keep the retry. Tick list header as drawn: title and "N of M ticked" on the start side, "Mark everyone present" on the end; "Clear all" shows once something is ticked.
+- Icons: the local drawings for today, places, bell, user, people, clock, tick and plus are gone; tabs and buttons use the kit `Icon` line set (tabs: calendar, pin, bell, user). `glyphs.tsx` keeps only call, chat and minus (the kit has none), behind `AppIcon`. A guard test fails if a kit icon is drawn locally again.
+- Urdu times: `formatLocalTime` wraps the Urdu time in `ltrRun`, so every time on every screen reads "4:30 PM" in a right-to-left line. English is unchanged.
+- i18n (en and ur together, Urdu draft): `admin.home.nextSection`, `admin.home.coming`, `admin.home.quickActions`, `admin.home.postShort`, `admin.home.changeTimeShort`, `admin.places.circleCount.one/other`, `admin.venueEditor.circles.title/help/empty`. Nothing removed.
+- Tests: 534 passing in 33 files (was 494). New: next card (time, coming, portion, the four routes, today vs another day, none when no coming date, scope never leaks another venue), quick actions for venue, city, admin and multi-role, `nextOf`, LTR/RTL x light/dark x sizes for the card with the Urdu time mark, venue art and circle counts, count failure, empty Places case, venue page circles per role, ordering, empty, retry, not on create, combos; occurrence and attendance not-available and retry; tick list count and clear; Urdu time in the attendance header; `ltrRun` unit test; tab icons from the kit.
+- Checks: `pnpm --filter @qc/admin-app typecheck`, `test`, `pnpm exec eslint apps/admin-app`, `prettier --check` on changed files pass; `expo export --platform web` bundles to a scratch folder.
+
 ## In progress
 
 - Nothing.
 
 ## Blocked
 
-- Nothing blocking. Items below work around gaps and wait on the change requests.
+- Running the admin app against the raw contract mock (`pnpm --filter @qc/contracts mock`) cannot show real admin screens; the causes are in `packages/contracts/src/mock.ts` (contracts lane), not in the app:
+  - `me.get` (line 264) returns `fixtureMe`, whose `roles` is `[]` (`fixtures.ts` 617-632), and `auth.verifyCode` (lines 251-263) hands out `mock-user`, which every staff endpoint refuses (line 388). So no one can be a coordinator. Fix: staff tokens such as `mock-venue` / `mock-city` / `mock-staff` with a `me` that carries the matching role (venue 1, city 1, national), and scope the lists below by that role with `scopeFilter`.
+  - No handler for `adminVenues.list`, `adminSessions.list`, `adminSessions.occurrences`, `adminCircles.list`, `adminAttendance.get` or `registrations.forSession`, so they answer with `fakeFromSchema` rows (ids like `...000000000001`, name "sample"). That is the Places empty state (the generated venue is not the coordinator's venue, so the app's working-venue filter leaves nothing), the "sample" sessions on Today (`adminSessions.get` then says not found), and the occurrence and attendance error (the generated occurrence list never holds the fixture occurrence id the app asks for). Fix: add these to the `overrides` table (after `adminCircles.get`, line 329) serving `fx.venues` (cityId, includeArchived), `fx.adminSessions` (cityId, venueId via `sessionMatches`), `fx.occurrences` for the session (from, to, limit; not_found for an unknown session), `fx.circles` (cityId, venueId), attendance from the fixture occurrence (headcount, `entries: []`, `markedAt: null`; not_found for an unknown occurrence) and synthetic registrants for a known session. The admin app's own test backend (`src/test/backend.ts`) already does all of this and can be the model.
+- Venue photos: the drawings show photos; contracts have no photo field. The app draws venue art until `Venue` gets a photo URL (and an upload or a console field to set it).
+
+Nothing else blocking. Items below work around gaps and wait on the change requests.
 
 ## Questions for the orchestrator
 

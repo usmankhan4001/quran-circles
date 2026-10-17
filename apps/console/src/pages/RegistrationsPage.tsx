@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import {
   REGISTRATION_STATUSES,
@@ -18,13 +18,18 @@ import {
   ErrorState,
   LoadMore,
   Loading,
+  NoMatch,
   PageHeader,
   Phone,
+  SearchField,
   SelectField,
+  StatRow,
+  TableCard,
   type BadgeTone,
   type Column,
 } from '../components/ui';
 import { useI18n } from '../i18n';
+import { filterBySearch } from '../lib/search';
 import { SECTION_KEYS } from './SessionsPage';
 
 export const REGISTRATION_STATUS_KEYS = {
@@ -48,6 +53,7 @@ export default function RegistrationsPage() {
   const { api, principal } = useSignedIn();
   const [occurrenceId, setOccurrenceId] = useState('');
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
+  const [query, setQuery] = useState('');
 
   // The public endpoint knows published sessions; a draft may be missing, and the table still works.
   const session = useAsync(
@@ -79,6 +85,12 @@ export default function RegistrationsPage() {
       return page;
     },
     [api, sessionId, occurrenceId, status],
+  );
+
+  const loaded = list.status === 'ready' ? list.items : [];
+  const rows = useMemo(
+    () => filterBySearch(loaded, query, (r) => [r.name, r.phone]),
+    [loaded, query],
   );
 
   const sessionData = session.status === 'ready' ? session.data : null;
@@ -136,71 +148,93 @@ export default function RegistrationsPage() {
       <p>
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>
       </p>
-      <div className="filters" role="group" aria-label={t('console.shell.filters')}>
-        <SelectField
-          id="filter-occurrence"
-          label={t('console.exports.filter.occurrence')}
-          value={occurrenceId}
-          placeholder={t('console.exports.filter.allOccurrences')}
-          onChange={(e) => setOccurrenceId(e.target.value)}
-          options={(occurrences.status === 'ready' ? occurrences.data : []).map((o) => ({
-            value: o.id,
-            label: dateTime(o.startsAt),
-          }))}
-        />
-        <SelectField
-          id="filter-registration-status"
-          label={t('console.shell.filter.status')}
-          value={status}
-          placeholder={t('console.shell.filter.all')}
-          onChange={(e) => setStatus(e.target.value as RegistrationStatus | '')}
-          options={REGISTRATION_STATUSES.map((s) => ({
-            value: s,
-            label: t(REGISTRATION_STATUS_KEYS[s]),
-          }))}
-        />
-      </div>
       {totals && list.status === 'ready' ? (
-        <dl className="stats" aria-label={t('console.exports.totals.label')}>
-          <div className="stat">
-            <dt className="stat-label">{t('console.exports.totals.registrations')}</dt>
-            <dd className="stat-value">{number(totals.registrations)}</dd>
-          </div>
-          <div className="stat">
-            <dt className="stat-label">{t('console.exports.totals.people')}</dt>
-            <dd className="stat-value">{number(totals.people)}</dd>
-          </div>
-          <div className="stat">
-            <dt className="stat-label">{t('console.exports.totals.waitlisted')}</dt>
-            <dd className="stat-value">{number(totals.waitlisted)}</dd>
-          </div>
-        </dl>
-      ) : null}
-      {list.status === 'loading' ? <Loading /> : null}
-      {list.status === 'error' ? <ErrorState error={list.error} onRetry={list.reload} /> : null}
-      {list.status === 'ready' && list.items.length === 0 ? (
-        <EmptyState
-          title={t('console.exports.registrations.empty.title')}
-          body={t('console.exports.registrations.empty.body')}
+        <StatRow
+          label={t('console.exports.totals.label')}
+          stats={[
+            {
+              id: 'registrations',
+              label: t('console.exports.totals.registrations'),
+              value: totals.registrations,
+            },
+            { id: 'people', label: t('console.exports.totals.people'), value: totals.people },
+            {
+              id: 'waitlisted',
+              label: t('console.exports.totals.waitlisted'),
+              value: totals.waitlisted,
+              tone: 'notice',
+            },
+          ]}
         />
       ) : null}
       {list.status === 'ready' && list.items.length > 0 ? (
-        <>
-          <Banner tone="notice">{t('console.exports.registrations.sensitive')}</Banner>
+        <Banner tone="notice">{t('console.exports.registrations.sensitive')}</Banner>
+      ) : null}
+      <TableCard
+        search={
+          <SearchField
+            id="registrations-search"
+            label={t('console.exports.registrations.search')}
+            value={query}
+            onChange={setQuery}
+          />
+        }
+        filtersLabel={t('console.shell.filters')}
+        filters={
+          <>
+            <SelectField
+              id="filter-occurrence"
+              label={t('console.exports.filter.occurrence')}
+              value={occurrenceId}
+              placeholder={t('console.exports.filter.allOccurrences')}
+              onChange={(e) => setOccurrenceId(e.target.value)}
+              options={(occurrences.status === 'ready' ? occurrences.data : []).map((o) => ({
+                value: o.id,
+                label: dateTime(o.startsAt),
+              }))}
+            />
+            <SelectField
+              id="filter-registration-status"
+              label={t('console.shell.filter.status')}
+              value={status}
+              placeholder={t('console.shell.filter.all')}
+              onChange={(e) => setStatus(e.target.value as RegistrationStatus | '')}
+              options={REGISTRATION_STATUSES.map((s) => ({
+                value: s,
+                label: t(REGISTRATION_STATUS_KEYS[s]),
+              }))}
+            />
+          </>
+        }
+      >
+        {list.status === 'loading' ? <Loading /> : null}
+        {list.status === 'error' ? <ErrorState error={list.error} onRetry={list.reload} /> : null}
+        {list.status === 'ready' && list.items.length === 0 ? (
+          <EmptyState
+            title={t('console.exports.registrations.empty.title')}
+            body={t('console.exports.registrations.empty.body')}
+          />
+        ) : null}
+        {list.status === 'ready' && list.items.length > 0 && rows.length === 0 ? (
+          <NoMatch query={query} partial={list.hasMore} />
+        ) : null}
+        {list.status === 'ready' && rows.length > 0 ? (
           <DataTable
             caption={t('console.exports.registrations.title')}
             columns={columns}
-            rows={list.items}
+            rows={rows}
             rowKey={(r) => r.id}
           />
+        ) : null}
+        {list.status === 'ready' ? (
           <LoadMore
             hasMore={list.hasMore}
             loading={list.loadingMore}
             onLoadMore={list.loadMore}
             error={list.moreError}
           />
-        </>
-      ) : null}
+        ) : null}
+      </TableCard>
     </div>
   );
 }

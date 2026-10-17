@@ -9,6 +9,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf, retryAfterOf } from '../lib/errors';
 import { formatPhone, maskPhone } from '../lib/phone';
@@ -301,6 +302,20 @@ export function EmptyState({
   );
 }
 
+/**
+ * Rows were loaded but none match the search. When the list has more pages, it says only the
+ * loaded rows were searched, because search runs in the browser.
+ */
+export function NoMatch({ query, partial = false }: { query: string; partial?: boolean }) {
+  const { t } = useI18n();
+  return (
+    <EmptyState
+      title={t('console.search.noMatch.title', { query: query.trim() })}
+      body={partial ? t('console.search.noMatch.partial') : t('console.search.noMatch.body')}
+    />
+  );
+}
+
 /** A failed load, with the reason in plain words and a way to try again. */
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
   const { t, number } = useI18n();
@@ -468,6 +483,180 @@ export function LoadMore({
           {t('console.shell.loadMore')}
         </Button>
       ) : null}
+    </div>
+  );
+}
+
+/* Numbers on top (KPI cards) ---------------------------------------------------------------- */
+
+export interface Stat {
+  id: string;
+  label: string;
+  value: number;
+  /** `notice` is the gold card for numbers that ask for attention, such as approvals waiting. */
+  tone?: 'default' | 'notice';
+}
+
+/**
+ * The row of number cards above a table, as drawn (C2): a labelled region holding a description
+ * list, so a screen reader hears each label with its number. `partial` says the numbers only
+ * count the rows loaded so far, when the list has more pages: the API returns no totals.
+ */
+export function StatRow({
+  label,
+  stats,
+  partial = false,
+}: {
+  label: string;
+  stats: readonly Stat[];
+  partial?: boolean;
+}) {
+  const { t, number } = useI18n();
+  return (
+    <section className="stat-row" aria-label={label}>
+      <dl className="stats">
+        {stats.map((s) => (
+          <div
+            key={s.id}
+            className={`stat${s.tone === 'notice' && s.value > 0 ? ' stat-warn' : ''}`}
+          >
+            <dt className="stat-label">{s.label}</dt>
+            <dd className="stat-value">{number(s.value)}</dd>
+          </div>
+        ))}
+      </dl>
+      {partial ? <p className="stats-note">{t('console.kpi.partial')}</p> : null}
+    </section>
+  );
+}
+
+/* Table card: search, filters and the add button over the table ------------------------------ */
+
+/**
+ * A search box in the table card's top row. The label is the placeholder people see, and also a
+ * real (visually hidden) label, so it is announced. It filters the rows already on screen.
+ */
+export function SearchField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="search">
+      <Icon name="search" size="sm" />
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="search"
+        className="search-input"
+        placeholder={label}
+        autoComplete="off"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+/** The primary "Add" button of a table card, with the plus icon. */
+export function AddButton({ children, ...rest }: ButtonProps) {
+  return (
+    <Button variant="primary" {...rest}>
+      <Icon name="plus" size="sm" />
+      {children}
+    </Button>
+  );
+}
+
+/** The same "Add" action when it goes to another page, such as the bulk import. */
+export function AddLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link className="btn btn-primary" to={to}>
+      <Icon name="plus" size="sm" />
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * A raised card that holds a table: the top row has the title or search, any filters, and the
+ * add action at the end; the table, its empty state or its loading state sit below.
+ */
+export function TableCard({
+  title,
+  search,
+  filters,
+  filtersLabel,
+  action,
+  children,
+}: {
+  /** A heading for the card when the page has more than one table. */
+  title?: string;
+  search?: ReactNode;
+  filters?: ReactNode;
+  /** Names the group of filters for screen readers. */
+  filtersLabel?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  const headingId = useId();
+  return (
+    <section className="table-card" aria-labelledby={title ? headingId : undefined}>
+      <div className="table-tools">
+        {title ? (
+          <h2 id={headingId} className="table-card-title">
+            {title}
+          </h2>
+        ) : null}
+        {search}
+        {filters ? (
+          <div className="table-filters" role="group" aria-label={filtersLabel}>
+            {filters}
+          </div>
+        ) : null}
+        {action ? <div className="table-action">{action}</div> : null}
+      </div>
+      <div className="table-card-body">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * A row of joined buttons where one is chosen, as drawn for the invite status filter. Each is a
+ * toggle button with `aria-pressed`, inside a labelled group.
+ */
+export function SegmentedControl<V extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: V;
+  options: readonly { value: V; label: string }[];
+  onChange: (value: V) => void;
+}) {
+  return (
+    <div className="segmented" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          className="segment"
+          aria-pressed={o.value === value}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

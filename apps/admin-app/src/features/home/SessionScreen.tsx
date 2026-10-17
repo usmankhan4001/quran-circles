@@ -91,7 +91,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                 {can.postUpdate ? (
                   <QuickAction
                     testID="session-post-update"
-                    glyph="bell"
+                    icon="bell"
                     label={t('admin.home.postAbout')}
                     onPress={() => nav.push(routes.postUpdate(s.id))}
                   />
@@ -99,7 +99,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                 {can.changeSchedule ? (
                   <QuickAction
                     testID="session-change-time"
-                    glyph="clock"
+                    icon="clock"
                     label={t('admin.home.changeTime')}
                     onPress={() => nav.push(routes.schedule(s.id))}
                   />

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useId, useMemo, useState, type FormEvent } from 'react';
 import {
   AssignRoleBody,
   InviteBody,
@@ -16,6 +16,7 @@ import { fetchAllPages, usePaged, useAsync } from '../api/hooks';
 import { roleLabelKey } from '../components/Shell';
 import { useScopeLabel } from '../components/scope';
 import {
+  AddButton,
   Badge,
   Banner,
   Button,
@@ -26,15 +27,21 @@ import {
   LoadMore,
   Loading,
   Modal,
+  NoMatch,
   PageHeader,
   Phone,
-  Section,
+  SearchField,
+  SegmentedControl,
   SelectField,
+  StatRow,
+  TableCard,
   TextField,
   type BadgeTone,
   type Column,
 } from '../components/ui';
 import { useI18n } from '../i18n';
+import { coordinatorStats } from '../lib/kpis';
+import { filterBySearch } from '../lib/search';
 import { errorMessageKeyOf, fieldIssues } from '../lib/errors';
 import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, phoneTail } from '../lib/phone';
 import { canAssignRole, canSomewhere } from '../lib/permissions';
@@ -118,10 +125,11 @@ export default function CoordinatorsPage() {
   const [inviteFilter, setInviteFilter] = useState<InviteFilter>('all');
   const [resending, setResending] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
-  const [inviting, setInviting] = useState(false);
   const [revokingInvite, setRevokingInvite] = useState<Invite | null>(null);
   const [handingOver, setHandingOver] = useState<StaffRoleAssignment | null>(null);
   const [removing, setRemoving] = useState<StaffRoleAssignment | null>(null);
+  const [inviteQuery, setInviteQuery] = useState('');
+  const [peopleQuery, setPeopleQuery] = useState('');
   const dir = useDirectory();
 
   const invites = useAsync(() => api.adminRoles.invites(), [api]);
@@ -265,26 +273,39 @@ export default function CoordinatorsPage() {
     },
   ];
 
-  const visibleInvites =
-    invites.status === 'ready'
-      ? invites.data.items.filter((i) => inviteFilter === 'all' || i.status === inviteFilter)
-      : [];
+  const allInvites = invites.status === 'ready' ? invites.data.items : [];
+  const loadedPeople = people.status === 'ready' ? people.items : [];
+  const stats = useMemo(
+    () => coordinatorStats(allInvites, loadedPeople),
+    [allInvites, loadedPeople],
+  );
+  const statusInvites = allInvites.filter(
+    (i) => inviteFilter === 'all' || i.status === inviteFilter,
+  );
+  const visibleInvites = filterBySearch(statusInvites, inviteQuery, (i) => [
+    i.displayName,
+    i.phone,
+    tx(roleLabelKey(i.role)),
+    scopeLabel(i),
+  ]);
+  const visiblePeople = filterBySearch(loadedPeople, peopleQuery, (a) => [
+    a.userName,
+    a.phone,
+    tx(roleLabelKey(a.role)),
+    scopeLabel(a),
+  ]);
   const filterLabel = (f: InviteFilter) =>
     f === 'all' ? t('console.invites.filter.all') : t(INVITE_STATUS_KEYS[f]);
+  // "Invite" in the table card moves to the form beside the table, as drawn.
+  const openInviteForm = () => {
+    const first = document.getElementById('invite-role');
+    first?.scrollIntoView?.({ block: 'nearest' });
+    first?.focus();
+  };
 
   return (
     <div className="page">
-      <PageHeader
-        title={t('console.nav.coordinators')}
-        intro={t('console.invites.intro')}
-        actions={
-          canInviteAny ? (
-            <Button variant="primary" onClick={() => setInviting(true)}>
-              {t('console.invites.new')}
-            </Button>
-          ) : null
-        }
-      />
+      <PageHeader title={t('console.nav.coordinators')} intro={t('console.invites.intro')} />
       {notice ? (
         <Banner tone="success" onDismiss={() => setNotice(null)}>
           {t(notice.key)}
@@ -295,45 +316,88 @@ export default function CoordinatorsPage() {
           {t(errorMessageKeyOf(failure))}
         </Banner>
       ) : null}
+      {invites.status === 'ready' ? (
+        <StatRow
+          label={t('console.kpi.label')}
+          partial={people.status === 'ready' && people.hasMore}
+          stats={[
+            { id: 'waiting', label: t('console.invites.kpi.waiting'), value: stats.waiting },
+            { id: 'accepted', label: t('console.invites.kpi.accepted'), value: stats.accepted },
+            {
+              id: 'expired',
+              label: t('console.invites.kpi.expired'),
+              value: stats.expired,
+              tone: 'notice',
+            },
+            { id: 'active', label: t('console.invites.kpi.active'), value: stats.activeRoles },
+          ]}
+        />
+      ) : null}
 
-      <Section
-        title={t('console.invites.list.title')}
-        actions={
-          <SelectField
-            id="invite-filter"
-            label={t('console.invites.filter.label')}
-            value={inviteFilter}
-            onChange={(e) => setInviteFilter(e.target.value as InviteFilter)}
-            options={INVITE_FILTERS.map((f) => ({ value: f, label: filterLabel(f) }))}
+      <div className={canInviteAny ? 'split' : undefined}>
+        <TableCard
+          title={t('console.invites.list.title')}
+          search={
+            <SearchField
+              id="invites-search"
+              label={t('console.invites.search')}
+              value={inviteQuery}
+              onChange={setInviteQuery}
+            />
+          }
+          filters={
+            <SegmentedControl
+              label={t('console.invites.filter.label')}
+              value={inviteFilter}
+              options={INVITE_FILTERS.map((f) => ({ value: f, label: filterLabel(f) }))}
+              onChange={setInviteFilter}
+            />
+          }
+          action={
+            canInviteAny ? (
+              <AddButton onClick={openInviteForm}>{t('console.invites.new')}</AddButton>
+            ) : null
+          }
+        >
+          {invites.status === 'loading' ? <Loading /> : null}
+          {invites.status === 'error' ? (
+            <ErrorState error={invites.error} onRetry={invites.reload} />
+          ) : null}
+          {invites.status === 'ready' && statusInvites.length === 0 ? (
+            <EmptyState
+              title={
+                inviteFilter === 'all'
+                  ? t('console.invites.empty')
+                  : t('console.invites.filter.empty')
+              }
+            />
+          ) : null}
+          {invites.status === 'ready' && statusInvites.length > 0 && visibleInvites.length === 0 ? (
+            <NoMatch query={inviteQuery} />
+          ) : null}
+          {invites.status === 'ready' && visibleInvites.length > 0 ? (
+            <DataTable
+              caption={t('console.invites.list.title')}
+              columns={inviteColumns}
+              rows={visibleInvites}
+              rowKey={(i) => i.id}
+            />
+          ) : null}
+        </TableCard>
+        {canInviteAny ? <InvitePanel onDone={() => done('console.invites.sent')} /> : null}
+      </div>
+
+      <TableCard
+        title={t('console.invites.active.title')}
+        search={
+          <SearchField
+            id="people-search"
+            label={t('console.invites.active.search')}
+            value={peopleQuery}
+            onChange={setPeopleQuery}
           />
         }
-      >
-        {invites.status === 'loading' ? <Loading /> : null}
-        {invites.status === 'error' ? (
-          <ErrorState error={invites.error} onRetry={invites.reload} />
-        ) : null}
-        {invites.status === 'ready' && visibleInvites.length === 0 ? (
-          <EmptyState
-            title={
-              inviteFilter === 'all'
-                ? t('console.invites.empty')
-                : t('console.invites.filter.empty')
-            }
-          />
-        ) : null}
-        {invites.status === 'ready' && visibleInvites.length > 0 ? (
-          <DataTable
-            caption={t('console.invites.list.title')}
-            columns={inviteColumns}
-            rows={visibleInvites}
-            rowKey={(i) => i.id}
-          />
-        ) : null}
-      </Section>
-
-      <Section
-        title={t('console.invites.active.title')}
-        actions={
+        filters={
           <CheckboxField
             label={t('console.invites.showPast')}
             checked={showPast}
@@ -351,33 +415,27 @@ export default function CoordinatorsPage() {
             body={t('console.invites.active.empty.body')}
           />
         ) : null}
-        {people.status === 'ready' && people.items.length > 0 ? (
-          <>
-            <DataTable
-              caption={t('console.invites.active.title')}
-              columns={personColumns}
-              rows={people.items}
-              rowKey={(a) => a.id}
-            />
-            <LoadMore
-              hasMore={people.hasMore}
-              loading={people.loadingMore}
-              onLoadMore={people.loadMore}
-              error={people.moreError}
-            />
-          </>
+        {people.status === 'ready' && people.items.length > 0 && visiblePeople.length === 0 ? (
+          <NoMatch query={peopleQuery} partial={people.hasMore} />
         ) : null}
-      </Section>
+        {people.status === 'ready' && visiblePeople.length > 0 ? (
+          <DataTable
+            caption={t('console.invites.active.title')}
+            columns={personColumns}
+            rows={visiblePeople}
+            rowKey={(a) => a.id}
+          />
+        ) : null}
+        {people.status === 'ready' ? (
+          <LoadMore
+            hasMore={people.hasMore}
+            loading={people.loadingMore}
+            onLoadMore={people.loadMore}
+            error={people.moreError}
+          />
+        ) : null}
+      </TableCard>
 
-      {inviting ? (
-        <InviteDialog
-          onClose={() => setInviting(false)}
-          onDone={() => {
-            setInviting(false);
-            done('console.invites.sent');
-          }}
-        />
-      ) : null}
       {revokingInvite ? (
         <ConfirmDialog
           title={t('console.invites.revoke.title')}
@@ -480,8 +538,14 @@ export function ConfirmDialog({
 
 /* Invite ------------------------------------------------------------------------------------- */
 
-function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+/**
+ * The invite form, in a card beside the invites table (two columns at 64rem and wider, one
+ * below), as drawn. It is part of the page, not a dialog, so nothing traps focus; "Invite" in the
+ * table card moves focus to its first field. After a sent invite the form clears for the next one.
+ */
+function InvitePanel({ onDone }: { onDone: () => void }) {
   const { t, tx } = useI18n();
+  const headingId = useId();
   const { api, principal } = useSignedIn();
   const dir = useDirectory();
 
@@ -491,7 +555,10 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       return dir.cities.some((c) => canAssignRole(principal, r, { cityId: c.id }));
     return dir.venues.some((v) => canAssignRole(principal, r, { cityId: v.cityId, venueId: v.id }));
   });
-  const [role, setRole] = useState<Role | ''>(roles.length === 1 ? (roles[0] as Role) : '');
+  // The form is on the page from the start, before the cities and venues have loaded, so the
+  // only-one-role default is worked out on every render rather than fixed when it mounts.
+  const [chosenRole, setRole] = useState<Role | '' | null>(null);
+  const role: Role | '' = chosenRole ?? (roles.length === 1 ? (roles[0] as Role) : '');
   const [cityId, setCityId] = useState('');
   const [venueId, setVenueId] = useState('');
   const [phone, setPhone] = useState('');
@@ -548,30 +615,31 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
     setFailure(null);
     try {
       await api.adminRoles.invite({ body: parsed.data });
+      setRole(null);
+      setCityId('');
+      setVenueId('');
+      setPhone('');
+      setName('');
+      setErrors({});
       onDone();
     } catch (error) {
       setErrors(serverFieldErrors(error, t));
       setFailure(error);
+    } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal
-      title={t('console.invites.new')}
-      onClose={onClose}
-      footer={
-        <>
-          <Button onClick={onClose} disabled={busy}>
-            {t('console.shell.cancel')}
-          </Button>
-          <Button variant="primary" type="submit" form="invite-form" busy={busy}>
-            {t('console.invites.send')}
-          </Button>
-        </>
-      }
-    >
-      <form id="invite-form" className="form" onSubmit={(e) => void submit(e)} noValidate>
+    <section className="card side-card" aria-labelledby={headingId}>
+      <h2 id={headingId}>{t('console.invites.new')}</h2>
+      <form
+        id="invite-form"
+        className="form"
+        aria-labelledby={headingId}
+        onSubmit={(e) => void submit(e)}
+        noValidate
+      >
         {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
         {errors.form ? <Banner tone="danger">{errors.form}</Banner> : null}
         <SelectField
@@ -639,8 +707,13 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
           onChange={(e) => setName(e.target.value)}
           maxLength={80}
         />
+        <div className="form-actions">
+          <Button variant="primary" type="submit" busy={busy}>
+            {t('console.invites.send')}
+          </Button>
+        </div>
       </form>
-    </Modal>
+    </section>
   );
 }
 

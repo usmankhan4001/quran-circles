@@ -18,6 +18,7 @@ import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
+import { VenueArt } from '../../components/VenueArt';
 import { Screen } from '../../components/Screen';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { pickLocalized } from '../../lib/localized';
@@ -53,16 +54,28 @@ function VenueList() {
   const api = useApi();
   const nav = useNavigation();
   const { filter, principal, active } = useWorkingScope();
-  const query = useQuery<Venue[]>(async () => {
-    const page = await api.adminVenues.list({
-      query: {
-        ...(filter.cityId ? { cityId: filter.cityId } : {}),
-        includeArchived: 'true',
-        limit: 100,
-      },
-    });
+  const query = useQuery<VenueRows>(async () => {
+    const [page, circleCounts] = await Promise.all([
+      api.adminVenues.list({
+        query: {
+          ...(filter.cityId ? { cityId: filter.cityId } : {}),
+          includeArchived: 'true',
+          limit: 100,
+        },
+      }),
+      // The count on each card is a nicety: the venues still show when it cannot load.
+      api.adminCircles
+        .list({ query: { ...filter, limit: 100 } })
+        .then((circles) => {
+          const counts: Record<string, number> = {};
+          for (const c of circles.items) counts[c.venueId] = (counts[c.venueId] ?? 0) + 1;
+          return counts;
+        })
+        .catch(() => null),
+    ]);
     // A venue-scoped role works on that one venue even when the person holds others.
-    return filter.venueId ? page.items.filter((v) => v.id === filter.venueId) : page.items;
+    const venues = filter.venueId ? page.items.filter((v) => v.id === filter.venueId) : page.items;
+    return { venues, circleCounts };
   }, [filter.cityId, filter.venueId, active?.id]);
   const mayCreate = principal.assignments.some(
     (a) => a.role === 'national_admin' || a.role === 'city_coordinator',
@@ -81,7 +94,7 @@ function VenueList() {
         />
       ) : null}
       <QueryBoundary query={query} testID="places-venues">
-        {(venues) =>
+        {({ venues, circleCounts }) =>
           venues.length === 0 ? (
             <EmptyState
               title={t('admin.places.noVenuesTitle')}
@@ -97,11 +110,17 @@ function VenueList() {
                 onChangeText={setSearch}
               />
               {matching(venues, (v) => pickLocalized(v.name, locale), search).map((v) => (
-                <PlaceCard
+                <VenueCard
                   key={v.id}
                   testID={`venue-${v.id}`}
+                  venueId={v.id}
                   title={pickLocalized(v.name, locale)}
                   detail={pickLocalized(v.address, locale)}
+                  circles={
+                    circleCounts
+                      ? t.plural('admin.places.circleCount', circleCounts[v.id] ?? 0)
+                      : undefined
+                  }
                   tag={
                     v.status === 'archived'
                       ? { label: t('admin.places.archived'), kind: 'neutral' }
@@ -116,6 +135,12 @@ function VenueList() {
       </QueryBoundary>
     </View>
   );
+}
+
+interface VenueRows {
+  venues: Venue[];
+  /** Circles per venue id, or null when the count could not be read. */
+  circleCounts: Record<string, number> | null;
 }
 
 interface CircleRows {
@@ -218,7 +243,66 @@ function matching<T>(items: T[], nameOf: (item: T) => string, search: string): T
   return needle ? items.filter((i) => nameOf(i).toLocaleLowerCase().includes(needle)) : items;
 }
 
-/** A venue or circle row: name, a detail line, a status tag and an arrow into the editor. */
+/**
+ * A venue as a picture card, as drawn: the venue's art on top with its status tag, the name, the
+ * address and how many circles meet there. The contract has no photo field yet, so the picture is
+ * drawn venue art (`VenueArt`).
+ */
+function VenueCard({
+  venueId,
+  title,
+  detail,
+  circles,
+  tag,
+  onPress,
+  testID,
+}: {
+  venueId: string;
+  title: string;
+  detail: string;
+  circles?: string;
+  tag?: { label: string; kind: TagKind };
+  onPress: () => void;
+  testID: string;
+}): ReactNode {
+  const { colors } = useTheme();
+  const label = [title, detail, circles, tag?.label].filter(Boolean).join(', ');
+  return (
+    <Card testID={testID} onPress={onPress} accessibilityLabel={label} padding="none">
+      <View>
+        <VenueArt seed={venueId} testID={`${testID}-art`} />
+        {tag ? (
+          <View style={{ position: 'absolute', top: spacing.sm, start: spacing.sm }}>
+            <Tag label={tag.label} kind={tag.kind} />
+          </View>
+        ) : null}
+      </View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.md,
+          padding: spacing.lg,
+        }}
+      >
+        <View style={{ flex: 1, gap: spacing.xxs }}>
+          <Text variant="label">{title}</Text>
+          <Text variant="caption" color="textSecondary">
+            {detail}
+          </Text>
+          {circles ? (
+            <Text variant="caption" color="textAccent">
+              {circles}
+            </Text>
+          ) : null}
+        </View>
+        <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
+      </View>
+    </Card>
+  );
+}
+
+/** A circle row: name, a detail line, a status tag and an arrow into the editor. */
 function PlaceCard({
   title,
   detail,

@@ -1,9 +1,10 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { createBackend, FIXTURE_NOW, ids, meFor } from '../../test/backend';
+import { createBackend, FIXTURE_NOW, ids, meFor, type RoleKind } from '../../test/backend';
 import { combos, renderScreen, settled } from '../../test/render';
 import { routes } from '../../navigation/routes';
-import { TodayScreen } from './TodayScreen';
+import { isToday } from '../../lib/time';
+import { TodayScreen, nextOf } from './TodayScreen';
 import { SessionScreen } from './SessionScreen';
 
 const sessionRow = (id: string) => screen.queryByTestId(`session-${id}`);
@@ -198,6 +199,155 @@ describe.each(combos)('SessionScreen in $name', (combo) => {
       { backend: createBackend({ me: meFor('venue') }), combo },
     );
     await settled('session-data-not-available');
+    expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
+  });
+});
+
+/** The session Today should put in the big card for a backend: the earliest coming date in scope. */
+function expectedNext(backend: ReturnType<typeof createBackend>, venueId?: string) {
+  const inScope = backend.state.sessions.filter((s) => !venueId || s.venueId === venueId);
+  return nextOf(inScope)!;
+}
+
+describe('nextOf', () => {
+  const base = createBackend().state.sessions;
+  it('picks the session whose next date comes first', () => {
+    const sorted = [...base]
+      .filter((s) => s.nextOccurrence)
+      .sort((a, b) => a.nextOccurrence!.startsAt.localeCompare(b.nextOccurrence!.startsAt));
+    expect(nextOf(base)?.id).toBe(sorted[0]!.id);
+    expect(nextOf([...base].reverse())?.id).toBe(sorted[0]!.id);
+  });
+
+  it('skips sessions with no coming date or a cancelled one, and can find none', () => {
+    const [a, b] = base.filter((s) => s.nextOccurrence);
+    const none = { ...a!, nextOccurrence: null };
+    const cancelled = {
+      ...a!,
+      nextOccurrence: { ...a!.nextOccurrence!, status: 'cancelled' as const },
+    };
+    expect(nextOf([none, b!])?.id).toBe(b!.id);
+    expect(nextOf([cancelled, b!])?.id).toBe(b!.id);
+    expect(nextOf([none])).toBeNull();
+    expect(nextOf([])).toBeNull();
+  });
+});
+
+describe('TodayScreen next session card', () => {
+  it('puts the next session in the big card with its time, people coming and four actions', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const next = expectedNext(backend, ids.venueAlNoor);
+    const { nav } = renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
+    const card = await screen.findByTestId('today-next');
+    expect(within(card).getByTestId(`session-${next.id}`)).toBeTruthy();
+    expect(within(card).getByText(next.title.en)).toBeTruthy();
+    expect(within(card).getByTestId('today-next-time').textContent).toMatch(/\d:\d\d/);
+    if (next.registration.seatsTaken !== null) {
+      expect(within(card).getByTestId('today-next-coming').textContent).toBe(
+        String(next.registration.seatsTaken),
+      );
+    }
+    // The big card is not repeated in the list below it.
+    expect(screen.getAllByTestId(`session-${next.id}`)).toHaveLength(1);
+
+    fireEvent.click(screen.getByTestId('today-action-registrants'));
+    fireEvent.click(screen.getByTestId('today-action-attendance'));
+    fireEvent.click(screen.getByTestId('today-action-post'));
+    fireEvent.click(screen.getByTestId('today-action-time'));
+    const occ = next.nextOccurrence!;
+    expect(nav.pushed).toEqual([
+      routes.registrants(next.id, isToday(occ.startsAt, FIXTURE_NOW) ? occ.id : undefined),
+      routes.attendance(next.id, next.nextOccurrence!.id),
+      routes.postUpdate(next.id),
+      routes.schedule(next.id),
+    ]);
+  });
+
+  it('opens the session when the top of the card is tapped', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const next = expectedNext(backend, ids.venueAlNoor);
+    const { nav } = renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
+    fireEvent.click(await screen.findByTestId(`session-${next.id}`));
+    expect(nav.pushed).toEqual([routes.session(next.id)]);
+  });
+
+  it("opens today's registrants for today's date only when the next session is today", async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const next = expectedNext(backend, ids.venueAlNoor);
+    // A day before the next date: the card says the date and registrants opens without a date.
+    const dayBefore = new Date(Date.parse(next.nextOccurrence!.startsAt) - 24 * 3600_000);
+    const first = renderScreen(<TodayScreen now={dayBefore} />, { backend });
+    await screen.findByTestId('today-next');
+    expect(screen.getByText('Next session')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('today-action-registrants'));
+    expect(first.nav.pushed).toEqual([routes.registrants(next.id)]);
+    first.unmount();
+
+    const now = new Date(next.nextOccurrence!.startsAt);
+    const { nav } = renderScreen(<TodayScreen now={now} />, { backend });
+    const card = await screen.findByTestId('today-next');
+    expect(within(card).getByText('Today')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('today-action-registrants'));
+    expect(nav.pushed).toEqual([routes.registrants(next.id, next.nextOccurrence!.id)]);
+  });
+
+  it('shows the portion being read when the next date has one', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const next = expectedNext(backend, ids.venueAlNoor);
+    const s = backend.state.sessions.find((x) => x.id === next.id)!;
+    s.nextOccurrence = { ...s.nextOccurrence!, portionLabel: 'Sample portion 1 to 31' };
+    renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
+    expect((await screen.findByTestId('today-next-portion')).textContent).toBe(
+      'Sample portion 1 to 31',
+    );
+  });
+
+  it('shows no big card when no session has a coming date, and lists them all', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    for (const s of backend.state.sessions) s.nextOccurrence = null;
+    renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
+    await settled('today-data');
+    expect(screen.queryByTestId('today-next')).toBeNull();
+    expect(screen.queryByTestId('today-actions')).toBeNull();
+    expect(sessionRow(ids.sessionDora)).toBeTruthy();
+    expect(screen.getByText('Your sessions')).toBeTruthy();
+  });
+
+  it.each<RoleKind>(['venue', 'city', 'admin', 'multi'])(
+    'gives a %s every quick action on a session in scope',
+    async (kind) => {
+      const backend = createBackend({ me: meFor(kind) });
+      renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
+      await screen.findByTestId('today-next');
+      for (const id of ['registrants', 'attendance', 'post', 'time']) {
+        expect(screen.getByTestId(`today-action-${id}`)).toBeTruthy();
+      }
+    },
+  );
+
+  it('puts only sessions of the working scope in the big card', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    // The Lahore session is made the soonest of all; a venue coordinator in Rawalpindi never sees it.
+    const lahore = backend.state.sessions.find((s) => s.id === ids.sessionLahore)!;
+    lahore.nextOccurrence = { ...lahore.nextOccurrence!, startsAt: '2027-02-15T08:30:00Z' };
+    renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
+    const card = await screen.findByTestId('today-next');
+    expect(within(card).queryByTestId(`session-${ids.sessionLahore}`)).toBeNull();
+    expect(screen.queryByTestId(`session-${ids.sessionLahore}`)).toBeNull();
+  });
+});
+
+describe.each(combos)('TodayScreen next session card in $name', (combo) => {
+  it('shows the card and its actions, with the Urdu time kept left to right', async () => {
+    const { container } = renderScreen(<TodayScreen now={FIXTURE_NOW} />, {
+      backend: createBackend({ me: meFor('venue') }),
+      combo,
+    });
+    await screen.findByTestId('today-next');
+    expect(screen.getAllByRole('button').length).toBeGreaterThan(4);
+    const time = screen.getByTestId('today-next-time').textContent ?? '';
+    if (combo.locale === 'ur') expect(time.startsWith('\u200e')).toBe(true);
+    else expect(time).not.toContain('\u200e');
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 });

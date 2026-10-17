@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ltrRun } from '@qc/ui';
 import {
   formatInstantDate,
   formatInstantTime,
@@ -59,6 +60,18 @@ describe('formatting', () => {
     expect(formatLocalTime('19:30', 'ur')).toMatch(/7:30/);
     expect(formatLocalTime('19:30', 'ur')).not.toMatch(/[۰-۹٠-٩]/);
     expect(formatInstantTime('2027-02-15T14:30:00Z', 'en')).toMatch(/7:30\s?pm/i);
+  });
+
+  it('keeps an Urdu time as one left-to-right run, so it reads "4:30 PM" in a right-to-left line', () => {
+    const LRM = '\u200e';
+    const ur = formatLocalTime('16:30', 'ur');
+    expect(ur.startsWith(LRM)).toBe(true);
+    expect(ur.endsWith(LRM)).toBe(true);
+    expect(ur.slice(1, -1)).toMatch(/^4:30\s?(PM|pm|\S+)$/);
+    expect(ur).toBe(ltrRun(ur.slice(1, -1)));
+    expect(formatInstantTime('2027-02-15T11:30:00Z', 'ur').startsWith(LRM)).toBe(true);
+    // English needs no marks.
+    expect(formatLocalTime('16:30', 'en')).not.toContain(LRM);
   });
 
   it('writes the date with a short weekday', () => {

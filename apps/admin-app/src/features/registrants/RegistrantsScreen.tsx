@@ -255,14 +255,14 @@ function RegistrantCard({
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <RoundButton
               testID={`registrant-${r.id}-call`}
-              glyph="call"
+              icon="call"
               accessibilityLabel={t('admin.registrants.callName', { name })}
               onPress={() => contact('call')}
             />
             {r.allowsWhatsapp ? (
               <RoundButton
                 testID={`registrant-${r.id}-whatsapp`}
-                glyph="chat"
+                icon="chat"
                 accessibilityLabel={t('admin.registrants.whatsappName', { name })}
                 onPress={() => contact('whatsapp')}
               />

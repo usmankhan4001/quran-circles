@@ -1,7 +1,19 @@
 import { useState } from 'react';
-import { View } from 'react-native';
-import { can, type City, type Venue } from '@qc/contracts';
-import { Button, Card, Checkbox, Select, Text, TextField, spacing } from '@qc/ui';
+import { Pressable, View } from 'react-native';
+import { can, type AdminCircle, type City, type Venue } from '@qc/contracts';
+import {
+  Button,
+  Card,
+  Checkbox,
+  Icon,
+  Select,
+  Tag,
+  Text,
+  TextField,
+  minTouchTarget,
+  spacing,
+  useTheme,
+} from '@qc/ui';
 import { isErrorCode, serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
@@ -12,6 +24,7 @@ import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
+import { routes } from '../../navigation/routes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import {
   emptyVenueForm,
@@ -270,6 +283,8 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
         />
       </Card>
 
+      {original ? <VenueCircles venue={original} /> : null}
+
       {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="venue-nothing">
           {t(shown.nothing)}
@@ -287,5 +302,109 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
         />
       </ScreenFooter>
     </View>
+  );
+}
+
+/**
+ * The circles that meet at this venue, each opening the circle editor, and a way to start a new
+ * one here. This is how a venue coordinator reaches the circle editor from their venue, as drawn.
+ * A venue coordinator's new circle waits for a city coordinator (the editor says so).
+ */
+function VenueCircles({ venue }: { venue: Venue }) {
+  const { t, locale } = useT();
+  const api = useApi();
+  const nav = useNavigation();
+  const { colors } = useTheme();
+  const { principal } = useWorkingScope();
+  const circles = useQuery<AdminCircle[]>(async () => {
+    const page = await api.adminCircles.list({ query: { venueId: venue.id, limit: 100 } });
+    // Waiting circles first, then by name.
+    return page.items
+      .filter((c) => c.venueId === venue.id)
+      .sort(
+        (a, b) =>
+          Number(b.status === 'pending_approval') - Number(a.status === 'pending_approval') ||
+          pickLocalized(a.name, locale).localeCompare(pickLocalized(b.name, locale)),
+      );
+  }, [venue.id, locale]);
+  const mayCreate = can(principal, 'circle.create', { venueId: venue.id, cityId: venue.cityId });
+
+  return (
+    <Card testID="venue-circles">
+      <View style={{ gap: spacing.md }}>
+        <View style={{ gap: spacing.xs }}>
+          <Text variant="title3" heading={2}>
+            {t('admin.venueEditor.circles.title')}
+          </Text>
+          <Text variant="caption" color="textSecondary">
+            {t('admin.venueEditor.circles.help')}
+          </Text>
+        </View>
+        <QueryBoundary query={circles} testID="venue-circles-data">
+          {(items) =>
+            items.length === 0 ? (
+              <Text color="textSecondary" testID="venue-circles-empty">
+                {t('admin.venueEditor.circles.empty')}
+              </Text>
+            ) : (
+              <View>
+                {items.map((c, i) => {
+                  const name = pickLocalized(c.name, locale);
+                  const status = t(`admin.circleEditor.status.${c.status}`);
+                  return (
+                    <Pressable
+                      key={c.id}
+                      role="button"
+                      testID={`venue-circle-${c.id}`}
+                      accessibilityLabel={`${name}, ${status}`}
+                      onPress={() => nav.push(routes.circle(c.id))}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: spacing.md,
+                        minHeight: minTouchTarget,
+                        paddingVertical: spacing.md,
+                        borderTopWidth: i === 0 ? 0 : 1,
+                        borderTopColor: colors.border,
+                      }}
+                    >
+                      <View style={{ flex: 1, gap: spacing.xxs }}>
+                        <Text variant="label">{name}</Text>
+                        {c.teacherName ? (
+                          <Text variant="caption" color="textSecondary">
+                            {c.teacherName}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Tag
+                        label={status}
+                        kind={
+                          c.status === 'pending_approval'
+                            ? 'gilt'
+                            : c.status === 'published'
+                              ? 'ok'
+                              : 'neutral'
+                        }
+                      />
+                      <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )
+          }
+        </QueryBoundary>
+        {mayCreate ? (
+          <Button
+            testID="venue-new-circle"
+            label={t('admin.places.newCircle')}
+            icon="plus"
+            variant="outline"
+            fullWidth
+            onPress={() => nav.push(routes.newCircle(venue.id))}
+          />
+        ) : null}
+      </View>
+    </Card>
   );
 }

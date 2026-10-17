@@ -1,12 +1,11 @@
 import { View } from 'react-native';
 import type { Session } from '@qc/contracts';
-import { EmptyState, SessionCard, Text, isolate, spacing } from '@qc/ui';
+import { EmptyState, IconButton, SessionCard, Text, isolate, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi, useAuth } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
-import { QuickAction } from '../../components/QuickAction';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { pickLocalized } from '../../lib/localized';
 import {
@@ -21,6 +20,7 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { canPostAnywhere } from '../post-update/scopes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
+import { NextSessionCard } from './NextSessionCard';
 import { whenSummary } from './sessionText';
 
 export interface TodayScreenProps {
@@ -28,7 +28,10 @@ export interface TodayScreenProps {
   now?: Date;
 }
 
-/** The first tab: sessions in the working scope, with today's first. */
+/**
+ * The first tab (layout A): the next session as a big card with four quick actions, then the
+ * other sessions in the working scope, today's first.
+ */
 export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const { t, locale } = useT();
   const api = useApi();
@@ -76,17 +79,20 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
       }
       title={t('admin.home.title')}
       subtitle={formatLocalDate(pkDateOf(now), locale)}
+      actions={
+        canPostAnywhere(principal) ? (
+          <IconButton
+            testID="today-post-update"
+            icon="bell"
+            variant="onHero"
+            accessibilityLabel={t('admin.home.postUpdate')}
+            onPress={() => nav.push(routes.postUpdate())}
+          />
+        ) : undefined
+      }
       testID="today"
     >
       <ScopeSwitcher />
-      {canPostAnywhere(principal) ? (
-        <QuickAction
-          testID="today-post-update"
-          glyph="bell"
-          label={t('admin.home.postUpdate')}
-          onPress={() => nav.push(routes.postUpdate())}
-        />
-      ) : null}
       <QueryBoundary query={query} testID="today-data">
         {(sessions) => {
           if (sessions.length === 0) {
@@ -97,13 +103,25 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
               />
             );
           }
-          const todays = sessions.filter(
+          const next = nextOf(sessions);
+          const rest = sessions.filter((s) => s !== next);
+          const todays = rest.filter(
             (s) => s.nextOccurrence && isToday(s.nextOccurrence.startsAt, now),
           );
-          const others = sessions.filter((s) => !todays.includes(s));
+          const others = rest.filter((s) => !todays.includes(s));
+          const nextIsToday = !!next?.nextOccurrence && isToday(next.nextOccurrence.startsAt, now);
           return (
             <View style={{ gap: spacing.lg }}>
-              {todays.length > 0 ? (
+              {next ? (
+                <View style={{ gap: spacing.md }}>
+                  <Text variant="title3" heading={2}>
+                    {nextIsToday ? t('admin.home.todaySection') : t('admin.home.nextSection')}
+                  </Text>
+                  <NextSessionCard session={next} now={now} />
+                  {nextIsToday ? todays.map((s) => row(s, false)) : null}
+                </View>
+              ) : null}
+              {!nextIsToday && todays.length > 0 ? (
                 <View style={{ gap: spacing.md }}>
                   <Text variant="title3" heading={2}>
                     {t('admin.home.todaySection')}
@@ -114,7 +132,9 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
               {others.length > 0 ? (
                 <View style={{ gap: spacing.md }}>
                   <Text variant="title3" heading={2}>
-                    {todays.length > 0 ? t('admin.home.otherSection') : t('admin.home.allSection')}
+                    {todays.length > 0 || next
+                      ? t('admin.home.otherSection')
+                      : t('admin.home.allSection')}
                   </Text>
                   {others.map((s) => row(s, true))}
                 </View>
@@ -125,4 +145,14 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
       </QueryBoundary>
     </Screen>
   );
+}
+
+/** The session whose next date comes first. Sessions with no coming date are never "next". */
+export function nextOf(sessions: readonly Session[]): Session | null {
+  let best: Session | null = null;
+  for (const s of sessions) {
+    if (!s.nextOccurrence || s.nextOccurrence.status === 'cancelled') continue;
+    if (!best || s.nextOccurrence.startsAt < best.nextOccurrence!.startsAt) best = s;
+  }
+  return best;
 }

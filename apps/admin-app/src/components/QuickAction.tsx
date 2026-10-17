@@ -1,9 +1,9 @@
 import { Pressable, View } from 'react-native';
 import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
-import { Glyph, type GlyphName } from './glyphs';
+import { AppIcon, type AppIconName } from './glyphs';
 
 export interface QuickActionProps {
-  glyph: GlyphName;
+  icon: AppIconName;
   label: string;
   onPress: () => void;
   testID?: string;
@@ -13,7 +13,7 @@ export interface QuickActionProps {
  * A wide tinted tile for a main action, with a round icon, the label and an arrow.
  * TODO(kit): replace with a kit quick-action tile when one exists.
  */
-export function QuickAction({ glyph, label, onPress, testID }: QuickActionProps) {
+export function QuickAction({ icon, label, onPress, testID }: QuickActionProps) {
   const { colors } = useTheme();
   return (
     <Pressable
@@ -41,7 +41,7 @@ export function QuickAction({ glyph, label, onPress, testID }: QuickActionProps)
           justifyContent: 'center',
         }}
       >
-        <Glyph name={glyph} color={colors.textOnAccent} size={22} />
+        <AppIcon name={icon} color={colors.textOnAccent} size={22} />
       </View>
       <View style={{ flex: 1 }}>
         <Text variant="label" decorative>

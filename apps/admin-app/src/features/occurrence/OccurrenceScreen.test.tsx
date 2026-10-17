@@ -207,3 +207,34 @@ describe('OccurrenceScreen', () => {
     expect(routes.session(ids.sessionDora)).toBe(`/session/${ids.sessionDora}`);
   });
 });
+
+describe('OccurrenceScreen when the date is not in the session', () => {
+  it('says the date is not available, with no retry, when the session does not list it', async () => {
+    // The raw contract mock answers the occurrence list with generated ids, so the date the app
+    // asked for is never in it. The screen must say "not available", not "something went wrong".
+    const backend = createBackend({ me: meFor('venue') });
+    renderScreen(
+      <OccurrenceScreen
+        sessionId={ids.sessionDora}
+        occurrenceId="00000000-0000-4000-8000-0d0000000001"
+        now={FIXTURE_NOW}
+      />,
+      { backend },
+    );
+    expect(await screen.findByTestId('occurrence-data-not-available')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
+    expect(screen.queryByTestId('occurrence-form')).toBeNull();
+  });
+
+  it('still offers a retry when the list fails for another reason', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.failWith('adminSessions.occurrences', 'service_unavailable');
+    const occ = firstOccurrence(backend, ids.sessionDora);
+    renderScreen(
+      <OccurrenceScreen sessionId={ids.sessionDora} occurrenceId={occ.id} now={FIXTURE_NOW} />,
+      { backend },
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /try again/i }));
+    await screen.findByTestId('occurrence-form');
+  });
+});

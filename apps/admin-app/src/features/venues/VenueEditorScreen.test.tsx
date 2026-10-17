@@ -1,7 +1,8 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import * as fx from '@qc/contracts/fixtures';
-import { createBackend, ids, meFor } from '../../test/backend';
+import { createBackend, ids, meFor, type RoleKind } from '../../test/backend';
+import { routes } from '../../navigation/routes';
 import { combos, renderScreen, typeInto } from '../../test/render';
 import { VenueEditorScreen } from './VenueEditorScreen';
 
@@ -182,5 +183,80 @@ describe('VenueEditorScreen edit', () => {
       backend: createBackend({ me: meFor('admin') }),
     });
     expect(await screen.findByText(/could not find what you were looking for/)).toBeTruthy();
+  });
+});
+
+describe('VenueEditorScreen circles at the venue', () => {
+  it.each<RoleKind>(['venue', 'city', 'admin', 'multi'])(
+    'lets a %s open a circle of the venue in the circle editor and start a new one there',
+    async (kind) => {
+      const backend = createBackend({ me: meFor(kind) });
+      const circle = backend.state.circles.find((c) => c.venueId === ids.venueAlNoor)!;
+      const { nav } = renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, { backend });
+      const row = await screen.findByTestId(`venue-circle-${circle.id}`);
+      fireEvent.click(row);
+      fireEvent.click(screen.getByTestId('venue-new-circle'));
+      expect(nav.pushed).toEqual([routes.circle(circle.id), routes.newCircle(ids.venueAlNoor)]);
+      // Only this venue's circles are asked for and shown.
+      expect(backend.callsTo('adminCircles.list').at(-1)!.query.venueId).toBe(ids.venueAlNoor);
+      const other = backend.state.circles.find((c) => c.venueId !== ids.venueAlNoor)!;
+      expect(screen.queryByTestId(`venue-circle-${other.id}`)).toBeNull();
+    },
+  );
+
+  it('puts circles waiting for approval first, with their status', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const published = backend.state.circles.find((c) => c.venueId === ids.venueAlNoor)!;
+    backend.state.circles.push({
+      ...published,
+      id: '00000000-0000-4000-8000-0c0000000001',
+      name: { en: 'A sample waiting circle', ur: null },
+      status: 'pending_approval',
+      approvedAt: null,
+    });
+    renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, { backend });
+    await screen.findByTestId(`venue-circle-${published.id}`);
+    const rows = screen.getAllByTestId(/^venue-circle-/);
+    expect(rows[0]!.getAttribute('data-testid')).toBe(
+      'venue-circle-00000000-0000-4000-8000-0c0000000001',
+    );
+    expect(within(rows[0]!).getByText('Waiting for approval')).toBeTruthy();
+  });
+
+  it('says when no circle meets at the venue yet', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.state.circles = backend.state.circles.filter((c) => c.venueId !== ids.venueAlNoor);
+    renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, { backend });
+    expect(await screen.findByTestId('venue-circles-empty')).toBeTruthy();
+    expect(screen.getByTestId('venue-new-circle')).toBeTruthy();
+  });
+
+  it('shows a retry inside the card when the circles cannot load, and keeps the form', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.failWith('adminCircles.list', 'service_unavailable');
+    renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, { backend });
+    const retry = await within(await screen.findByTestId('venue-circles')).findByRole('button', {
+      name: /try again/i,
+    });
+    expect(screen.getByTestId('venue-editor-form')).toBeTruthy();
+    fireEvent.click(retry);
+    await screen.findByTestId('venue-circles-data');
+  });
+
+  it('has no circles card while a new venue is being made', async () => {
+    renderScreen(<VenueEditorScreen />, { backend: createBackend({ me: meFor('city') }) });
+    await screen.findByTestId('venue-editor-form');
+    expect(screen.queryByTestId('venue-circles')).toBeNull();
+  });
+});
+
+describe.each(combos)('VenueEditorScreen circles in $name', (combo) => {
+  it('shows the circles card in every direction, colour and size', async () => {
+    const { container } = renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, {
+      backend: createBackend({ me: meFor('venue') }),
+      combo,
+    });
+    await screen.findByTestId('venue-circles-data');
+    expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 });

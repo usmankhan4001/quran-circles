@@ -34,8 +34,8 @@ describe('MainTabs', () => {
     }
     expect(screen.getByText('Places')).toBeTruthy();
     expect(screen.queryByText('Updates')).toBeNull();
-    for (const g of ['today', 'places', 'bell', 'user']) {
-      expect(screen.getByTestId(`glyph-${g}`)).toBeTruthy();
+    for (const g of ['calendar', 'pin', 'bell', 'user']) {
+      expect(screen.getAllByTestId(`icon-${g}`).length).toBeGreaterThan(0);
     }
     expect(screen.getByTestId('tab-places').getAttribute('aria-selected')).toBe('true');
     expect(screen.getByTestId('tab-index').getAttribute('aria-selected')).toBe('false');

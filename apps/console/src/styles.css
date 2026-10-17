@@ -76,7 +76,8 @@ html[lang='ur']
     .step,
     .brand-name,
     .shell-user-name,
-    .stat-label
+    .stat-label,
+    .segment
   ) {
   font-weight: 400;
 }
@@ -473,6 +474,9 @@ a {
 }
 html[lang='ur'] .btn {
   font-size: calc(var(--type-label-size) * var(--scale-urdu));
+}
+a.btn {
+  text-decoration: none;
 }
 .btn:active:not(:disabled) {
   transform: scale(0.98);
@@ -1004,6 +1008,142 @@ html[dir='rtl'] .field-box-select::after {
 .stat-warn .stat-value,
 .stat-warn .stat-label {
   color: var(--c-text-on-warning-subtle);
+}
+
+.stat-row {
+  display: grid;
+  gap: var(--space-xs);
+}
+.stats-note {
+  margin: 0;
+  color: var(--c-text-secondary);
+  font-size: 0.8125rem;
+}
+
+/* Table card (C2): one raised card; the top row holds the search, the filters and the add
+   button at the end edge, and the table sits flush below it. */
+.table-card {
+  background: var(--c-surface);
+  border: 1px solid var(--card-edge);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-low);
+}
+.table-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md);
+  border-block-end: 1px solid var(--c-border);
+}
+.table-card-title {
+  margin-inline-end: auto;
+}
+.table-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.table-filters .field {
+  min-inline-size: 11rem;
+}
+.table-filters .check {
+  min-block-size: var(--touch-min);
+}
+.table-action {
+  margin-inline-start: auto;
+}
+.table-card-body > .table-wrap {
+  border: 0;
+  border-radius: 0;
+  border-end-start-radius: var(--radius-card);
+  border-end-end-radius: var(--radius-card);
+  box-shadow: none;
+}
+.table-card-body > .state {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.table-card-body > .load-more {
+  padding: var(--space-md);
+  border-block-start: 1px solid var(--c-border);
+}
+
+.search {
+  flex: 1 1 16rem;
+  min-inline-size: min(16rem, 100%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-md);
+  background: var(--c-surface-muted);
+  border-radius: var(--radius-md);
+  color: var(--c-text-muted);
+}
+.search:focus-within {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+.search-input {
+  flex: 1;
+  min-inline-size: 0;
+  min-block-size: var(--touch-min);
+  border: 0;
+  background: transparent;
+  color: var(--c-text);
+  font: inherit;
+}
+.search-input:focus-visible {
+  outline: none;
+}
+.search-input::placeholder {
+  color: var(--c-text-muted);
+  opacity: 1;
+}
+
+/* Segmented filter: joined pills, the chosen one filled green. */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  background: var(--c-surface-muted);
+}
+.segment {
+  min-block-size: 2.25rem;
+  padding-inline: var(--space-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text-secondary);
+  font: inherit;
+  font-size: var(--type-label-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+.segment[aria-pressed='true'] {
+  background: var(--c-accent);
+  color: var(--c-text-on-accent);
+}
+
+/* Table with a side card (invites): two columns on wide screens, one below. */
+.split {
+  display: grid;
+  gap: var(--space-lg);
+  align-items: start;
+}
+@media (min-width: 64rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+.side-card {
+  display: grid;
+  gap: var(--space-md);
 }
 
 /* Dialog: green-topped, big corners (D13) ---------------------------------------------------- */

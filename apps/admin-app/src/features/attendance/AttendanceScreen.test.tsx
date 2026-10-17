@@ -1,7 +1,7 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createBackend, FIXTURE_NOW, ids, meFor, registrantsFor } from '../../test/backend';
-import { combos, renderScreen, typeInto } from '../../test/render';
+import { combos, renderScreen, RTL_UR, typeInto } from '../../test/render';
 import { AttendanceScreen } from './AttendanceScreen';
 
 const open = async (
@@ -185,5 +185,53 @@ describe('AttendanceScreen', () => {
   it('is open to a city coordinator for the venues of their city', async () => {
     await open({ me: 'city', sessionId: ids.sessionWomen });
     await screen.findByTestId('attendance-form');
+  });
+});
+
+describe('AttendanceScreen tick list', () => {
+  it('shows the count from the start, "Mark everyone" beside it, and clear only after a tick', async () => {
+    await open({ count: 4 });
+    await screen.findByTestId(`attendance-tick-${registrant(0).id}`);
+    const list = screen.getByTestId('attendance-tick-list');
+    const confirmed = registrantsFor(ids.sessionDora, 4).filter((r) => r.status === 'confirmed');
+    expect(within(list).getByTestId('attendance-ticked-count').textContent).toBe(
+      `0 of ${confirmed.length} ticked`,
+    );
+    expect(within(list).getByTestId('attendance-tick-all')).toBeTruthy();
+    expect(within(list).queryByTestId('attendance-clear')).toBeNull();
+    fireEvent.click(screen.getByTestId(`attendance-tick-${registrant(0).id}`));
+    expect(within(list).getByTestId('attendance-ticked-count').textContent).toBe(
+      `1 of ${confirmed.length} ticked`,
+    );
+    expect(within(list).getAllByRole('checkbox')).toHaveLength(confirmed.length);
+    fireEvent.click(within(list).getByTestId('attendance-clear'));
+    expect(within(list).queryByTestId('attendance-clear')).toBeNull();
+  });
+
+  it('says the date is not available, with no retry, when the session does not list it', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    renderScreen(
+      <AttendanceScreen
+        sessionId={ids.sessionDora}
+        occurrenceId="00000000-0000-4000-8000-0d0000000001"
+        now={FIXTURE_NOW}
+      />,
+      { backend },
+    );
+    expect(await screen.findByTestId('attendance-occurrence-not-available')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
+    expect(backend.callsTo('adminAttendance.get')).toHaveLength(0);
+  });
+
+  it('shows the date in the header with the Urdu time kept left to right', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const occ = backend.state.occurrences.find((o) => o.sessionId === ids.sessionDora)!;
+    renderScreen(
+      <AttendanceScreen sessionId={ids.sessionDora} occurrenceId={occ.id} now={FIXTURE_NOW} />,
+      { backend, combo: RTL_UR },
+    );
+    await screen.findByTestId('attendance-form');
+    const hero = screen.getByTestId('attendance-hero');
+    expect(hero.textContent).toMatch(/\u200e\d{1,2}:\d\d[^\u200e]*\u200e/);
   });
 });

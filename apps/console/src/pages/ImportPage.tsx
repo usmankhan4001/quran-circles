@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router';
 import { canSomewhere } from '../lib/permissions';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
@@ -25,10 +26,13 @@ import {
   PageHeader,
   Section,
   SelectField,
+  StatRow,
   StepIndicator,
+  TableCard,
   type BadgeTone,
   type Column,
 } from '../components/ui';
+import { Icon } from '../components/icons';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf } from '../lib/errors';
 import { saveTextFile } from '../lib/download';
@@ -95,7 +99,10 @@ export default function ImportPage() {
         ? canSomewhere(principal, 'role.assign_venue_coordinator')
         : canSomewhere(principal, 'session.create'),
   );
-  const [kind, setKind] = useState<ImportKind>(kinds[0] ?? 'venues');
+  // "Add" on the Sessions and Venues pages opens this page with ?kind= set to what they add.
+  const [params] = useSearchParams();
+  const asked = kinds.find((k) => k === params.get('kind'));
+  const [kind, setKind] = useState<ImportKind>(asked ?? kinds[0] ?? 'venues');
   const [fileText, setFileText] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const [phase, setPhase] = useState<Phase>({ name: 'choose' });
@@ -218,6 +225,9 @@ export default function ImportPage() {
   ];
 
   const busy = phase.name === 'checking' || phase.name === 'applying';
+  const hasProblems =
+    report !== null &&
+    (report.fileIssues.length > 0 || report.rows.some((r) => r.issues.length > 0));
 
   return (
     <div className="page">
@@ -306,24 +316,24 @@ export default function ImportPage() {
           {report.serverChecked ? (
             <p className="field-hint">{t('console.import.serverChecked')}</p>
           ) : null}
-          <dl className="stats stats-four" aria-label={t('console.import.summary')}>
-            <div className="stat">
-              <dt className="stat-label">{t('console.import.count.total')}</dt>
-              <dd className="stat-value">{number(report.counts.total)}</dd>
-            </div>
-            <div className="stat">
-              <dt className="stat-label">{t('console.import.count.valid')}</dt>
-              <dd className="stat-value">{number(report.counts.valid)}</dd>
-            </div>
-            <div className="stat">
-              <dt className="stat-label">{t('console.import.count.duplicate')}</dt>
-              <dd className="stat-value">{number(report.counts.duplicate)}</dd>
-            </div>
-            <div className={`stat${report.counts.invalid > 0 ? ' stat-warn' : ''}`}>
-              <dt className="stat-label">{t('console.import.count.invalid')}</dt>
-              <dd className="stat-value">{number(report.counts.invalid)}</dd>
-            </div>
-          </dl>
+          <StatRow
+            label={t('console.import.summary')}
+            stats={[
+              { id: 'valid', label: t('console.import.count.valid'), value: report.counts.valid },
+              {
+                id: 'invalid',
+                label: t('console.import.count.invalid'),
+                value: report.counts.invalid,
+                tone: 'notice',
+              },
+              {
+                id: 'duplicate',
+                label: t('console.import.count.duplicate'),
+                value: report.counts.duplicate,
+              },
+              { id: 'total', label: t('console.import.count.total'), value: report.counts.total },
+            ]}
+          />
 
           {report.fileIssues.length > 0 ? (
             <ul className="issue-list" aria-label={t('console.import.fileProblems')}>
@@ -370,15 +380,27 @@ export default function ImportPage() {
           ) : null}
 
           {report.counts.total > 0 ? (
-            <>
-              <CheckboxField
-                label={t('console.import.showAll')}
-                checked={showAll}
-                onChange={(e) => {
-                  setShowAll(e.target.checked);
-                  setLimit(SHOWN_AT_FIRST);
-                }}
-              />
+            <TableCard
+              title={t('console.import.problems.title')}
+              filters={
+                <CheckboxField
+                  label={t('console.import.showAll')}
+                  checked={showAll}
+                  onChange={(e) => {
+                    setShowAll(e.target.checked);
+                    setLimit(SHOWN_AT_FIRST);
+                  }}
+                />
+              }
+              action={
+                hasProblems ? (
+                  <Button onClick={downloadReport}>
+                    <Icon name="download" size="sm" />
+                    {t('console.import.errors.download')}
+                  </Button>
+                ) : null
+              }
+            >
               {issueRows.length > 0 ? (
                 <>
                   <DataTable
@@ -388,15 +410,17 @@ export default function ImportPage() {
                     rowKey={(r) => String(r.line)}
                   />
                   {issueRows.length > limit ? (
-                    <Button onClick={() => setLimit((n) => n + SHOWN_AT_FIRST)}>
-                      {t('console.import.showMore', { count: number(issueRows.length - limit) })}
-                    </Button>
+                    <div className="load-more">
+                      <Button onClick={() => setLimit((n) => n + SHOWN_AT_FIRST)}>
+                        {t('console.import.showMore', { count: number(issueRows.length - limit) })}
+                      </Button>
+                    </div>
                   ) : null}
                 </>
               ) : (
-                <p>{t('console.import.noProblems')}</p>
+                <p className="loading">{t('console.import.noProblems')}</p>
               )}
-            </>
+            </TableCard>
           ) : null}
 
           <div className="form-actions">
@@ -414,7 +438,7 @@ export default function ImportPage() {
             >
               {t('console.import.checkAgain')}
             </Button>
-            {report.fileIssues.length > 0 || report.rows.some((r) => r.issues.length > 0) ? (
+            {hasProblems && report.counts.total === 0 ? (
               <Button onClick={downloadReport}>{t('console.import.errors.download')}</Button>
             ) : null}
             <Button variant="ghost" disabled={phase.name === 'applying'} onClick={reset}>

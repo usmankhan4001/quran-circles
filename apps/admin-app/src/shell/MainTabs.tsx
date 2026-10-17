@@ -1,14 +1,14 @@
-import { TabBar, type TabItem } from '@qc/ui';
+import { Icon, TabBar, type IconName, type TabItem } from '@qc/ui';
 import { useT } from '../appearance/AppearanceProvider';
-import { Glyph, type GlyphName } from '../components/glyphs';
 
 export type MainTabKey = 'index' | 'updates' | 'places' | 'account';
 
 export const mainTabOrder: readonly MainTabKey[] = ['index', 'places', 'updates', 'account'];
 
-const glyphOf: Record<MainTabKey, GlyphName> = {
-  index: 'today',
-  places: 'places',
+/** The drawings' line icons from the kit (Today is the calendar, Places the map pin). */
+const iconOf: Record<MainTabKey, IconName> = {
+  index: 'calendar',
+  places: 'pin',
   updates: 'bell',
   account: 'user',
 };
@@ -32,7 +32,7 @@ export function MainTabs({
   const items: TabItem[] = mainTabOrder.map((key) => ({
     key,
     label: t(labelKey[key]),
-    icon: ({ color }) => <Glyph name={glyphOf[key]} color={color} size={24} />,
+    icon: ({ color }) => <Icon name={iconOf[key]} color={color} size={24} />,
   }));
   return (
     <TabBar

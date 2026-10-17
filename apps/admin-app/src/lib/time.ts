@@ -1,4 +1,5 @@
 import type { Locale } from '@qc/contracts';
+import { ltrRun } from '@qc/ui';
 
 /**
  * Time in this product is stored in UTC and shown in Pakistan time (UTC+5, no daylight saving).
@@ -53,11 +54,16 @@ export function pkInstant(localDate: string, localTime: string): string {
   return d.toISOString().replace('.000Z', 'Z');
 }
 
-/** `7:30 pm` from a 24-hour `19:30`, in the language's own digits-free form. */
+/**
+ * `7:30 pm` from a 24-hour `19:30`, with Latin digits in both languages. In Urdu the time is
+ * kept as one left-to-right run (`ltrRun`), so a right-to-left line shows "4:30 PM" and not
+ * "PM 4:30".
+ */
 export function formatLocalTime(localTime: string, locale: Locale): string {
   const [h, m] = localTime.split(':').map(Number) as [number, number];
+  let text: string;
   try {
-    return new Intl.DateTimeFormat(intlTag(locale), {
+    text = new Intl.DateTimeFormat(intlTag(locale), {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
@@ -65,8 +71,9 @@ export function formatLocalTime(localTime: string, locale: Locale): string {
     }).format(new Date(Date.UTC(2000, 0, 1, h, m)));
   } catch {
     const suffix = h >= 12 ? 'pm' : 'am';
-    return `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${suffix}`;
+    text = `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${suffix}`;
   }
+  return locale === 'ur' ? ltrRun(text) : text;
 }
 
 export const formatInstantTime = (instant: string, locale: Locale): string =>

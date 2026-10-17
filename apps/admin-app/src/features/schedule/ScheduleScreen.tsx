@@ -6,6 +6,7 @@ import {
   Card,
   Chip,
   ConfirmSheet,
+  Icon,
   Select,
   Switch,
   Text,
@@ -19,7 +20,6 @@ import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { Glyph } from '../../components/glyphs';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { pickLocalized } from '../../lib/localized';
@@ -203,7 +203,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
               backgroundColor: colors.surface,
             }}
           >
-            <Glyph name="clock" color={colors.accent} size={22} />
+            <Icon name="clock" color={colors.accent} size={22} />
           </View>
           <View style={{ flex: 1, gap: spacing.xxs }}>
             <Text variant="caption" color="textSecondary">

@@ -90,7 +90,7 @@ export function AttendanceScreen({
           <Text>{t('errors.forbidden')}</Text>
         </Card>
       ) : (
-        <QueryBoundary query={occurrence} testID="attendance-occurrence">
+        <QueryBoundary query={occurrence} testID="attendance-occurrence" notFoundIsNotAvailable>
           {() => <AttendanceFlow sessionId={sessionId} occurrenceId={occurrenceId} />}
         </QueryBoundary>
       )}
@@ -200,15 +200,23 @@ function AttendanceForm({
         </View>
       </Card>
 
-      <Card padding="none">
+      <Card padding="none" testID="attendance-tick-list">
+        {/* As drawn: the title and "N of M ticked" on the start side, "Mark everyone" on the end. */}
         <View style={{ padding: spacing.lg, gap: spacing.xs }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <View style={{ flex: 1 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: spacing.sm,
+            }}
+          >
+            <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160, gap: spacing.xxs }}>
               <Text variant="title3" heading={2}>
                 {t('admin.attendance.registeredTitle')}
               </Text>
               {registrants.items.length > 0 ? (
-                <Text variant="caption" color="textSecondary" testID="attendance-ticked-count">
+                <Text variant="label" color="textAccent" testID="attendance-ticked-count">
                   {t('admin.attendance.ticked', {
                     present: n(tickedPeople),
                     total: n(registrants.items.length),
@@ -216,12 +224,7 @@ function AttendanceForm({
                 </Text>
               ) : null}
             </View>
-          </View>
-          <Text variant="caption" color="textSecondary">
-            {t('admin.attendance.registeredHelper')}
-          </Text>
-          {registrants.items.length > 0 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {registrants.items.length > 0 ? (
               <Button
                 testID="attendance-tick-all"
                 label={t('admin.attendance.markAll')}
@@ -237,6 +240,13 @@ function AttendanceForm({
                   })
                 }
               />
+            ) : null}
+          </View>
+          <Text variant="caption" color="textSecondary">
+            {t('admin.attendance.registeredHelper')}
+          </Text>
+          {tickedPeople > 0 ? (
+            <View style={{ flexDirection: 'row' }}>
               <Button
                 testID="attendance-clear"
                 label={t('admin.attendance.clear')}
