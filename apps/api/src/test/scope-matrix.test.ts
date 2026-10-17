@@ -14,7 +14,7 @@ import {
 } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { createHarness, type Actor, type CallOptions, type Harness } from './harness';
-import { createSession } from './fixtures';
+import { createSession, finishPoster, seedPosterTemplates } from './fixtures';
 
 /**
  * Every staff endpoint against every kind of caller, with the scope engine as the oracle: the
@@ -40,6 +40,8 @@ interface Fixture {
   /** Ayah of the day picks: one for the fixture's venue, one national. */
   venueDailyAyahId: string;
   nationalDailyAyahId: string;
+  /** A ready poster of the session, with its file stored (as the worker leaves it). */
+  posterId: string;
   /** The venue every scenario acts on, and its city. */
   venueId: string;
   cityId: string;
@@ -543,6 +545,51 @@ const SPECS: ScenarioSpec[] = [
     request: (fx) => ({ params: { dailyAyahId: fx.nationalDailyAyahId } }),
   },
   {
+    id: 'adminPosters.templates',
+    label: 'templates',
+    action: 'poster.create',
+    target: 'any',
+    // Any role that may make posters somewhere; no place is checked.
+    oracle: (principal) => holdsAny(principal, ['poster.create']),
+    request: () => ({}),
+  },
+  {
+    id: 'adminPosters.create',
+    label: 'create',
+    action: 'poster.create',
+    target: 'venue',
+    request: (fx) => ({
+      params: { sessionId: fx.sessionId },
+      body: {
+        templateKey: 'cloud',
+        language: 'en',
+        formats: ['story'],
+        fields: { title: { en: 'Matrix poster' } },
+      },
+    }),
+  },
+  {
+    id: 'adminPosters.list',
+    label: 'list',
+    action: 'poster.read',
+    target: 'venue',
+    request: (fx) => ({ params: { sessionId: fx.sessionId } }),
+  },
+  {
+    id: 'adminPosters.regenerate',
+    label: 'regenerate',
+    action: 'poster.create',
+    target: 'venue',
+    request: (fx) => ({ params: { posterId: fx.posterId } }),
+  },
+  {
+    id: 'adminPosters.file',
+    label: 'file',
+    action: 'poster.read',
+    target: 'venue',
+    request: (fx) => ({ params: { posterId: fx.posterId } }),
+  },
+  {
     id: 'adminAudit.list',
     label: 'list',
     action: 'audit.read',
@@ -652,6 +699,20 @@ async function build(): Promise<{
     .insert(schema.dailyAyahs)
     .values({ day: '2026-10-20', scopeType: 'national', surah: 13, ayah: 28 })
     .returning();
+  await seedPosterTemplates(h);
+  const poster = (
+    await h.api('adminPosters.create', {
+      as: admin,
+      params: { sessionId: session.id },
+      body: {
+        templateKey: 'cloud',
+        language: 'en',
+        formats: ['story'],
+        fields: { title: { en: 'Matrix poster' } },
+      },
+    })
+  ).json<{ items: { id: string }[] }>().items[0]!;
+  await finishPoster(h, poster.id);
   const fx: Fixture = {
     sessionId: session.id,
     occurrenceId,
@@ -662,6 +723,7 @@ async function build(): Promise<{
     handoverTargetUserId: target.userId,
     venueDailyAyahId: venuePick!.id,
     nationalDailyAyahId: nationalPick!.id,
+    posterId: poster.id,
     venueId: world.venueA1,
     cityId: world.cityA.id,
   };

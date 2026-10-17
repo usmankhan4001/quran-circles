@@ -37,7 +37,10 @@ type ParamsOf<K extends EndpointId> = Endpoints[K] extends { params: infer S } ?
 type QueryOf<K extends EndpointId> = Endpoints[K] extends { query: infer S } ? Out<S> : undefined;
 type BodyOf<K extends EndpointId> = Endpoints[K] extends { body: infer S } ? Out<S> : undefined;
 
-/** What a handler returns: the response body before the schema parse, a string for CSV, or nothing. */
+/**
+ * What a handler returns: the response body before the schema parse, a string for CSV, the bytes
+ * (`Uint8Array`) for a file, or nothing.
+ */
 export type ResultOf<K extends EndpointId> = Endpoints[K]['success'] extends { status: 204 }
   ? void
   : Endpoints[K]['success'] extends { schema: infer S extends z.ZodType }
@@ -258,6 +261,19 @@ function register<K extends EndpointId>(
     if (def.success.contentType === 'text/csv') {
       c.header('content-type', 'text/csv; charset=utf-8');
       return c.body(parsed.data as string, status);
+    }
+    if (def.success.contentType === 'application/octet-stream') {
+      // A file: the bytes as they are. The handler sets the real type (`image/png`,
+      // `application/pdf`) and the file name; without one it goes out as plain bytes.
+      const data: unknown = parsed.data;
+      if (!(data instanceof Uint8Array)) return fail('internal_error');
+      const bytes: Uint8Array<ArrayBuffer> =
+        data.buffer instanceof ArrayBuffer
+          ? (data as Uint8Array<ArrayBuffer>)
+          : new Uint8Array(data);
+      if (!extraHeaders['content-type']) c.header('content-type', 'application/octet-stream');
+      c.header('x-content-type-options', 'nosniff');
+      return c.body(bytes, status);
     }
     return c.json(parsed.data, status);
   });

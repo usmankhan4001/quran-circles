@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { guardTransactions } from '@qc/db/testing';
 import { drizzle } from 'drizzle-orm/pglite';
@@ -19,6 +22,13 @@ import { createLogger } from '../middleware/logger';
 import { MemoryRateLimiter } from '../middleware/rate-limit';
 import { TEST_PRINCIPAL_HEADER, testPrincipalMiddleware } from '../middleware/test-auth';
 import type { ApiConfig, AppEnv } from '../modules/shared/context';
+import { memoryPosterQueue, type MemoryPosterQueue } from '../modules/posters/queue';
+import { providePosterRuntime } from '../modules/posters/runtime';
+import {
+  localDiskPosterStorage,
+  resolvePosterPath,
+  type PosterStorage,
+} from '../modules/posters/storage';
 
 /**
  * A real Postgres (PGlite) with the real migrations, and the real API on top of it. The only
@@ -62,6 +72,8 @@ export interface ApiResult {
   status: number;
   headers: Headers;
   text: string;
+  /** The raw body, for file endpoints (`application/octet-stream`). */
+  bytes: Uint8Array;
   json<T = Record<string, unknown>>(): T;
 }
 
@@ -83,6 +95,13 @@ export interface Harness {
   app: Hono<AppEnv>;
   world: World;
   logs: string[];
+  /** The poster render queue: the jobs the API handed to the worker. Emptied by `reset`. */
+  posterQueue: MemoryPosterQueue;
+  /** The poster file store, a fresh folder under the OS temp dir (`POSTER_STORAGE_DIR` in tests). */
+  posterStorage: PosterStorage;
+  posterStorageDir: string;
+  /** Writes a file under a poster key, as the worker does (the API itself only reads). */
+  putPosterFile(key: string, bytes: Uint8Array): void;
   reset(): Promise<void>;
   close(): Promise<void>;
   call(method: string, path: string, options?: CallOptions): Promise<ApiResult>;
@@ -119,6 +138,15 @@ function checkAgainstContract(id: string, def: EndpointDef, result: ApiResult): 
     if (result.status !== def.success.status) {
       throw new Error(`${id} answered ${result.status}, the contract says ${def.success.status}`);
     }
+    if (def.success.contentType === 'application/octet-stream') {
+      // A file: bytes with a real media type, never a JSON body.
+      const type = result.headers.get('content-type') ?? '';
+      if (type.startsWith('application/json')) throw new Error(`${id} answered JSON, not a file`);
+      if (def.success.schema && !def.success.schema.safeParse(result.bytes).success) {
+        throw new Error(`${id} response does not match its schema`);
+      }
+      return;
+    }
     if (
       def.success.status !== 204 &&
       def.success.schema &&
@@ -151,6 +179,10 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const clock = new FakeClock();
   const limiter = new MemoryRateLimiter();
   const logs: string[] = [];
+  const posterStorageDir = mkdtempSync(join(tmpdir(), 'qc-api-posters-'));
+  const posterQueue = memoryPosterQueue();
+  const posterStorage = localDiskPosterStorage(posterStorageDir);
+  providePosterRuntime(db, { queue: posterQueue, storage: posterStorage });
   const app = createApp({
     db,
     now: clock.now,
@@ -190,6 +222,14 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
     app,
     world: undefined as unknown as World,
     logs,
+    posterQueue,
+    posterStorage,
+    posterStorageDir,
+    putPosterFile(key, bytes) {
+      const file = resolvePosterPath(posterStorageDir, key);
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, bytes);
+    },
     anonymous: null,
     async reset() {
       const tables = await pg.query<{ tablename: string }>(
@@ -201,9 +241,14 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
       clock.set(START);
       limiter.reset();
       logs.length = 0;
+      posterQueue.jobs.length = 0;
+      posterQueue.fail = false;
       harness.world = await seedWorld(db);
     },
-    close: () => pg.close(),
+    async close() {
+      await pg.close();
+      rmSync(posterStorageDir, { recursive: true, force: true });
+    },
     async call(method, path, o = {}) {
       const res = await app.request(url(path, o.query), {
         method,
@@ -214,11 +259,13 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
             ? { body: JSON.stringify(o.body) }
             : {}),
       });
-      const text = await res.text();
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const text = new TextDecoder().decode(bytes);
       return {
         status: res.status,
         headers: res.headers,
         text,
+        bytes,
         json: <T = Record<string, unknown>>() => JSON.parse(text) as T,
       };
     },

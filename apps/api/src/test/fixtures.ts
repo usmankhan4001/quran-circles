@@ -1,5 +1,13 @@
+import { eq } from 'drizzle-orm';
 import { schema } from '@qc/db';
-import type { AdminCircle, AdminSession, Registration } from '@qc/contracts';
+import {
+  DEMO_POSTER_TEMPLATES,
+  posterStorageKey,
+  type AdminCircle,
+  type AdminSession,
+  type PosterFailureCode,
+  type Registration,
+} from '@qc/contracts';
 import type { Actor, Harness } from './harness';
 
 /**
@@ -128,4 +136,72 @@ export async function createCircle(
   });
   if (res.status !== 201) throw new Error(`circle not created: ${res.status} ${res.text}`);
   return res.json<AdminCircle>();
+}
+
+/** The demo poster templates (`cloud`, `night`), as the development seed inserts them. */
+export async function seedPosterTemplates(
+  h: Harness,
+  extra: Partial<typeof schema.posterTemplates.$inferInsert>[] = [],
+): Promise<Map<string, string>> {
+  const rows = await h.db
+    .insert(schema.posterTemplates)
+    .values([
+      ...DEMO_POSTER_TEMPLATES.map((t) => ({
+        key: t.key,
+        nameEn: t.name.en,
+        nameUr: t.name.ur,
+        version: t.version,
+        formats: [...t.formats],
+        provisional: t.provisional,
+      })),
+      ...extra.map((t, i) => ({
+        key: `extra-${i}`,
+        nameEn: 'Extra',
+        nameUr: 'اضافی',
+        formats: ['story'],
+        ...t,
+      })),
+    ])
+    .returning({ id: schema.posterTemplates.id, key: schema.posterTemplates.key });
+  return new Map(rows.map((r) => [r.key, r.id]));
+}
+
+/** Bytes that start like a PNG or a PDF; enough to tell them apart. Not real images. */
+export const FAKE_PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+export const FAKE_PDF = new TextEncoder().encode('%PDF-1.7\n% synthetic test file\n%%EOF\n');
+
+/**
+ * Does what the worker does when a render succeeds: stores the bytes under `posterStorageKey` and
+ * marks the row ready with its key and alt text.
+ */
+export async function finishPoster(
+  h: Harness,
+  posterId: string,
+  o: { bytes?: Uint8Array; store?: boolean } = {},
+): Promise<string> {
+  const [row] = await h.db.select().from(schema.posters).where(eq(schema.posters.id, posterId));
+  if (!row) throw new Error('poster not found');
+  const contentType =
+    row.format === 'print_a4' || row.format === 'print_a3' ? 'application/pdf' : 'image/png';
+  const key = posterStorageKey(
+    row.sessionId,
+    posterId.replace(/-/g, '').padEnd(64, '0'),
+    contentType,
+  );
+  if (o.store !== false) {
+    h.putPosterFile(key, o.bytes ?? (contentType === 'application/pdf' ? FAKE_PDF : FAKE_PNG));
+  }
+  await h.db
+    .update(schema.posters)
+    .set({ status: 'ready', storageKey: key, altText: { en: 'A poster for a circle.' } })
+    .where(eq(schema.posters.id, posterId));
+  return key;
+}
+
+/** Does what the worker does when a render fails for good. */
+export async function failPoster(h: Harness, posterId: string, code: PosterFailureCode) {
+  await h.db
+    .update(schema.posters)
+    .set({ status: 'failed', failureCode: code })
+    .where(eq(schema.posters.id, posterId));
 }

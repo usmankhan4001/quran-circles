@@ -5,6 +5,7 @@ import { importHandlers } from './import/routes';
 import { meHandlers } from './me/routes';
 import { oversightHandlers } from './oversight/routes';
 import { placesHandlers } from './places/routes';
+import { posterHandlers } from './posters/routes';
 import { readingHandlers } from './reading/routes';
 import { registrationHandlers } from './registrations/routes';
 import { roleHandlers } from './roles/routes';
@@ -32,5 +33,6 @@ export function allHandlers(): Handlers[] {
     oversightHandlers(),
     importHandlers(),
     readingHandlers(),
+    posterHandlers(),
   ];
 }
