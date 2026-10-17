@@ -1,6 +1,6 @@
 # Status: ui
 
-Updated: 2026-10-16
+Updated: 2026-10-17
 Branch: lane/ui/wp21 (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -17,7 +17,7 @@ All eleven brief deliverables, in order.
 
 ## In progress
 
-- Redesign from scratch with the product owner, run as a design conversation. Decisions are recorded in `docs/design/redesign-decisions.md`. The kit and the apps are unchanged until the owner agrees the direction. A full design brief (modes, data, primitives, every component and screen) is in `docs/design/ui-image-prompts.md`; the owner is generating designs from it.
+- Redesign from scratch with the product owner, run as a design conversation. Decisions are recorded in `docs/design/redesign-decisions.md`. The kit and the apps are unchanged until the owner agrees the direction. A full design brief (modes, data, primitives, every component and screen) is in `docs/design/ui-image-prompts.md`; the owner is generating designs from it. Decided so far: D8–D14 (buttons, fields, choices, cards, screen direction, overlays, Home). Layout options for every other user-app screen, the admin app and the console are drawn and listed under Open questions in `redesign-decisions.md`; the owner picks them together.
 
 ## Blocked
 

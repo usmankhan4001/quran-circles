@@ -111,6 +111,14 @@ Chosen by the owner on 2026-10-17 from [Home options](https://claude.ai/artifact
 
 ## Open questions
 
-- Owner review of the component set.
-- Screen-by-screen design (user app, then admin app, then console).
+- Screen layouts drawn on 2026-10-17, owner picks at the end:
+  - Nearby N1 / N2 / N3: https://claude.ai/artifact/EYjcjnrHaSBfovNtJxtGHU
+  - Session and venue S1 / S2 / S3: https://claude.ai/artifact/RgfYMvwTtFh8GuPtDa2ex3
+  - Register R1 / R2 / R3: https://claude.ai/artifact/3aF22dRg3yjS8wbGxKr18k
+  - My Journey J1 / J2 / J3: https://claude.ai/artifact/E8bF29LSW1Pc2FSGKM3xa7
+  - Quran and prayer times Q1 / Q2: https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx
+  - Updates, profile and sign-in A / B: https://claude.ai/artifact/4WQhXBEstymMgd8GgEADrU
+  - Admin app A / B: https://claude.ai/artifact/LgHSJiqzbsUtSWSKA4NDfc
+  - Console C1 / C2: https://claude.ai/artifact/HKniV9wA9yrnpqWgGwB22m
+- Navigation (N1 / N2 / N3 from the navigation page): the screens since D12 use the floating bar (N2); not yet confirmed.
 - Font files and licences: Jameel Noori Nastaleeq or Mehr Nastaliq, and KFGQPC or QCF.
