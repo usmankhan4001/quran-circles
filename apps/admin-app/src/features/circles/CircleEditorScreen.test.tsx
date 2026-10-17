@@ -164,7 +164,7 @@ describe('CircleEditorScreen edit and approval', () => {
     );
   });
 
-  it('asks for confirmation and sends the note when rejecting', async () => {
+  it('asks for confirmation and never sends the note when rejecting', async () => {
     const backend = createBackend({ me: meFor('city') });
     makeRawalpindiCirclePending(backend);
     const { nav } = renderScreen(<CircleEditorScreen circleId={ids.circlePublished} />, {
@@ -176,10 +176,7 @@ describe('CircleEditorScreen edit and approval', () => {
     typeInto('circle-reject-note', 'Please add the teacher name');
     fireEvent.click(await screen.findByTestId('circle-reject-confirm-confirm'));
     await waitFor(() => expect(nav.backs).toBe(1));
-    expect(backend.callsTo('adminCircles.decide')[0]!.body).toEqual({
-      decision: 'reject',
-      note: 'Please add the teacher name',
-    });
+    expect(backend.callsTo('adminCircles.decide')[0]!.body).toEqual({ decision: 'reject' });
     expect(backend.state.circles.find((c) => c.id === ids.circlePublished)!.status).toBe(
       'rejected',
     );

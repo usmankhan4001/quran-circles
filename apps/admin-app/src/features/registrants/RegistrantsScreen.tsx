@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { AdminOccurrence, StaffRegistration } from '@qc/contracts';
 import {
+  Avatar,
   Button,
   Card,
   EmptyState,
@@ -10,7 +11,6 @@ import {
   Text,
   TextField,
   isolate,
-  ltrRun,
   spacing,
 } from '@qc/ui';
 import { useQuery } from '../../api/query';
@@ -18,11 +18,13 @@ import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
+import { RoundButton } from '../../components/RoundButton';
 import { Screen } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
-import { formatPhoneDisplay, type ContactKind } from '../../lib/phone';
+import { type ContactKind } from '../../lib/phone';
 import { formatInstantDate, formatInstantTime, isToday, pkDayRange } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
+import { routes } from '../../navigation/routes';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { useSession } from '../home/sessionDirectory';
@@ -99,6 +101,17 @@ export function RegistrantsScreen({
       subtitle={session.data ? pickLocalized(session.data.title, locale) : undefined}
       onBack={nav.back}
       testID="registrants"
+      footer={
+        allowed && occurrenceId ? (
+          <Button
+            testID="registrants-take-attendance"
+            label={t('admin.registrants.takeAttendance')}
+            size="large"
+            fullWidth
+            onPress={() => nav.push(routes.attendance(sessionId, occurrenceId))}
+          />
+        ) : undefined
+      }
     >
       {!allowed ? (
         <Card variant="flat" testID="registrants-forbidden">
@@ -214,42 +227,40 @@ function RegistrantCard({
   };
   return (
     <Card testID={`registrant-${r.id}`}>
-      <View style={{ gap: spacing.sm }}>
-        <Text variant="label">{r.name ? isolate(r.name) : name}</Text>
-        <Text variant="caption" color="textSecondary">
-          {t('admin.registrants.party', { count: n(r.partySize) })} ·{' '}
-          {t(`admin.registrants.section.${r.section}`)}
-          {r.status === 'waitlisted' ? ` · ${t('admin.registrants.waitlisted')}` : ''}
-        </Text>
-        {r.phone ? (
-          <Text variant="caption" color="textSecondary" direction="ltr">
-            {ltrRun(formatPhoneDisplay(r.phone))}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <Avatar name={name} />
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <Text variant="label">{r.name ? isolate(r.name) : name}</Text>
+          <Text variant="caption" color="textSecondary">
+            {t('admin.registrants.party', { count: n(r.partySize) })} ·{' '}
+            {t(`admin.registrants.section.${r.section}`)}
+            {r.status === 'waitlisted' ? ` · ${t('admin.registrants.waitlisted')}` : ''}
           </Text>
-        ) : null}
+          {r.phone ? null : (
+            <Text variant="caption" color="textSecondary">
+              {t('admin.registrants.noPhone')}
+            </Text>
+          )}
+        </View>
+        {/* Owner decision 2026-10-17: the number is never shown. The buttons carry the name. */}
         {r.phone ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            <Button
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <RoundButton
               testID={`registrant-${r.id}-call`}
-              label={t('admin.registrants.call')}
-              variant="secondary"
+              glyph="call"
               accessibilityLabel={t('admin.registrants.callName', { name })}
               onPress={() => contact('call')}
             />
             {r.allowsWhatsapp ? (
-              <Button
+              <RoundButton
                 testID={`registrant-${r.id}-whatsapp`}
-                label={t('admin.registrants.whatsapp')}
-                variant="secondary"
+                glyph="chat"
                 accessibilityLabel={t('admin.registrants.whatsappName', { name })}
                 onPress={() => contact('whatsapp')}
               />
             ) : null}
           </View>
-        ) : (
-          <Text variant="caption" color="textSecondary">
-            {t('admin.registrants.noPhone')}
-          </Text>
-        )}
+        ) : null}
       </View>
     </Card>
   );

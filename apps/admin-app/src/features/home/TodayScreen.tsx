@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import type { Session } from '@qc/contracts';
-import { Button, EmptyState, ListItem, Text, spacing } from '@qc/ui';
+import { EmptyState, Text, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
+import { SessionCard } from '../../components/SessionCard';
+import { Tag } from '../../components/Tag';
+import { QuickAction } from '../../components/QuickAction';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { pickLocalized } from '../../lib/localized';
 import { formatLocalDate, isToday, pkDateOf } from '../../lib/time';
@@ -40,41 +43,32 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   }, [query.data, dir]);
 
   const row = (s: Session, withDate: boolean) => (
-    <ListItem
+    <SessionCard
       key={s.id}
       testID={`session-${s.id}`}
       title={pickLocalized(s.title, locale)}
-      subtitle={`${pickLocalized(s.venue.name, locale)} · ${
+      detail={`${pickLocalized(s.venue.name, locale)} · ${
         withDate
           ? (nextOccurrenceText(s, locale) ?? whenSummary(s, t, locale))
           : whenSummary(s, t, locale)
       }`}
-      trailing={
-        s.status === 'draft' ? (
-          <Text variant="caption" color="textSecondary">
-            {t('admin.home.draft')}
-          </Text>
-        ) : undefined
-      }
-      divider
+      tag={s.status === 'draft' ? <Tag label={t('admin.home.draft')} tone="warning" /> : undefined}
       onPress={() => nav.push(routes.session(s.id))}
     />
   );
 
   return (
     <Screen
-      variant="large"
       title={t('admin.home.title')}
       subtitle={formatLocalDate(pkDateOf(now), locale)}
       testID="today"
     >
       <ScopeSwitcher />
       {canPostAnywhere(principal) ? (
-        <Button
+        <QuickAction
           testID="today-post-update"
+          glyph="bell"
           label={t('admin.home.postUpdate')}
-          variant="secondary"
-          fullWidth
           onPress={() => nav.push(routes.postUpdate())}
         />
       ) : null}
@@ -95,7 +89,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
           return (
             <View style={{ gap: spacing.lg }}>
               {todays.length > 0 ? (
-                <View>
+                <View style={{ gap: spacing.md }}>
                   <Text variant="title3" heading={2}>
                     {t('admin.home.todaySection')}
                   </Text>
@@ -103,7 +97,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
                 </View>
               ) : null}
               {others.length > 0 ? (
-                <View>
+                <View style={{ gap: spacing.md }}>
                   <Text variant="title3" heading={2}>
                     {todays.length > 0 ? t('admin.home.otherSection') : t('admin.home.allSection')}
                   </Text>

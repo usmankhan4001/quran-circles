@@ -1,9 +1,17 @@
 import { TabBar, type TabItem } from '@qc/ui';
 import { useT } from '../appearance/AppearanceProvider';
+import { Glyph, type GlyphName } from '../components/glyphs';
 
 export type MainTabKey = 'index' | 'updates' | 'places' | 'account';
 
-export const mainTabOrder: readonly MainTabKey[] = ['index', 'updates', 'places', 'account'];
+export const mainTabOrder: readonly MainTabKey[] = ['index', 'places', 'updates', 'account'];
+
+const glyphOf: Record<MainTabKey, GlyphName> = {
+  index: 'today',
+  places: 'places',
+  updates: 'bell',
+  account: 'user',
+};
 
 const labelKey = {
   index: 'admin.tabs.today',
@@ -21,7 +29,11 @@ export function MainTabs({
   onChange: (key: MainTabKey) => void;
 }) {
   const { t } = useT();
-  const items: TabItem[] = mainTabOrder.map((key) => ({ key, label: t(labelKey[key]) }));
+  const items: TabItem[] = mainTabOrder.map((key) => ({
+    key,
+    label: t(labelKey[key]),
+    icon: ({ color }) => <Glyph name={glyphOf[key]} color={color} size={24} />,
+  }));
   return (
     <TabBar
       testID="main-tabs"

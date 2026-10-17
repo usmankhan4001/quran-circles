@@ -1,6 +1,6 @@
 # Status: admin-app
 
-Updated: 2026-10-16
+Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -23,6 +23,16 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - Checks run: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `pnpm exec eslint apps/admin-app`, `pnpm exec prettier --check apps/admin-app` all pass. `expo export --platform web` bundles (output to a scratch folder, not the repo). No native or store build was made.
 - Fixed along the way: Places showed another venue's row when a person with two venue roles worked as one of them (now narrowed to the working venue); the attendance form could be overwritten by its own late load (now starts from the loaded data).
 
+## Redesign pass (2026-10-17, layout A)
+
+- Every screen now sits under one green header (`HeroHeader`, painted from `hero` / `textOnHero` / `onHero` glass buttons only; a guard test fails on any raw colour in screen code). Tabs: Today, Places, Updates, Account, floating kit `TabBar` with drawn icons.
+- Today, Places, Updates, session page restyled with `SessionCard`, `Tag`, `SeatMeter`, `QuickAction` tiles; Account has an avatar card and a "You look after" heading; sign-out is an outline button; circle reject is a danger button.
+- Registrants (owner decision 2026-10-17): the phone number is no longer written anywhere. Round call and WhatsApp buttons are named after the person. A pinned "Take attendance" button opens attendance. Tests assert no phone digits in text or aria-labels (4 combos) and the contact links still work.
+- `adminCircles.decide` no longer sends `note` (the contract dropped it). The reject note field is kept but not sent.
+- Local stand-ins, each marked `TODO(kit)`: `HeroHeader`, `Tag`, `SessionCard`, `SeatMeter`, `QuickAction`, `RoundButton`, `glyphs` (call, chat, search, tab icons), `Stepper`. The kit exports none of SearchField, CodeField, Stepper, Tag, SeatMeter, DateStrip, SessionCard, green Header, PrayerStrip, Banner, ConfirmSheet yet (checked at start and end).
+- Not matched: gradient on the hero (solid colour), venue search, "Archive this venue", "Save draft", offline queue, session picker, safe-area insets context, cancelling a whole session from schedule. Attendance, post update, schedule, occurrence and venue/circle editors got the new header and button variants but keep their previous layouts.
+- Tests: 444 in 34 files.
+
 ## In progress
 
 - Nothing.
@@ -33,7 +43,8 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 
 ## Questions for the orchestrator
 
-- Registrants and numbers: the brief asks for numbers beside call and WhatsApp; `docs/design/screens/admin-todays-registrants.md` says the number is never shown. The build shows it (as a left-to-right run, never logged). Which wins? If hidden, it is a one-line change.
+- Resolved 2026-10-17: the registrants screen never shows the number.
+- The circle reject note field is kept but no longer sent. Should the field go?
 - Extra i18n namespaces beyond the six assigned: `admin.signIn`, `admin.home`, `admin.scope`, `admin.account`, `admin.common`, `admin.places`, `admin.updates`, `admin.tabs`, `admin.occurrence`; plus `admin.registrants.noMatch`. Appended to `en.json` and `ur.json` together, nothing reordered or removed. Please confirm they are acceptable (a new namespace counts as a contract change).
 - Sign-in sends the code over `whatsapp`. Is that the intended default channel for coordinators?
 - Design specs (written by the ui lane at the same time) ask for things the build does not do yet: offline queue for attendance and a cached registrants list, a session picker and offline note on registrants, "Present" text on ticked rows, recap and portion fields on the attendance screen (they live on the occurrence screen, per the contract), cancelling a whole session from the schedule screen, a map pin picker and "Archive this venue", "Save draft" for circles. None is in the assigned item list. Which should be next?

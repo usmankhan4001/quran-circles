@@ -47,6 +47,21 @@ describe('what the admin app must never do', () => {
   });
 });
 
+describe('colours', () => {
+  it('uses theme tokens only, with no raw colour in screen code', () => {
+    for (const f of files) {
+      expect(f.text, f.path).not.toMatch(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/);
+    }
+  });
+
+  it('paints the green header from the hero tokens', () => {
+    const hero = files.find((f) => f.path === 'components/HeroHeader.tsx')!;
+    expect(hero.text).toContain('colors.hero');
+    expect(hero.text).toContain('textOnHero');
+    expect(hero.text).toContain('onHero');
+  });
+});
+
 describe('the words on screen', () => {
   const en = messages.en as Record<string, string>;
   const ur = messages.ur as Record<string, string>;

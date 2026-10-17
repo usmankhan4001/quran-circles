@@ -1,5 +1,14 @@
 import { View } from 'react-native';
-import { Button, Card, Select, SegmentedControl, Text, spacing, type TextSizeStep } from '@qc/ui';
+import {
+  Avatar,
+  Button,
+  Card,
+  Select,
+  SegmentedControl,
+  Text,
+  spacing,
+  type TextSizeStep,
+} from '@qc/ui';
 import {
   colorChoices,
   useAppearance,
@@ -18,17 +27,23 @@ export function AccountScreen() {
   const { locale, setLocale, textSize, setTextSize, colorChoice, setColorChoice } = useAppearance();
   const sizes: TextSizeStep[] = [0, 1, 2, 3];
   return (
-    <Screen variant="large" title={t('admin.account.title')} testID="account">
-      <Card variant="flat">
-        <View style={{ gap: spacing.xs }}>
-          <Text variant="caption" color="textSecondary">
-            {t('admin.account.signedInAs')}
-          </Text>
-          <Text variant="label">
-            {me?.displayName ? isolate(me.displayName) : t('admin.account.noName')}
-          </Text>
+    <Screen title={t('admin.account.title')} testID="account">
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Avatar name={me?.displayName ?? t('admin.account.noName')} size="lg" />
+          <View style={{ flex: 1, gap: spacing.xs }}>
+            <Text variant="caption" color="textSecondary">
+              {t('admin.account.signedInAs')}
+            </Text>
+            <Text variant="label">
+              {me?.displayName ? isolate(me.displayName) : t('admin.account.noName')}
+            </Text>
+          </View>
         </View>
       </Card>
+      <Text variant="title3" heading={2}>
+        {t('admin.account.lookAfter')}
+      </Text>
       <ScopeSwitcher />
       <Text variant="title3" heading={2}>
         {t('admin.account.display')}
@@ -59,7 +74,7 @@ export function AccountScreen() {
       <Button
         testID="account-sign-out"
         label={t('admin.account.signOut')}
-        variant="secondary"
+        variant="outline"
         fullWidth
         onPress={() => void signOut()}
       />

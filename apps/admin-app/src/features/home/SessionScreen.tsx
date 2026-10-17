@@ -1,11 +1,14 @@
 import { View } from 'react-native';
 import type { AdminOccurrence } from '@qc/contracts';
-import { Button, Card, ListItem, Text, formatNumber, spacing } from '@qc/ui';
+import { Button, Card, Text, formatNumber, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
+import { QuickAction } from '../../components/QuickAction';
 import { Screen } from '../../components/Screen';
+import { SeatMeter } from '../../components/SeatMeter';
+import { Tag } from '../../components/Tag';
 import { pickLocalized } from '../../lib/localized';
 import { formatInstantDate, formatInstantTime, isToday, pkDayRange } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -50,20 +53,29 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
           const todayOccurrence = occurrences.data?.find((o) => isToday(o.startsAt, now));
           return (
             <View style={{ gap: spacing.lg }}>
-              <Card variant="flat">
-                <View style={{ gap: spacing.xs }}>
+              <Card>
+                <View style={{ gap: spacing.sm }}>
                   <Text variant="label">{whenSummary(s, t, locale)}</Text>
                   <Text variant="caption" color="textSecondary">
                     {t(`admin.home.section.${s.section}`)} ·{' '}
                     {s.language === 'ur' ? 'اردو' : 'English'}
                   </Text>
+                  {s.status === 'draft' ? (
+                    <Tag label={t('admin.home.draft')} tone="warning" />
+                  ) : null}
                   {s.registration.capacity !== null ? (
-                    <Text variant="caption" color="textSecondary">
-                      {t('admin.home.seats', {
-                        taken: formatNumber(s.registration.seatsTaken ?? 0, locale),
-                        capacity: formatNumber(s.registration.capacity, locale),
-                      })}
-                    </Text>
+                    <>
+                      <SeatMeter
+                        taken={s.registration.seatsTaken ?? 0}
+                        capacity={s.registration.capacity}
+                      />
+                      <Text variant="caption" color="textSecondary">
+                        {t('admin.home.seats', {
+                          taken: formatNumber(s.registration.seatsTaken ?? 0, locale),
+                          capacity: formatNumber(s.registration.capacity, locale),
+                        })}
+                      </Text>
+                    </>
                   ) : null}
                 </View>
               </Card>
@@ -79,20 +91,20 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                   onPress={() => nav.push(routes.registrants(s.id, todayOccurrence?.id))}
                 />
               ) : null}
-              <View>
+              <View style={{ gap: spacing.sm }}>
                 {can.postUpdate ? (
-                  <ListItem
+                  <QuickAction
                     testID="session-post-update"
-                    title={t('admin.home.postAbout')}
-                    divider
+                    glyph="bell"
+                    label={t('admin.home.postAbout')}
                     onPress={() => nav.push(routes.postUpdate(s.id))}
                   />
                 ) : null}
                 {can.changeSchedule ? (
-                  <ListItem
+                  <QuickAction
                     testID="session-change-time"
-                    title={t('admin.home.changeTime')}
-                    divider
+                    glyph="clock"
+                    label={t('admin.home.changeTime')}
                     onPress={() => nav.push(routes.schedule(s.id))}
                   />
                 ) : null}
@@ -151,6 +163,7 @@ function OccurrenceCard({
         <Text variant="label">
           {formatInstantDate(o.startsAt, locale)} · {formatInstantTime(o.startsAt, locale)}
         </Text>
+        {o.status === 'cancelled' ? <Tag label={t('admin.home.cancelled')} tone="danger" /> : null}
         {notes.length > 0 ? (
           <Text variant="caption" color={o.status === 'cancelled' ? 'textDanger' : 'textSecondary'}>
             {notes.join(' · ')}

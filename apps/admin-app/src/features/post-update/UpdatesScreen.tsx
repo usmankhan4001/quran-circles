@@ -24,7 +24,7 @@ export function UpdatesScreen() {
     [filter.cityId, filter.venueId, active?.id],
   );
   return (
-    <Screen variant="large" title={t('admin.updates.title')} testID="updates">
+    <Screen title={t('admin.updates.title')} testID="updates">
       <ScopeSwitcher />
       {canPostAnywhere(principal) ? (
         <Button

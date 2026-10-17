@@ -155,10 +155,11 @@ function CircleEditorFlow({
 
   const decideNow = async (decision: 'approve' | 'reject') => {
     if (!original) return;
-    const trimmed = note.trim();
+    // The contract takes no free-text note any more (it must not reach the audit log), so the
+    // field is kept for the coordinator's own thinking but is never sent.
     const res = await decide.run({
       params: { circleId: original.id },
-      body: { decision, ...(trimmed ? { note: trimmed } : {}) },
+      body: { decision },
     });
     setRejecting(false);
     if (res) nav.back();
@@ -190,7 +191,7 @@ function CircleEditorFlow({
             <Button
               testID="circle-reject"
               label={t('admin.circleEditor.reject')}
-              variant="secondary"
+              variant="danger"
               fullWidth
               disabled={decide.status === 'running'}
               onPress={() => setRejecting(true)}

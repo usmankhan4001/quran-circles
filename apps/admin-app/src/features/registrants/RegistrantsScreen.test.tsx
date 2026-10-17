@@ -7,7 +7,7 @@ import { RegistrantsScreen } from './RegistrantsScreen';
 const idOf = (sessionId: string, i: number) => registrantsFor(sessionId, i + 1)[i]!.id;
 
 describe.each(combos)('RegistrantsScreen in $name', (combo) => {
-  it('lists names, numbers, party sizes and sections of today for a city coordinator', async () => {
+  it('lists names, party sizes and sections of today for a city coordinator', async () => {
     const backend = createBackend({ me: meFor('city') });
     const { container } = renderScreen(
       <RegistrantsScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} pollMs={0} />,
@@ -16,8 +16,15 @@ describe.each(combos)('RegistrantsScreen in $name', (combo) => {
     await settled('registrants-list');
     const first = await screen.findByTestId(`registrant-${idOf(ids.sessionDora, 0)}`);
     expect(within(first).getByText(/Sample Guest One/)).toBeTruthy();
-    // A number is shown to a coordinator, in Western digits, as a left-to-right run.
-    expect(first.textContent).toMatch(/\+92 300 \d{7}/);
+    // Owner decision 2026-10-17: no phone number is ever written on the row.
+    expect(first.textContent).not.toMatch(/\d{4,}/);
+    expect(first.textContent).not.toContain('+92');
+    // The contact buttons are named after the person.
+    const callLabel = within(first)
+      .getByTestId(`registrant-${idOf(ids.sessionDora, 0)}-call`)
+      .getAttribute('aria-label');
+    expect(callLabel).toContain('Sample Guest One');
+    expect(callLabel).not.toMatch(/\d/);
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
     // The list asked for today's occurrence only.
     const call = backend.callsTo('registrations.forSession')[0]!;
@@ -26,6 +33,37 @@ describe.each(combos)('RegistrantsScreen in $name', (combo) => {
 });
 
 describe('RegistrantsScreen behaviour', () => {
+  it('writes no phone number anywhere in the rendered list, not even in a label', async () => {
+    const { container } = renderScreen(
+      <RegistrantsScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} pollMs={0} />,
+      { backend: createBackend({ me: meFor('city'), registrantCount: 8 }) },
+    );
+    await screen.findByTestId(`registrant-${idOf(ids.sessionDora, 0)}`);
+    const phones = registrantsFor(ids.sessionDora, 8)
+      .map((r) => r.phone)
+      .filter((p): p is string => Boolean(p));
+    expect(phones.length).toBeGreaterThan(0);
+    const text = container.textContent ?? '';
+    const labels = Array.from(container.querySelectorAll('[aria-label]'))
+      .map((e) => e.getAttribute('aria-label'))
+      .join(' ');
+    for (const phone of phones) {
+      const digits = phone.replace(/\D/g, '');
+      for (const haystack of [text, labels]) {
+        expect(haystack.replace(/\D/g, '')).not.toContain(digits.slice(-7));
+        expect(haystack).not.toContain(phone);
+      }
+    }
+  });
+
+  it('takes the coordinator to attendance from the pinned button', async () => {
+    renderScreen(<RegistrantsScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} pollMs={0} />, {
+      backend: createBackend({ me: meFor('city') }),
+    });
+    await screen.findByTestId(`registrant-${idOf(ids.sessionDora, 0)}`);
+    expect(screen.getByTestId('registrants-take-attendance')).toBeTruthy();
+  });
+
   it('never calls the bulk export', async () => {
     const backend = createBackend({ me: meFor('admin') });
     renderScreen(<RegistrantsScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} pollMs={0} />, {

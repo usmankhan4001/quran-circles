@@ -29,8 +29,8 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="updates" />
       <Tabs.Screen name="places" />
+      <Tabs.Screen name="updates" />
       <Tabs.Screen name="account" />
     </Tabs>
   );

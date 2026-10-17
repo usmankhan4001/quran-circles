@@ -23,22 +23,27 @@ function renderTabs(
 
 describe('MainTabs', () => {
   it('has the four destinations in order', () => {
-    expect(mainTabOrder).toEqual(['index', 'updates', 'places', 'account']);
+    expect(mainTabOrder).toEqual(['index', 'places', 'updates', 'account']);
   });
 
   it('labels each tab in English and marks the active one', () => {
     renderTabs('en', 'places');
-    expect(screen.getByText('Today')).toBeTruthy();
-    expect(screen.getByText('Updates')).toBeTruthy();
+    // Each tab keeps its name for a screen reader; only the chosen one also shows it.
+    for (const name of ['Today', 'Updates', 'Places', 'Account']) {
+      expect(screen.getByLabelText(name)).toBeTruthy();
+    }
     expect(screen.getByText('Places')).toBeTruthy();
-    expect(screen.getByText('Account')).toBeTruthy();
+    expect(screen.queryByText('Updates')).toBeNull();
+    for (const g of ['today', 'places', 'bell', 'user']) {
+      expect(screen.getByTestId(`glyph-${g}`)).toBeTruthy();
+    }
     expect(screen.getByTestId('tab-places').getAttribute('aria-selected')).toBe('true');
     expect(screen.getByTestId('tab-index').getAttribute('aria-selected')).toBe('false');
   });
 
   it('labels the tabs in Urdu', () => {
     renderTabs('ur');
-    expect(screen.queryByText('Today')).toBeNull();
+    expect(screen.queryByLabelText('Today')).toBeNull();
     expect(screen.getByTestId('main-tabs')).toBeTruthy();
   });
 

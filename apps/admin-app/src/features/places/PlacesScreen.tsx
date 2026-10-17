@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { can, type AdminCircle, type Venue } from '@qc/contracts';
-import { Button, EmptyState, ListItem, SegmentedControl, Text, spacing } from '@qc/ui';
+import { Button, EmptyState, SegmentedControl, Text, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
+import { SessionCard } from '../../components/SessionCard';
+import { Tag } from '../../components/Tag';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -20,7 +22,7 @@ export function PlacesScreen() {
   const { t } = useT();
   const [tab, setTab] = useState<Tab>('venues');
   return (
-    <Screen variant="large" title={t('admin.places.title')} testID="places">
+    <Screen title={t('admin.places.title')} testID="places">
       <ScopeSwitcher />
       <SegmentedControl
         accessibilityLabel={t('admin.places.title')}
@@ -73,21 +75,18 @@ function VenueList() {
               description={t('admin.places.noVenuesBody')}
             />
           ) : (
-            <View>
+            <View style={{ gap: spacing.md }}>
               {venues.map((v) => (
-                <ListItem
+                <SessionCard
                   key={v.id}
                   testID={`venue-${v.id}`}
                   title={pickLocalized(v.name, locale)}
-                  subtitle={pickLocalized(v.address, locale)}
-                  trailing={
+                  detail={pickLocalized(v.address, locale)}
+                  tag={
                     v.status === 'archived' ? (
-                      <Text variant="caption" color="textSecondary">
-                        {t('admin.places.archived')}
-                      </Text>
+                      <Tag label={t('admin.places.archived')} tone="neutral" />
                     ) : undefined
                   }
-                  divider
                   onPress={() => nav.push(routes.venue(v.id))}
                 />
               ))}
@@ -151,19 +150,27 @@ function CircleList() {
               can(principal, 'circle.approve', { cityId: c.cityId, venueId: c.venueId }),
           ).length;
           return (
-            <View>
+            <View style={{ gap: spacing.md }}>
               {pending > 0 ? (
                 <Text testID="places-pending-count" variant="label" color="textWarning">
                   {t.plural('admin.places.needsDecision', pending, { count: n(pending) })}
                 </Text>
               ) : null}
               {circles.map((c) => (
-                <ListItem
+                <SessionCard
                   key={c.id}
                   testID={`circle-${c.id}`}
                   title={pickLocalized(c.name, locale)}
-                  subtitle={`${venueNames[c.venueId] ?? ''} · ${t(`admin.circleEditor.status.${c.status}`)}`}
-                  divider
+                  detail={
+                    c.status === 'pending_approval'
+                      ? (venueNames[c.venueId] ?? '')
+                      : `${venueNames[c.venueId] ?? ''} · ${t(`admin.circleEditor.status.${c.status}`)}`
+                  }
+                  tag={
+                    c.status === 'pending_approval' ? (
+                      <Tag label={t(`admin.circleEditor.status.${c.status}`)} tone="warning" />
+                    ) : undefined
+                  }
                   onPress={() => nav.push(routes.circle(c.id))}
                 />
               ))}

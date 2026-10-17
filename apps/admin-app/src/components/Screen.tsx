@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Header, screenGutter, spacing, useTheme } from '@qc/ui';
+import { screenGutter, spacing, useTheme } from '@qc/ui';
+import { HeroHeader } from './HeroHeader';
 
 export interface ScreenProps {
   title: string;
@@ -8,8 +9,10 @@ export interface ScreenProps {
   onBack?: () => void;
   backLabel?: string;
   actions?: ReactNode;
-  /** The tab roots use the large title. */
+  /** Kept so existing callers still compile; every screen now has the same green header. */
   variant?: 'regular' | 'large';
+  /** Extra content inside the green header, under the title. */
+  hero?: ReactNode;
   children: ReactNode;
   /** Pinned under the content, for the one main action of a form. */
   footer?: ReactNode;
@@ -29,7 +32,7 @@ export function Screen({
   onBack,
   backLabel,
   actions,
-  variant = 'regular',
+  hero,
   children,
   footer,
   testID,
@@ -37,14 +40,15 @@ export function Screen({
   const { colors } = useTheme();
   return (
     <View testID={testID} style={[styles.fill, { backgroundColor: colors.background }]}>
-      <Header
+      <HeroHeader
         title={title}
         subtitle={subtitle}
         onBack={onBack}
         backLabel={backLabel}
         actions={actions}
-        variant={variant}
-      />
+      >
+        {hero}
+      </HeroHeader>
       <ScrollView
         style={styles.fill}
         contentContainerStyle={styles.content}
