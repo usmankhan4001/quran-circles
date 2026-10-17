@@ -105,6 +105,10 @@ Agreed by the owner on 2026-10-17 from [New look](https://claude.ai/artifact/2Na
 
 Chosen by the owner on 2026-10-17 from [Sheets, dialogs and messages](https://claude.ai/artifact/W7EG4KGSDkcssX83ozucMk). Bottom sheets (radius 28 top corners, grab handle, dimmed backdrop) and centred dialogs (radius 26) open with the app's green header gradient; the dialog icon sits on a white eight-point star. Sheet content uses the chosen chips and section cards, with Clear (outline) and the main action side by side. Dialogs stack the safe action as the main button above the careful (terracotta outline) one. Toasts are solid green with a white action, near the bottom. Banners run edge to edge: grey for offline, gold for time changes, terracotta for errors with a Retry action.
 
+### D14. Home: next circle, then search and map (H4)
+
+Chosen by the owner on 2026-10-17 from [Home options](https://claude.ai/artifact/2CiFog76rb9ZAHLF2BDCHX), a mix of H1 and H3. Top to bottom: green header with area, Hijri date and notifications, holding "Your next circle" (title, venue and distance, big start time and countdown, the portion, sections, Directions and My registration); a search field with a filter button; a small map card with start-time pins and "12 circles within 3 km"; "Circles near you" as picture cards (distance, time, sections, seats); an Ayah of the day card (Arabic, translation, reference, share); then a smaller "Also in the app" row with Quran, Prayer times, Qibla and Updates. Floating tab bar: Home, Nearby, Quran, Journey. In Ramadan the header card shows tonight's Dora instead.
+
 ## Open questions
 
 - Owner review of the component set.
