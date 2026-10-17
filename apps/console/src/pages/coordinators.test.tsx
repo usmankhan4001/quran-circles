@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { Locale } from '../i18n';
 import { rawalpindi, venueA, venueB } from '../test/people';
 import { renderConsole, screen, text, waitFor, writes, type Call } from '../test/harness';
+import { resendBody } from './CoordinatorsPage';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-0e00000000${String(n).padStart(2, '0')}`;
 
@@ -650,5 +651,155 @@ describe('invite status and resend', () => {
     // The other invite is for a venue in another city.
     expect(venues[2]!.cityId).not.toBe(rawalpindi!.id);
     expect(resendFor('064')).toBeNull();
+  });
+});
+
+describe('resending a handover invite', () => {
+  const handover: Invite = {
+    ...invite,
+    id: uuid(25),
+    phone: '+923000000065',
+    displayName: 'Test Handover',
+    status: 'expired',
+    replacesAssignmentId: personA.id,
+  };
+  const cityHandover: Invite = {
+    ...invite,
+    id: uuid(26),
+    phone: '+923000000066',
+    role: 'city_coordinator',
+    scopeType: 'city',
+    cityId: rawalpindi!.id,
+    venueId: null,
+    replacesAssignmentId: cityPerson.id,
+  };
+  const withHandover = {
+    ...data,
+    'adminRoles.invites': () => ({ items: [invite, handover] }),
+  };
+  const resendButton = (digits: string) =>
+    screen.findByRole('button', {
+      name: `${text('console.invites.resend')} for the number ending ${digits}`,
+    });
+
+  it('copies replacesAssignmentId into the resend body for venue and city roles only', () => {
+    expect(resendBody(handover)).toMatchObject({ replacesAssignmentId: personA.id });
+    expect(resendBody(cityHandover)).toMatchObject({
+      role: 'city_coordinator',
+      cityId: rawalpindi!.id,
+      replacesAssignmentId: cityPerson.id,
+    });
+    expect(resendBody(invite)).not.toHaveProperty('replacesAssignmentId');
+    expect(resendBody({ ...invite, replacesAssignmentId: null })).not.toHaveProperty(
+      'replacesAssignmentId',
+    );
+    expect(resendBody(handover, { withHandover: false })).not.toHaveProperty(
+      'replacesAssignmentId',
+    );
+    const admin: Invite = {
+      ...handover,
+      role: 'national_admin',
+      scopeType: 'national',
+      venueId: null,
+    };
+    expect(resendBody(admin)).not.toHaveProperty('replacesAssignmentId');
+  });
+
+  it.each<Locale>(['en', 'ur'])('marks handover invites in the list (%s)', async (locale) => {
+    renderConsole({ role: 'national', path: '/coordinators', locale, handlers: withHandover });
+    const table = await screen.findByRole('table', {
+      name: text('console.invites.list.title', locale),
+    });
+    const rows = within(table).getAllByRole('row').slice(1);
+    const rowOf = (name: string) =>
+      rows.find((r) => within(r).queryByRole('rowheader', { name }) !== null)!;
+    const tag = text('console.invites.handoverTag', locale);
+    expect(within(rowOf('Test Handover')).getByText(tag)).toBeTruthy();
+    expect(within(rowOf('Test Invitee')).queryByText(tag)).toBeNull();
+  });
+
+  it('keeps the handover when sending a lapsed handover invite again', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...withHandover,
+        'adminRoles.invite': (c: { body: unknown }) => ({ ...handover, ...(c.body as object) }),
+      },
+    });
+    await user.click(await resendButton('065'));
+    expect(await screen.findByText(text('console.invites.resent'))).toBeTruthy();
+    const sent = find(calls, 'POST', '/v1/admin/invites');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toEqual({
+      role: 'venue_coordinator',
+      venueId: venueA!.id,
+      phone: '+923000000065',
+      displayName: 'Test Handover',
+      replacesAssignmentId: personA.id,
+    });
+  });
+
+  it('offers to send without the handover when the old coordinator was already removed', async () => {
+    const notFound = errorResponse('not_found');
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...withHandover,
+        'adminRoles.invite': (c: { body: unknown }, id: string) =>
+          (c.body as { replacesAssignmentId?: string }).replacesAssignmentId
+            ? notFound(c, id)
+            : { ...handover, ...(c.body as object), replacesAssignmentId: null },
+      },
+    });
+    await user.click(await resendButton('065'));
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText(text('console.invites.handoverGone.title'))).toBeTruthy();
+    expect(within(alert).getByText(text('console.invites.handoverGone.body'))).toBeTruthy();
+    // The generic "not found" message is not shown for this case.
+    expect(screen.queryByText(text('errors.not_found'))).toBeNull();
+    expect(screen.queryByText(text('console.invites.resent'))).toBeNull();
+
+    await user.click(
+      within(alert).getByRole('button', {
+        name: text('console.invites.handoverGone.resendPlain'),
+      }),
+    );
+    expect(await screen.findByText(text('console.invites.resent'))).toBeTruthy();
+    expect(screen.queryByText(text('console.invites.handoverGone.title'))).toBeNull();
+    const sent = find(calls, 'POST', '/v1/admin/invites');
+    expect(sent).toHaveLength(2);
+    expect(sent[0]?.body).toMatchObject({ replacesAssignmentId: personA.id });
+    expect(sent[1]?.body).toEqual({
+      role: 'venue_coordinator',
+      venueId: venueA!.id,
+      phone: '+923000000065',
+      displayName: 'Test Handover',
+    });
+  });
+
+  it('shows the usual message for other failures, and for not found on a plain invite', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: { ...withHandover, 'adminRoles.invite': errorResponse('not_found') },
+    });
+    await user.click(await resendButton('061'));
+    expect(await screen.findByText(text('errors.not_found'))).toBeTruthy();
+    expect(screen.queryByText(text('console.invites.handoverGone.title'))).toBeNull();
+  });
+
+  it('shows the usual message when a handover resend fails for another reason', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: withHandover,
+      forceError: (c) =>
+        c.method === 'POST' && c.path === '/v1/admin/invites' ? 'rate_limited' : undefined,
+    });
+    await user.click(await resendButton('065'));
+    expect(await screen.findByText(text('errors.rate_limited'))).toBeTruthy();
+    expect(screen.queryByText(text('console.invites.handoverGone.title'))).toBeNull();
   });
 });

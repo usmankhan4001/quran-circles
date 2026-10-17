@@ -208,7 +208,8 @@ export async function createSession(
     input.endsOn &&
     compareDates(input.endsOn, input.startsOn) < 0
   ) {
-    invalid('endsOn');
+    // Same code as the import uses for a backwards session row (same day is fine).
+    invalid('endsOn', 'invalid_range');
   }
 
   const sessionId = await db.transaction(async (tx) => {
@@ -362,7 +363,9 @@ export async function changeSchedule(
       : change.endsOn !== undefined
         ? change.endsOn
         : current.endsOn;
-    if (!oneOff && endsOn && compareDates(endsOn, current.startsOn) < 0) invalid('endsOn');
+    if (!oneOff && endsOn && compareDates(endsOn, current.startsOn) < 0) {
+      invalid('endsOn', 'invalid_range');
+    }
 
     const localStartTime = change.localStartTime ?? current.localStartTime.slice(0, 5);
     const durationMinutes = change.durationMinutes ?? current.durationMinutes;

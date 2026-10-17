@@ -25,6 +25,8 @@ beforeEach(async () => {
 });
 
 type Page<T> = { items: T[]; nextCursor: string | null };
+const issuesOf = (res: { json: <T>() => T }) =>
+  res.json<{ error: { issues?: { path: string; code: string }[] } }>().error.issues ?? [];
 const occurrencesOf = async (sessionId: string, query: Record<string, string | number> = {}) =>
   (
     await h.api('adminSessions.occurrences', {
@@ -142,6 +144,13 @@ describe('creating sessions', () => {
       body: { ...base, endsOn: '2026-10-01' },
     });
     expect(badEnd.status).toBe(400);
+    expect(issuesOf(badEnd)).toEqual([{ path: 'endsOn', code: 'invalid_range' }]);
+    // Ending on the day it starts is fine.
+    const sameDay = await h.api('adminSessions.create', {
+      as: admin,
+      body: { ...base, endsOn: base.startsOn },
+    });
+    expect(sameDay.status).toBe(201);
     const nilId = '00000000-0000-4000-8000-000000000000';
     const badCircle = await h.api('adminSessions.create', {
       as: admin,
@@ -596,6 +605,23 @@ describe('changing the time', () => {
     });
     expect(cancelled.status).toBe(409);
     expect(cancelled.json<{ error: { code: string } }>().error.code).toBe('session_cancelled');
+  });
+
+  it('refuses an end date before the session starts with invalid_range, as the import does', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const backwards = await h.api('adminSessions.changeSchedule', {
+      as: admin,
+      params: { sessionId: session.id },
+      body: { endsOn: '2026-10-01', effectiveFrom: '2026-10-20', notify: false },
+    });
+    expect(backwards.status).toBe(400);
+    expect(issuesOf(backwards)).toEqual([{ path: 'endsOn', code: 'invalid_range' }]);
+    const ends = await h.api('adminSessions.changeSchedule', {
+      as: admin,
+      params: { sessionId: session.id },
+      body: { endsOn: session.startsOn, effectiveFrom: '2026-10-20', notify: false },
+    });
+    expect(ends.status).toBe(200);
   });
 });
 

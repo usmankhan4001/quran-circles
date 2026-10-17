@@ -3,6 +3,11 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k
 
+## Done (2026-10-17: after rc.3, session end date issue code)
+
+- `adminSessions.create` and `adminSessions.changeSchedule` now report an `endsOn` before the session's `startsOn` as `validation_failed` `{path: 'endsOn', code: 'invalid_range'}` (was `invalid_reference`), the code the import uses for the same check. Same day is still fine. `adminSessions.update` takes no `endsOn` (`SessionUpdate`), so the schedule change is the only update path with this check. The contract lists no per-field codes for these endpoints, so no CHANGELOG or description change. Neither the console nor the admin app reads the code for this field (the console has no single session editor; the admin app's schedule screen sends no `endsOn` and maps issues by path only).
+- Tests: `@qc/api` 554 passing in 27 files (1 new for the schedule change; the create test now asserts the code and that the same day is accepted).
+
 ## Done (2026-10-17: contract 1.0.0-rc.3)
 
 - Invites return `replacesAssignmentId` (null for a plain invite) on `adminRoles.invite` and `adminRoles.invites`. A resend that names the link carries it, including for a lapsed invite; a resend of a pending handover invite without it keeps the link only while the replaced assignment is still live (a stale one is dropped). An ended or unknown link sent explicitly is still `not_found`, and the pending invite is left as it was.
@@ -60,8 +65,6 @@ Branch: claude/peaceful-archimedes-ain95k
 - Nothing blocking. The items under "Questions" and the change requests need decisions in other lanes.
 
 ## Questions for the orchestrator
-
-- `adminSessions.create` reports an `endsOn` before `startsOn` as `validation_failed` `{path: 'endsOn', code: 'invalid_reference'}`, while the import uses `invalid_range` for the same check. Changing the single create to `invalid_range` would be cleaner but changes an issue code clients may read; left as it is, say if it should change.
 
 - `purgeStaleAuthRows` (`apps/api/src/jobs.ts`) is still not scheduled by the worker; it would need the same move into a shared package.
 - The lazy per-session `topUpOccurrences` on the public occurrences view and `insertSession` still ignore a season's last day (pre-existing); only the daily job caps at it.

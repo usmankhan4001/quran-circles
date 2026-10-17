@@ -73,6 +73,14 @@ Drawn but with no data or API behind it (left out, not invented):
 - `src/main.tsx` imports `@fontsource/figtree` 400 to 800; `src/fonts.css` declares Mehr Nastaliq Web and KFGQPC Uthmanic Script HAFS from the kit's `packages/ui/assets/fonts`, which Vite copies into the build unchanged (the KFGQPC OTF is never converted). `--font-urdu` is now Mehr Nastaliq Web, Noto Nastaliq Urdu, serif.
 - A credits footer (`src/components/Credits.tsx`, under every signed-in page, collapsed `details`) lists the same credits as the user app (`creditGroups` from `@qc/ui`). The focus-order test now ends with the credits.
 
+## Contract 1.0.0-rc.3 follow-up: handover resend, 2026-10-17
+
+- `resendBody` copies `invite.replacesAssignmentId` into the resend body for city and venue invites, so sending a lapsed handover invite again keeps the handover.
+- When that resend answers `not_found` (the old coordinator was already removed), the page shows a warning banner saying the handover cannot be sent again, with a "Send without the handover" button that resends it as a plain invite. Other failures, and `not_found` on a plain invite, show the usual error message.
+- Handover invites carry a "Handover" tag next to the role in the invites table.
+- i18n: 4 keys added to `en.json` and `ur.json` together (Urdu draft under `_meta.status`): `console.invites.handoverTag`, `console.invites.handoverGone.title/body/resendPlain`.
+- Tests: 280 in 18 files (273 before), no skips. New: the body copies the link for venue and city roles only (and not with `withHandover: false`), the tag in LTR and RTL, the lapsed handover resend body, the `not_found` path then the plain resend, and the usual message for other failures.
+
 ## In progress
 
 - Nothing.
@@ -84,7 +92,6 @@ Drawn but with no data or API behind it (left out, not invented):
 ## Questions for the orchestrator
 
 - Remaining differences from `docs/design/screens/console-*.md`: (1) the invite form is a non-modal card beside the table, as drawn, not a focus-trapping panel as the spec text says (say if the trap is wanted); (2) exports have no Attendance kind or history table (not in the contract); (3) circles are not importable (no circle create endpoint); (4) the drawn import check quotes cell values, the console does not (no personal data in errors); (5) the Exports page has no single-session target (that file is on the session's Registrations page). Say if the ui lane wants any of these changed.
-- A resent invite that was a handover does not carry `replacesAssignmentId`: the `Invite` schema does not return it, so the console cannot copy it. Should `Invite` expose it?
 - The mock's coordinators import never reports duplicates, so that path is only tested with the console's own check and a stubbed server answer.
 - Is the extra `console.*` namespace use fine? I used the three namespaces from the brief and also `console.shell`, `nav`, `roles`, `scope`, `phone`, `signIn`, `sessions`, `venues`, `audit`, `settings`.
 - The ui lane's `console.import.confirm` ("Import {count} rows") has no singular form, so the console uses its own `console.import.apply.one/other`. Unused ui-lane keys: `console.import.confirm`, `console.import.file.help`, `console.import.row.error`, `console.import.dryRun.run`, `console.import.step.import`, `console.exports.kind.*`, `console.exports.history.*`, `console.exports.ready`, `console.exports.download`, `console.exports.format.csv`, `console.invites.title`, `console.invites.role.city`, `console.invites.role.venue`.

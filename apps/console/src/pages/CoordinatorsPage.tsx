@@ -42,7 +42,7 @@ import {
 import { useI18n } from '../i18n';
 import { coordinatorStats } from '../lib/kpis';
 import { filterBySearch } from '../lib/search';
-import { errorMessageKeyOf, fieldIssues } from '../lib/errors';
+import { errorKind, errorMessageKeyOf, fieldIssues } from '../lib/errors';
 import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, phoneTail } from '../lib/phone';
 import { canAssignRole, canSomewhere } from '../lib/permissions';
 
@@ -95,22 +95,32 @@ function serverFieldErrors(error: unknown, t: Translate): Record<string, string>
   return out;
 }
 
+/** A handover invite names the assignment it replaces (city and venue roles only). */
+const isHandover = (invite: Invite) =>
+  Boolean(invite.replacesAssignmentId) && invite.role !== 'national_admin';
+
 /**
  * The body that sends an invite again: a new invite for the same number, role and place. The
  * contract documents this as the resend; the server replaces the waiting invite and sends the
- * message again with a new expiry.
+ * message again with a new expiry. A handover invite keeps its `replacesAssignmentId` (rc.3), so
+ * resending a lapsed one still hands over, unless `withHandover` is false.
  */
-export function resendBody(invite: Invite): InviteBody | null {
+export function resendBody(
+  invite: Invite,
+  { withHandover = true }: { withHandover?: boolean } = {},
+): InviteBody | null {
   const name =
     invite.displayName && PersonName.safeParse(invite.displayName).success
       ? { displayName: invite.displayName }
       : {};
+  const handover =
+    withHandover && isHandover(invite) ? { replacesAssignmentId: invite.replacesAssignmentId } : {};
   const parsed = InviteBody.safeParse({
     role: invite.role,
     phone: invite.phone,
     ...name,
-    ...(invite.role === 'city_coordinator' ? { cityId: invite.cityId } : {}),
-    ...(invite.role === 'venue_coordinator' ? { venueId: invite.venueId } : {}),
+    ...(invite.role === 'city_coordinator' ? { cityId: invite.cityId, ...handover } : {}),
+    ...(invite.role === 'venue_coordinator' ? { venueId: invite.venueId, ...handover } : {}),
   });
   return parsed.success ? parsed.data : null;
 }
@@ -124,6 +134,8 @@ export default function CoordinatorsPage() {
   const [failure, setFailure] = useState<unknown>(null);
   const [inviteFilter, setInviteFilter] = useState<InviteFilter>('all');
   const [resending, setResending] = useState<string | null>(null);
+  // A handover resend the server refused because the old coordinator is already gone.
+  const [handoverGone, setHandoverGone] = useState<Invite | null>(null);
   const [showPast, setShowPast] = useState(false);
   const [revokingInvite, setRevokingInvite] = useState<Invite | null>(null);
   const [handingOver, setHandingOver] = useState<StaffRoleAssignment | null>(null);
@@ -156,17 +168,30 @@ export default function CoordinatorsPage() {
     people.reload();
   };
 
-  const resend = async (invite: Invite) => {
-    const body = resendBody(invite);
+  const resend = async (invite: Invite, withHandover = true) => {
+    const body = resendBody(invite, { withHandover });
     if (!body) return;
     setResending(invite.id);
     setNotice(null);
     setFailure(null);
+    if (withHandover) setHandoverGone(null);
     try {
       await api.adminRoles.invite({ body });
+      setHandoverGone(null);
       done('console.invites.resent');
     } catch (error) {
-      setFailure(error);
+      // The replaced assignment has ended (the old coordinator was removed): offer to send it
+      // again as a plain invite rather than showing a bare "not found".
+      const handoverLost =
+        'replacesAssignmentId' in body &&
+        Boolean(body.replacesAssignmentId) &&
+        errorKind(error) === 'not_found';
+      if (handoverLost) {
+        setHandoverGone(invite);
+      } else {
+        setHandoverGone(null);
+        setFailure(error);
+      }
     } finally {
       setResending(null);
     }
@@ -184,7 +209,21 @@ export default function CoordinatorsPage() {
       header: t('console.invites.col.phone'),
       cell: (i) => <Phone value={i.phone} masked />,
     },
-    { id: 'role', header: t('console.invites.col.role'), cell: (i) => t(roleLabelKey(i.role)) },
+    {
+      id: 'role',
+      header: t('console.invites.col.role'),
+      cell: (i) => (
+        <>
+          {t(roleLabelKey(i.role))}
+          {isHandover(i) ? (
+            <>
+              {' '}
+              <Badge tone="accent">{t('console.invites.handoverTag')}</Badge>
+            </>
+          ) : null}
+        </>
+      ),
+    },
     { id: 'scope', header: t('console.invites.col.scope'), cell: (i) => scopeLabel(i) },
     { id: 'expires', header: t('console.invites.col.expires'), cell: (i) => dateTime(i.expiresAt) },
     {
@@ -314,6 +353,23 @@ export default function CoordinatorsPage() {
       {failure ? (
         <Banner tone="danger" onDismiss={() => setFailure(null)}>
           {t(errorMessageKeyOf(failure))}
+        </Banner>
+      ) : null}
+      {handoverGone ? (
+        <Banner
+          tone="warning"
+          title={t('console.invites.handoverGone.title')}
+          onDismiss={() => setHandoverGone(null)}
+        >
+          <p>{t('console.invites.handoverGone.body')}</p>
+          <Button
+            className="btn-small"
+            busy={resending === handoverGone.id}
+            disabled={resending !== null}
+            onClick={() => void resend(handoverGone, false)}
+          >
+            {t('console.invites.handoverGone.resendPlain')}
+          </Button>
         </Banner>
       ) : null}
       {invites.status === 'ready' ? (
