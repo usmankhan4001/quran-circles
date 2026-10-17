@@ -101,6 +101,10 @@ Chosen by the owner on 2026-10-17 from [Cards](https://claude.ai/artifact/ASLSHH
 
 Agreed by the owner on 2026-10-17 from [New look](https://claude.ai/artifact/2NaxNfwZVYS4mWmryb6GAM), inspired by an Iqraa-style reference. Green header that fades into the page, picture cards for venues, light illustrated touches, a floating tab bar. The app is about Quran circles and the Dora: Home leads with your next session, then nearby circles; session, registration and journey screens carry the weight. Quran reading, prayer times, qibla and similar features stay in the app but sit in secondary places (a smaller row or their own tab), never as the main focus.
 
+### D13. Sheets, dialogs and messages: green-topped (O3)
+
+Chosen by the owner on 2026-10-17 from [Sheets, dialogs and messages](https://claude.ai/artifact/W7EG4KGSDkcssX83ozucMk). Bottom sheets (radius 28 top corners, grab handle, dimmed backdrop) and centred dialogs (radius 26) open with the app's green header gradient; the dialog icon sits on a white eight-point star. Sheet content uses the chosen chips and section cards, with Clear (outline) and the main action side by side. Dialogs stack the safe action as the main button above the careful (terracotta outline) one. Toasts are solid green with a white action, near the bottom. Banners run edge to edge: grey for offline, gold for time changes, terracotta for errors with a Retry action.
+
 ## Open questions
 
 - Owner review of the component set.
