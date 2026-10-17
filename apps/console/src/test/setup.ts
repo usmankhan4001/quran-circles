@@ -1,5 +1,8 @@
 import { afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
+
+// The machine is shared with other builds; give async queries room before they give up.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();

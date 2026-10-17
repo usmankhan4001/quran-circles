@@ -35,3 +35,8 @@ Branch: claude/peaceful-archimedes-ain95k (nothing committed by this lane; owner
 ## Contract change requests
 
 - None.
+
+## Wave 4 full check (2026-10-17)
+
+- Typecheck, lint and format pass. All 7,436 tests pass when packages run one at a time (`pnpm -r --workspace-concurrency=1 --filter '!@qc/e2e' test`, about 7 minutes here).
+- With the default parallel run, two UI tests timed out under load (console `coordinators.test.tsx`, content `V1ImportBanner.test.tsx`); both pass on their own. The console now uses the same 5 s async timeout as the admin app and content. Open: decide whether the root `test` script should limit workspace concurrency.
