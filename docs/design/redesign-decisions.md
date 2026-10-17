@@ -97,6 +97,10 @@ Chosen by the owner on 2026-10-17 from [Choices](https://claude.ai/artifact/H9ZP
 
 Chosen by the owner on 2026-10-17 from [Cards](https://claude.ai/artifact/ASLSHHQN2caYbQhX3VcnLK). White cards, corner radius 22, padding 14, no border, a soft two-layer shadow (0 1 2 and 0 8 22 at low green-black opacity). At night the shadow is replaced by a 1 px light hairline. Inside a card: eyebrow in green caps, title 17/700, muted 13 line, big time 28/600 on the trailing side, status tags radius 8 (leaf for good, gold for Quran and time changes, terracotta for problems), dividers as 1 px hairlines. Thumbnails radius 16; date blocks on leaf tint.
 
+### D12. Screen direction: reference style, circles first
+
+Agreed by the owner on 2026-10-17 from [New look](https://claude.ai/artifact/2NaxNfwZVYS4mWmryb6GAM), inspired by an Iqraa-style reference. Green header that fades into the page, picture cards for venues, light illustrated touches, a floating tab bar. The app is about Quran circles and the Dora: Home leads with your next session, then nearby circles; session, registration and journey screens carry the weight. Quran reading, prayer times, qibla and similar features stay in the app but sit in secondary places (a smaller row or their own tab), never as the main focus.
+
 ## Open questions
 
 - Owner review of the component set.
