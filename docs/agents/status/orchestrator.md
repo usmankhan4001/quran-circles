@@ -42,6 +42,7 @@ None. All work is on branch `claude/peaceful-archimedes-ain95k`.
 - Decide how the work splits between the owner and the full developer.
 - Choose a reference low-end Android phone.
 - UI catalog review (Gate 2) is pending the UI and screens redesign the user has started.
+- Schedule the next features decided with the owner (`docs/product/features-next.md`) and decide their change request (`docs/engineering/change-requests/2026-10-17-next-features.md`).
 - Decide the open change requests (auth session grace, users display name, OTP locale, outbox venue/provider id, bulk import, export scope, handover lookup, contract gaps in api-core).
 - Meta template approval, native Urdu review, Google Maps key, VAPID keys, store accounts.
 - Live prayer-time comparison: run `node packages/content/scripts/compare-aladhan.mjs` with internet access.
