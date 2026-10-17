@@ -3,8 +3,8 @@
 The Postgres schema (Drizzle), the migrations, the synthetic seed, the shared scheduled jobs, and
 the command that creates the first national admin. Owned by the contracts lane.
 
-Every command runs from `v2/` and reads `DATABASE_URL` (default: the development database in
-`infra/docker-compose.dev.yml`). A `v2/.env` file is loaded if there is one; variables already
+Every command runs from the repository root and reads `DATABASE_URL` (default: the development database in
+`infra/docker-compose.dev.yml`). A `.env` file at the repository root is loaded if there is one; variables already
 set in the environment win.
 
 | Command                                                        | What it does                                  |

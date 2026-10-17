@@ -26,7 +26,7 @@ Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (
 
 ## Repository split (2026-10-17)
 
-- V2 now lives in its own repository, `usmankhan4001/quran-circles`, with `v2/` as the root. History was kept with `git subtree split --prefix=v2` from `nearby-dora-quran` branch `claude/peaceful-archimedes-ain95k` at `451b98f` (65 commits).
+- V2 now lives in its own repository, `usmankhan4001/quran-circles`, with `v2/` as the root. History was kept with `git subtree split --prefix=v2` from `nearby-dora-quran` branch `claude/peaceful-archimedes-ain95k` at `451b98f` (65 commits), then the final commit `913c333` merged in.
 - Path prefixes fixed for the new root in docs, lane `CLAUDE.md` files, briefs, infra comments, the cron file (`/srv/qc/app/infra/...`) and the deploy steps in `infra/README.md` (`cd /srv/qc/app`).
 - `.github/` moved over and adapted: `workflows/ci.yml` (was `v2-ci.yml`, no path filter or working directory), `pull_request_template.md` (was `PULL_REQUEST_TEMPLATE/v2.md`), `CODEOWNERS` without the `/v2` prefix.
 - `nearby-dora-quran` is unchanged; its `v2/` folder is no longer where work happens.

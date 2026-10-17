@@ -6,7 +6,7 @@ import {
 import { fail, loadDotEnv, withDrizzle } from './connect';
 
 try {
-  // Parse and load v2/.env first, so a usage error or a production refusal never connects.
+  // Parse and load the repository's .env first, so a usage error or a production refusal never connects.
   const args = parseBootstrapArgs(process.argv.slice(2));
   loadDotEnv();
   assertBootstrapAllowed(process.env, args.yes);
