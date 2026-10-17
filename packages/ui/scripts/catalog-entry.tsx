@@ -14,6 +14,7 @@ import {
   Checkbox,
   Chip,
   CodeField,
+  DateStrip,
   EmptyState,
   ErrorState,
   Header,
@@ -21,7 +22,10 @@ import {
   Icon,
   IconButton,
   ListItem,
+  PrayerStrip,
   SearchField,
+  SeatMeter,
+  SessionCard,
   SegmentedControl,
   Select,
   Skeleton,
@@ -863,6 +867,99 @@ const stories: Story[] = [
               onAction={noop}
             />
           </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'session-card',
+    title: 'SessionCard and SeatMeter',
+    note: 'What and where on the start side, the time big on the end side (D11). The meter turns gold when nearly full.',
+    cases: [
+      {
+        label: 'Session with a tag and places',
+        render: (l) => (
+          <SessionCard
+            eyebrow={pick(l, 'Weekly circle', 'ہفتہ وار حلقہ')}
+            title={pick(l, 'Dars-e-Quran', 'درسِ قرآن')}
+            place={pick(l, 'Masjid Al-Noor · 1.2 km', 'مسجد النور · 1.2 کلومیٹر')}
+            day={pick(l, 'Friday', 'جمعہ')}
+            time="7:30"
+            details={pick(l, 'Men, Women · Urdu', 'مرد، خواتین · اردو')}
+            tag={{ label: pick(l, 'Time changed', 'وقت بدل گیا'), kind: 'gilt' }}
+            seats={{ taken: 26, capacity: 30 }}
+            onPress={noop}
+          />
+        ),
+      },
+      {
+        label: 'Seat meters',
+        render: () => (
+          <div style={{ display: 'grid', gap: 12 }}>
+            <SeatMeter taken={9} capacity={30} />
+            <SeatMeter taken={29} capacity={30} />
+            <SeatMeter taken={30} capacity={30} />
+            <SeatMeter taken={48} capacity={null} />
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'date-strip',
+    title: 'DateStrip and PrayerStrip',
+    cases: [
+      {
+        label: 'Days, Friday chosen, Saturday has nothing',
+        render: (l) => (
+          <DateStrip
+            accessibilityLabel={pick(l, 'Day', 'دن')}
+            value="fri"
+            onChange={noop}
+            days={[
+              {
+                key: 'thu',
+                weekday: pick(l, 'Thu', 'جمعرات'),
+                day: '29',
+                accessibilityLabel: 'Thu 29',
+              },
+              {
+                key: 'fri',
+                weekday: pick(l, 'Fri', 'جمعہ'),
+                day: '30',
+                accessibilityLabel: 'Fri 30',
+              },
+              {
+                key: 'sat',
+                weekday: pick(l, 'Sat', 'ہفتہ'),
+                day: '31',
+                accessibilityLabel: 'Sat 31',
+                disabled: true,
+              },
+              {
+                key: 'sun',
+                weekday: pick(l, 'Sun', 'اتوار'),
+                day: '1',
+                accessibilityLabel: 'Sun 1',
+              },
+            ]}
+          />
+        ),
+      },
+      {
+        label: 'Prayer times, Asr next',
+        render: (l) => (
+          <PrayerStrip
+            nextLabel={pick(l, 'Next', 'اگلی')}
+            nextKey="asr"
+            prayers={[
+              { key: 'fajr', name: pick(l, 'Fajr', 'فجر'), time: '5:12' },
+              { key: 'dhuhr', name: pick(l, 'Dhuhr', 'ظہر'), time: '12:18' },
+              { key: 'asr', name: pick(l, 'Asr', 'عصر'), time: '3:52' },
+              { key: 'maghrib', name: pick(l, 'Maghrib', 'مغرب'), time: '6:04' },
+              { key: 'isha', name: pick(l, 'Isha', 'عشاء'), time: '7:25' },
+            ]}
+          />
         ),
       },
     ],

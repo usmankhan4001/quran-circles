@@ -10,13 +10,17 @@ import {
   Checkbox,
   Chip,
   CodeField,
+  DateStrip,
   EmptyState,
   ErrorState,
   Header,
   HeroHeader,
   IconButton,
   ListItem,
+  PrayerStrip,
   SearchField,
+  SeatMeter,
+  SessionCard,
   SegmentedControl,
   Select,
   Skeleton,
@@ -48,6 +52,31 @@ function Everything() {
       <Banner kind="change" title="Time changed" actionLabel="View" onAction={noop} />
       <SearchField accessibilityLabel="Search circles" value="kahf" onChangeText={noop} />
       <CodeField accessibilityLabel="6-digit code" value="12" onChangeText={noop} />
+      <DateStrip
+        accessibilityLabel="Day"
+        value="fri"
+        onChange={noop}
+        days={[
+          { key: 'thu', weekday: 'Thu', day: '29', accessibilityLabel: 'Thursday 29' },
+          { key: 'fri', weekday: 'Fri', day: '30', accessibilityLabel: 'Friday 30' },
+        ]}
+      />
+      <PrayerStrip
+        nextLabel="Next"
+        nextKey="asr"
+        prayers={[
+          { key: 'fajr', name: 'Fajr', time: '5:12' },
+          { key: 'asr', name: 'Asr', time: '3:52' },
+        ]}
+      />
+      <SessionCard
+        title="Dars-e-Quran"
+        place="Masjid Al-Noor"
+        time="7:30 pm"
+        seats={{ taken: 21, capacity: 30 }}
+        onPress={noop}
+      />
+      <SeatMeter taken={3} capacity={10} />
       <Text heading={2} variant="title2">
         Section
       </Text>

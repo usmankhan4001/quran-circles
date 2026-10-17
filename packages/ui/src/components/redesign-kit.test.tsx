@@ -2,7 +2,19 @@ import { useState } from 'react';
 import { fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
-import { Banner, CodeField, HeroHeader, IconButton, SearchField, Tag } from '../index';
+import {
+  Banner,
+  CodeField,
+  ConfirmSheet,
+  DateStrip,
+  HeroHeader,
+  IconButton,
+  PrayerStrip,
+  SearchField,
+  SeatMeter,
+  SessionCard,
+  Tag,
+} from '../index';
 import { semanticColors } from '../semantic-colors';
 import { minTouchTarget } from '../tokens';
 import { matrix, px, renderThemed, rgb } from '../test/utils';
@@ -101,6 +113,120 @@ describe.each(matrix)('redesign components in $name', (combo) => {
     expect(screen.getByRole('alert').textContent).toContain('Could not load');
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  it('SeatMeter says the places left and exposes the fill to screen readers', () => {
+    renderThemed(<SeatMeter taken={21} capacity={30} />, combo);
+    const meter = screen.getByRole('progressbar');
+    expect(meter.getAttribute('aria-valuenow')).toBe('21');
+    expect(meter.getAttribute('aria-valuemax')).toBe('30');
+    expect(meter.getAttribute('aria-label')).toBe(
+      ui(combo.locale, 'ui.seatsLeft').replace('{count}', combo.locale === 'ur' ? '9' : '9'),
+    );
+  });
+
+  it('DateStrip is a radio group whose chosen day fills green', () => {
+    const onChange = vi.fn();
+    renderThemed(
+      <DateStrip
+        accessibilityLabel="Day"
+        value="fri"
+        onChange={onChange}
+        days={[
+          { key: 'thu', weekday: 'Thu', day: '29', accessibilityLabel: 'Thursday 29 October' },
+          { key: 'fri', weekday: 'Fri', day: '30', accessibilityLabel: 'Friday 30 October' },
+          {
+            key: 'sat',
+            weekday: 'Sat',
+            day: '31',
+            accessibilityLabel: 'Saturday 31 October',
+            disabled: true,
+          },
+        ]}
+      />,
+      combo,
+    );
+    const fri = screen.getByRole('radio', { name: 'Friday 30 October' });
+    expect(fri.getAttribute('aria-checked')).toBe('true');
+    expect(px(getComputedStyle(fri).minHeight)).toBeGreaterThanOrEqual(minTouchTarget);
+    fireEvent.click(screen.getByRole('radio', { name: 'Thursday 29 October' }));
+    expect(onChange).toHaveBeenCalledWith('thu');
+    fireEvent.click(screen.getByRole('radio', { name: 'Saturday 31 October' }));
+    expect(onChange).not.toHaveBeenCalledWith('sat');
+  });
+
+  it('PrayerStrip names the next prayer for screen readers', () => {
+    renderThemed(
+      <PrayerStrip
+        nextLabel="Next"
+        nextKey="asr"
+        prayers={[
+          { key: 'fajr', name: 'Fajr', time: '5:12' },
+          { key: 'asr', name: 'Asr', time: '3:52' },
+        ]}
+      />,
+      combo,
+    );
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.getByLabelText('Next: Asr 3:52')).toBeTruthy();
+  });
+
+  it('SessionCard is one button that reads the whole session', () => {
+    const onPress = vi.fn();
+    renderThemed(
+      <SessionCard
+        title="Dars-e-Quran"
+        place="Masjid Al-Noor · 1.2 km"
+        day="Friday"
+        time="7:30 pm"
+        tag={{ label: 'Time changed', kind: 'gilt' }}
+        seats={{ taken: 30, capacity: 30 }}
+        onPress={onPress}
+      />,
+      combo,
+    );
+    const card = screen.getByRole('button', {
+      name: 'Dars-e-Quran, Masjid Al-Noor · 1.2 km, Friday 7:30 pm',
+    });
+    fireEvent.click(card);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(ui(combo.locale, 'ui.seatsFull'))).toBeTruthy();
+  });
+
+  it('ConfirmSheet asks before a destructive action and can be kept', () => {
+    const onConfirm = vi.fn();
+    const onCancel = vi.fn();
+    renderThemed(
+      <ConfirmSheet
+        visible
+        destructive
+        title="Cancel this session?"
+        message="Registered people will be told."
+        confirmLabel="Yes, cancel session"
+        cancelLabel="Keep the session"
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />,
+      combo,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Keep the session' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel session' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SeatMeter', () => {
+  it('says when a session is full, has one place, or has no limit', () => {
+    const { unmount } = renderThemed(<SeatMeter taken={30} capacity={30} />);
+    expect(screen.getByText('Full')).toBeTruthy();
+    unmount();
+    const one = renderThemed(<SeatMeter taken={29} capacity={30} />);
+    expect(screen.getByText('1 place left')).toBeTruthy();
+    one.unmount();
+    renderThemed(<SeatMeter taken={12} capacity={null} />);
+    expect(screen.getByText('No limit on places')).toBeTruthy();
+    expect(screen.queryByRole('progressbar')).toBeNull();
   });
 });
 
