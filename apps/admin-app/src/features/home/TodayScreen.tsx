@@ -1,24 +1,29 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import type { Session } from '@qc/contracts';
-import { EmptyState, Text, spacing } from '@qc/ui';
+import { EmptyState, SessionCard, Text, isolate, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
-import { useApi } from '../../auth/AuthProvider';
+import { useApi, useAuth } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
-import { SessionCard } from '../../components/SessionCard';
-import { Tag } from '../../components/Tag';
 import { QuickAction } from '../../components/QuickAction';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { pickLocalized } from '../../lib/localized';
-import { formatLocalDate, isToday, pkDateOf } from '../../lib/time';
+import {
+  formatInstantDate,
+  formatInstantTime,
+  formatLocalDate,
+  formatLocalTime,
+  isToday,
+  pkDateOf,
+} from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { canPostAnywhere } from '../post-update/scopes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { useSessionDirectory } from './sessionDirectory';
-import { nextOccurrenceText, whenSummary } from './sessionText';
+import { whenSummary } from './sessionText';
 
 export interface TodayScreenProps {
   /** The moment "today" is taken from. Tests pass a fixed one. */
@@ -31,6 +36,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const api = useApi();
   const nav = useNavigation();
   const dir = useSessionDirectory();
+  const { me } = useAuth();
   const { active, filter, principal } = useWorkingScope();
 
   const query = useQuery(async () => {
@@ -42,23 +48,39 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
     if (query.data) dir.remember(query.data);
   }, [query.data, dir]);
 
-  const row = (s: Session, withDate: boolean) => (
-    <SessionCard
-      key={s.id}
-      testID={`session-${s.id}`}
-      title={pickLocalized(s.title, locale)}
-      detail={`${pickLocalized(s.venue.name, locale)} · ${
-        withDate
-          ? (nextOccurrenceText(s, locale) ?? whenSummary(s, t, locale))
-          : whenSummary(s, t, locale)
-      }`}
-      tag={s.status === 'draft' ? <Tag label={t('admin.home.draft')} tone="warning" /> : undefined}
-      onPress={() => nav.push(routes.session(s.id))}
-    />
-  );
+  const row = (s: Session, withDate: boolean) => {
+    const next = s.nextOccurrence;
+    return (
+      <SessionCard
+        key={s.id}
+        testID={`session-${s.id}`}
+        title={pickLocalized(s.title, locale)}
+        place={pickLocalized(s.venue.name, locale)}
+        time={
+          next
+            ? formatInstantTime(next.startsAt, locale)
+            : formatLocalTime(s.localStartTime, locale)
+        }
+        day={withDate && next ? formatInstantDate(next.startsAt, locale) : undefined}
+        details={whenSummary(s, t, locale)}
+        tag={s.status === 'draft' ? { label: t('admin.home.draft'), kind: 'gilt' } : undefined}
+        seats={
+          s.registration.capacity !== null
+            ? { taken: s.registration.seatsTaken ?? 0, capacity: s.registration.capacity }
+            : undefined
+        }
+        onPress={() => nav.push(routes.session(s.id))}
+      />
+    );
+  };
 
   return (
     <Screen
+      eyebrow={
+        me?.displayName
+          ? t('admin.home.greeting', { name: isolate(me.displayName) })
+          : t('admin.home.greetingPlain')
+      }
       title={t('admin.home.title')}
       subtitle={formatLocalDate(pkDateOf(now), locale)}
       testID="today"

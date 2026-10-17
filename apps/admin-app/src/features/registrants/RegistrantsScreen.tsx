@@ -8,8 +8,8 @@ import {
   EmptyState,
   Select,
   SegmentedControl,
+  SearchField,
   Text,
-  TextField,
   isolate,
   spacing,
 } from '@qc/ui';
@@ -106,6 +106,7 @@ export function RegistrantsScreen({
           <Button
             testID="registrants-take-attendance"
             label={t('admin.registrants.takeAttendance')}
+            icon="check"
             size="large"
             fullWidth
             onPress={() => nav.push(routes.attendance(sessionId, occurrenceId))}
@@ -145,9 +146,10 @@ export function RegistrantsScreen({
               <View style={{ gap: spacing.md }}>
                 {list.totals ? <Totals totals={list.totals} /> : null}
                 {list.items.length > 0 ? (
-                  <TextField
+                  <SearchField
                     testID="registrants-search"
-                    label={t('admin.registrants.search')}
+                    accessibilityLabel={t('admin.registrants.search')}
+                    placeholder={t('admin.registrants.search')}
                     value={search}
                     onChangeText={setSearch}
                   />

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createBackend, ids, meFor } from '../../test/backend';
-import { combos, renderScreen } from '../../test/render';
+import { combos, renderScreen, typeInto } from '../../test/render';
 import { routes } from '../../navigation/routes';
 import { PlacesScreen } from './PlacesScreen';
 
@@ -43,6 +43,20 @@ describe('PlacesScreen venues', () => {
     expect(screen.getByTestId('places-new-venue')).toBeTruthy();
     fireEvent.click(screen.getByTestId(`venue-${ids.venueLahore}`));
     expect(nav.pushed).toEqual([routes.venue(ids.venueLahore)]);
+  });
+
+  it('narrows the loaded venues by name without asking the server again', async () => {
+    const backend = createBackend({ me: meFor('admin') });
+    renderScreen(<PlacesScreen />, { backend });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    const calls = backend.callsTo('adminVenues.list').length;
+    const name = backend.state.venues.find((v) => v.id === ids.venueLahore)!.name.en;
+    typeInto('places-venue-search', name);
+    expect(screen.getByTestId(`venue-${ids.venueLahore}`)).toBeTruthy();
+    expect(screen.queryByTestId(`venue-${ids.venueAlNoor}`)).toBeNull();
+    typeInto('places-venue-search', 'zzz no such venue');
+    expect(screen.queryByTestId(`venue-${ids.venueLahore}`)).toBeNull();
+    expect(backend.callsTo('adminVenues.list')).toHaveLength(calls);
   });
 
   it('marks an archived venue', async () => {

@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { Icon } from '@qc/ui';
 
 /**
- * Line icons the kit does not have yet (phone, chat, search and the four tab icons), drawn with
+ * Line icons the kit does not have yet (phone, chat, minus and the four tab icons), drawn with
  * views so the app needs no icon font or SVG library. They are decoration: every button that uses
  * one carries its own name for a screen reader. None of them points anywhere, so none flips in
  * right-to-left.
@@ -11,7 +11,6 @@ import { Icon } from '@qc/ui';
 export type GlyphName =
   | 'call'
   | 'chat'
-  | 'search'
   | 'today'
   | 'places'
   | 'bell'
@@ -19,7 +18,8 @@ export type GlyphName =
   | 'people'
   | 'clock'
   | 'tick'
-  | 'minus';
+  | 'minus'
+  | 'plus';
 
 export interface GlyphProps {
   name: GlyphName;
@@ -115,24 +115,6 @@ export function Glyph({ name, color, size = 24 }: GlyphProps) {
             h={stroke}
             color={color}
             style={{ alignSelf: 'flex-start', marginStart: size * 0.18 }}
-          />
-        </View>
-      );
-      break;
-    case 'search':
-      art = (
-        <View style={{ width: size * 0.9, height: size * 0.9 }}>
-          <Ring d={size * 0.62} color={color} stroke={stroke} />
-          <Bar
-            w={size * 0.34}
-            h={stroke}
-            color={color}
-            style={{
-              position: 'absolute',
-              end: 0,
-              bottom: size * 0.1,
-              transform: [{ rotate: '45deg' }],
-            }}
           />
         </View>
       );
@@ -309,6 +291,9 @@ export function Glyph({ name, color, size = 24 }: GlyphProps) {
       break;
     case 'minus':
       art = <Bar w={size * 0.6} h={Math.max(2, Math.round(size / 10))} color={color} />;
+      break;
+    case 'plus':
+      art = <Icon name="plus" size={size * 0.8} color={color} />;
       break;
   }
   return (

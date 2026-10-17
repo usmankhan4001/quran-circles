@@ -9,7 +9,7 @@ import { useApi } from '../../auth/AuthProvider';
 import { BilingualField } from '../../components/BilingualField';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { Screen } from '../../components/Screen';
+import { Screen, ScreenFooter } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -167,17 +167,19 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
             </Text>
           </View>
         </Card>
-        <Button label={t('admin.common.done')} size="large" fullWidth onPress={nav.back} />
-        <Button
-          label={t('admin.postUpdate.another')}
-          variant="secondary"
-          fullWidth
-          onPress={() => {
-            post.reset();
-            setForm(emptyPostUpdateForm(defaultScopeChoice(active, options), sessionId));
-            setStep('compose');
-          }}
-        />
+        <ScreenFooter>
+          <Button label={t('admin.common.done')} size="large" fullWidth onPress={nav.back} />
+          <Button
+            label={t('admin.postUpdate.another')}
+            variant="secondary"
+            fullWidth
+            onPress={() => {
+              post.reset();
+              setForm(emptyPostUpdateForm(defaultScopeChoice(active, options), sessionId));
+              setStep('compose');
+            }}
+          />
+        </ScreenFooter>
       </View>
     );
   }
@@ -210,25 +212,27 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
           </View>
         </Card>
         <ErrorNotice error={post.error} onDismiss={post.reset} />
-        <Button
-          testID="post-update-send"
-          label={t('admin.postUpdate.send')}
-          size="large"
-          fullWidth
-          loading={post.status === 'running'}
-          onPress={() => void send()}
-        />
-        <Button
-          testID="post-update-edit"
-          label={t('admin.postUpdate.edit')}
-          variant="tertiary"
-          fullWidth
-          disabled={post.status === 'running'}
-          onPress={() => {
-            post.reset();
-            setStep('compose');
-          }}
-        />
+        <ScreenFooter>
+          <Button
+            testID="post-update-send"
+            label={t('admin.postUpdate.send')}
+            size="large"
+            fullWidth
+            loading={post.status === 'running'}
+            onPress={() => void send()}
+          />
+          <Button
+            testID="post-update-edit"
+            label={t('admin.postUpdate.edit')}
+            variant="tertiary"
+            fullWidth
+            disabled={post.status === 'running'}
+            onPress={() => {
+              post.reset();
+              setStep('compose');
+            }}
+          />
+        </ScreenFooter>
       </View>
     );
   }
@@ -249,128 +253,153 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
           <Text variant="label">{pickLocalized(session.title, locale)}</Text>
         </Card>
       ) : (
-        <View style={{ gap: spacing.md }}>
-          <Text variant="title3" heading={2}>
+        <View style={{ gap: spacing.sm }}>
+          <Text variant="label" color="textSecondary" heading={2}>
             {t('admin.postUpdate.whoFor')}
           </Text>
-          {options.levels.length > 1 ? (
-            <SegmentedControl
-              accessibilityLabel={t('admin.postUpdate.whoFor')}
-              value={form.level}
-              onChange={(level) =>
-                patch({
-                  level,
-                  cityId: level === 'city' ? (options.cities[0]?.id ?? null) : null,
-                  venueId: level === 'venue' ? (options.venues[0]?.id ?? null) : null,
-                })
-              }
-              options={options.levels.map((l) => ({ value: l, label: levelLabels[l] }))}
-            />
-          ) : null}
-          {form.level === 'city' ? (
-            <Select
-              testID="post-update-city"
-              label={levelLabels.city}
-              required
-              value={form.cityId ?? undefined}
-              onChange={(cityId) => patch({ cityId })}
-              options={options.cities.map((c) => ({ value: c.id, label: c.label }))}
-              error={errors.scope ? t(errors.scope) : undefined}
-            />
-          ) : null}
-          {form.level === 'venue' ? (
-            <Select
-              testID="post-update-venue"
-              label={levelLabels.venue}
-              required
-              value={form.venueId ?? undefined}
-              onChange={(venueId) => patch({ venueId })}
-              options={options.venues.map((v) => ({ value: v.id, label: v.label }))}
-              error={errors.scope ? t(errors.scope) : undefined}
-            />
-          ) : null}
-          <Text variant="caption" color="textSecondary">
-            {scopeText}
-          </Text>
+          <Card>
+            <View style={{ gap: spacing.md }}>
+              {options.levels.length > 1 ? (
+                <SegmentedControl
+                  accessibilityLabel={t('admin.postUpdate.whoFor')}
+                  value={form.level}
+                  onChange={(level) =>
+                    patch({
+                      level,
+                      cityId: level === 'city' ? (options.cities[0]?.id ?? null) : null,
+                      venueId: level === 'venue' ? (options.venues[0]?.id ?? null) : null,
+                    })
+                  }
+                  options={options.levels.map((l) => ({ value: l, label: levelLabels[l] }))}
+                />
+              ) : null}
+              {form.level === 'city' ? (
+                <Select
+                  testID="post-update-city"
+                  label={levelLabels.city}
+                  required
+                  value={form.cityId ?? undefined}
+                  onChange={(cityId) => patch({ cityId })}
+                  options={options.cities.map((c) => ({ value: c.id, label: c.label }))}
+                  error={errors.scope ? t(errors.scope) : undefined}
+                />
+              ) : null}
+              {form.level === 'venue' ? (
+                <Select
+                  testID="post-update-venue"
+                  label={levelLabels.venue}
+                  required
+                  value={form.venueId ?? undefined}
+                  onChange={(venueId) => patch({ venueId })}
+                  options={options.venues.map((v) => ({ value: v.id, label: v.label }))}
+                  error={errors.scope ? t(errors.scope) : undefined}
+                />
+              ) : null}
+              <Text variant="caption" color="textSecondary">
+                {scopeText}
+              </Text>
+            </View>
+          </Card>
         </View>
       )}
 
       {templates.length > 0 ? (
-        <View style={{ gap: spacing.md }}>
-          <Select
-            testID="post-update-template"
-            label={t('admin.postUpdate.template.label')}
-            helper={t('admin.postUpdate.template.help')}
-            value={form.templateKey ?? ''}
-            onChange={(key) => {
-              const next = templates.find((x) => x.key === key) ?? null;
-              const values = next
-                ? suggestedValues(next, session, locale, form.templateValues)
-                : {};
-              setForm((f) => applyTemplate({ ...f, templateValues: values }, next));
-            }}
-            options={[
-              { value: '', label: t('admin.postUpdate.template.none') },
-              ...templates.map((x) => ({ value: x.key, label: templateLabel(t, x.key) })),
-            ]}
-          />
-          {template
-            ? template.variables.map((name) => (
-                <TextField
-                  key={name}
-                  testID={`post-update-var-${name}`}
-                  label={variableLabel(t, name)}
-                  required
-                  value={form.templateValues[name] ?? ''}
-                  onChangeText={(value) =>
-                    setForm((f) =>
-                      applyTemplate(
-                        { ...f, templateValues: { ...f.templateValues, [name]: value } },
-                        template,
-                      ),
-                    )
-                  }
-                  error={errors.template ? t(errors.template) : undefined}
-                />
-              ))
-            : null}
-        </View>
+        <Card>
+          <View style={{ gap: spacing.md }}>
+            <Select
+              testID="post-update-template"
+              label={t('admin.postUpdate.template.label')}
+              helper={t('admin.postUpdate.template.help')}
+              value={form.templateKey ?? ''}
+              onChange={(key) => {
+                const next = templates.find((x) => x.key === key) ?? null;
+                const values = next
+                  ? suggestedValues(next, session, locale, form.templateValues)
+                  : {};
+                setForm((f) => applyTemplate({ ...f, templateValues: values }, next));
+              }}
+              options={[
+                { value: '', label: t('admin.postUpdate.template.none') },
+                ...templates.map((x) => ({ value: x.key, label: templateLabel(t, x.key) })),
+              ]}
+            />
+            {template
+              ? template.variables.map((name) => (
+                  <TextField
+                    key={name}
+                    testID={`post-update-var-${name}`}
+                    label={variableLabel(t, name)}
+                    required
+                    value={form.templateValues[name] ?? ''}
+                    onChangeText={(value) =>
+                      setForm((f) =>
+                        applyTemplate(
+                          { ...f, templateValues: { ...f.templateValues, [name]: value } },
+                          template,
+                        ),
+                      )
+                    }
+                    error={errors.template ? t(errors.template) : undefined}
+                  />
+                ))
+              : null}
+          </View>
+        </Card>
       ) : null}
 
-      <BilingualField
-        testID="post-update-title"
-        label={t('admin.postUpdate.title.label')}
-        value={form.title}
-        onChange={(title) => patch({ title })}
-        required
-        error={errors.title ? t(errors.title) : undefined}
-      />
-      <BilingualField
-        testID="post-update-body"
-        label={t('admin.postUpdate.body.label')}
-        value={form.body}
-        onChange={(body) => patch({ body })}
-        multiline
-        required
-        error={errors.body ? t(errors.body) : undefined}
-      />
-      <Text variant="caption" color="textSecondary">
-        {t('admin.postUpdate.language.help')}
-      </Text>
-      <Switch
-        testID="post-update-notify"
-        label={t('admin.postUpdate.notify.label')}
-        description={t('admin.postUpdate.notify.help')}
-        value={form.notify}
-        onValueChange={(notify) => patch({ notify })}
-      />
-      <Button
-        testID="post-update-preview"
-        label={t('admin.postUpdate.preview')}
-        size="large"
-        fullWidth
-        onPress={toPreview}
-      />
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="label" color="textSecondary" heading={2}>
+          {t('admin.postUpdate.message')}
+        </Text>
+        <Card>
+          <View style={{ gap: spacing.md }}>
+            <BilingualField
+              testID="post-update-title"
+              label={t('admin.postUpdate.title.label')}
+              value={form.title}
+              onChange={(title) => patch({ title })}
+              required
+              error={errors.title ? t(errors.title) : undefined}
+            />
+            <BilingualField
+              testID="post-update-body"
+              label={t('admin.postUpdate.body.label')}
+              value={form.body}
+              onChange={(body) => patch({ body })}
+              multiline
+              required
+              error={errors.body ? t(errors.body) : undefined}
+            />
+            <Text variant="caption" color="textSecondary">
+              {t('admin.postUpdate.language.help')}
+            </Text>
+          </View>
+        </Card>
+      </View>
+
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="label" color="textSecondary" heading={2}>
+          {t('admin.postUpdate.sendBy')}
+        </Text>
+        <Card>
+          <Switch
+            testID="post-update-notify"
+            label={t('admin.postUpdate.notify.label')}
+            description={t('admin.postUpdate.notify.help')}
+            value={form.notify}
+            onValueChange={(notify) => patch({ notify })}
+          />
+        </Card>
+      </View>
+      <ScreenFooter>
+        <Button
+          testID="post-update-preview"
+          label={t('admin.postUpdate.preview')}
+          size="large"
+          fullWidth
+          onPress={toPreview}
+        />
+      </ScreenFooter>
     </View>
   );
 }

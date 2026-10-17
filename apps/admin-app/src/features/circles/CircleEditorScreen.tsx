@@ -1,15 +1,26 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { can, type AdminCircle, type Venue } from '@qc/contracts';
-import { Button, Card, Select, SegmentedControl, Text, TextField, Toast, spacing } from '@qc/ui';
+import {
+  Button,
+  Card,
+  ConfirmSheet,
+  Select,
+  SegmentedControl,
+  Tag,
+  Text,
+  TextField,
+  Toast,
+  spacing,
+  type TagKind,
+} from '@qc/ui';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { BilingualField } from '../../components/BilingualField';
-import { ConfirmSheet } from '../../components/ConfirmSheet';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { Screen } from '../../components/Screen';
+import { Screen, ScreenFooter } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -96,7 +107,6 @@ function CircleEditorFlow({
   const [errors, setErrors] = useState<CircleErrors>({});
   const [created, setCreated] = useState<AdminCircle | null>(null);
   const [rejecting, setRejecting] = useState(false);
-  const [note, setNote] = useState('');
   const create = useMutation(api.adminCircles.create);
   const update = useMutation(api.adminCircles.update);
   const decide = useMutation(api.adminCircles.decide);
@@ -134,7 +144,9 @@ function CircleEditorFlow({
             </Text>
           </View>
         </Card>
-        <Button label={t('admin.common.done')} size="large" fullWidth onPress={nav.back} />
+        <ScreenFooter>
+          <Button label={t('admin.common.done')} size="large" fullWidth onPress={nav.back} />
+        </ScreenFooter>
       </View>
     );
   }
@@ -155,8 +167,7 @@ function CircleEditorFlow({
 
   const decideNow = async (decision: 'approve' | 'reject') => {
     if (!original) return;
-    // The contract takes no free-text note any more (it must not reach the audit log), so the
-    // field is kept for the coordinator's own thinking but is never sent.
+    // There is no free-text note: personal text must not reach the audit log.
     const res = await decide.run({
       params: { circleId: original.id },
       body: { decision },
@@ -191,7 +202,7 @@ function CircleEditorFlow({
             <Button
               testID="circle-reject"
               label={t('admin.circleEditor.reject')}
-              variant="danger"
+              variant="outline"
               fullWidth
               disabled={decide.status === 'running'}
               onPress={() => setRejecting(true)}
@@ -200,67 +211,82 @@ function CircleEditorFlow({
         </Card>
       ) : null}
 
-      <Select
-        testID="circle-venue"
-        label={t('admin.circleEditor.venue.label')}
-        required
-        disabled={Boolean(original)}
-        value={form.venueId ?? undefined}
-        onChange={(id) => patch({ venueId: id })}
-        options={(original ? loaded.venues : venueOptions).map((v) => ({
-          value: v.id,
-          label: pickLocalized(v.name, locale),
-        }))}
-        error={errors.venue ? t(errors.venue) : undefined}
-      />
-      <BilingualField
-        testID="circle-name"
-        label={t('admin.circleEditor.name.label')}
-        value={form.name}
-        onChange={(name) => patch({ name })}
-        required
-        error={errors.name ? t(errors.name) : undefined}
-        disabled={busy}
-      />
-      <TextField
-        testID="circle-teacher"
-        label={t('admin.circleEditor.teacher.label')}
-        helper={t('admin.circleEditor.teacher.help')}
-        value={form.teacherName}
-        onChangeText={(teacherName) => patch({ teacherName })}
-        error={errors.teacher ? t(errors.teacher) : undefined}
-        maxLength={80}
-        loading={busy}
-      />
-      <BilingualField
-        testID="circle-description"
-        label={t('admin.circleEditor.description')}
-        value={form.description}
-        onChange={(description) => patch({ description })}
-        multiline
-        disabled={busy}
-      />
-      <SegmentedControl
-        accessibilityLabel={t('admin.circleEditor.language.label')}
-        value={form.language}
-        onChange={(language) => patch({ language })}
-        options={[
-          { value: 'en', label: 'English' },
-          { value: 'ur', label: 'اردو' },
-        ]}
-        disabled={busy}
-      />
-      <SegmentedControl
-        accessibilityLabel={t('admin.circleEditor.section.label')}
-        value={form.section}
-        onChange={(section) => patch({ section })}
-        options={[
-          { value: 'women', label: t('admin.circleEditor.section.women') },
-          { value: 'men', label: t('admin.circleEditor.section.men') },
-          { value: 'family', label: t('admin.circleEditor.section.family') },
-        ]}
-        disabled={busy}
-      />
+      <Card>
+        <View style={{ gap: spacing.md }}>
+          <Select
+            testID="circle-venue"
+            label={t('admin.circleEditor.venue.label')}
+            required
+            disabled={Boolean(original)}
+            value={form.venueId ?? undefined}
+            onChange={(id) => patch({ venueId: id })}
+            options={(original ? loaded.venues : venueOptions).map((v) => ({
+              value: v.id,
+              label: pickLocalized(v.name, locale),
+            }))}
+            error={errors.venue ? t(errors.venue) : undefined}
+          />
+          <BilingualField
+            testID="circle-name"
+            label={t('admin.circleEditor.name.label')}
+            value={form.name}
+            onChange={(name) => patch({ name })}
+            required
+            error={errors.name ? t(errors.name) : undefined}
+            disabled={busy}
+          />
+          <TextField
+            testID="circle-teacher"
+            label={t('admin.circleEditor.teacher.label')}
+            helper={t('admin.circleEditor.teacher.help')}
+            value={form.teacherName}
+            onChangeText={(teacherName) => patch({ teacherName })}
+            error={errors.teacher ? t(errors.teacher) : undefined}
+            maxLength={80}
+            loading={busy}
+          />
+          <BilingualField
+            testID="circle-description"
+            label={t('admin.circleEditor.description')}
+            value={form.description}
+            onChange={(description) => patch({ description })}
+            multiline
+            disabled={busy}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <View style={{ gap: spacing.md }}>
+          <Text variant="title3" heading={2}>
+            {t('admin.circleEditor.whoFor')}
+          </Text>
+          <Text variant="label">{t('admin.circleEditor.language.label')}</Text>
+          <SegmentedControl
+            accessibilityLabel={t('admin.circleEditor.language.label')}
+            value={form.language}
+            onChange={(language) => patch({ language })}
+            options={[
+              { value: 'en', label: 'English' },
+              { value: 'ur', label: 'اردو' },
+            ]}
+            disabled={busy}
+          />
+          <Text variant="label">{t('admin.circleEditor.section.label')}</Text>
+          <SegmentedControl
+            accessibilityLabel={t('admin.circleEditor.section.label')}
+            value={form.section}
+            onChange={(section) => patch({ section })}
+            options={[
+              { value: 'women', label: t('admin.circleEditor.section.women') },
+              { value: 'men', label: t('admin.circleEditor.section.men') },
+              { value: 'family', label: t('admin.circleEditor.section.family') },
+            ]}
+            disabled={busy}
+          />
+        </View>
+      </Card>
+
       <TextField
         testID="circle-link"
         label={t('admin.circleEditor.online.label')}
@@ -291,37 +317,36 @@ function CircleEditorFlow({
         onDismiss={original ? update.reset : create.reset}
       />
       {canEdit ? (
-        <Button
-          testID="circle-save"
-          label={original ? t('admin.common.save') : t('admin.circleEditor.submit')}
-          size="large"
-          fullWidth
-          loading={busy}
-          onPress={() => void submit()}
-        />
+        <ScreenFooter>
+          <Button
+            testID="circle-save"
+            label={
+              original
+                ? t('admin.common.save')
+                : willBePending
+                  ? t('admin.circleEditor.sendForApproval')
+                  : t('admin.circleEditor.submit')
+            }
+            size="large"
+            fullWidth
+            loading={busy}
+            onPress={() => void submit()}
+          />
+        </ScreenFooter>
       ) : null}
 
       <ConfirmSheet
         testID="circle-reject-confirm"
         visible={rejecting}
         title={t('admin.circleEditor.reject.title')}
+        message={t('admin.circleEditor.reject.body')}
         confirmLabel={t('admin.circleEditor.reject')}
-        danger
+        cancelLabel={t('admin.common.cancel')}
+        destructive
         busy={decide.status === 'running'}
         onCancel={() => setRejecting(false)}
         onConfirm={() => void decideNow('reject')}
-      >
-        <TextField
-          testID="circle-reject-note"
-          label={t('admin.circleEditor.reject.note')}
-          helper={t('admin.circleEditor.reject.noteHelp')}
-          value={note}
-          onChangeText={setNote}
-          multiline
-          maxLength={500}
-        />
-        <ErrorNotice error={decide.error} onDismiss={decide.reset} />
-      </ConfirmSheet>
+      />
     </View>
   );
 }
@@ -338,9 +363,23 @@ function StatusBanner({
     status === 'pending_approval' && !canDecide
       ? t('admin.circleEditor.statusWaiting')
       : t(`admin.circleEditor.status.${status}`);
+  const kind: Record<AdminCircle['status'], TagKind> = {
+    draft: 'neutral',
+    pending_approval: 'gilt',
+    published: 'ok',
+    rejected: 'alert',
+    archived: 'neutral',
+  };
   return (
     <Card variant="flat" testID="circle-status">
-      <Text variant="label">{text}</Text>
+      <View style={{ gap: spacing.xs }}>
+        <Tag label={t(`admin.circleEditor.status.${status}`)} kind={kind[status]} />
+        {text !== t(`admin.circleEditor.status.${status}`) ? (
+          <Text variant="caption" color="textSecondary">
+            {text}
+          </Text>
+        ) : null}
+      </View>
     </Card>
   );
 }

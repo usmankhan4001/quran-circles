@@ -1,14 +1,25 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import type { AdminOccurrence, Session } from '@qc/contracts';
-import { Button, Card, Chip, Select, Switch, Text, TextField, spacing } from '@qc/ui';
+import {
+  Button,
+  Card,
+  Chip,
+  ConfirmSheet,
+  Select,
+  Switch,
+  Text,
+  TextField,
+  spacing,
+  useTheme,
+} from '@qc/ui';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
-import { ConfirmSheet } from '../../components/ConfirmSheet';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { Screen } from '../../components/Screen';
+import { Glyph } from '../../components/glyphs';
+import { Screen, ScreenFooter } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { pickLocalized } from '../../lib/localized';
 import {
@@ -22,6 +33,7 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { useSession, useSessionDirectory } from '../home/sessionDirectory';
+import { whenSummary } from '../home/sessionText';
 import {
   initialScheduleForm,
   MAX_DURATION,
@@ -100,6 +112,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
   const nav = useNavigation();
   const dir = useSessionDirectory();
   const { session, occurrences, people } = loaded;
+  const { colors } = useTheme();
 
   const dates = useMemo(
     () => [
@@ -154,77 +167,109 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
             </Text>
           </View>
         </Card>
-        <Button label={t('admin.common.done')} size="large" fullWidth onPress={nav.back} />
+        <ScreenFooter>
+          <Button label={t('admin.common.done')} size="large" fullWidth onPress={nav.back} />
+        </ScreenFooter>
       </View>
     );
   }
 
+  const peopleLine = form.notify
+    ? people === null
+      ? t('admin.schedule.effect.notifyUnknown')
+      : t.plural('admin.schedule.effect.notify', people)
+    : t('admin.schedule.effect.quiet');
+
   return (
     <View style={{ gap: spacing.lg }} testID="schedule-form">
       <Card variant="flat">
-        <Text variant="caption" color="textSecondary">
-          {pickLocalized(session.title, locale)}
-        </Text>
-        <Text variant="label">
-          {formatLocalTime(session.localStartTime, locale)} · {n(session.durationMinutes)}{' '}
-          {t('admin.schedule.minutes')}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.surface,
+            }}
+          >
+            <Glyph name="clock" color={colors.accent} size={22} />
+          </View>
+          <View style={{ flex: 1, gap: spacing.xxs }}>
+            <Text variant="caption" color="textSecondary">
+              {pickLocalized(session.title, locale)}
+            </Text>
+            <Text variant="label" testID="schedule-current">
+              {t('admin.schedule.current', { when: whenSummary(session, t, locale) })}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              {n(session.durationMinutes)} {t('admin.schedule.minutes')}
+            </Text>
+          </View>
+        </View>
       </Card>
 
-      <TextField
-        testID="schedule-time"
-        label={t('admin.schedule.time.label')}
-        helper={t('admin.schedule.time.help')}
-        value={form.time}
-        onChangeText={(time) => patch({ time })}
-        onBlur={() => patch({ time: tidyTime(form.time) })}
-        error={errors.time ? t(errors.time) : undefined}
-        keyboardType="numbers-and-punctuation"
-        contentDirection="ltr"
-        maxLength={5}
-        required
-      />
-      <Stepper
-        testID="schedule-duration"
-        label={t('admin.schedule.duration.label')}
-        value={form.durationMinutes}
-        min={MIN_DURATION}
-        max={MAX_DURATION}
-        step={5}
-        onChange={(durationMinutes) => patch({ durationMinutes })}
-      />
-      {errors.duration ? (
-        <Text variant="caption" color="textDanger">
-          {t(errors.duration)}
-        </Text>
-      ) : null}
-
-      {session.kind === 'recurring' ? (
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="label">{t('admin.schedule.days.label')}</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-              <Chip
-                key={d}
-                testID={`schedule-day-${d}`}
-                label={weekdayName(d, locale, 'short')}
-                selected={form.days.includes(d)}
-                onPress={() =>
-                  patch({
-                    days: form.days.includes(d)
-                      ? form.days.filter((x) => x !== d)
-                      : [...form.days, d],
-                  })
-                }
-              />
-            ))}
-          </View>
-          {errors.days ? (
+      <Card>
+        <View style={{ gap: spacing.md }}>
+          <TextField
+            testID="schedule-time"
+            label={t('admin.schedule.time.label')}
+            helper={t('admin.schedule.time.help')}
+            value={form.time}
+            onChangeText={(time) => patch({ time })}
+            onBlur={() => patch({ time: tidyTime(form.time) })}
+            error={errors.time ? t(errors.time) : undefined}
+            keyboardType="numbers-and-punctuation"
+            contentDirection="ltr"
+            maxLength={5}
+            required
+          />
+          <Stepper
+            testID="schedule-duration"
+            label={t('admin.schedule.duration.label')}
+            value={form.durationMinutes}
+            min={MIN_DURATION}
+            max={MAX_DURATION}
+            step={5}
+            onChange={(durationMinutes) => patch({ durationMinutes })}
+          />
+          {errors.duration ? (
             <Text variant="caption" color="textDanger">
-              {t(errors.days)}
+              {t(errors.duration)}
             </Text>
           ) : null}
         </View>
+      </Card>
+
+      {session.kind === 'recurring' ? (
+        <Card>
+          <View style={{ gap: spacing.sm }}>
+            <Text variant="label">{t('admin.schedule.days.label')}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+                <Chip
+                  key={d}
+                  testID={`schedule-day-${d}`}
+                  label={weekdayName(d, locale, 'short')}
+                  selected={form.days.includes(d)}
+                  onPress={() =>
+                    patch({
+                      days: form.days.includes(d)
+                        ? form.days.filter((x) => x !== d)
+                        : [...form.days, d],
+                    })
+                  }
+                />
+              ))}
+            </View>
+            {errors.days ? (
+              <Text variant="caption" color="textDanger">
+                {t(errors.days)}
+              </Text>
+            ) : null}
+          </View>
+        </Card>
       ) : null}
 
       <Select
@@ -241,58 +286,59 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
         error={errors.effectiveFrom ? t(errors.effectiveFrom) : undefined}
       />
 
-      <Switch
-        testID="schedule-notify"
-        label={t('admin.schedule.notify.label')}
-        description={t('admin.schedule.notify.help')}
-        value={form.notify}
-        onValueChange={(notify) => patch({ notify })}
-      />
+      <Card>
+        <View style={{ gap: spacing.xs }}>
+          <Switch
+            testID="schedule-notify"
+            label={t('admin.schedule.notify.label')}
+            description={t('admin.schedule.notify.help')}
+            value={form.notify}
+            onValueChange={(notify) => patch({ notify })}
+          />
+          <Text variant="caption" color="textSecondary" testID="schedule-effect-people">
+            {peopleLine}
+          </Text>
+        </View>
+      </Card>
 
       {errors.nothing ? (
         <Text variant="caption" color="textDanger" testID="schedule-nothing">
           {t(errors.nothing)}
         </Text>
       ) : null}
-      <Button
-        testID="schedule-review"
-        label={t('admin.schedule.review')}
-        size="large"
-        fullWidth
-        onPress={review}
-      />
+      <ErrorNotice error={confirming ? null : change.error} onDismiss={change.reset} />
+      <ScreenFooter>
+        <Button
+          testID="schedule-review"
+          label={t('admin.schedule.review')}
+          size="large"
+          fullWidth
+          onPress={review}
+        />
+      </ScreenFooter>
 
       <ConfirmSheet
         testID="schedule-confirm"
         visible={confirming}
         title={t('admin.schedule.confirm.title')}
+        message={[
+          t('admin.schedule.effect.when', {
+            time: formatLocalTime(tidyTime(form.time), locale),
+            date: formatLocalDate(form.effectiveFrom, locale),
+          }),
+          t.plural('admin.schedule.effect.dates', affected),
+          peopleLine,
+          t('admin.schedule.posterNote'),
+        ].join('\n')}
         confirmLabel={t('admin.schedule.submit')}
+        cancelLabel={t('admin.common.cancel')}
         busy={change.status === 'running'}
         onCancel={() => {
           change.reset();
           setConfirming(false);
         }}
         onConfirm={() => void save()}
-      >
-        <View style={{ gap: spacing.sm }}>
-          <Text>
-            {t('admin.schedule.effect.when', {
-              time: formatLocalTime(tidyTime(form.time), locale),
-              date: formatLocalDate(form.effectiveFrom, locale),
-            })}
-          </Text>
-          <Text>{t.plural('admin.schedule.effect.dates', affected)}</Text>
-          <Text testID="schedule-effect-people">
-            {form.notify
-              ? people === null
-                ? t('admin.schedule.effect.notifyUnknown')
-                : t.plural('admin.schedule.effect.notify', people)
-              : t('admin.schedule.effect.quiet')}
-          </Text>
-          <Text>{t('admin.schedule.posterNote')}</Text>
-        </View>
-        <ErrorNotice error={change.error} onDismiss={change.reset} />
-      </ConfirmSheet>
+      />
     </View>
   );
 }

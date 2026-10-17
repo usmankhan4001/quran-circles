@@ -1,8 +1,8 @@
 import { View } from 'react-native';
-import { Button, SegmentedControl, Text, TextField, Toast, spacing } from '@qc/ui';
+import { Button, CodeField, SegmentedControl, Text, TextField, Toast, spacing } from '@qc/ui';
 import { useAppearance, useT } from '../../appearance/AppearanceProvider';
 import { useAuth } from '../../auth/AuthProvider';
-import { Screen } from '../../components/Screen';
+import { Screen, ScreenFooter } from '../../components/Screen';
 import { formatPhoneDisplay } from '../../lib/phone';
 import { useSignIn } from './useSignIn';
 
@@ -14,7 +14,7 @@ export function SignInScreen() {
   const s = useSignIn(publicApi, completeSignIn, { locale });
 
   return (
-    <Screen title={t('admin.signIn.title')} subtitle={t('admin.signIn.subtitle')} testID="sign-in">
+    <Screen title={t('app.name')} subtitle={t('admin.signIn.subtitle')} testID="sign-in">
       <SegmentedControl
         accessibilityLabel={t('admin.account.language')}
         value={locale}
@@ -36,12 +36,23 @@ export function SignInScreen() {
           }
         />
       ) : null}
+      <View style={{ gap: spacing.xs }}>
+        <Text variant="title3" heading={2}>
+          {s.step === 'phone' ? t('admin.signIn.heading') : t('admin.signIn.codeLabel')}
+        </Text>
+        <Text variant="caption" color="textSecondary">
+          {s.step === 'phone'
+            ? t('admin.signIn.phoneHelper')
+            : t('admin.signIn.codeHelper', {
+                phone: s.phone ? formatPhoneDisplay(s.phone) : '',
+              })}
+        </Text>
+      </View>
       {s.step === 'phone' ? (
         <View style={{ gap: spacing.lg }}>
           <TextField
             testID="sign-in-phone"
             label={t('admin.signIn.phoneLabel')}
-            helper={t('admin.signIn.phoneHelper')}
             value={s.phoneInput}
             onChangeText={s.setPhoneInput}
             error={s.phoneError ? t(s.phoneError) : undefined}
@@ -52,42 +63,36 @@ export function SignInScreen() {
             loading={s.busy}
             onSubmitEditing={() => void s.submitPhone()}
           />
-          <Button
-            testID="sign-in-send-code"
-            label={t('admin.signIn.sendCode')}
-            size="large"
-            fullWidth
-            loading={s.busy}
-            onPress={() => void s.submitPhone()}
-          />
+          <ScreenFooter>
+            <Button
+              testID="sign-in-send-code"
+              label={t('admin.signIn.sendCode')}
+              size="large"
+              fullWidth
+              loading={s.busy}
+              onPress={() => void s.submitPhone()}
+            />
+          </ScreenFooter>
         </View>
       ) : (
         <View style={{ gap: spacing.lg }}>
-          <TextField
+          <CodeField
             testID="sign-in-code"
-            label={t('admin.signIn.codeLabel')}
-            helper={t('admin.signIn.codeHelper', {
-              phone: s.phone ? formatPhoneDisplay(s.phone) : '',
-            })}
+            accessibilityLabel={t('admin.signIn.codeLabel')}
             value={s.code}
             onChangeText={s.setCode}
             error={s.codeError ? t(s.codeError) : undefined}
-            keyboardType="number-pad"
-            autoComplete="one-time-code"
-            contentDirection="ltr"
-            maxLength={6}
-            required
-            loading={s.busy}
-            onSubmitEditing={() => void s.submitCode()}
           />
-          <Button
-            testID="sign-in-verify"
-            label={t('admin.signIn.verify')}
-            size="large"
-            fullWidth
-            loading={s.busy}
-            onPress={() => void s.submitCode()}
-          />
+          <ScreenFooter>
+            <Button
+              testID="sign-in-verify"
+              label={t('admin.signIn.verify')}
+              size="large"
+              fullWidth
+              loading={s.busy}
+              onPress={() => void s.submitCode()}
+            />
+          </ScreenFooter>
           <Button
             testID="sign-in-resend"
             label={

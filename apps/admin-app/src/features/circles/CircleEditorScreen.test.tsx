@@ -164,7 +164,7 @@ describe('CircleEditorScreen edit and approval', () => {
     );
   });
 
-  it('asks for confirmation and never sends the note when rejecting', async () => {
+  it('asks for confirmation and sends only the decision when rejecting', async () => {
     const backend = createBackend({ me: meFor('city') });
     makeRawalpindiCirclePending(backend);
     const { nav } = renderScreen(<CircleEditorScreen circleId={ids.circlePublished} />, {
@@ -173,7 +173,8 @@ describe('CircleEditorScreen edit and approval', () => {
     await screen.findByTestId('circle-decision');
     fireEvent.click(screen.getByTestId('circle-reject'));
     expect(backend.callsTo('adminCircles.decide')).toHaveLength(0);
-    typeInto('circle-reject-note', 'Please add the teacher name');
+    // There is no note field any more: the contract takes only the decision.
+    expect(screen.queryByTestId('circle-reject-note')).toBeNull();
     fireEvent.click(await screen.findByTestId('circle-reject-confirm-confirm'));
     await waitFor(() => expect(nav.backs).toBe(1));
     expect(backend.callsTo('adminCircles.decide')[0]!.body).toEqual({ decision: 'reject' });
@@ -182,7 +183,7 @@ describe('CircleEditorScreen edit and approval', () => {
     );
   });
 
-  it('sends a rejection without a note when none is typed', async () => {
+  it('sends a rejection with only the decision', async () => {
     const backend = createBackend({ me: meFor('city') });
     makeRawalpindiCirclePending(backend);
     renderScreen(<CircleEditorScreen circleId={ids.circlePublished} />, { backend });

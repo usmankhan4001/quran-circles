@@ -19,7 +19,7 @@ import type { MessageKey } from '../../i18n/translate';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { Screen } from '../../components/Screen';
+import { Screen, ScreenFooter } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
 import { formatInstantDate, formatInstantTime } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -151,10 +151,20 @@ function AttendanceForm({
 
   const total = entriesTotal(state);
 
+  const tickedPeople = registrants.items.filter((r) => r.id in state.ticked).length;
+
   return (
     <View style={{ gap: spacing.lg }} testID="attendance-form">
       <Card>
         <View style={{ gap: spacing.md }}>
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="title3" heading={2}>
+              {t('admin.attendance.headcount.help')}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              {t('admin.attendance.tick.help')}
+            </Text>
+          </View>
           <Stepper
             testID="attendance-headcount"
             large
@@ -188,132 +198,156 @@ function AttendanceForm({
         </View>
       </Card>
 
-      <Text variant="title3" heading={2}>
-        {t('admin.attendance.registeredTitle')}
-      </Text>
-      <Text variant="caption" color="textSecondary">
-        {t('admin.attendance.registeredHelper')}
-      </Text>
-      {registrants.items.length > 0 ? (
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="caption" color="textSecondary" testID="attendance-ticked-count">
-            {t('admin.attendance.ticked', {
-              present: n(registrants.items.filter((r) => r.id in state.ticked).length),
-              total: n(registrants.items.length),
-            })}
-          </Text>
-          <Button
-            testID="attendance-tick-all"
-            label={t('admin.attendance.markAll')}
-            variant="tertiary"
-            onPress={() =>
-              dispatch({
-                type: 'tickAll',
-                people: registrants.items.map((r) => ({
-                  registrationId: r.id,
-                  count: r.partySize,
-                })),
-              })
-            }
-          />
-          <Button
-            testID="attendance-clear"
-            label={t('admin.attendance.clear')}
-            variant="tertiary"
-            onPress={() => dispatch({ type: 'clearTicks' })}
-          />
-        </View>
-      ) : null}
-      <QueryBoundary query={registrants.query} testID="attendance-registrants">
-        {() =>
-          registrants.items.length === 0 ? (
-            <EmptyState
-              title={t('admin.attendance.noRegistrantsTitle')}
-              description={t('admin.attendance.noRegistrantsBody')}
-            />
-          ) : (
-            <View>
-              {registrants.items.map((r) => (
-                <Checkbox
-                  key={r.id}
-                  testID={`attendance-tick-${r.id}`}
-                  label={r.name ? isolate(r.name) : t('admin.registrants.noName')}
-                  description={t('admin.registrants.party', { count: n(r.partySize) })}
-                  checked={r.id in state.ticked}
-                  onChange={(on) =>
-                    dispatch(
-                      on
-                        ? { type: 'tick', registrationId: r.id, count: r.partySize }
-                        : { type: 'untick', registrationId: r.id },
-                    )
-                  }
-                />
-              ))}
-              {registrants.hasMore ? (
-                <Button
-                  testID="attendance-more"
-                  label={t('admin.registrants.more')}
-                  variant="secondary"
-                  fullWidth
-                  loading={registrants.loadingMore}
-                  onPress={() => void registrants.loadMore()}
-                />
+      <Card padding="none">
+        <View style={{ padding: spacing.lg, gap: spacing.xs }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="title3" heading={2}>
+                {t('admin.attendance.registeredTitle')}
+              </Text>
+              {registrants.items.length > 0 ? (
+                <Text variant="caption" color="textSecondary" testID="attendance-ticked-count">
+                  {t('admin.attendance.ticked', {
+                    present: n(tickedPeople),
+                    total: n(registrants.items.length),
+                  })}
+                </Text>
               ) : null}
             </View>
-          )
-        }
-      </QueryBoundary>
-
-      <Text variant="title3" heading={2}>
-        {t('admin.attendance.dropInsTitle')}
-      </Text>
-      <Text variant="caption" color="textSecondary">
-        {t('admin.attendance.dropInsHelper')}
-      </Text>
-      {state.dropIns.map((d) => (
-        <Card key={d.id} variant="outlined" testID={`attendance-dropin-${d.id}`}>
-          <View style={{ gap: spacing.sm }}>
-            <Text variant="label">{d.name ? isolate(d.name) : t('admin.attendance.unnamed')}</Text>
-            <Text variant="caption" color="textSecondary">
-              {t('admin.registrants.party', { count: n(d.count) })}
-            </Text>
-            <Button
-              testID={`attendance-dropin-${d.id}-remove`}
-              label={t('admin.attendance.remove')}
-              variant="tertiary"
-              onPress={() => dispatch({ type: 'removeDropIn', id: d.id })}
-            />
           </View>
-        </Card>
-      ))}
-      <View style={{ gap: spacing.md }}>
-        <TextField
-          testID="attendance-new-name"
-          label={t('admin.attendance.nameLabel')}
-          value={newName}
-          onChangeText={setNewName}
-          maxLength={80}
-        />
-        <Stepper
-          testID="attendance-new-count"
-          label={t('admin.attendance.peopleLabel')}
-          value={newCount}
-          min={1}
-          max={MAX_ENTRY_COUNT}
-          onChange={setNewCount}
-        />
-        <Button
-          testID="attendance-add"
-          label={t('admin.attendance.add')}
-          variant="secondary"
-          fullWidth
-          onPress={() => {
-            dispatch({ type: 'addDropIn', name: newName || null, count: newCount });
-            setNewName('');
-            setNewCount(1);
-          }}
-        />
-      </View>
+          <Text variant="caption" color="textSecondary">
+            {t('admin.attendance.registeredHelper')}
+          </Text>
+          {registrants.items.length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+              <Button
+                testID="attendance-tick-all"
+                label={t('admin.attendance.markAll')}
+                variant="secondary"
+                icon="check"
+                onPress={() =>
+                  dispatch({
+                    type: 'tickAll',
+                    people: registrants.items.map((r) => ({
+                      registrationId: r.id,
+                      count: r.partySize,
+                    })),
+                  })
+                }
+              />
+              <Button
+                testID="attendance-clear"
+                label={t('admin.attendance.clear')}
+                variant="tertiary"
+                onPress={() => dispatch({ type: 'clearTicks' })}
+              />
+            </View>
+          ) : null}
+        </View>
+        <QueryBoundary query={registrants.query} testID="attendance-registrants">
+          {() =>
+            registrants.items.length === 0 ? (
+              <View style={{ paddingBottom: spacing.lg }}>
+                <EmptyState
+                  title={t('admin.attendance.noRegistrantsTitle')}
+                  description={t('admin.attendance.noRegistrantsBody')}
+                />
+              </View>
+            ) : (
+              <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
+                {registrants.items.map((r) => (
+                  <Checkbox
+                    key={r.id}
+                    testID={`attendance-tick-${r.id}`}
+                    label={r.name ? isolate(r.name) : t('admin.registrants.noName')}
+                    description={t('admin.registrants.party', { count: n(r.partySize) })}
+                    checked={r.id in state.ticked}
+                    onChange={(on) =>
+                      dispatch(
+                        on
+                          ? { type: 'tick', registrationId: r.id, count: r.partySize }
+                          : { type: 'untick', registrationId: r.id },
+                      )
+                    }
+                  />
+                ))}
+                {registrants.hasMore ? (
+                  <Button
+                    testID="attendance-more"
+                    label={t('admin.registrants.more')}
+                    variant="secondary"
+                    fullWidth
+                    loading={registrants.loadingMore}
+                    onPress={() => void registrants.loadMore()}
+                  />
+                ) : null}
+              </View>
+            )
+          }
+        </QueryBoundary>
+      </Card>
+
+      <Card>
+        <View style={{ gap: spacing.md }}>
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="title3" heading={2}>
+              {t('admin.attendance.dropInsTitle')}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              {t('admin.attendance.dropInsHelper')}
+            </Text>
+          </View>
+          {state.dropIns.map((d) => (
+            <View
+              key={d.id}
+              testID={`attendance-dropin-${d.id}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text variant="label">
+                  {d.name ? isolate(d.name) : t('admin.attendance.unnamed')}
+                </Text>
+                <Text variant="caption" color="textSecondary">
+                  {t('admin.registrants.party', { count: n(d.count) })}
+                </Text>
+              </View>
+              <Button
+                testID={`attendance-dropin-${d.id}-remove`}
+                label={t('admin.attendance.remove')}
+                variant="tertiary"
+                onPress={() => dispatch({ type: 'removeDropIn', id: d.id })}
+              />
+            </View>
+          ))}
+          <TextField
+            testID="attendance-new-name"
+            label={t('admin.attendance.nameLabel')}
+            value={newName}
+            onChangeText={setNewName}
+            maxLength={80}
+          />
+          <Stepper
+            testID="attendance-new-count"
+            label={t('admin.attendance.peopleLabel')}
+            value={newCount}
+            min={1}
+            max={MAX_ENTRY_COUNT}
+            onChange={setNewCount}
+          />
+          <Button
+            testID="attendance-add"
+            label={t('admin.attendance.add')}
+            variant="secondary"
+            icon="plus"
+            fullWidth
+            onPress={() => {
+              dispatch({ type: 'addDropIn', name: newName || null, count: newCount });
+              setNewName('');
+              setNewCount(1);
+            }}
+          />
+        </View>
+      </Card>
 
       {error ? (
         <Text variant="caption" color="textDanger" testID="attendance-error">
@@ -329,14 +363,16 @@ function AttendanceForm({
           message={t('admin.attendance.saved')}
         />
       ) : null}
-      <Button
-        testID="attendance-save"
-        label={t('admin.common.save')}
-        size="large"
-        fullWidth
-        loading={save.status === 'running'}
-        onPress={() => void submit()}
-      />
+      <ScreenFooter>
+        <Button
+          testID="attendance-save"
+          label={t('admin.attendance.save')}
+          size="large"
+          fullWidth
+          loading={save.status === 'running'}
+          onPress={() => void submit()}
+        />
+      </ScreenFooter>
     </View>
   );
 }

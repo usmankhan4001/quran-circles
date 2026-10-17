@@ -1,14 +1,12 @@
 import { View } from 'react-native';
 import type { AdminOccurrence } from '@qc/contracts';
-import { Button, Card, Text, formatNumber, spacing } from '@qc/ui';
+import { Button, Card, SeatMeter, Tag, Text, formatNumber, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { QuickAction } from '../../components/QuickAction';
 import { Screen } from '../../components/Screen';
-import { SeatMeter } from '../../components/SeatMeter';
-import { Tag } from '../../components/Tag';
 import { pickLocalized } from '../../lib/localized';
 import { formatInstantDate, formatInstantTime, isToday, pkDayRange } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -60,9 +58,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                     {t(`admin.home.section.${s.section}`)} ·{' '}
                     {s.language === 'ur' ? 'اردو' : 'English'}
                   </Text>
-                  {s.status === 'draft' ? (
-                    <Tag label={t('admin.home.draft')} tone="warning" />
-                  ) : null}
+                  {s.status === 'draft' ? <Tag label={t('admin.home.draft')} kind="gilt" /> : null}
                   {s.registration.capacity !== null ? (
                     <>
                       <SeatMeter
@@ -163,7 +159,7 @@ function OccurrenceCard({
         <Text variant="label">
           {formatInstantDate(o.startsAt, locale)} · {formatInstantTime(o.startsAt, locale)}
         </Text>
-        {o.status === 'cancelled' ? <Tag label={t('admin.home.cancelled')} tone="danger" /> : null}
+        {o.status === 'cancelled' ? <Tag label={t('admin.home.cancelled')} kind="alert" /> : null}
         {notes.length > 0 ? (
           <Text variant="caption" color={o.status === 'cancelled' ? 'textDanger' : 'textSecondary'}>
             {notes.join(' · ')}

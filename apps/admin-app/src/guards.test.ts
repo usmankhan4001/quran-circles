@@ -54,11 +54,22 @@ describe('colours', () => {
     }
   });
 
-  it('paints the green header from the hero tokens', () => {
-    const hero = files.find((f) => f.path === 'components/HeroHeader.tsx')!;
-    expect(hero.text).toContain('colors.hero');
-    expect(hero.text).toContain('textOnHero');
-    expect(hero.text).toContain('onHero');
+  it('uses the kit green header on every screen, not a local copy', () => {
+    const frame = files.find((f) => f.path === 'components/Screen.tsx')!;
+    expect(frame.text).toMatch(/import \{[^}]*\bHeroHeader\b[^}]*\} from '@qc\/ui'/);
+    expect(files.some((f) => f.path === 'components/HeroHeader.tsx')).toBe(false);
+  });
+
+  it('uses the kit pieces that replaced the local stand-ins', () => {
+    for (const name of ['Tag', 'SessionCard', 'SeatMeter', 'ConfirmSheet']) {
+      expect(
+        files.some((f) => f.path === `components/${name}.tsx`),
+        name,
+      ).toBe(false);
+      for (const f of files) {
+        expect(f.text, f.path).not.toContain(`components/${name}'`);
+      }
+    }
   });
 });
 

@@ -25,13 +25,15 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 
 ## Redesign pass (2026-10-17, layout A)
 
-- Every screen now sits under one green header (`HeroHeader`, painted from `hero` / `textOnHero` / `onHero` glass buttons only; a guard test fails on any raw colour in screen code). Tabs: Today, Places, Updates, Account, floating kit `TabBar` with drawn icons.
-- Today, Places, Updates, session page restyled with `SessionCard`, `Tag`, `SeatMeter`, `QuickAction` tiles; Account has an avatar card and a "You look after" heading; sign-out is an outline button; circle reject is a danger button.
-- Registrants (owner decision 2026-10-17): the phone number is no longer written anywhere. Round call and WhatsApp buttons are named after the person. A pinned "Take attendance" button opens attendance. Tests assert no phone digits in text or aria-labels (4 combos) and the contact links still work.
-- `adminCircles.decide` no longer sends `note` (the contract dropped it). The reject note field is kept but not sent.
-- Local stand-ins, each marked `TODO(kit)`: `HeroHeader`, `Tag`, `SessionCard`, `SeatMeter`, `QuickAction`, `RoundButton`, `glyphs` (call, chat, search, tab icons), `Stepper`. The kit exports none of SearchField, CodeField, Stepper, Tag, SeatMeter, DateStrip, SessionCard, green Header, PrayerStrip, Banner, ConfirmSheet yet (checked at start and end).
-- Not matched: gradient on the hero (solid colour), venue search, "Archive this venue", "Save draft", offline queue, session picker, safe-area insets context, cancelling a whole session from schedule. Attendance, post update, schedule, occurrence and venue/circle editors got the new header and button variants but keep their previous layouts.
-- Tests: 444 in 34 files.
+- Every screen has the kit `HeroHeader` (green, `hero` / `textOnHero` tokens) through `Screen`, and a pinned bottom bar for the main action. Forms deep in a screen put their action there with `ScreenFooter`. Tabs: Today, Places, Updates, Account, kit `TabBar` with drawn icons.
+- Kit pieces now used: `HeroHeader`, `Tag`, `SessionCard` (Today), `SeatMeter`, `SearchField` (registrants, places), `ConfirmSheet` (schedule, occurrence, circle reject), `CodeField` (sign-in). The local `HeroHeader`, `Tag`, `SessionCard`, `SeatMeter` and `ConfirmSheet` are deleted; a guard test fails if they come back.
+- Still local, marked `TODO(kit)` (the kit has no equivalent): `Stepper` (now round tinted buttons), `RoundButton`, `QuickAction`, `glyphs` (call, chat, minus, plus, tab icons).
+- Layouts matched to the drawn screens: Today (greeting, session cards with time, seats, draft tag), session page, registrants (no phone number shown, owner decision 2026-10-17; pinned "Take attendance"), attendance (headcount card with a big stepper, tick-list card with "Mark everyone", others-who-came card, pinned "Save attendance"), post an update (who / message / send-by groups in cards, pinned preview, send and done bars), change the time ("Now" card, time and length, days, from, notify card that says who will be told, pinned review, confirm sheet), occurrence (date card with tag, portion card, recap card, cancel card, pinned save), venue editor (name and address, pin, contact, facilities, entrance cards, pinned "Save venue"), circle editor (status tag, details card, language and section card, approve and reject, pinned save or "Send for approval"), places (search, cards with tags, outline "New venue"), sign-in (app name in the header, phone step, six-box code step), account.
+- The circle reject note field is gone and `adminCircles.decide` sends only `decision`, as the contract now requires.
+- When the server refuses a change made from a confirm sheet, the sheet closes and the error shows on the page (the kit sheet takes only a message).
+- Not built (later wave or no contract): hero gradient (solid colour), "Archive this venue", "Save draft", offline queue, session picker, whole-session cancel from the schedule screen, map pin picker, portion field on the attendance screen (it lives on the occurrence screen), reject reason chips.
+- i18n: 15 keys added in this redesign (en and ur together, Urdu draft). `admin.home.ofCapacity` and `admin.home.quickActions` are not used yet.
+- Tests: 452 in 34 files. Typecheck, eslint and prettier pass; `expo export --platform web` bundles to a scratch folder.
 
 ## In progress
 
@@ -44,7 +46,6 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 ## Questions for the orchestrator
 
 - Resolved 2026-10-17: the registrants screen never shows the number.
-- The circle reject note field is kept but no longer sent. Should the field go?
 - Extra i18n namespaces beyond the six assigned: `admin.signIn`, `admin.home`, `admin.scope`, `admin.account`, `admin.common`, `admin.places`, `admin.updates`, `admin.tabs`, `admin.occurrence`; plus `admin.registrants.noMatch`. Appended to `en.json` and `ur.json` together, nothing reordered or removed. Please confirm they are acceptable (a new namespace counts as a contract change).
 - Sign-in sends the code over `whatsapp`. Is that the intended default channel for coordinators?
 - Design specs (written by the ui lane at the same time) ask for things the build does not do yet: offline queue for attendance and a cached registrants list, a session picker and offline note on registrants, "Present" text on ticked rows, recap and portion fields on the attendance screen (they live on the occurrence screen, per the contract), cancelling a whole session from the schedule screen, a map pin picker and "Archive this venue", "Save draft" for circles. None is in the assigned item list. Which should be next?

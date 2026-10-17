@@ -9,7 +9,7 @@ import { useApi } from '../../auth/AuthProvider';
 import { BilingualField } from '../../components/BilingualField';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { Screen } from '../../components/Screen';
+import { Screen, ScreenFooter } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -124,94 +124,117 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
 
   return (
     <View style={{ gap: spacing.lg }} testID="venue-editor-form">
-      {!original ? (
-        <Select
-          testID="venue-city"
-          label={t('admin.venueEditor.city.label')}
-          required
-          value={form.cityId ?? undefined}
-          onChange={(cityId) => patch({ cityId, areaId: null })}
-          options={creatableCities.map((c) => ({
-            value: c.id,
-            label: pickLocalized(c.name, locale),
-          }))}
-          error={errors.city ? t(errors.city) : undefined}
-        />
-      ) : null}
-      <Select
-        testID="venue-area"
-        label={t('admin.venueEditor.area.label')}
-        required
-        value={form.areaId ?? undefined}
-        onChange={(areaId) => patch({ areaId })}
-        options={(areas.data ?? []).map((a) => ({
-          value: a.id,
-          label: pickLocalized(a.name, locale),
-        }))}
-        error={errors.area ? t(errors.area) : undefined}
-        disabled={areas.status === 'loading'}
-      />
-      <BilingualField
-        testID="venue-name"
-        label={t('admin.venueEditor.name.label')}
-        value={form.name}
-        onChange={(name) => patch({ name })}
-        required
-        error={errors.name ? t(errors.name) : undefined}
-        disabled={busy}
-      />
-      <BilingualField
-        testID="venue-address"
-        label={t('admin.venueEditor.address.label')}
-        value={form.address}
-        onChange={(address) => patch({ address })}
-        multiline
-        required
-        error={errors.address ? t(errors.address) : undefined}
-        disabled={busy}
-      />
-      <TextField
-        testID="venue-lat"
-        label={t('admin.venueEditor.lat.label')}
-        helper={t('admin.venueEditor.coords.help')}
-        value={form.lat}
-        onChangeText={(lat) => patch({ lat })}
-        error={errors.lat ? t(errors.lat) : undefined}
-        keyboardType="numbers-and-punctuation"
-        contentDirection="ltr"
-        required
-        loading={busy}
-      />
-      <TextField
-        testID="venue-lng"
-        label={t('admin.venueEditor.lng.label')}
-        value={form.lng}
-        onChangeText={(lng) => patch({ lng })}
-        error={errors.lng ? t(errors.lng) : undefined}
-        keyboardType="numbers-and-punctuation"
-        contentDirection="ltr"
-        required
-        loading={busy}
-      />
-      <TextField
-        testID="venue-phone"
-        label={t('admin.venueEditor.phone.label')}
-        helper={t('admin.venueEditor.phone.help')}
-        value={form.contactPhone}
-        onChangeText={(contactPhone) => patch({ contactPhone })}
-        error={errors.phone ? t(errors.phone) : undefined}
-        keyboardType="phone-pad"
-        contentDirection="ltr"
-        loading={busy}
-      />
-
-      <Text variant="title3" heading={2}>
-        {t('admin.venueEditor.facilities.title')}
-      </Text>
-      <Text variant="caption" color="textSecondary">
-        {t('admin.venueEditor.facilities.help')}
-      </Text>
       <Card>
+        <View style={{ gap: spacing.md }}>
+          <Text variant="title3" heading={2}>
+            {t('admin.venueEditor.details')}
+          </Text>
+          {!original ? (
+            <Select
+              testID="venue-city"
+              label={t('admin.venueEditor.city.label')}
+              required
+              value={form.cityId ?? undefined}
+              onChange={(cityId) => patch({ cityId, areaId: null })}
+              options={creatableCities.map((c) => ({
+                value: c.id,
+                label: pickLocalized(c.name, locale),
+              }))}
+              error={errors.city ? t(errors.city) : undefined}
+            />
+          ) : null}
+          <Select
+            testID="venue-area"
+            label={t('admin.venueEditor.area.label')}
+            required
+            value={form.areaId ?? undefined}
+            onChange={(areaId) => patch({ areaId })}
+            options={(areas.data ?? []).map((a) => ({
+              value: a.id,
+              label: pickLocalized(a.name, locale),
+            }))}
+            error={errors.area ? t(errors.area) : undefined}
+            disabled={areas.status === 'loading'}
+          />
+          <BilingualField
+            testID="venue-name"
+            label={t('admin.venueEditor.name.label')}
+            value={form.name}
+            onChange={(name) => patch({ name })}
+            required
+            error={errors.name ? t(errors.name) : undefined}
+            disabled={busy}
+          />
+          <BilingualField
+            testID="venue-address"
+            label={t('admin.venueEditor.address.label')}
+            value={form.address}
+            onChange={(address) => patch({ address })}
+            multiline
+            required
+            error={errors.address ? t(errors.address) : undefined}
+            disabled={busy}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <View style={{ gap: spacing.md }}>
+          <Text variant="title3" heading={2}>
+            {t('admin.venueEditor.pin.label')}
+          </Text>
+          <TextField
+            testID="venue-lat"
+            label={t('admin.venueEditor.lat.label')}
+            helper={t('admin.venueEditor.coords.help')}
+            value={form.lat}
+            onChangeText={(lat) => patch({ lat })}
+            error={errors.lat ? t(errors.lat) : undefined}
+            keyboardType="numbers-and-punctuation"
+            contentDirection="ltr"
+            required
+            loading={busy}
+          />
+          <TextField
+            testID="venue-lng"
+            label={t('admin.venueEditor.lng.label')}
+            value={form.lng}
+            onChangeText={(lng) => patch({ lng })}
+            error={errors.lng ? t(errors.lng) : undefined}
+            keyboardType="numbers-and-punctuation"
+            contentDirection="ltr"
+            required
+            loading={busy}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <View style={{ gap: spacing.md }}>
+          <Text variant="title3" heading={2}>
+            {t('admin.venueEditor.contact')}
+          </Text>
+          <TextField
+            testID="venue-phone"
+            label={t('admin.venueEditor.phone.label')}
+            helper={t('admin.venueEditor.phone.help')}
+            value={form.contactPhone}
+            onChangeText={(contactPhone) => patch({ contactPhone })}
+            error={errors.phone ? t(errors.phone) : undefined}
+            keyboardType="phone-pad"
+            contentDirection="ltr"
+            loading={busy}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <Text variant="title3" heading={2}>
+          {t('admin.venueEditor.facilities.title')}
+        </Text>
+        <Text variant="caption" color="textSecondary">
+          {t('admin.venueEditor.facilities.help')}
+        </Text>
         {FACILITY_KEYS.map((key) => (
           <Checkbox
             key={key}
@@ -223,14 +246,16 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
           />
         ))}
       </Card>
-      <BilingualField
-        testID="venue-entrance"
-        label={t('admin.venueEditor.entrance.label')}
-        value={form.entranceNotes}
-        onChange={(entranceNotes) => patch({ entranceNotes })}
-        multiline
-        disabled={busy}
-      />
+      <Card>
+        <BilingualField
+          testID="venue-entrance"
+          label={t('admin.venueEditor.entrance.label')}
+          value={form.entranceNotes}
+          onChange={(entranceNotes) => patch({ entranceNotes })}
+          multiline
+          disabled={busy}
+        />
+      </Card>
 
       {errors.nothing ? (
         <Text variant="caption" color="textDanger" testID="venue-nothing">
@@ -238,14 +263,16 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
         </Text>
       ) : null}
       <ErrorNotice error={failure} onDismiss={original ? update.reset : create.reset} />
-      <Button
-        testID="venue-save"
-        label={original ? t('admin.common.save') : t('admin.venueEditor.submit')}
-        size="large"
-        fullWidth
-        loading={busy}
-        onPress={() => void submit()}
-      />
+      <ScreenFooter>
+        <Button
+          testID="venue-save"
+          label={t('admin.venueEditor.submit')}
+          size="large"
+          fullWidth
+          loading={busy}
+          onPress={() => void submit()}
+        />
+      </ScreenFooter>
     </View>
   );
 }

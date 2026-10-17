@@ -135,7 +135,7 @@ describe('OccurrenceScreen', () => {
     );
   });
 
-  it('keeps the sheet open and shows the mapped error when the server refuses the cancellation', async () => {
+  it('closes the sheet and shows the mapped error when the server refuses the cancellation', async () => {
     const { backend } = await open();
     backend.failWith('adminOccurrences.update', 'session_cancelled');
     await screen.findByTestId('occurrence-form');

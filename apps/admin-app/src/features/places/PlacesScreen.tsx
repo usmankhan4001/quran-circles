@@ -1,14 +1,24 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { can, type AdminCircle, type Venue } from '@qc/contracts';
-import { Button, EmptyState, SegmentedControl, Text, spacing } from '@qc/ui';
+import {
+  Button,
+  Card,
+  EmptyState,
+  Icon,
+  SearchField,
+  SegmentedControl,
+  Tag,
+  Text,
+  spacing,
+  useTheme,
+  type TagKind,
+} from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
-import { SessionCard } from '../../components/SessionCard';
-import { Tag } from '../../components/Tag';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -57,12 +67,15 @@ function VenueList() {
   const mayCreate = principal.assignments.some(
     (a) => a.role === 'national_admin' || a.role === 'city_coordinator',
   );
+  const [search, setSearch] = useState('');
   return (
     <View style={{ gap: spacing.md }}>
       {mayCreate ? (
         <Button
           testID="places-new-venue"
           label={t('admin.places.newVenue')}
+          icon="plus"
+          variant="outline"
           fullWidth
           onPress={() => nav.push(routes.newVenue())}
         />
@@ -76,16 +89,23 @@ function VenueList() {
             />
           ) : (
             <View style={{ gap: spacing.md }}>
-              {venues.map((v) => (
-                <SessionCard
+              <SearchField
+                testID="places-venue-search"
+                accessibilityLabel={t('admin.places.searchVenues')}
+                placeholder={t('admin.places.searchVenues')}
+                value={search}
+                onChangeText={setSearch}
+              />
+              {matching(venues, (v) => pickLocalized(v.name, locale), search).map((v) => (
+                <PlaceCard
                   key={v.id}
                   testID={`venue-${v.id}`}
                   title={pickLocalized(v.name, locale)}
                   detail={pickLocalized(v.address, locale)}
                   tag={
-                    v.status === 'archived' ? (
-                      <Tag label={t('admin.places.archived')} tone="neutral" />
-                    ) : undefined
+                    v.status === 'archived'
+                      ? { label: t('admin.places.archived'), kind: 'neutral' }
+                      : undefined
                   }
                   onPress={() => nav.push(routes.venue(v.id))}
                 />
@@ -124,12 +144,15 @@ function CircleList() {
     return { circles: circlesSorted, venueNames };
   }, [filter.cityId, filter.venueId, active?.id, locale]);
   const mayCreate = principal.assignments.length > 0;
+  const [search, setSearch] = useState('');
   return (
     <View style={{ gap: spacing.md }}>
       {mayCreate ? (
         <Button
           testID="places-new-circle"
           label={t('admin.places.newCircle')}
+          icon="plus"
+          variant="outline"
           fullWidth
           onPress={() => nav.push(routes.newCircle())}
         />
@@ -156,8 +179,15 @@ function CircleList() {
                   {t.plural('admin.places.needsDecision', pending, { count: n(pending) })}
                 </Text>
               ) : null}
-              {circles.map((c) => (
-                <SessionCard
+              <SearchField
+                testID="places-circle-search"
+                accessibilityLabel={t('admin.places.searchCircles')}
+                placeholder={t('admin.places.searchCircles')}
+                value={search}
+                onChangeText={setSearch}
+              />
+              {matching(circles, (c) => pickLocalized(c.name, locale), search).map((c) => (
+                <PlaceCard
                   key={c.id}
                   testID={`circle-${c.id}`}
                   title={pickLocalized(c.name, locale)}
@@ -167,9 +197,9 @@ function CircleList() {
                       : `${venueNames[c.venueId] ?? ''} · ${t(`admin.circleEditor.status.${c.status}`)}`
                   }
                   tag={
-                    c.status === 'pending_approval' ? (
-                      <Tag label={t(`admin.circleEditor.status.${c.status}`)} tone="warning" />
-                    ) : undefined
+                    c.status === 'pending_approval'
+                      ? { label: t(`admin.circleEditor.status.${c.status}`), kind: 'gilt' }
+                      : undefined
                   }
                   onPress={() => nav.push(routes.circle(c.id))}
                 />
@@ -179,5 +209,42 @@ function CircleList() {
         }}
       </QueryBoundary>
     </View>
+  );
+}
+
+/** Narrows what is already loaded by name; it never asks the server again. */
+function matching<T>(items: T[], nameOf: (item: T) => string, search: string): T[] {
+  const needle = search.trim().toLocaleLowerCase();
+  return needle ? items.filter((i) => nameOf(i).toLocaleLowerCase().includes(needle)) : items;
+}
+
+/** A venue or circle row: name, a detail line, a status tag and an arrow into the editor. */
+function PlaceCard({
+  title,
+  detail,
+  tag,
+  onPress,
+  testID,
+}: {
+  title: string;
+  detail: string;
+  tag?: { label: string; kind: TagKind };
+  onPress: () => void;
+  testID: string;
+}): ReactNode {
+  const { colors } = useTheme();
+  return (
+    <Card testID={testID} onPress={onPress} accessibilityLabel={`${title}, ${detail}`}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View style={{ flex: 1, gap: spacing.xs }}>
+          <Text variant="label">{title}</Text>
+          <Text variant="caption" color="textSecondary">
+            {detail}
+          </Text>
+          {tag ? <Tag label={tag.label} kind={tag.kind} /> : null}
+        </View>
+        <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
+      </View>
+    </Card>
   );
 }
