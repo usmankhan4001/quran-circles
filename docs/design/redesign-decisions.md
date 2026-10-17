@@ -109,16 +109,33 @@ Chosen by the owner on 2026-10-17 from [Sheets, dialogs and messages](https://cl
 
 Chosen by the owner on 2026-10-17 from [Home options](https://claude.ai/artifact/2CiFog76rb9ZAHLF2BDCHX), a mix of H1 and H3. Top to bottom: green header with area, Hijri date and notifications, holding "Your next circle" (title, venue and distance, big start time and countdown, the portion, sections, Directions and My registration); a search field with a filter button; a small map card with start-time pins and "12 circles within 3 km"; "Circles near you" as picture cards (distance, time, sections, seats); an Ayah of the day card (Arabic, translation, reference, share); then a smaller "Also in the app" row with Quran, Prayer times, Qibla and Updates. Floating tab bar: Home, Nearby, Quran, Journey. In Ramadan the header card shows tonight's Dora instead.
 
+### D15. Screens settled on 2026-10-17
+
+The owner called the UI final on 2026-10-17. The picks below are the suggested ones from each set; the owner was asked to confirm or change them.
+
+| Screen | Pick | What it means | Options page |
+| --- | --- | --- | --- |
+| Navigation | N2 | Floating tab bar: Home, Nearby, Quran, Journey | navigation page |
+| Nearby | N2 | Green header as on Home with a Map / List switch; small cards for the nearest places on the map; the list ends with "Ask for a circle near you" | https://claude.ai/artifact/EYjcjnrHaSBfovNtJxtGHU |
+| Session and venue | S1 | Photo of the place on top, details scroll over it in raised cards, one Register bar at the bottom | https://claude.ai/artifact/RgfYMvwTtFh8GuPtDa2ex3 |
+| Register | R2 | Opens as a green-topped sheet (D13) over the session page | https://claude.ai/artifact/3aF22dRg3yjS8wbGxKr18k |
+| My Journey | J1 | Green header with three season numbers, then upcoming (with reminder switches), circle progress and followed masjids | https://claude.ai/artifact/E8bF29LSW1Pc2FSGKM3xa7 |
+| Quran and prayer times | Q1 | Clean lists: star-numbered surahs, verse cards with translation, prayer times as a list with a bell per prayer | https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx |
+| Updates, profile and sign-in | B | Green header on each page; updates as cards linking to the session; profile opens with quick tiles | https://claude.ai/artifact/4WQhXBEstymMgd8GgEADrU |
+| Admin app | A | Same look as the user app: green header, floating tabs, today's circles as big cards with quick actions | https://claude.ai/artifact/LgHSJiqzbsUtSWSKA4NDfc |
+| Console | C2 | Green sidebar with the eight-point pattern; light content area | https://claude.ai/artifact/HKniV9wA9yrnpqWgGwB22m |
+
+### D16. Feature and staff screens follow the picks
+
+The remaining screens were drawn in the chosen styles (Q1 lists, O3 sheets, admin A, console C2) with no alternatives:
+
+- Quran, prayer, posters, circle features and staff tools: https://claude.ai/artifact/Q4Qxk1AfrL7i411qrnXVAR. Covers paras, search, reading settings, verse actions, bookmarks, offline copies, qibla, monthly timetable, prayer alerts, asking for a circle, first open, ayah share, the poster flow (design, edit, ready, out of date), session companion, invites, reminders, Ramadan Home, the home-screen widget, message templates, circle requests by area and venue handover.
+- Admin app and console: https://claude.ai/artifact/9orj7uMZstU7Pq88PrjBY1. Covers today's registrants, changing or cancelling a time, venues and circles, venue and circle editors with approval, sign-in, account, coordinator invites, bulk import check and exports.
+- Posters use the Tanzeem green (D3) and Figtree / Nastaliq (D4), not the emerald, DM Sans and Gulzar in `poster-direction.md`; that file needs updating to match.
+
 ## Open questions
 
-- Screen layouts drawn on 2026-10-17, owner picks at the end:
-  - Nearby N1 / N2 / N3: https://claude.ai/artifact/EYjcjnrHaSBfovNtJxtGHU
-  - Session and venue S1 / S2 / S3: https://claude.ai/artifact/RgfYMvwTtFh8GuPtDa2ex3
-  - Register R1 / R2 / R3: https://claude.ai/artifact/3aF22dRg3yjS8wbGxKr18k
-  - My Journey J1 / J2 / J3: https://claude.ai/artifact/E8bF29LSW1Pc2FSGKM3xa7
-  - Quran and prayer times Q1 / Q2: https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx
-  - Updates, profile and sign-in A / B: https://claude.ai/artifact/4WQhXBEstymMgd8GgEADrU
-  - Admin app A / B: https://claude.ai/artifact/LgHSJiqzbsUtSWSKA4NDfc
-  - Console C1 / C2: https://claude.ai/artifact/HKniV9wA9yrnpqWgGwB22m
-- Navigation (N1 / N2 / N3 from the navigation page): the screens since D12 use the floating bar (N2); not yet confirmed.
+- Confirm the D15 picks (asked on 2026-10-17).
+- Update `poster-direction.md` to the D3 colours and D4 type.
 - Font files and licences: Jameel Noori Nastaleeq or Mehr Nastaliq, and KFGQPC or QCF.
+- Applying the design to `packages/ui` and the apps waits for the owner's go-ahead.
