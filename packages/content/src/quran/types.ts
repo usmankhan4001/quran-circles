@@ -1,15 +1,20 @@
 /**
- * One ayah as the reader shows it. The Arabic text and the Urdu translation come from the
- * online source at run time. Nothing in this repository holds them (see the rights section of
- * docs/agents/briefs/content.md).
+ * One ayah as the reader shows it. The Arabic text and the Urdu and English translations
+ * (Maududi's) come from the online source at run time. Nothing in this repository holds them
+ * (see the rights section of docs/agents/briefs/content.md).
  */
 export interface QuranVerse {
   surah: number;
   /** The ayah number inside its surah. */
   ayah: number;
   arabic: string;
-  /** Null when the translation was not available for this ayah. */
+  /** Null when the Urdu translation was not available for this ayah. */
   urdu: string | null;
+  /**
+   * Null when the English translation was not available for this ayah: the source left the
+   * edition out or sent it empty, or the copy was cached before English was asked for.
+   */
+  english: string | null;
 }
 
 export type PassageKind = 'surah' | 'juz';

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createMemoryStorage } from '../storage/memory';
-import { createClock, createFakeQuranApi, fakeArabic, fakeUrdu } from '../test/fakes';
+import { createClock, createFakeQuranApi, fakeArabic, fakeEnglish, fakeUrdu } from '../test/fakes';
 import { createAlQuranCloudSource } from './alquranCloud';
-import { CACHE_FRESH_MS, createCachedQuranSource } from './cache';
+import { CACHE_FORMAT, CACHE_FRESH_MS, createCachedQuranSource } from './cache';
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -97,7 +97,7 @@ describe('createCachedQuranSource', () => {
     const { api, source } = setup();
     await source.getSurah(1);
     await source.getJuz(1);
-    expect(api.calls).toHaveLength(3); // one for the surah, two editions for the juz
+    expect(api.calls).toHaveLength(4); // one for the surah, three editions for the juz
     expect((await source.getSurah(1)).fromCache).toBe(true);
     expect((await source.getJuz(1)).fromCache).toBe(true);
   });
@@ -194,6 +194,7 @@ describe('createCachedQuranSource getAyah', () => {
       ayah: 255,
       arabic: fakeArabic(2, 255),
       urdu: fakeUrdu(2, 255),
+      english: fakeEnglish(2, 255),
     });
   });
 
@@ -218,6 +219,7 @@ describe('createCachedQuranSource getAyah', () => {
       ayah: 3,
       arabic: fakeArabic(112, 3),
       urdu: fakeUrdu(112, 3),
+      english: fakeEnglish(112, 3),
     });
     expect(api.calls).toHaveLength(1);
   });
@@ -342,5 +344,160 @@ describe('createCachedQuranSource getAyah', () => {
     const pending = source.getAyah(2, 255, { signal: controller.signal });
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+  });
+});
+
+/**
+ * Entries written before the English translation was asked for (format 1): no `format` field,
+ * and no `english` on the verses. Built here from invented words.
+ */
+const legacyVerse = (surah: number, ayah: number) => ({
+  surah,
+  ayah,
+  arabic: fakeArabic(surah, ayah),
+  urdu: fakeUrdu(surah, ayah),
+});
+const legacySurah = (surah: number, ayahs: number, fetchedAt: string) =>
+  JSON.stringify({
+    kind: 'surah',
+    id: surah,
+    fetchedAt,
+    verses: Array.from({ length: ayahs }, (_, i) => legacyVerse(surah, i + 1)),
+  });
+const legacyAyah = (surah: number, ayah: number, fetchedAt: string) =>
+  JSON.stringify({ kind: 'ayah', fetchedAt, verse: legacyVerse(surah, ayah) });
+
+describe('createCachedQuranSource with copies cached before English', () => {
+  const seed = async (
+    storage: ReturnType<typeof createMemoryStorage>,
+    entries: Record<string, string>,
+  ) => {
+    for (const [key, value] of Object.entries(entries)) await storage.setItem(key, value);
+    await storage.setItem(
+      'qc.quran.cache.index.v1',
+      JSON.stringify(Object.keys(entries).map((key, i) => ({ key, accessedAt: i }))),
+    );
+  };
+
+  it('writes the English and the current format with every new copy', async () => {
+    const { storage, source } = setup();
+    await source.getSurah(112);
+    await source.getAyah(2, 255);
+    const surah = JSON.parse((await storage.getItem('qc.quran.cache.v1:surah:112')) ?? '{}') as {
+      format: number;
+      verses: { english: string | null }[];
+    };
+    expect(surah.format).toBe(CACHE_FORMAT);
+    expect(surah.verses[0]?.english).toBe(fakeEnglish(112, 1));
+    const ayah = JSON.parse((await storage.getItem('qc.quran.cache.v1:ayah:2:255')) ?? '{}') as {
+      format: number;
+      verse: { english: string | null };
+    };
+    expect(ayah.format).toBe(CACHE_FORMAT);
+    expect(ayah.verse.english).toBe(fakeEnglish(2, 255));
+  });
+
+  it('fetches an old-format passage again when online, even inside its freshness window', async () => {
+    const { api, clock, storage, source } = setup();
+    await seed(storage, {
+      'qc.quran.cache.v1:surah:112': legacySurah(112, 4, clock.now().toISOString()),
+    });
+    const passage = await source.getSurah(112);
+    expect(passage).toMatchObject({ fromCache: false, stale: false });
+    expect(passage.verses[0]?.english).toBe(fakeEnglish(112, 1));
+    expect(api.calls).toHaveLength(1);
+    // The refetched copy replaced the old one, so the next read is a plain cache hit.
+    const again = await source.getSurah(112);
+    expect(again).toMatchObject({ fromCache: true, stale: false });
+    expect(again.verses[0]?.english).toBe(fakeEnglish(112, 1));
+    expect(api.calls).toHaveLength(1);
+  });
+
+  it('still shows an old-format passage offline, without English and marked stale', async () => {
+    const { api, clock, storage, source } = setup();
+    await seed(storage, {
+      'qc.quran.cache.v1:surah:112': legacySurah(112, 4, clock.now().toISOString()),
+    });
+    api.offline = true;
+    const passage = await source.getSurah(112);
+    expect(passage).toMatchObject({ kind: 'surah', id: 112, fromCache: true, stale: true });
+    expect(passage.verses).toHaveLength(4);
+    expect(passage.verses[1]).toEqual({
+      surah: 112,
+      ayah: 2,
+      arabic: fakeArabic(112, 2),
+      urdu: fakeUrdu(112, 2),
+      english: null,
+    });
+    expect(await source.isCached({ kind: 'surah', id: 112 })).toBe(true);
+    expect(await source.cachedPassages()).toEqual([{ kind: 'surah', id: 112 }]);
+  });
+
+  it('keeps the old copy when the refetch fails with an error status', async () => {
+    const { api, clock, storage, source } = setup();
+    const old = legacySurah(112, 4, clock.now().toISOString());
+    await seed(storage, { 'qc.quran.cache.v1:surah:112': old });
+    api.failNextWith = 503;
+    expect(await source.getSurah(112)).toMatchObject({ fromCache: true, stale: true });
+    expect(await storage.getItem('qc.quran.cache.v1:surah:112')).toBe(old);
+  });
+
+  it('fetches an old-format single ayah again when online, and shows it offline', async () => {
+    const { api, clock, storage, source } = setup();
+    await seed(storage, {
+      'qc.quran.cache.v1:ayah:2:255': legacyAyah(2, 255, clock.now().toISOString()),
+    });
+    api.offline = true;
+    const offline = await source.getAyah(2, 255);
+    expect(offline).toMatchObject({ fromCache: true, stale: true });
+    expect(offline.verse).toEqual({
+      surah: 2,
+      ayah: 255,
+      arabic: fakeArabic(2, 255),
+      urdu: fakeUrdu(2, 255),
+      english: null,
+    });
+    api.offline = false;
+    const online = await source.getAyah(2, 255);
+    expect(online).toMatchObject({ fromCache: false, stale: false });
+    expect(online.verse.english).toBe(fakeEnglish(2, 255));
+    expect(api.calls.filter((c) => c.includes('/ayah/'))).toHaveLength(2);
+  });
+
+  it('prefers a fresh current copy of an ayah over a newer old-format one', async () => {
+    const { api, clock, storage, source } = setup();
+    await source.getAyah(112, 2);
+    clock.advance(DAY);
+    await storage.setItem(
+      'qc.quran.cache.v1:surah:112',
+      legacySurah(112, 4, clock.now().toISOString()),
+    );
+    const result = await source.getAyah(112, 2);
+    expect(result).toMatchObject({ fromCache: true, stale: false });
+    expect(result.verse.english).toBe(fakeEnglish(112, 2));
+    expect(api.calls).toHaveLength(1);
+  });
+
+  it('does not read an ayah out of an old-format surah as fresh', async () => {
+    const { api, clock, storage, source } = setup();
+    await seed(storage, {
+      'qc.quran.cache.v1:surah:112': legacySurah(112, 4, clock.now().toISOString()),
+    });
+    const result = await source.getAyah(112, 3);
+    expect(result.fromCache).toBe(false);
+    expect(result.verse.english).toBe(fakeEnglish(112, 3));
+    expect(api.calls).toHaveLength(1);
+  });
+
+  it('keeps a copy fetched without English (a partial answer) as current, with no English', async () => {
+    const { api, clock, source } = setup();
+    api.english = 'missing';
+    await source.getSurah(112);
+    api.english = 'full';
+    clock.advance(DAY);
+    const again = await source.getSurah(112);
+    expect(again).toMatchObject({ fromCache: true, stale: false });
+    expect(again.verses.every((v) => v.english === null && v.urdu !== null)).toBe(true);
+    expect(api.calls).toHaveLength(1);
   });
 });

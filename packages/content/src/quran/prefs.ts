@@ -10,7 +10,7 @@ export const ARABIC_ZOOM_STEPS = [0.8, 1, 1.25, 1.5, 1.85, 2.2] as const;
 export const DEFAULT_ARABIC_ZOOM_INDEX = 1;
 
 export interface ReaderPrefs {
-  /** Show the Urdu translation under each ayah. */
+  /** Show the translation under each ayah (Urdu on an Urdu screen, English on an English one). */
   showTranslation: boolean;
   /** An index into ARABIC_ZOOM_STEPS. */
   arabicZoomIndex: number;

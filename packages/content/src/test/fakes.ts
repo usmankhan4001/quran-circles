@@ -14,12 +14,19 @@ export const fakeArabic = (surah: number, ayah: number): string => {
   return ayah === 1 && surah !== 1 && surah !== 9 ? `${FAKE_OPENING} ${body}` : body;
 };
 export const fakeUrdu = (surah: number, ayah: number): string => `FAKE-UR ${surah}:${ayah}`;
+export const fakeEnglish = (surah: number, ayah: number): string => `FAKE-EN ${surah}:${ayah}`;
 
-export const fakeVerse = (surah: number, ayah: number, urdu = true): QuranVerse => ({
+export const fakeVerse = (
+  surah: number,
+  ayah: number,
+  urdu = true,
+  english = true,
+): QuranVerse => ({
   surah,
   ayah,
   arabic: fakeArabic(surah, ayah),
   urdu: urdu ? fakeUrdu(surah, ayah) : null,
+  english: english ? fakeEnglish(surah, ayah) : null,
 });
 
 interface FakeAyah {
@@ -46,9 +53,28 @@ export interface FakeQuranApi {
   failNextWith?: number;
   /** Answer with a body that is not valid JSON for the source. */
   garbage: boolean;
-  /** Leave the translation out of every response. */
+  /** Leave the translations (Urdu and English) out of every response. */
   withoutTranslation: boolean;
+  /**
+   * How the English edition is answered. `full`: like the others. `missing`: left out of a
+   * combined answer, and a 404 for a juz. `empty`: there, with no ayahs (combined surah, juz)
+   * or an empty text (single ayah). `unreadable`: there, in a shape the source cannot read.
+   */
+  english: 'full' | 'missing' | 'empty' | 'unreadable';
 }
+
+const editionOf = (id: string): 'arabic' | 'urdu' | 'english' | null => {
+  if (id === 'quran-uthmani') return 'arabic';
+  if (id.startsWith('ur.')) return 'urdu';
+  if (id.startsWith('en.')) return 'english';
+  return null;
+};
+const textOf = (edition: 'arabic' | 'urdu' | 'english', surah: number, ayah: number): string =>
+  edition === 'arabic'
+    ? fakeArabic(surah, ayah)
+    : edition === 'urdu'
+      ? fakeUrdu(surah, ayah)
+      : fakeEnglish(surah, ayah);
 
 /** A stand-in for api.alquran.cloud that serves invented text. */
 export function createFakeQuranApi(): FakeQuranApi {
@@ -57,6 +83,7 @@ export function createFakeQuranApi(): FakeQuranApi {
     offline: false,
     garbage: false,
     withoutTranslation: false,
+    english: 'full',
     fetch: ((input: RequestInfo | URL) => {
       const url = String(input);
       api.calls.push(url);
@@ -68,48 +95,80 @@ export function createFakeQuranApi(): FakeQuranApi {
       }
       if (api.garbage) return Promise.resolve(new Response('{"status":"OK","data":{"nope":1}}'));
 
-      const surahMatch = /\/surah\/(\d+)\/editions\/([^,]+),(.+)$/.exec(url);
+      const surahMatch = /\/surah\/(\d+)\/editions\/([^/]+)$/.exec(url);
       if (surahMatch) {
         const surah = Number(surahMatch[1]);
         const count = ayahCountOf(surah);
         if (count === 0) return Promise.resolve(new Response('{}', { status: 404 }));
-        const arabic = Array.from({ length: count }, (_, i) =>
-          ayahOf(surah, i + 1, fakeArabic(surah, i + 1), false),
-        );
-        const urdu = api.withoutTranslation
-          ? []
-          : Array.from({ length: count }, (_, i) =>
-              ayahOf(surah, i + 1, fakeUrdu(surah, i + 1), false),
-            );
-        return Promise.resolve(json({ status: 'OK', data: [{ ayahs: arabic }, { ayahs: urdu }] }));
+        const data: unknown[] = [];
+        for (const id of (surahMatch[2] ?? '').split(',')) {
+          const edition = editionOf(id);
+          if (edition === null) return Promise.resolve(new Response('{}', { status: 404 }));
+          if (edition === 'english' && api.english === 'missing') continue;
+          if (edition === 'english' && api.english === 'unreadable') {
+            data.push({ nope: 1 });
+            continue;
+          }
+          const empty =
+            (edition !== 'arabic' && api.withoutTranslation) ||
+            (edition === 'english' && api.english === 'empty');
+          data.push({
+            ayahs: empty
+              ? []
+              : Array.from({ length: count }, (_, i) =>
+                  ayahOf(surah, i + 1, textOf(edition, surah, i + 1), false),
+                ),
+          });
+        }
+        return Promise.resolve(json({ status: 'OK', data }));
       }
 
-      const ayahMatch = /\/ayah\/(\d+):(\d+)\/editions\/([^,]+),(.+)$/.exec(url);
+      const ayahMatch = /\/ayah\/(\d+):(\d+)\/editions\/([^/]+)$/.exec(url);
       if (ayahMatch) {
         const surah = Number(ayahMatch[1]);
         const ayah = Number(ayahMatch[2]);
         if (ayah < 1 || ayah > ayahCountOf(surah)) {
           return Promise.resolve(new Response('{}', { status: 404 }));
         }
-        const data = [ayahOf(surah, ayah, fakeArabic(surah, ayah), true)];
-        if (!api.withoutTranslation) data.push(ayahOf(surah, ayah, fakeUrdu(surah, ayah), true));
-        else data.push(ayahOf(surah, ayah, '', true));
+        const data: unknown[] = [];
+        for (const id of (ayahMatch[3] ?? '').split(',')) {
+          const edition = editionOf(id);
+          if (edition === null) return Promise.resolve(new Response('{}', { status: 404 }));
+          if (edition === 'english' && api.english === 'missing') continue;
+          if (edition === 'english' && api.english === 'unreadable') {
+            data.push({ nope: 1 });
+            continue;
+          }
+          const empty =
+            (edition !== 'arabic' && api.withoutTranslation) ||
+            (edition === 'english' && api.english === 'empty');
+          data.push(ayahOf(surah, ayah, empty ? '' : textOf(edition, surah, ayah), true));
+        }
         return Promise.resolve(json({ status: 'OK', data }));
       }
 
       const juzMatch = /\/juz\/(\d+)\/(.+)$/.exec(url);
       if (juzMatch) {
         const juz = Number(juzMatch[1]);
-        const edition = juzMatch[2] ?? '';
-        const isArabic = edition === 'quran-uthmani';
-        const ayahs = juzSegments(juz).flatMap((seg) =>
-          Array.from({ length: seg.toAyah - seg.fromAyah + 1 }, (_, i) => {
-            const ayah = seg.fromAyah + i;
-            if (isArabic) return ayahOf(seg.surah, ayah, fakeArabic(seg.surah, ayah), true);
-            if (api.withoutTranslation) return null;
-            return ayahOf(seg.surah, ayah, fakeUrdu(seg.surah, ayah), true);
-          }).filter((a): a is FakeAyah => a !== null),
-        );
+        const edition = editionOf(juzMatch[2] ?? '');
+        if (edition === null) return Promise.resolve(new Response('{}', { status: 404 }));
+        if (edition === 'english' && api.english === 'missing') {
+          return Promise.resolve(new Response('{}', { status: 404 }));
+        }
+        if (edition === 'english' && api.english === 'unreadable') {
+          return Promise.resolve(json({ status: 'OK', data: { nope: 1 } }));
+        }
+        const empty =
+          (edition !== 'arabic' && api.withoutTranslation) ||
+          (edition === 'english' && api.english === 'empty');
+        const ayahs = empty
+          ? []
+          : juzSegments(juz).flatMap((seg) =>
+              Array.from({ length: seg.toAyah - seg.fromAyah + 1 }, (_, i) => {
+                const ayah = seg.fromAyah + i;
+                return ayahOf(seg.surah, ayah, textOf(edition, seg.surah, ayah), true);
+              }),
+            );
         return Promise.resolve(json({ status: 'OK', data: { ayahs } }));
       }
       return Promise.resolve(new Response('{}', { status: 404 }));

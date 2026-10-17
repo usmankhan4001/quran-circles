@@ -22,13 +22,27 @@ export const CACHE_MAX_PASSAGES = 24;
 const CACHE_PREFIX = 'qc.quran.cache.v1:';
 const INDEX_KEY = 'qc.quran.cache.index.v1';
 
-const VerseSchema = z.object({
-  surah: z.number().int(),
-  ayah: z.number().int(),
-  arabic: z.string(),
-  urdu: z.string().nullable(),
-});
+/**
+ * The shape of what is written today. Entries without it were written before the English
+ * translation was asked for (format 1): they are kept under the same keys and still read, with
+ * no English, but they never count as fresh, so the next read online fetches them again and
+ * overwrites them. Offline they are shown as they are.
+ */
+export const CACHE_FORMAT = 2;
+
+const VerseSchema = z
+  .object({
+    surah: z.number().int(),
+    ayah: z.number().int(),
+    arabic: z.string(),
+    urdu: z.string().nullable(),
+    // Missing in format 1.
+    english: z.string().nullable().optional(),
+  })
+  .transform((v): QuranVerse => ({ ...v, english: v.english ?? null }));
+const FormatSchema = z.number().int().optional();
 const EntrySchema = z.object({
+  format: FormatSchema,
   kind: z.enum(['surah', 'juz']),
   id: z.number().int(),
   fetchedAt: z.string(),
@@ -36,6 +50,7 @@ const EntrySchema = z.object({
 });
 /** One ayah read on its own. It takes one place in the index, like a passage. */
 const AyahEntrySchema = z.object({
+  format: FormatSchema,
   kind: z.literal('ayah'),
   fetchedAt: z.string(),
   verse: VerseSchema,
@@ -66,6 +81,8 @@ interface CachedCopy {
   key: string;
   verse: QuranVerse;
   fetchedAt: string;
+  /** False for a copy in an older format, which is refetched when it can be. */
+  current: boolean;
 }
 
 /**
@@ -104,6 +121,8 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
       for (const entry of dropped) await storage.removeItem(entry.key).catch(() => undefined);
     });
 
+  const isFresh = (fetchedAt: string) => now().getTime() - Date.parse(fetchedAt) < freshMs;
+
   const readEntry = async (kind: PassageKind, id: number) => {
     const key = keyOf(kind, id);
     const entry = await readJson(storage, key, EntrySchema);
@@ -113,6 +132,19 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
     return entry;
   };
 
+  /** A cached entry as a passage, without the storage-only fields. */
+  const passageOf = (
+    entry: NonNullable<Awaited<ReturnType<typeof readEntry>>>,
+    stale: boolean,
+  ): QuranPassage => ({
+    kind: entry.kind,
+    id: entry.id,
+    fetchedAt: entry.fetchedAt,
+    verses: entry.verses,
+    fromCache: true,
+    stale,
+  });
+
   const load = async (
     kind: PassageKind,
     id: number,
@@ -120,12 +152,11 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
   ): Promise<QuranPassage> => {
     const key = keyOf(kind, id);
     const cached = await readEntry(kind, id);
-    const fetchedAtMs = cached ? Date.parse(cached.fetchedAt) : Number.NaN;
-    const fresh = cached !== null && now().getTime() - fetchedAtMs < freshMs;
+    const fresh = cached !== null && cached.format === CACHE_FORMAT && isFresh(cached.fetchedAt);
 
     if (cached && fresh) {
       await touch(key);
-      return { ...cached, fromCache: true, stale: false };
+      return passageOf(cached, false);
     }
 
     try {
@@ -134,6 +165,7 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
           ? await source.getSurah(id, fetchOptions)
           : await source.getJuz(id, fetchOptions);
       await writeJson(storage, key, {
+        format: CACHE_FORMAT,
         kind,
         id,
         fetchedAt: passage.fetchedAt,
@@ -145,7 +177,7 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
       if (isAbortError(error)) throw error;
       // A surah that does not exist is not an offline problem, and there is nothing to fall back to.
       if (cached && !(error instanceof QuranSourceError && error.code === 'not_found')) {
-        return { ...cached, fromCache: true, stale: true };
+        return passageOf(cached, true);
       }
       throw error;
     }
@@ -163,7 +195,14 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
     ] as const) {
       const entry = await readEntry(kind, id);
       const verse = entry?.verses.find((v) => v.surah === surah && v.ayah === ayah);
-      if (entry && verse) copies.push({ key: keyOf(kind, id), verse, fetchedAt: entry.fetchedAt });
+      if (entry && verse) {
+        copies.push({
+          key: keyOf(kind, id),
+          verse,
+          fetchedAt: entry.fetchedAt,
+          current: entry.format === CACHE_FORMAT,
+        });
+      }
     }
     const single = await readJson(storage, ayahKeyOf(surah, ayah), AyahEntrySchema);
     if (single && single.verse.surah === surah && single.verse.ayah === ayah) {
@@ -171,6 +210,7 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
         key: ayahKeyOf(surah, ayah),
         verse: single.verse,
         fetchedAt: single.fetchedAt,
+        current: single.format === CACHE_FORMAT,
       });
     }
     return copies.sort((a, b) => Date.parse(b.fetchedAt) - Date.parse(a.fetchedAt));
@@ -183,14 +223,17 @@ export function createCachedQuranSource(options: CachedQuranSourceOptions): Cach
   ): Promise<QuranAyah> => {
     const copies = await cachedCopiesOf(surah, ayah);
     const newest = copies[0];
-    if (newest && now().getTime() - Date.parse(newest.fetchedAt) < freshMs) {
-      await touch(newest.key);
-      return { verse: newest.verse, fetchedAt: newest.fetchedAt, fromCache: true, stale: false };
+    // A copy in an older format is never fresh; it is only the fallback below.
+    const fresh = copies.find((copy) => copy.current && isFresh(copy.fetchedAt));
+    if (fresh) {
+      await touch(fresh.key);
+      return { verse: fresh.verse, fetchedAt: fresh.fetchedAt, fromCache: true, stale: false };
     }
     try {
       const result = await source.getAyah(surah, ayah, fetchOptions);
       const key = ayahKeyOf(surah, ayah);
       await writeJson(storage, key, {
+        format: CACHE_FORMAT,
         kind: 'ayah',
         fetchedAt: result.fetchedAt,
         verse: result.verse,

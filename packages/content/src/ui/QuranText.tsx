@@ -2,6 +2,7 @@ import { View } from 'react-native';
 import { Text, spacing, useTheme } from '@qc/ui';
 import { splitBismillah } from '../quran/bismillah';
 import { useAyah } from './hooks';
+import { verseTranslation } from './reader';
 import { useContentI18n } from './i18n';
 
 export interface QuranTextCreditProps {
@@ -74,14 +75,17 @@ export function SavedMark({ accessibilityLabel, testID }: SavedMarkProps) {
 export interface AyahTextProps {
   surah: number;
   ayah: number;
-  /** Show the Urdu translation under the Arabic. Default: on an Urdu screen only. */
+  /**
+   * Show the translation in the screen language under the Arabic: Urdu on an Urdu screen,
+   * English on an English screen. Default: shown.
+   */
   showTranslation?: boolean;
   testID?: string;
 }
 
 /**
- * The words of one ayah: the Arabic in the Quran font, the Urdu translation when asked, and the
- * text credit. Only that ayah is fetched (or read from a cached surah or juz that holds it).
+ * The words of one ayah: the Arabic in the Quran font, the translation in the screen language
+ * (Urdu or English) unless switched off, and the text credit. Only that ayah is fetched (or read from a cached surah or juz that holds it).
  * Nothing is drawn while it loads or when it cannot be had, so a card can keep just its
  * reference. Ayah 1 is shown without the opening formula, as in the reader.
  */
@@ -90,15 +94,15 @@ export function AyahText({ surah, ayah, showTranslation, testID = 'ayah-text' }:
   const state = useAyah(surah, ayah);
   if (state.status !== 'ready') return null;
   const { verse } = state.ayah;
-  const withTranslation = showTranslation ?? i18n.locale === 'ur';
+  const translation = verseTranslation(verse, i18n.locale);
   return (
     <View style={{ gap: spacing.sm }} testID={testID}>
       <Text variant="quran" lang="ar" align="center" selectable testID={`${testID}-arabic`}>
         {splitBismillah(verse).text}
       </Text>
-      {withTranslation && verse.urdu ? (
-        <Text lang="ur" selectable testID={`${testID}-translation`}>
-          {verse.urdu}
+      {(showTranslation ?? true) && translation.text ? (
+        <Text lang={translation.lang} selectable testID={`${testID}-translation`}>
+          {translation.text}
         </Text>
       ) : null}
       <QuranTextCredit testID={`${testID}-credit`} />

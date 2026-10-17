@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
 import { fonts, semanticColors, textScale } from '@qc/ui';
 import { ARABIC_ZOOM_STEPS } from '../quran/prefs';
-import { FAKE_OPENING, fakeArabic, fakeUrdu } from '../test/fakes';
+import { FAKE_OPENING, fakeArabic, fakeEnglish, fakeUrdu } from '../test/fakes';
 import { createTestServices, matrix, renderContent, type TestServices } from '../test/render';
 import { QuranReaderScreen } from './QuranReaderScreen';
 import type { ReaderTarget } from './reader';
@@ -40,7 +40,7 @@ const rgbOf = (hex: string) => {
 const arabicOf = (surah: number, ayah: number) => screen.getByTestId(`arabic-${surah}-${ayah}`);
 
 describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
-  it('shows each ayah as Arabic (lang ar, right to left) with the Urdu translation under it', async () => {
+  it('shows each ayah as Arabic (lang ar, right to left) with the screen language translation under it', async () => {
     const t = createTestServices();
     open(t, { kind: 'surah', id: 1 }, { combo: { combo } });
     const ar = await screen.findByTestId('arabic-1-1');
@@ -49,10 +49,22 @@ describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
     expect(ar.getAttribute('dir')).toBe('rtl');
     expect(getComputedStyle(ar).fontFamily).toContain(fonts.quran);
 
-    const ur = screen.getByTestId('urdu-1-1');
-    expect(ur.textContent).toBe(fakeUrdu(1, 1));
-    expect(ur.getAttribute('lang')).toBe('ur');
-    expect(getComputedStyle(ur).fontFamily).not.toContain(fonts.quran);
+    // Urdu screens show Maududi's Urdu (right to left); English screens his English (left to
+    // right). The other language's translation is not shown.
+    const translation = screen.getByTestId('translation-1-1');
+    if (combo.locale === 'ur') {
+      expect(translation.textContent).toBe(fakeUrdu(1, 1));
+      expect(translation.getAttribute('lang')).toBe('ur');
+      expect(translation.getAttribute('dir')).toBe('rtl');
+      expect(screen.queryByText(fakeEnglish(1, 1))).toBeNull();
+    } else {
+      expect(translation.textContent).toBe(fakeEnglish(1, 1));
+      expect(translation.getAttribute('lang')).toBe('en');
+      expect(translation.getAttribute('dir')).toBe('ltr');
+      expect(screen.queryByText(fakeUrdu(1, 1))).toBeNull();
+    }
+    expect(getComputedStyle(translation).fontFamily).not.toContain(fonts.quran);
+    expect(getComputedStyle(translation).color).toBe(rgbOf(semanticColors[combo.mode].text));
 
     // The Arabic follows the app's text size (four steps) at the reader's default zoom, and the
     // colour mode: the text colour is the theme's.
@@ -125,12 +137,12 @@ describe('QuranReaderScreen', () => {
   it('shows the Arabic only when the translation is switched off, and remembers the choice', async () => {
     const t = createTestServices();
     open(t, { kind: 'surah', id: 1 });
-    await screen.findByTestId('urdu-1-1');
+    await screen.findByTestId('translation-1-1');
     fireEvent.click(screen.getByTestId('reader-settings'));
     fireEvent.click(
       await screen.findByRole('switch', { name: msg('en', 'quran.translation.show') }),
     );
-    await waitFor(() => expect(screen.queryByTestId('urdu-1-1')).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('translation-1-1')).toBeNull());
     expect(arabicOf(1, 1)).toBeTruthy();
     await waitFor(async () => expect((await t.services.prefs.load()).showTranslation).toBe(false));
   });
@@ -141,6 +153,33 @@ describe('QuranReaderScreen', () => {
     open(t, { kind: 'surah', id: 1 });
     await screen.findByTestId('arabic-1-1');
     expect(screen.getAllByText(msg('en', 'quran.reader.translationMissing')).length).toBe(7);
+  });
+
+  it('says so on an English screen when only the English translation is missing', async () => {
+    const t = createTestServices();
+    t.quranApi.english = 'missing';
+    open(t, { kind: 'surah', id: 1 });
+    await screen.findByTestId('arabic-1-1');
+    expect(screen.getAllByText(msg('en', 'quran.reader.translationMissing')).length).toBe(7);
+    // The Urdu is not shown in the English one's place.
+    expect(screen.queryByText(fakeUrdu(1, 1))).toBeNull();
+  });
+
+  it('keeps the Urdu on an Urdu screen when only the English translation is missing', async () => {
+    const t = createTestServices();
+    t.quranApi.english = 'empty';
+    open(t, { kind: 'surah', id: 1 }, { combo: { combo: { locale: 'ur' } } });
+    expect((await screen.findByTestId('translation-1-1')).textContent).toBe(fakeUrdu(1, 1));
+    expect(screen.queryByText(msg('ur', 'quran.reader.translationMissing'))).toBeNull();
+  });
+
+  it('respects the translation switch on an Urdu screen too', async () => {
+    const t = createTestServices();
+    await t.services.prefs.save({ showTranslation: false, arabicZoomIndex: 1 });
+    open(t, { kind: 'surah', id: 1 }, { combo: { combo: { locale: 'ur' } } });
+    await screen.findByTestId('arabic-1-1');
+    await waitFor(() => expect(screen.queryByTestId('translation-1-1')).toBeNull());
+    expect(screen.queryByText(fakeUrdu(1, 1))).toBeNull();
   });
 
   it('changes the Arabic size one step at a time, within the limits', async () => {
@@ -246,14 +285,27 @@ describe('QuranReaderScreen', () => {
     expect(await t.services.bookmarks.list()).toHaveLength(0);
   });
 
-  it('shares the ayah with its reference', async () => {
+  it('shares the ayah with its reference and the English translation on an English screen', async () => {
     const t = createTestServices();
     const onShare = vi.fn();
     open(t, { kind: 'surah', id: 1 }, { onShare });
     await screen.findByTestId('arabic-1-2');
     fireEvent.click(screen.getByTestId('share-1-2'));
     expect(onShare).toHaveBeenCalledWith(
-      [msg('en', 'quran.share.title', { key: '1:2' }), fakeArabic(1, 2), fakeUrdu(1, 2)].join('\n'),
+      [msg('en', 'quran.share.title', { key: '1:2' }), fakeArabic(1, 2), fakeEnglish(1, 2)].join(
+        '\n',
+      ),
+    );
+  });
+
+  it('shares the Urdu translation on an Urdu screen', async () => {
+    const t = createTestServices();
+    const onShare = vi.fn();
+    open(t, { kind: 'surah', id: 1 }, { onShare, combo: { combo: { locale: 'ur' } } });
+    await screen.findByTestId('arabic-1-2');
+    fireEvent.click(screen.getByTestId('share-1-2'));
+    expect(onShare).toHaveBeenCalledWith(
+      [msg('ur', 'quran.share.title', { key: '1:2' }), fakeArabic(1, 2), fakeUrdu(1, 2)].join('\n'),
     );
   });
 

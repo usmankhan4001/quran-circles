@@ -27,7 +27,14 @@ import { useBookmarks, usePassage, useReaderPrefs } from './hooks';
 import { useContentI18n, type ContentI18n } from './i18n';
 import { usePositionTracker } from './positionTracker';
 import { QuranTextCredit } from './QuranText';
-import { buildRows, resolveJump, rowIndexFor, type ReaderRow, type ReaderTarget } from './reader';
+import {
+  buildRows,
+  resolveJump,
+  rowIndexFor,
+  verseTranslation,
+  type ReaderRow,
+  type ReaderTarget,
+} from './reader';
 
 type SheetName = 'settings' | 'jump' | 'surahs' | null;
 
@@ -48,7 +55,8 @@ function defaultShare(message: string) {
 }
 
 /**
- * The reader: Arabic with an Urdu translation under each ayah, a text size, a jump to an ayah,
+ * The reader: Arabic with a translation under each ayah (Urdu on an Urdu screen, English on an
+ * English screen, both Maududi's), a text size, a jump to an ayah,
  * and quick moves between surahs. The last place reached is saved as the reading position.
  *
  * Page turn: the previous/next surah buttons follow the Quran's right-to-left order in both
@@ -130,7 +138,8 @@ export function QuranReaderScreen({
     (row: Extract<ReaderRow, { type: 'verse' }>) => {
       const key = formatVerseKey({ surah: row.verse.surah, ayah: row.verse.ayah });
       const parts = [i18n.t('quran.share.title', { key }), row.verse.arabic];
-      if (row.verse.urdu) parts.push(row.verse.urdu);
+      const translation = verseTranslation(row.verse, i18n.locale).text;
+      if (translation) parts.push(translation);
       onShare(parts.join('\n'));
     },
     [i18n, onShare],
@@ -562,7 +571,8 @@ const VerseRow = memo(function VerseRow({
   onShare: (row: Extract<ReaderRow, { type: 'verse' }>) => void;
 }) {
   const theme = useTheme();
-  const { surah, ayah, urdu } = row.verse;
+  const { surah, ayah } = row.verse;
+  const translation = verseTranslation(row.verse, i18n.locale);
   const number = i18n.n(ayah);
   return (
     <View
@@ -605,9 +615,9 @@ const VerseRow = memo(function VerseRow({
           </View>
         </View>
         {showTranslation ? (
-          urdu ? (
-            <Text lang="ur" selectable testID={`urdu-${surah}-${ayah}`}>
-              {urdu}
+          translation.text ? (
+            <Text lang={translation.lang} selectable testID={`translation-${surah}-${ayah}`}>
+              {translation.text}
             </Text>
           ) : (
             <Text color="textMuted" variant="caption">

@@ -12,14 +12,29 @@ import {
   type QuranVerse,
 } from './types';
 
-/** The online source V1 used. Its edition ids are the same ones V1 asked for. */
+/**
+ * The online source V1 used. The Arabic and Urdu edition ids are the ones V1 asked for; the
+ * English one (Maududi's English translation) was added for English screens (owner decision,
+ * 2026-10-17).
+ */
 export const ALQURAN_CLOUD_BASE_URL = 'https://api.alquran.cloud/v1';
-export const DEFAULT_EDITIONS = { arabic: 'quran-uthmani', urdu: 'ur.maududi' } as const;
+export const DEFAULT_EDITIONS = {
+  arabic: 'quran-uthmani',
+  urdu: 'ur.maududi',
+  english: 'en.maududi',
+} as const;
+
+export interface QuranEditions {
+  arabic: string;
+  urdu: string;
+  /** The English translation. Leave out, or pass null, to ask for none. */
+  english?: string | null;
+}
 
 export interface AlQuranCloudOptions {
   fetch: typeof fetch;
   baseUrl?: string;
-  editions?: { arabic: string; urdu: string };
+  editions?: QuranEditions;
   now?: () => Date;
 }
 
@@ -31,9 +46,21 @@ const AyahSchema = z.object({
 });
 const EditionSchema = z.object({ ayahs: z.array(AyahSchema) });
 const Envelope = z.object({ status: z.string(), data: z.unknown() });
-const SurahEditionsData = z.array(EditionSchema).min(2);
-/** `/ayah/{surah}:{ayah}/editions/...` answers with one ayah per edition, in the asked order. */
-const AyahEditionsData = z.array(AyahSchema).min(2);
+/**
+ * `/surah/{n}/editions/...` and `/ayah/{surah}:{ayah}/editions/...` answer with one entry per
+ * edition, in the asked order. The Arabic and the Urdu have to be there; the English is read on
+ * its own, so a missing or unreadable English edition only means "no English translation".
+ */
+const EditionsData = z.array(z.unknown()).min(2);
+
+type Ayah = z.infer<typeof AyahSchema>;
+type Edition = z.infer<typeof EditionSchema>;
+
+/** The English edition when it can be read, else undefined (never an error). */
+function optionalEdition(value: unknown): Edition | undefined {
+  const parsed = EditionSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
 
 async function getJson(
   doFetch: typeof fetch,
@@ -62,28 +89,41 @@ async function getJson(
   return envelope.data.data;
 }
 
+const translationsOf = (edition: Edition | undefined) =>
+  new Map((edition?.ayahs ?? []).map((a) => [a.number, a.text]));
+
 /**
- * Joins the translation to the Arabic by the source's running ayah number, not by position,
- * so a gap in one edition cannot shift every translation below it.
+ * Joins the translations to the Arabic by the source's running ayah number, not by position,
+ * so a gap in one edition cannot shift every translation below it. An empty text counts as no
+ * translation.
  */
 function join(
-  arabic: z.infer<typeof EditionSchema>,
-  urdu: z.infer<typeof EditionSchema>,
-  surahOf: (ayah: z.infer<typeof AyahSchema>) => number,
+  arabic: Edition,
+  urdu: Edition,
+  english: Edition | undefined,
+  surahOf: (ayah: Ayah) => number,
 ): QuranVerse[] {
-  const translation = new Map(urdu.ayahs.map((a) => [a.number, a.text]));
+  const urduOf = translationsOf(urdu);
+  const englishOf = translationsOf(english);
   return arabic.ayahs.map((a) => ({
     surah: surahOf(a),
     ayah: a.numberInSurah,
     arabic: a.text,
-    urdu: translation.get(a.number)?.trim() || null,
+    urdu: urduOf.get(a.number)?.trim() || null,
+    english: englishOf.get(a.number)?.trim() || null,
   }));
 }
 
-/** Reads Arabic and Urdu from api.alquran.cloud, the source V1 used. */
+/**
+ * Reads the Arabic and the Urdu and English translations from api.alquran.cloud, the source V1
+ * used. A surah or a single ayah is one request for all editions, as before; a juz is one
+ * request per edition (the source has no combined juz request that V1 could rely on).
+ */
 export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSource {
   const baseUrl = (options.baseUrl ?? ALQURAN_CLOUD_BASE_URL).replace(/\/+$/, '');
   const editions = options.editions ?? DEFAULT_EDITIONS;
+  const englishId = editions.english ?? null;
+  const editionList = [editions.arabic, editions.urdu, ...(englishId ? [englishId] : [])].join(',');
   const now = options.now ?? (() => new Date());
   const passage = (kind: 'surah' | 'juz', id: number, verses: QuranVerse[]): QuranPassage => ({
     kind,
@@ -99,28 +139,46 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
       if (!isSurahNumber(surah)) throw new QuranSourceError('not_found');
       const data = await getJson(
         options.fetch,
-        `${baseUrl}/surah/${surah}/editions/${editions.arabic},${editions.urdu}`,
+        `${baseUrl}/surah/${surah}/editions/${editionList}`,
         fetchOptions,
       );
-      const parsed = SurahEditionsData.safeParse(data);
+      const parsed = EditionsData.safeParse(data);
       if (!parsed.success) throw new QuranSourceError('invalid_response');
-      const [arabic, urdu] = parsed.data;
-      if (!arabic || !urdu || arabic.ayahs.length === 0) {
+      const arabic = EditionSchema.safeParse(parsed.data[0]);
+      const urdu = EditionSchema.safeParse(parsed.data[1]);
+      if (!arabic.success || !urdu.success || arabic.data.ayahs.length === 0) {
         throw new QuranSourceError('invalid_response');
       }
+      const english = englishId ? optionalEdition(parsed.data[2]) : undefined;
       return passage(
         'surah',
         surah,
-        join(arabic, urdu, () => surah),
+        join(arabic.data, urdu.data, english, () => surah),
       );
     },
 
     async getJuz(juz, fetchOptions) {
       if (!isJuzNumber(juz)) throw new QuranSourceError('not_found');
       // V1 found the combined editions endpoint unreliable for a juz, so ask for each one.
-      const [arabicData, urduData] = await Promise.all([
+      // The English is optional: an edition the source does not have, or cannot send readably,
+      // means "no English translation". A dropped connection or an error status still fails
+      // the read, so the cache keeps (and later refreshes) its copy instead of an English-less one.
+      const [arabicData, urduData, englishData] = await Promise.all([
         getJson(options.fetch, `${baseUrl}/juz/${juz}/${editions.arabic}`, fetchOptions),
         getJson(options.fetch, `${baseUrl}/juz/${juz}/${editions.urdu}`, fetchOptions),
+        englishId
+          ? getJson(options.fetch, `${baseUrl}/juz/${juz}/${englishId}`, fetchOptions).catch(
+              (error: unknown) => {
+                if (
+                  error instanceof QuranSourceError &&
+                  (error.code === 'not_found' || error.code === 'invalid_response')
+                ) {
+                  return undefined;
+                }
+                throw error;
+              },
+            )
+          : undefined,
       ]);
       const arabic = EditionSchema.safeParse(arabicData);
       const urdu = EditionSchema.safeParse(urduData);
@@ -133,7 +191,7 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
       return passage(
         'juz',
         juz,
-        join(arabic.data, urdu.data, (a) => a.surah?.number ?? 0),
+        join(arabic.data, urdu.data, optionalEdition(englishData), (a) => a.surah?.number ?? 0),
       );
     },
 
@@ -141,26 +199,34 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
       if (!isValidAyah(surah, ayah)) throw new QuranSourceError('not_found');
       const data = await getJson(
         options.fetch,
-        `${baseUrl}/ayah/${surah}:${ayah}/editions/${editions.arabic},${editions.urdu}`,
+        `${baseUrl}/ayah/${surah}:${ayah}/editions/${editionList}`,
         fetchOptions,
       );
-      const parsed = AyahEditionsData.safeParse(data);
+      const parsed = EditionsData.safeParse(data);
       if (!parsed.success) throw new QuranSourceError('invalid_response');
-      const [arabic, urdu] = parsed.data;
-      // The answer has to be the ayah that was asked for, in both editions.
-      const isAsked = (a: z.infer<typeof AyahSchema> | undefined) =>
-        a !== undefined &&
-        a.numberInSurah === ayah &&
-        (a.surah === undefined || a.surah.number === surah);
-      if (!arabic || !isAsked(arabic) || !arabic.text.trim()) {
+      const arabicParsed = AyahSchema.safeParse(parsed.data[0]);
+      const urduParsed = AyahSchema.safeParse(parsed.data[1]);
+      if (!arabicParsed.success || !urduParsed.success) {
         throw new QuranSourceError('invalid_response');
       }
+      const arabic = arabicParsed.data;
+      // The answer has to be the ayah that was asked for.
+      const isAsked = (a: Ayah) =>
+        a.numberInSurah === ayah && (a.surah === undefined || a.surah.number === surah);
+      if (!isAsked(arabic) || !arabic.text.trim()) {
+        throw new QuranSourceError('invalid_response');
+      }
+      // A translation counts only when it belongs to the same ayah as the Arabic.
+      const translation = (a: Ayah | undefined) =>
+        a !== undefined && isAsked(a) && a.number === arabic.number ? a.text.trim() || null : null;
+      const englishParsed = englishId ? AyahSchema.safeParse(parsed.data[2]) : undefined;
       return {
         verse: {
           surah,
           ayah,
           arabic: arabic.text,
-          urdu: isAsked(urdu) && urdu?.number === arabic.number ? urdu.text.trim() || null : null,
+          urdu: translation(urduParsed.data),
+          english: translation(englishParsed?.success ? englishParsed.data : undefined),
         },
         fromCache: false,
         stale: false,

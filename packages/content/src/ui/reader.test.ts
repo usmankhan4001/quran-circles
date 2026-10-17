@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fakeVerse, FAKE_OPENING } from '../test/fakes';
-import { buildRows, resolveJump, rowIndexFor, targetForBookmark } from './reader';
+import { fakeEnglish, fakeUrdu, fakeVerse, FAKE_OPENING } from '../test/fakes';
+import { buildRows, resolveJump, rowIndexFor, targetForBookmark, verseTranslation } from './reader';
 import type { QuranPassage } from '../quran/types';
 
 const passage = (
@@ -113,5 +113,24 @@ describe('targetForBookmark', () => {
   });
   it('gives nothing for a bookmark with missing fields', () => {
     expect(targetForBookmark({ kind: 'ayah', surah: 2, ayah: null, para: null })).toBeNull();
+  });
+});
+
+describe('verseTranslation', () => {
+  it('gives the Urdu on an Urdu screen and the English on an English screen', () => {
+    const verse = fakeVerse(2, 255);
+    expect(verseTranslation(verse, 'ur')).toEqual({ lang: 'ur', text: fakeUrdu(2, 255) });
+    expect(verseTranslation(verse, 'en')).toEqual({ lang: 'en', text: fakeEnglish(2, 255) });
+  });
+
+  it('never puts the other language in place of a missing one', () => {
+    expect(verseTranslation(fakeVerse(2, 255, true, false), 'en')).toEqual({
+      lang: 'en',
+      text: null,
+    });
+    expect(verseTranslation(fakeVerse(2, 255, false, true), 'ur')).toEqual({
+      lang: 'ur',
+      text: null,
+    });
   });
 });

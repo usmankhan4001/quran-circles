@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { fonts, semanticColors } from '@qc/ui';
-import { FAKE_OPENING, fakeArabic, fakeUrdu } from '../test/fakes';
+import { FAKE_OPENING, fakeArabic, fakeEnglish, fakeUrdu } from '../test/fakes';
 import { createTestServices, lightDarkMatrix, matrix, renderContent } from '../test/render';
 import { AyahText, QuranTextCredit, SavedMark } from './QuranText';
 
@@ -19,7 +19,7 @@ const rgbOf = (hex: string) => {
 const ayahCalls = (calls: string[]) => calls.filter((url) => url.includes('/ayah/'));
 
 describe.each(matrix)('AyahText in $name', (combo) => {
-  it('shows one ayah in the Quran font, the translation on an Urdu screen, and the credit', async () => {
+  it('shows one ayah in the Quran font, the translation in the screen language, and the credit', async () => {
     const t = createTestServices();
     renderContent(<AyahText surah={93} ayah={3} />, t.services, { combo });
     const arabic = await screen.findByTestId('ayah-text-arabic');
@@ -29,14 +29,20 @@ describe.each(matrix)('AyahText in $name', (combo) => {
     expect(getComputedStyle(arabic).fontFamily).toContain(fonts.quran);
     expect(getComputedStyle(arabic).color).toBe(rgbOf(semanticColors[combo.mode].text));
 
+    // Maududi's Urdu on an Urdu screen (right to left), his English on an English screen (left
+    // to right), in the theme's text colour and not in the Quran font.
+    const translation = screen.getByTestId('ayah-text-translation');
     if (combo.locale === 'ur') {
-      const translation = screen.getByTestId('ayah-text-translation');
       expect(translation.textContent).toBe(fakeUrdu(93, 3));
       expect(translation.getAttribute('lang')).toBe('ur');
-      expect(getComputedStyle(translation).fontFamily).not.toContain(fonts.quran);
+      expect(translation.getAttribute('dir')).toBe('rtl');
     } else {
-      expect(screen.queryByTestId('ayah-text-translation')).toBeNull();
+      expect(translation.textContent).toBe(fakeEnglish(93, 3));
+      expect(translation.getAttribute('lang')).toBe('en');
+      expect(translation.getAttribute('dir')).toBe('ltr');
     }
+    expect(getComputedStyle(translation).fontFamily).not.toContain(fonts.quran);
+    expect(getComputedStyle(translation).color).toBe(rgbOf(semanticColors[combo.mode].text));
 
     expect(screen.getByTestId('ayah-text-credit').textContent).toBe(
       msg(combo.locale, 'quran.credit.arabic'),
@@ -63,24 +69,78 @@ describe('AyahText', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('shows the translation when asked on an English screen, and hides it when asked on Urdu', async () => {
+  it.each(['en', 'ur'] as const)(
+    'hides the translation when switched off, on an %s screen',
+    async (locale) => {
+      const t = createTestServices();
+      renderContent(<AyahText surah={93} ayah={3} showTranslation={false} />, t.services, {
+        combo: { locale },
+      });
+      await screen.findByTestId('ayah-text-arabic');
+      expect(screen.queryByTestId('ayah-text-translation')).toBeNull();
+      expect(screen.queryByText(fakeUrdu(93, 3))).toBeNull();
+      expect(screen.queryByText(fakeEnglish(93, 3))).toBeNull();
+    },
+  );
+
+  it('shows the translation when asked explicitly, in the screen language', async () => {
     const t = createTestServices();
     const first = renderContent(<AyahText surah={93} ayah={3} showTranslation />, t.services);
-    expect((await screen.findByTestId('ayah-text-translation')).textContent).toBe(fakeUrdu(93, 3));
+    expect((await screen.findByTestId('ayah-text-translation')).textContent).toBe(
+      fakeEnglish(93, 3),
+    );
     first.unmount();
-    renderContent(<AyahText surah={93} ayah={3} showTranslation={false} />, t.services, {
+    renderContent(<AyahText surah={93} ayah={3} showTranslation />, t.services, {
       combo: { locale: 'ur' },
     });
-    await screen.findByTestId('ayah-text-arabic');
-    expect(screen.queryByTestId('ayah-text-translation')).toBeNull();
+    expect((await screen.findByTestId('ayah-text-translation')).textContent).toBe(fakeUrdu(93, 3));
   });
 
-  it('leaves the translation out when the ayah has none', async () => {
+  it.each(['en', 'ur'] as const)(
+    'leaves the translation out when the ayah has none, on an %s screen',
+    async (locale) => {
+      const t = createTestServices();
+      t.quranApi.withoutTranslation = true;
+      renderContent(<AyahText surah={93} ayah={3} />, t.services, { combo: { locale } });
+      await screen.findByTestId('ayah-text-arabic');
+      expect(screen.queryByTestId('ayah-text-translation')).toBeNull();
+    },
+  );
+
+  it('shows the Arabic alone on an English screen when the English edition is missing', async () => {
     const t = createTestServices();
-    t.quranApi.withoutTranslation = true;
-    renderContent(<AyahText surah={93} ayah={3} />, t.services, { combo: { locale: 'ur' } });
+    t.quranApi.english = 'missing';
+    renderContent(<AyahText surah={93} ayah={3} />, t.services);
     await screen.findByTestId('ayah-text-arabic');
+    // No English, and the Urdu is not shown in its place.
     expect(screen.queryByTestId('ayah-text-translation')).toBeNull();
+    expect(screen.queryByText(fakeUrdu(93, 3))).toBeNull();
+    expect(screen.getByTestId('ayah-text-credit')).toBeTruthy();
+  });
+
+  it('still shows the Urdu on an Urdu screen when the English edition is empty', async () => {
+    const t = createTestServices();
+    t.quranApi.english = 'empty';
+    renderContent(<AyahText surah={93} ayah={3} />, t.services, { combo: { locale: 'ur' } });
+    expect((await screen.findByTestId('ayah-text-translation')).textContent).toBe(fakeUrdu(93, 3));
+  });
+
+  it('shows an ayah cached before English offline, with the Urdu on an Urdu screen only', async () => {
+    const t = createTestServices();
+    const old = JSON.stringify({
+      kind: 'ayah',
+      fetchedAt: t.clock.now().toISOString(),
+      verse: { surah: 93, ayah: 3, arabic: fakeArabic(93, 3), urdu: fakeUrdu(93, 3) },
+    });
+    // The services keep the cache under the "qc.quran.cache." prefix of the given storage.
+    await t.storage.setItem('qc.quran.cache.qc.quran.cache.v1:ayah:93:3', old);
+    t.quranApi.offline = true;
+    const english = renderContent(<AyahText surah={93} ayah={3} />, t.services);
+    expect((await screen.findByTestId('ayah-text-arabic')).textContent).toBe(fakeArabic(93, 3));
+    expect(screen.queryByTestId('ayah-text-translation')).toBeNull();
+    english.unmount();
+    renderContent(<AyahText surah={93} ayah={3} />, t.services, { combo: { locale: 'ur' } });
+    expect((await screen.findByTestId('ayah-text-translation')).textContent).toBe(fakeUrdu(93, 3));
   });
 
   it('shows ayah 1 without the opening formula, as the reader does', async () => {

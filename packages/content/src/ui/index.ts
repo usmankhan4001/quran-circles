@@ -17,7 +17,8 @@ export type { QuranPrayerTabProps } from './QuranPrayerTab';
 export { V1ImportBanner } from './V1ImportBanner';
 export { AyahText, QuranTextCredit, SavedMark } from './QuranText';
 export type { AyahTextProps, QuranTextCreditProps, SavedMarkProps } from './QuranText';
-export type { ReaderTarget } from './reader';
+export { verseTranslation } from './reader';
+export type { ReaderTarget, VerseTranslation } from './reader';
 export {
   useNow,
   useNextPrayer,

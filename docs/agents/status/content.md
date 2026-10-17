@@ -5,6 +5,18 @@ Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committ
 
 ## Done
 
+### 2026-10-17: English translation (Maududi) on English screens (owner decision 2026-10-17)
+
+- **Source.** `createAlQuranCloudSource` now asks for a third edition, `en.maududi`, next to `quran-uthmani` and `ur.maududi`. Edition ids are configurable through `editions: { arabic, urdu, english? }` (`DEFAULT_EDITIONS.english = 'en.maududi'`; leave `english` out or pass null to ask for none). Surah and single ayah stay one request (`/editions/quran-uthmani,ur.maududi,en.maududi`). A juz was already one request per edition (the source has no combined juz request V1 could rely on), so a juz is now **three requests instead of two**. Translations are joined to the Arabic by running ayah number, as before.
+- **New verse field:** `QuranVerse.english: string | null`. A missing, empty or unreadable English edition (left out of the answer, no ayahs, blank text, wrong shape, a 404 for the juz edition) gives `english: null`, never an error. Arabic and Urdu are as strict as before. A dropped connection or error status on the juz English request still fails the read, so the cache falls back to its copy instead of storing an English-less one.
+- **Cache.** Same keys (`qc.quran.cache.v1:*`), new entry field `format: 2` (`CACHE_FORMAT`). Entries without it (written before English) are still read, with `english: null`, and still listed and shown offline (marked stale), but never count as fresh: the next read online refetches and overwrites them. For a single ayah, a fresh current copy is preferred over a newer old-format one.
+- **UI.** `verseTranslation(verse, locale)` (exported) picks Urdu on an Urdu screen and English on an English screen; the other language is never shown in place of a missing one. Reader rows (`translation-S-A` test id, was `urdu-S-A`), share text and `AyahText` use it. The reader's translation switch (`prefs.showTranslation`) and `AyahText`'s `showTranslation` prop are respected in both languages. `AyahText` now shows the translation by default on both screens (was Urdu screens only). `quran.translation.show` in English reads "Show English translation" (Urdu value unchanged).
+- **Credit.** The package shows only the Arabic text credit (`quran.credit.arabic`); there is no translation credit line, so nothing was added for English.
+- Tests: **856 in 25 files** (was 820). New: three-edition parsing (surah, juz, ayah), missing / empty / unreadable English for each read, English joined by ayah number with gaps, English for another ayah dropped, juz English offline / error status still fails, custom and no-English editions, Urdu still required; cache format written, old-format passage and ayah refetched online and shown offline, old copy kept on a failed refetch, fresh current copy preferred, partial answer kept; reader and `AyahText` in en (LTR, English) and ur (RTL, Urdu) across the 24-combination matrix (3 colour modes x 2 languages x 4 text sizes), switch off in both languages, missing English on each screen, share text per language, old cached ayah offline. All text invented (`FAKE-EN 2:255`).
+- Checks: `pnpm --filter @qc/content typecheck` and `test`, `npx eslint packages/content`, `prettier --check` on changed files, `pnpm --filter @qc/i18n test`, `pnpm --filter @qc/user-app test` (685 pass) and `typecheck`.
+- **For the user-app lane:** `HomeAyahText` in `apps/user-app/src/features/content/contentPackage.tsx` still shows `verse.urdu` on Urdu screens only. To show English on English screens, render `verse.english` with `lang="en"` when `locale === 'en'` (or use `verseTranslation(verse, locale)` from `@qc/content`, or mount the package's `AyahText`). Its test fakes `sourceAnswer` / `ayahAnswer` answer with two editions; that still passes (English is null), but testing English needs a third edition entry.
+- **Design doc:** `docs/design/screens/quran-and-prayer.md` still says "Show Urdu translation" and Urdu only; not my file.
+
 ### 2026-10-17: Quran gaps from the drawings (redesign-handoff.md, gap list, Quran list and reader rows)
 
 Drawing: Q1 "Clean lists" in https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx.
@@ -45,7 +57,7 @@ WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or tra
 
 ## Blocked
 
-- WP18 (offline copy): blocked on written rights for the Urdu translation, as briefed. Not started.
+- WP18 (offline copy): blocked on written rights for the Urdu and English (Maududi) translations, as briefed. Not started.
 - Live comparison with Aladhan: no network from the build environment. `packages/content/scripts/compare-aladhan.mjs` does it (six cities, five dates, exits non-zero on more than one minute). Someone with internet should run it once and note the result in decision 0007. Until then the check is the independent reference algorithm.
 
 ## What waits on the UI kit or on the apps
@@ -57,6 +69,7 @@ WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or tra
 
 ## Questions for the orchestrator
 
+- **English translation rights (WP18):** the rights to Maududi's English translation (`en.maududi`) are unconfirmed, the same status as `ur.maududi`. It is fetched from the online source at run time and kept only in the device cache like the Urdu; no copy is stored or shipped. Needs the same written permission before WP18.
 - **Text credit (for the owner):** the repo says the Arabic text is "reported as CC BY 3.0: credit Tanzil" (`docs/product/decisions.md`, brief). Nothing in the repo confirms that the `quran-uthmani` edition served by api.alquran.cloud is the Tanzil text, or what wording or link the licence asks for. The line shown is "Arabic text: Tanzil Project (tanzil.net)", without a licence name. Please confirm the source and whether the line should also name the licence (for example "CC BY 3.0") or link to tanzil.net. The Urdu translation (Maududi) has no credit line yet; its rights are still open (WP18).
 - **Decision 0008** lists `QuranSource` as `getSurah` and `getJuz`; it now also has `getAyah`. Not my file to edit; worth a line there.
 - **Kit:** a `download` (saved offline) icon in `Icon` would replace the package's drawn `SavedMark`.

@@ -24,7 +24,11 @@ function sourceAnswer(surah: number, ayahs: number) {
       text: `${label} placeholder ${i + 1}`,
     })),
   });
-  return { code: 200, status: 'OK', data: [edition('arabic'), edition('urdu')] };
+  return {
+    code: 200,
+    status: 'OK',
+    data: [edition('arabic'), edition('urdu'), edition('english')],
+  };
 }
 
 /** The same made-up words for one ayah, in the shape of the single-ayah answer. */
@@ -35,7 +39,7 @@ function ayahAnswer(surah: number, ayah: number) {
     text: `${label} placeholder ${ayah}`,
     surah: { number: surah },
   });
-  return { code: 200, status: 'OK', data: [one('arabic'), one('urdu')] };
+  return { code: 200, status: 'OK', data: [one('arabic'), one('urdu'), one('english')] };
 }
 
 /** The real package with in-memory storage and no network: the Quran text is never asked for. */
@@ -97,7 +101,7 @@ describe('the Quran & Prayer package inside the app', () => {
   });
 
   it.each(['en', 'ur'] as const)(
-    'shows the Arabic of the ayah of the day, and the Urdu translation only on an Urdu screen (%s)',
+    "shows the Arabic of the ayah of the day and the translation in the screen's language (%s)",
     async (locale) => {
       const place = ayahOfTheDay(NOW);
       const content = createContentModules({
@@ -117,16 +121,29 @@ describe('the Quran & Prayer package inside the app', () => {
       const view = await renderScreen(<HomeScreen />, { content, locale });
       const arabic = await view.findByTestId('home-ayah-arabic');
       expect(arabic.textContent).toBe(`arabic placeholder ${place.ayah}`);
-      if (locale === 'ur') {
-        expect(view.getByTestId('home-ayah-translation').textContent).toBe(
-          `urdu placeholder ${place.ayah}`,
-        );
-      } else {
-        // There is no English translation source, so English shows the Arabic alone.
-        expect(view.queryByTestId('home-ayah-translation')).toBeNull();
-      }
+      // Urdu on an Urdu screen, English on an English screen, never the other language.
+      expect(view.getByTestId('home-ayah-translation').textContent).toBe(
+        `${locale === 'ur' ? 'urdu' : 'english'} placeholder ${place.ayah}`,
+      );
     },
   );
+
+  it('shows the Arabic alone on an English screen when the source has no English', async () => {
+    const place = ayahOfTheDay(NOW);
+    const answer = ayahAnswer(place.surah, place.ayah);
+    const content = createContentModules({
+      storage: createMemoryStorage(),
+      fetch: async () =>
+        new Response(JSON.stringify({ ...answer, data: answer.data.slice(0, 2) }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+      getApi: () => null,
+    });
+    const view = await renderScreen(<HomeScreen />, { content, locale: 'en' });
+    await view.findByTestId('home-ayah-arabic');
+    expect(view.queryByTestId('home-ayah-translation')).toBeNull();
+  });
 
   it('is given whether someone is signed in and the Hijri offset from the server', async () => {
     const seen: { signedIn: boolean; hijriOffsetDays: number }[] = [];

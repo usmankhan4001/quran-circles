@@ -223,7 +223,7 @@
   "quran.bookmarks.empty": "No bookmarks yet. Tap the bookmark on any verse.",
   "quran.bookmark.add": "Add bookmark",
   "quran.bookmark.remove": "Remove bookmark",
-  "quran.translation.show": "Show Urdu translation",
+  "quran.translation.show": "Show English translation",
   "quran.textSize": "Text size",
   "quran.offline.save": "Save for offline reading",
   "quran.offline.saving": "Saving: {percent}%",

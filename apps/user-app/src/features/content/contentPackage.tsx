@@ -18,6 +18,7 @@ import {
   todayAt,
   useContent,
   useNow,
+  verseTranslation,
   type CreateContentServicesOptions,
   type QuranVerse,
   type ReaderTarget,
@@ -94,8 +95,8 @@ function HomePrayerStrip({ onPress }: { onPress?: () => void }) {
 
 /**
  * The words of one ayah, read through the package's own source and cache (the same path as the
- * reader), fetching only that ayah. Arabic always, with the text credit; the Urdu translation on an Urdu screen. There is no English
- * translation source, so an English screen shows the Arabic alone.
+ * reader), fetching only that ayah. Arabic always, with the text credit, and Maududi's translation
+ * in the screen's language (Urdu or English) when the source has it.
  */
 function HomeAyahText({ surah, ayah }: QuranPlace) {
   const { locale } = useI18n();
@@ -117,14 +118,15 @@ function HomeAyahText({ surah, ayah }: QuranPlace) {
     };
   }, [services, surah, ayah]);
   if (!verse) return null;
+  const translation = verseTranslation(verse, locale);
   return (
     <View style={{ gap: spacing.sm }} testID="home-ayah-text">
       <Text variant="quran" lang="ar" align="center" testID="home-ayah-arabic">
         {verse.arabic}
       </Text>
-      {locale === 'ur' && verse.urdu ? (
-        <Text variant="body" lang="ur" testID="home-ayah-translation">
-          {verse.urdu}
+      {translation.text ? (
+        <Text variant="body" lang={translation.lang} testID="home-ayah-translation">
+          {translation.text}
         </Text>
       ) : null}
       <QuranTextCredit />

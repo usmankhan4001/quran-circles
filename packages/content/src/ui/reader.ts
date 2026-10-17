@@ -3,6 +3,21 @@ import { parseVerseKey } from '../meta/ayah';
 import { splitBismillah } from '../quran/bismillah';
 import type { PassageKind, QuranPassage, QuranVerse } from '../quran/types';
 
+/** A verse's translation in the screen language, with the language it is written in. */
+export interface VerseTranslation {
+  lang: 'en' | 'ur';
+  /** Null when this ayah has no translation in that language. */
+  text: string | null;
+}
+
+/**
+ * The translation a screen shows under the Arabic: Maududi's Urdu on an Urdu screen, his
+ * English on an English screen. The other language's translation is never shown in its place.
+ */
+export function verseTranslation(verse: QuranVerse, locale: 'en' | 'ur'): VerseTranslation {
+  return locale === 'ur' ? { lang: 'ur', text: verse.urdu } : { lang: 'en', text: verse.english };
+}
+
 /** What the reader is asked to open. */
 export interface ReaderTarget {
   kind: PassageKind;
