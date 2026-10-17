@@ -7,12 +7,12 @@ import {
   type Invite,
   type InviteStatus,
   type Role,
+  type StaffRoleAssignment,
 } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { fetchAllPages, usePaged, useAsync } from '../api/hooks';
-import type { StaffRoleAssignment } from '../api/types';
 import { roleLabelKey } from '../components/Shell';
 import { useScopeLabel } from '../components/scope';
 import {
@@ -35,7 +35,7 @@ import {
   type Column,
 } from '../components/ui';
 import { useI18n } from '../i18n';
-import { errorMessageKeyOf } from '../lib/errors';
+import { errorMessageKeyOf, fieldIssues } from '../lib/errors';
 import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, phoneTail } from '../lib/phone';
 import { canAssignRole, canSomewhere } from '../lib/permissions';
 
@@ -57,13 +57,66 @@ const INVITE_TONE: Record<InviteStatus, BadgeTone> = {
 
 type Notice = { tone: 'success'; key: MessageKey } | null;
 
+type InviteFilter = 'all' | InviteStatus;
+const INVITE_FILTERS: readonly InviteFilter[] = [
+  'all',
+  'pending',
+  'accepted',
+  'expired',
+  'revoked',
+];
+
+/** Fields of an invite form, by the path the server names in a `validation_failed` answer. */
+const INVITE_FIELD_PATHS = {
+  phone: 'phone',
+  displayName: 'name',
+  role: 'role',
+  cityId: 'scope',
+  venueId: 'scope',
+} as const satisfies Record<string, 'phone' | 'name' | 'role' | 'scope'>;
+
+type Translate = ReturnType<typeof useI18n>['t'];
+
+/** Messages for the invite fields the server rejected, so the person sees which one to fix. */
+function serverFieldErrors(error: unknown, t: Translate): Record<string, string> {
+  const rejected = fieldIssues(error, INVITE_FIELD_PATHS);
+  const out: Record<string, string> = {};
+  if (rejected.phone) out.phone = t(PHONE_ISSUE_KEYS.invalid);
+  if (rejected.name) out.name = t('console.invites.form.name.invalid');
+  if (rejected.role) out.role = t('console.invites.form.rejected');
+  if (rejected.scope) out.scope = t('console.invites.form.rejected');
+  return out;
+}
+
+/**
+ * The body that sends an invite again: a new invite for the same number, role and place. The
+ * contract documents this as the resend; the server replaces the waiting invite and sends the
+ * message again with a new expiry.
+ */
+export function resendBody(invite: Invite): InviteBody | null {
+  const name =
+    invite.displayName && PersonName.safeParse(invite.displayName).success
+      ? { displayName: invite.displayName }
+      : {};
+  const parsed = InviteBody.safeParse({
+    role: invite.role,
+    phone: invite.phone,
+    ...name,
+    ...(invite.role === 'city_coordinator' ? { cityId: invite.cityId } : {}),
+    ...(invite.role === 'venue_coordinator' ? { venueId: invite.venueId } : {}),
+  });
+  return parsed.success ? parsed.data : null;
+}
+
 /** Coordinator invites, the people who hold roles now, and handing a venue or city over. */
 export default function CoordinatorsPage() {
   const { t, tx, dateTime } = useI18n();
   const { api, principal } = useSignedIn();
   const scopeLabel = useScopeLabel();
   const [notice, setNotice] = useState<Notice>(null);
-  const [showPastInvites, setShowPastInvites] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
+  const [inviteFilter, setInviteFilter] = useState<InviteFilter>('all');
+  const [resending, setResending] = useState<string | null>(null);
   const [showPast, setShowPast] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [revokingInvite, setRevokingInvite] = useState<Invite | null>(null);
@@ -89,9 +142,26 @@ export default function CoordinatorsPage() {
   });
 
   const done = (key: MessageKey) => {
+    setFailure(null);
     setNotice({ tone: 'success', key });
     invites.reload();
     people.reload();
+  };
+
+  const resend = async (invite: Invite) => {
+    const body = resendBody(invite);
+    if (!body) return;
+    setResending(invite.id);
+    setNotice(null);
+    setFailure(null);
+    try {
+      await api.adminRoles.invite({ body });
+      done('console.invites.resent');
+    } catch (error) {
+      setFailure(error);
+    } finally {
+      setResending(null);
+    }
   };
 
   const inviteColumns: Column<Invite>[] = [
@@ -117,17 +187,37 @@ export default function CoordinatorsPage() {
     {
       id: 'actions',
       header: t('console.invites.col.actions'),
-      cell: (i) =>
-        i.status === 'pending' && canAssignRole(principal, i.role, inviteScope(i)) ? (
-          <Button
-            variant="danger"
-            className="btn-small"
-            aria-label={`${t('console.invites.revoke')} ${t('console.invites.revoke.for', { digits: phoneTail(i.phone) })}`}
-            onClick={() => setRevokingInvite(i)}
-          >
-            {t('console.invites.revoke')}
-          </Button>
-        ) : null,
+      cell: (i) => {
+        if (!canAssignRole(principal, i.role, inviteScope(i))) return null;
+        const forNumber = t('console.invites.revoke.for', { digits: phoneTail(i.phone) });
+        const canResend = (i.status === 'pending' || i.status === 'expired') && resendBody(i);
+        if (!canResend && i.status !== 'pending') return null;
+        return (
+          <div className="row-actions">
+            {canResend ? (
+              <Button
+                className="btn-small"
+                aria-label={`${t('console.invites.resend')} ${forNumber}`}
+                busy={resending === i.id}
+                disabled={resending !== null}
+                onClick={() => void resend(i)}
+              >
+                {t('console.invites.resend')}
+              </Button>
+            ) : null}
+            {i.status === 'pending' ? (
+              <Button
+                variant="danger"
+                className="btn-small"
+                aria-label={`${t('console.invites.revoke')} ${forNumber}`}
+                onClick={() => setRevokingInvite(i)}
+              >
+                {t('console.invites.revoke')}
+              </Button>
+            ) : null}
+          </div>
+        );
+      },
     },
   ];
 
@@ -177,8 +267,10 @@ export default function CoordinatorsPage() {
 
   const visibleInvites =
     invites.status === 'ready'
-      ? invites.data.items.filter((i) => showPastInvites || i.status === 'pending')
+      ? invites.data.items.filter((i) => inviteFilter === 'all' || i.status === inviteFilter)
       : [];
+  const filterLabel = (f: InviteFilter) =>
+    f === 'all' ? t('console.invites.filter.all') : t(INVITE_STATUS_KEYS[f]);
 
   return (
     <div className="page">
@@ -198,14 +290,21 @@ export default function CoordinatorsPage() {
           {t(notice.key)}
         </Banner>
       ) : null}
+      {failure ? (
+        <Banner tone="danger" onDismiss={() => setFailure(null)}>
+          {t(errorMessageKeyOf(failure))}
+        </Banner>
+      ) : null}
 
       <Section
         title={t('console.invites.list.title')}
         actions={
-          <CheckboxField
-            label={t('console.invites.showPastInvites')}
-            checked={showPastInvites}
-            onChange={(e) => setShowPastInvites(e.target.checked)}
+          <SelectField
+            id="invite-filter"
+            label={t('console.invites.filter.label')}
+            value={inviteFilter}
+            onChange={(e) => setInviteFilter(e.target.value as InviteFilter)}
+            options={INVITE_FILTERS.map((f) => ({ value: f, label: filterLabel(f) }))}
           />
         }
       >
@@ -214,7 +313,13 @@ export default function CoordinatorsPage() {
           <ErrorState error={invites.error} onRetry={invites.reload} />
         ) : null}
         {invites.status === 'ready' && visibleInvites.length === 0 ? (
-          <EmptyState title={t('console.invites.empty')} />
+          <EmptyState
+            title={
+              inviteFilter === 'all'
+                ? t('console.invites.empty')
+                : t('console.invites.filter.empty')
+            }
+          />
         ) : null}
         {invites.status === 'ready' && visibleInvites.length > 0 ? (
           <DataTable
@@ -309,9 +414,11 @@ export default function CoordinatorsPage() {
         <HandoverDialog
           assignment={handingOver}
           onClose={() => setHandingOver(null)}
-          onDone={() => {
+          onDone={(mode) => {
             setHandingOver(null);
-            done('console.invites.handedOver');
+            done(
+              mode === 'phone' ? 'console.invites.handoverInvited' : 'console.invites.handedOver',
+            );
           }}
         />
       ) : null}
@@ -443,6 +550,7 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
       await api.adminRoles.invite({ body: parsed.data });
       onDone();
     } catch (error) {
+      setErrors(serverFieldErrors(error, t));
       setFailure(error);
       setBusy(false);
     }
@@ -538,9 +646,15 @@ function InviteDialog({ onClose, onDone }: { onClose: () => void; onDone: () => 
 
 /* Handover ----------------------------------------------------------------------------------- */
 
+type HandoverMode = 'existing' | 'phone';
+
 /**
- * Hands a venue or city to someone else. The API replaces the old assignment and gives the new
- * one in a single step: the previous coordinator loses access at once and the history stays.
+ * Hands a venue or city to someone else, in one of two ways:
+ * - to someone who already holds a role: `adminRoles.assign` with `replacesAssignmentId`. The new
+ *   coordinator has access at once and the previous one loses it in the same step.
+ * - to a phone number: `adminRoles.invite` with `replacesAssignmentId`. Nothing changes until the
+ *   person accepts the invite; then the server gives them the role and ends the old one together.
+ * The history stays either way.
  */
 function HandoverDialog({
   assignment,
@@ -549,7 +663,7 @@ function HandoverDialog({
 }: {
   assignment: StaffRoleAssignment;
   onClose: () => void;
-  onDone: () => void;
+  onDone: (mode: HandoverMode) => void;
 }) {
   const { t } = useI18n();
   const { api } = useSignedIn();
@@ -558,8 +672,11 @@ function HandoverDialog({
     () => fetchAllPages((cursor) => api.adminRoles.list({ query: { limit: 100, cursor } })),
     [api],
   );
+  const [chosenMode, setMode] = useState<HandoverMode | null>(null);
   const [userId, setUserId] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -573,42 +690,72 @@ function HandoverDialog({
     return [...seen.values()];
   }, [candidates, assignment.userId]);
 
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!userId) {
-      setError(t('console.invites.handover.person.required'));
-      return;
-    }
-    setError(null);
-    const parsed = AssignRoleBody.safeParse(
-      assignment.role === 'city_coordinator'
-        ? {
-            role: 'city_coordinator',
-            cityId: assignment.cityId,
-            userId,
-            replacesAssignmentId: assignment.id,
-          }
-        : {
-            role: 'venue_coordinator',
-            venueId: assignment.venueId,
-            userId,
-            replacesAssignmentId: assignment.id,
-          },
-    );
-    if (!parsed.success) {
-      setError(t('errors.validation_failed'));
-      return;
-    }
+  // With nobody else holding a role, a phone number is the only way, so it is chosen for them.
+  const mode: HandoverMode =
+    chosenMode ?? (candidates.status === 'ready' && people.length === 0 ? 'phone' : 'existing');
+  const previous = assignment.userName ?? t('console.invites.unnamed');
+  const place =
+    assignment.role === 'city_coordinator'
+      ? { role: 'city_coordinator' as const, cityId: assignment.cityId }
+      : { role: 'venue_coordinator' as const, venueId: assignment.venueId };
+  const preview = phone.trim() ? normalizePhone(phone, { mobileOnly: true }) : null;
+
+  const send = async (call: () => Promise<unknown>) => {
     setBusy(true);
     setFailure(null);
     try {
-      await api.adminRoles.assign({ body: parsed.data });
-      onDone();
+      await call();
+      onDone(mode);
     } catch (e) {
+      setErrors(serverFieldErrors(e, t));
       setFailure(e);
       setBusy(false);
     }
   };
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (mode === 'existing') {
+      if (!userId) {
+        setErrors({ person: t('console.invites.handover.person.required') });
+        return;
+      }
+      setErrors({});
+      const parsed = AssignRoleBody.safeParse({
+        ...place,
+        userId,
+        replacesAssignmentId: assignment.id,
+      });
+      if (!parsed.success) {
+        setErrors({ form: t('errors.validation_failed') });
+        return;
+      }
+      await send(() => api.adminRoles.assign({ body: parsed.data }));
+      return;
+    }
+
+    const next: Record<string, string> = {};
+    const phoneResult = normalizePhone(phone, { mobileOnly: true });
+    if (!phoneResult.ok) next.phone = t(PHONE_ISSUE_KEYS[phoneResult.issue]);
+    const trimmed = name.trim();
+    if (trimmed && !PersonName.safeParse(trimmed).success)
+      next.name = t('console.invites.form.name.invalid');
+    setErrors(next);
+    if (Object.keys(next).length > 0 || !phoneResult.ok) return;
+    const parsed = InviteBody.safeParse({
+      ...place,
+      phone: phoneResult.e164,
+      ...(trimmed ? { displayName: trimmed } : {}),
+      replacesAssignmentId: assignment.id,
+    });
+    if (!parsed.success) {
+      setErrors({ form: t('errors.validation_failed') });
+      return;
+    }
+    await send(() => api.adminRoles.invite({ body: parsed.data }));
+  };
+
+  const ready = candidates.status === 'ready' || mode === 'phone';
 
   return (
     <Modal
@@ -624,34 +771,52 @@ function HandoverDialog({
             type="submit"
             form="handover-form"
             busy={busy}
-            disabled={candidates.status !== 'ready' || people.length === 0}
+            disabled={!ready || (mode === 'existing' && people.length === 0)}
           >
-            {t('console.invites.handover.submit')}
+            {mode === 'phone'
+              ? t('console.invites.handover.sendInvite')
+              : t('console.invites.handover.submit')}
           </Button>
         </>
       }
     >
       <p>
-        {t('console.invites.handover.warning', {
-          previous: assignment.userName ?? t('console.invites.unnamed'),
-        })}
+        {mode === 'phone'
+          ? t('console.invites.handover.inviteWarning', { previous })
+          : t('console.invites.handover.warning', { previous })}
       </p>
-      {candidates.status === 'loading' ? <Loading /> : null}
-      {candidates.status === 'error' ? (
-        <ErrorState error={candidates.error} onRetry={candidates.reload} />
-      ) : null}
-      {candidates.status === 'ready' && people.length === 0 ? (
-        <Banner tone="warning">{t('console.invites.handover.nobody')}</Banner>
-      ) : null}
       {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
-      {candidates.status === 'ready' && people.length > 0 ? (
-        <form id="handover-form" className="form" onSubmit={(e) => void submit(e)} noValidate>
+      {errors.form ? <Banner tone="danger">{errors.form}</Banner> : null}
+      <form id="handover-form" className="form" onSubmit={(e) => void submit(e)} noValidate>
+        <SelectField
+          id="handover-mode"
+          label={t('console.invites.handover.mode.label')}
+          value={mode}
+          disabled={busy}
+          onChange={(e) => {
+            setMode(e.target.value as HandoverMode);
+            setErrors({});
+            setFailure(null);
+          }}
+          options={[
+            { value: 'existing', label: t('console.invites.handover.mode.existing') },
+            { value: 'phone', label: t('console.invites.handover.mode.phone') },
+          ]}
+        />
+        {mode === 'existing' && candidates.status === 'loading' ? <Loading /> : null}
+        {mode === 'existing' && candidates.status === 'error' ? (
+          <ErrorState error={candidates.error} onRetry={candidates.reload} />
+        ) : null}
+        {mode === 'existing' && candidates.status === 'ready' && people.length === 0 ? (
+          <Banner tone="warning">{t('console.invites.handover.nobodyYet')}</Banner>
+        ) : null}
+        {mode === 'existing' && candidates.status === 'ready' && people.length > 0 ? (
           <SelectField
             id="handover-person"
             label={t('console.invites.handover.person.label')}
-            hint={t('console.invites.handover.person.hint')}
+            hint={t('console.invites.handover.person.hintExisting')}
             value={userId}
-            error={error}
+            error={errors.person}
             required
             placeholder={t('ui.selectPlaceholder')}
             onChange={(e) => setUserId(e.target.value)}
@@ -660,8 +825,39 @@ function HandoverDialog({
               label: `${a.userName ?? t('console.invites.unnamed')} (${formatPhone(a.phone)})`,
             }))}
           />
-        </form>
-      ) : null}
+        ) : null}
+        {mode === 'phone' ? (
+          <>
+            <TextField
+              id="handover-phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              dir="ltr"
+              label={t('console.invites.phone.label')}
+              hint={
+                preview?.ok
+                  ? t('console.invites.form.phone.preview', { phone: formatPhone(preview.e164) })
+                  : t('console.invites.form.phone.hint')
+              }
+              error={errors.phone}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+            <TextField
+              id="handover-name"
+              autoComplete="off"
+              label={t('console.invites.form.name.label')}
+              error={errors.name}
+              optional
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={80}
+            />
+          </>
+        ) : null}
+      </form>
     </Modal>
   );
 }

@@ -160,36 +160,11 @@ export function toCsv(rows: readonly (readonly string[])[], delimiter = ','): st
     .concat('\r\n');
 }
 
-export interface CsvPart {
-  key: string;
-  csv: string;
-}
-
 /**
- * Joins several exports into one file with a leading `session_id` column. Columns are matched by
- * header name, so exports that differ in column order or have extra columns still line up.
- * Returns null when a part cannot be read, so a broken export is never silently dropped.
+ * How many data rows an exported file has (the header is not counted), so an export with nothing
+ * in it is reported instead of saved. Quoted line breaks inside a name do not count as rows.
  */
-export function mergeCsvParts(parts: readonly CsvPart[], keyColumn = 'session_id'): string | null {
-  const headers: string[] = [];
-  const parsed: { key: string; table: CsvTable }[] = [];
-  for (const part of parts) {
-    const table = parseCsv(part.csv, { maxRows: 1_000_000, maxChars: 50_000_000 });
-    if (table.errors.some((e) => e.code !== 'empty_file')) return null;
-    for (const h of table.header) if (!headers.includes(h)) headers.push(h);
-    parsed.push({ key: part.key, table });
-  }
-  const out: string[][] = [[keyColumn, ...headers]];
-  for (const { key, table } of parsed) {
-    for (const record of table.records) {
-      out.push([
-        key,
-        ...headers.map((h) => {
-          const idx = table.header.indexOf(h);
-          return idx === -1 ? '' : (record.cells[idx] ?? '');
-        }),
-      ]);
-    }
-  }
-  return toCsv(out);
+export function csvDataRowCount(text: string): number {
+  return parseCsv(text, { maxRows: Number.MAX_SAFE_INTEGER, maxChars: Number.MAX_SAFE_INTEGER })
+    .records.length;
 }

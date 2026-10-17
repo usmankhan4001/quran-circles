@@ -13,9 +13,38 @@ import {
   TextField,
 } from '../components/ui';
 import { useI18n } from '../i18n';
-import { errorMessageKeyOf } from '../lib/errors';
+import { errorMessageKeyOf, fieldIssues } from '../lib/errors';
 
 const OFFSETS = [-2, -1, 0, 1, 2] as const;
+
+type Field =
+  | 'hijriOffsetDays'
+  | 'seasonMode'
+  | 'whatsappDailyCapPerPerson'
+  | 'circleRequestAlertThreshold'
+  | 'leadDora'
+  | 'leadCircles';
+
+/** Form fields by the path of a settings value, for local and server validation issues alike. */
+const FIELD_PATHS: Readonly<Record<string, Field>> = {
+  hijriOffsetDays: 'hijriOffsetDays',
+  seasonMode: 'seasonMode',
+  whatsappDailyCapPerPerson: 'whatsappDailyCapPerPerson',
+  circleRequestAlertThreshold: 'circleRequestAlertThreshold',
+  'reminderLeadMinutes.dora': 'leadDora',
+  'reminderLeadMinutes.circles': 'leadCircles',
+};
+
+const FIELD_ERROR_KEYS = {
+  hijriOffsetDays: 'console.settings.hijri.invalid',
+  seasonMode: 'errors.validation_failed',
+  whatsappDailyCapPerPerson: 'console.settings.cap.invalid',
+  circleRequestAlertThreshold: 'console.settings.threshold.invalid',
+  leadDora: 'console.settings.lead.invalid',
+  leadCircles: 'console.settings.lead.invalid',
+} as const satisfies Record<Field, MessageKey>;
+
+const asNumber = (text: string) => (text.trim() === '' ? Number.NaN : Number(text));
 
 const SEASON_KEYS = {
   dora: 'console.settings.season.dora',
@@ -48,7 +77,9 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const [season, setSeason] = useState<Settings['seasonMode']>(initial.seasonMode);
   const [cap, setCap] = useState(String(initial.whatsappDailyCapPerPerson));
   const [threshold, setThreshold] = useState(String(initial.circleRequestAlertThreshold));
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [leadDora, setLeadDora] = useState(String(initial.reminderLeadMinutes.dora));
+  const [leadCircles, setLeadCircles] = useState(String(initial.reminderLeadMinutes.circles));
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [failure, setFailure] = useState<unknown>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -56,10 +87,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const draft = {
     hijriOffsetDays: Number(hijri),
     seasonMode: season,
-    whatsappDailyCapPerPerson: cap.trim() === '' ? Number.NaN : Number(cap),
-    circleRequestAlertThreshold: threshold.trim() === '' ? Number.NaN : Number(threshold),
+    whatsappDailyCapPerPerson: asNumber(cap),
+    circleRequestAlertThreshold: asNumber(threshold),
+    leadDora: asNumber(leadDora),
+    leadCircles: asNumber(leadCircles),
   };
-  const changed: Partial<Settings> = {};
+  const changed: SettingsUpdate = {};
   if (draft.hijriOffsetDays !== saved.hijriOffsetDays)
     changed.hijriOffsetDays = draft.hijriOffsetDays;
   if (draft.seasonMode !== saved.seasonMode) changed.seasonMode = draft.seasonMode;
@@ -67,6 +100,11 @@ function SettingsForm({ initial }: { initial: Settings }) {
     changed.whatsappDailyCapPerPerson = draft.whatsappDailyCapPerPerson;
   if (draft.circleRequestAlertThreshold !== saved.circleRequestAlertThreshold)
     changed.circleRequestAlertThreshold = draft.circleRequestAlertThreshold;
+  // Only the program whose lead time changed is sent; the contract takes a partial value.
+  const lead: NonNullable<SettingsUpdate['reminderLeadMinutes']> = {};
+  if (draft.leadDora !== saved.reminderLeadMinutes.dora) lead.dora = draft.leadDora;
+  if (draft.leadCircles !== saved.reminderLeadMinutes.circles) lead.circles = draft.leadCircles;
+  if (Object.keys(lead).length > 0) changed.reminderLeadMinutes = lead;
   const dirty = Object.keys(changed).length > 0;
 
   const submit = async (event: FormEvent) => {
@@ -75,17 +113,10 @@ function SettingsForm({ initial }: { initial: Settings }) {
     setFailure(null);
     const parsed = SettingsUpdate.safeParse(changed);
     if (!parsed.success) {
-      const next: Record<string, string> = {};
+      const next: Partial<Record<Field, string>> = {};
       for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? 'form');
-        next[key] =
-          key === 'hijriOffsetDays'
-            ? t('console.settings.hijri.invalid')
-            : key === 'whatsappDailyCapPerPerson'
-              ? t('console.settings.cap.invalid')
-              : key === 'circleRequestAlertThreshold'
-                ? t('console.settings.threshold.invalid')
-                : t('errors.validation_failed');
+        const field = fieldOf(issue.path.map(String));
+        if (field) next[field] = t(FIELD_ERROR_KEYS[field]);
       }
       setErrors(next);
       return;
@@ -99,8 +130,16 @@ function SettingsForm({ initial }: { initial: Settings }) {
       setSeason(result.seasonMode);
       setCap(String(result.whatsappDailyCapPerPerson));
       setThreshold(String(result.circleRequestAlertThreshold));
+      setLeadDora(String(result.reminderLeadMinutes.dora));
+      setLeadCircles(String(result.reminderLeadMinutes.circles));
       setDone(true);
     } catch (error) {
+      // A value the server refused is marked at its own field.
+      const rejected = fieldIssues(error, FIELD_PATHS);
+      const next: Partial<Record<Field, string>> = {};
+      for (const field of Object.keys(rejected) as Field[])
+        next[field] = t(FIELD_ERROR_KEYS[field]);
+      setErrors(next);
       setFailure(error);
     } finally {
       setBusy(false);
@@ -160,6 +199,34 @@ function SettingsForm({ initial }: { initial: Settings }) {
         value={threshold}
         onChange={(e) => setThreshold(e.target.value)}
       />
+      <fieldset className="fieldset">
+        <legend className="field-label">{t('console.settings.lead.legend')}</legend>
+        <p className="field-hint">{t('console.settings.lead.hint')}</p>
+        <TextField
+          id="setting-lead-dora"
+          type="number"
+          inputMode="numeric"
+          min={5}
+          max={1440}
+          dir="ltr"
+          label={t('console.settings.lead.dora')}
+          error={errors.leadDora}
+          value={leadDora}
+          onChange={(e) => setLeadDora(e.target.value)}
+        />
+        <TextField
+          id="setting-lead-circles"
+          type="number"
+          inputMode="numeric"
+          min={5}
+          max={1440}
+          dir="ltr"
+          label={t('console.settings.lead.circles')}
+          error={errors.leadCircles}
+          value={leadCircles}
+          onChange={(e) => setLeadCircles(e.target.value)}
+        />
+      </fieldset>
       <div className="form-actions">
         <Button type="submit" variant="primary" busy={busy} disabled={!dirty}>
           {t('console.settings.save')}
@@ -167,4 +234,13 @@ function SettingsForm({ initial }: { initial: Settings }) {
       </div>
     </form>
   );
+}
+
+/** The form field for an issue path such as `['reminderLeadMinutes', 'dora']`. */
+function fieldOf(path: readonly string[]): Field | undefined {
+  for (let n = path.length; n > 0; n--) {
+    const field = FIELD_PATHS[path.slice(0, n).join('.')];
+    if (field) return field;
+  }
+  return undefined;
 }

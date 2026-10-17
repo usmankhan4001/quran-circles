@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Invite } from '@qc/contracts';
+import type { Invite, StaffRoleAssignment } from '@qc/contracts';
 import { cities, venues } from '@qc/contracts/fixtures';
 import { parseCsv } from '../lib/csv';
 import {
@@ -11,12 +11,11 @@ import {
   venueB,
   venueCoordinator,
 } from '../test/people';
-import type { StaffRoleAssignment } from '../api/types';
 import { citiesMentioned, validateVenues } from './venues';
 import { validateCoordinators } from './coordinators';
 import { maskPhone } from '../lib/phone';
 import { parseDays, validateSessions } from './sessions';
-import { applyImport } from './apply';
+import { commitImport, mergeServerResult, rowsToSend, serverIssue } from './server';
 import { templateCsv } from './templates';
 import { IMPORT_KINDS } from './types';
 import { reportToCsv } from './run';
@@ -416,50 +415,125 @@ describe('templates, report and apply', () => {
     expect(csv).not.toContain('atlantis');
   });
 
-  it('refuses to apply a report that still has errors', async () => {
-    const r = validateVenues(
+  it('refuses to apply a report that still has errors, or that the server has not checked', async () => {
+    const bad = validateVenues(
       parseCsv(`${VENUE_HEADER}\n${venueRow({ city: 'atlantis' })}\n`),
       venueCtx(),
     );
-    await expect(applyImport(r, {} as never)).rejects.toThrow();
+    await expect(commitImport(bad, {} as never)).rejects.toThrow();
+    const unchecked = validateVenues(parseCsv(`${VENUE_HEADER}\n${venueRow()}\n`), venueCtx());
+    expect(unchecked.canApply).toBe(true);
+    expect(unchecked.serverChecked).toBe(false);
+    await expect(commitImport(unchecked, {} as never)).rejects.toThrow();
   });
+});
 
-  it('sends only valid rows, one by one, and stops at the first failure', async () => {
-    const r = validateVenues(
+describe('the server dry run and the import', () => {
+  const file = () =>
+    validateVenues(
       parseCsv(
-        `${VENUE_HEADER}\n${venueRow({ name_en: venueA!.name.en })}\n${venueRow({ name_en: 'N1' })}\n${venueRow({ name_en: 'N2' })}\n${venueRow({ name_en: 'N3' })}\n`,
+        `${VENUE_HEADER}\n${venueRow({ name_en: venueA!.name.en })}\n${venueRow({ name_en: 'N1' })}\n${venueRow({ name_en: 'N2', city: 'atlantis' })}\n${venueRow({ name_en: 'N3' })}\n`,
       ),
       venueCtx(),
     );
-    const sent: string[] = [];
-    const api = {
-      adminVenues: {
-        create: async ({ body }: { body: { name: { en: string } } }) => {
-          sent.push(body.name.en);
-          if (body.name.en === 'N2') throw new Error('boom');
-          return {};
-        },
-      },
-    };
-    const result = await applyImport(r, api as never);
-    expect(sent).toEqual(['N1', 'N2']);
-    expect(result).toMatchObject({
-      status: 'stopped',
-      created: 1,
-      skipped: 1,
-      failedLine: 4,
-      remaining: 2,
+
+  it('sends every row the console could build, including the ones it thinks are already there', () => {
+    expect(rowsToSend(file()).map((r) => r.line)).toEqual([2, 3, 5]);
+  });
+
+  it("takes the server's status for each row it was asked about", () => {
+    const report = file();
+    const sent = rowsToSend(report);
+    const merged = mergeServerResult(report, sent, {
+      dryRun: true,
+      applied: false,
+      counts: { created: 1, duplicate: 0, invalid: 2 },
+      rows: [
+        { index: 0, status: 'created', issues: [] },
+        { index: 1, status: 'invalid', issues: [{ path: 'cityId', code: 'forbidden' }] },
+        { index: 2, status: 'invalid', issues: [{ path: 'name.en', code: 'too_small' }] },
+      ],
+    });
+    expect(merged.serverChecked).toBe(true);
+    expect(merged.rows.map((r) => r.status)).toEqual(['valid', 'invalid', 'invalid', 'invalid']);
+    // The console's "already there" note gives way to the server's answer.
+    expect(codes(merged, 0)).toEqual([]);
+    expect(merged.rows[1]?.issues[0]).toMatchObject({
+      line: 3,
+      column: 'city',
+      code: 'out_of_scope',
+    });
+    expect(merged.rows[1]?.body).toBeUndefined();
+    // A row the console refused keeps its own problem.
+    expect(codes(merged, 2)).toEqual(['unknown_city']);
+    expect(merged.rows[3]?.issues[0]).toMatchObject({ column: 'name_en', code: 'invalid_value' });
+    expect(merged.counts).toEqual({ total: 4, valid: 1, duplicate: 0, invalid: 3 });
+    expect(merged.canApply).toBe(false);
+  });
+
+  it('turns server issue codes into report messages for the right column', () => {
+    expect(serverIssue('venues', 4, { path: 'areaId', code: 'area_not_in_city' })).toMatchObject({
+      line: 4,
+      column: 'area',
+      code: 'area_not_in_city',
+    });
+    expect(serverIssue('venues', 4, { path: 'areaId', code: 'invalid_reference' }).code).toBe(
+      'unknown_area',
+    );
+    expect(
+      serverIssue('coordinators', 2, { path: 'venueId', code: 'invalid_reference' }),
+    ).toMatchObject({
+      column: 'venue',
+      code: 'unknown_venue',
+    });
+    expect(
+      serverIssue('sessions', 2, { path: 'circleId', code: 'invalid_reference' }),
+    ).toMatchObject({
+      column: null,
+      code: 'invalid_reference',
+      params: { column: 'row' },
     });
   });
 
-  it('reports done with created and skipped counts', async () => {
-    const r = validateVenues(
+  it('imports with one call and reports created and skipped rows', async () => {
+    const report = file();
+    const clean = validateVenues(
       parseCsv(
         `${VENUE_HEADER}\n${venueRow({ name_en: venueA!.name.en })}\n${venueRow({ name_en: 'N1' })}\n`,
       ),
       venueCtx(),
     );
-    const api = { adminVenues: { create: async () => ({}) } };
-    expect(await applyImport(r, api as never)).toEqual({ status: 'done', created: 1, skipped: 1 });
+    const checked = mergeServerResult(clean, rowsToSend(clean), {
+      dryRun: true,
+      applied: false,
+      counts: { created: 1, duplicate: 1, invalid: 0 },
+      rows: [
+        { index: 0, status: 'duplicate', issues: [] },
+        { index: 1, status: 'created', issues: [] },
+      ],
+    });
+    const bodies: unknown[] = [];
+    const api = {
+      adminImport: {
+        venues: async ({ body }: { body: { dryRun: boolean; rows: unknown[] } }) => {
+          bodies.push(body);
+          return {
+            dryRun: false,
+            applied: true,
+            counts: { created: 1, duplicate: 1, invalid: 0 },
+            rows: [],
+          };
+        },
+      },
+    };
+    expect(await commitImport(checked, api as never)).toEqual({
+      applied: true,
+      created: 1,
+      skipped: 1,
+    });
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]).toMatchObject({ dryRun: false });
+    expect((bodies[0] as { rows: unknown[] }).rows).toHaveLength(2);
+    expect(report.counts.total).toBe(4);
   });
 });

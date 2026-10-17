@@ -3,6 +3,7 @@ import { fetchAllPages } from '../api/hooks';
 import type { Directory } from '../api/directory';
 import { parseCsv, toCsv } from '../lib/csv';
 import { validateCoordinators } from './coordinators';
+import { mergeServerResult, rowsToSend, sendImport } from './server';
 import { validateSessions } from './sessions';
 import { ISSUE_KEYS, type DryRunReport, type ImportIssue, type ImportKind } from './types';
 import { citiesMentioned, validateVenues } from './venues';
@@ -16,10 +17,30 @@ export interface DryRunInput {
 }
 
 /**
- * The dry run. It reads the file, loads what already exists (read-only requests), and checks
- * every row against the contract schemas and the person's scope. It never writes anything.
+ * The dry run, in two passes, and neither writes anything.
+ * 1. The console reads the file, loads what already exists (read-only requests) and checks every
+ *    row against the contract schemas and the person's scope, turning names into ids.
+ * 2. Every row it could turn into a contract body goes to the server's dry run
+ *    (`adminImport.<kind>` with `dryRun: true`), which is the authority: its per-row answer
+ *    (created, duplicate, invalid with issues) replaces the console's guess for those rows.
+ * A file with a problem in the file itself (a missing column, a broken quote) stops after pass 1.
  */
-export async function dryRun({
+export async function dryRun(input: DryRunInput): Promise<DryRunReport<unknown>> {
+  const report = await checkLocally(input);
+  const sent = rowsToSend(report);
+  const fileBlocked = report.fileIssues.some((i) => i.severity === 'error');
+  if (fileBlocked || sent.length === 0) return report;
+  const result = await sendImport(
+    input.api,
+    input.kind,
+    sent.map((r) => r.body),
+    true,
+  );
+  return mergeServerResult(report, sent, result);
+}
+
+/** Pass 1: the console's own check. Read-only. */
+async function checkLocally({
   kind,
   text,
   api,

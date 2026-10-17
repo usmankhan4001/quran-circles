@@ -5,7 +5,9 @@ import {
   ERROR_MESSAGE_KEYS,
   errorKind,
   errorMessageKeyOf,
+  fieldIssues,
   isAuthLost,
+  issuesOf,
   isErrorCode,
   retryAfterOf,
 } from './errors';
@@ -47,5 +49,26 @@ describe('error code mapping', () => {
     expect(retryAfterOf(new ApiClientError(403, 'forbidden', 'r'))).toBeNull();
     expect(isErrorCode('forbidden')).toBe(true);
     expect(isErrorCode('toString')).toBe(false);
+  });
+});
+
+describe('validation issues from the server', () => {
+  const rejected = new ApiClientError(400, 'validation_failed', 'r1', undefined, [
+    { path: 'phone', code: 'invalid_format' },
+    { path: 'name.en', code: 'too_small' },
+    { path: 'replacesAssignmentId', code: 'invalid_reference' },
+  ]);
+
+  it('reads the issues of a validation_failed answer only', () => {
+    expect(issuesOf(rejected)).toHaveLength(3);
+    expect(issuesOf(new ApiClientError(403, 'forbidden', 'r1'))).toEqual([]);
+    expect(issuesOf(new Error('x'))).toEqual([]);
+  });
+
+  it('points each issue at the form field it belongs to, by path prefix', () => {
+    expect(fieldIssues(rejected, { phone: 'phone', name: 'name' })).toEqual({
+      phone: { path: 'phone', code: 'invalid_format' },
+      name: { path: 'name.en', code: 'too_small' },
+    });
   });
 });

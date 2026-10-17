@@ -13,3 +13,5 @@ What I need:
    Workaround meanwhile: as described above.
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008. Item 1: types exported. Item 2: `ApiClientError.issues`. Item 3: documented on `QueryBool`. Item 4: answered, resend is a new `adminRoles.invite` for the same number (documented on the endpoint and in the changelog).
+
+Applied in console 2026-10-17: item 1, `StaffRoleAssignment` and `AuditEntry` come from `@qc/contracts` (the local derived types and `src/api/types.ts` are gone; the console has no attendance screen, so `Attendance` has no local type to replace). Item 2, `ApiClientError.issues` marks the rejected field in the invite, handover, settings and export forms (`fieldIssues` in `src/lib/errors.ts`). Item 3, query flags are sent as `'true'` / `'false'`. Item 4, Resend on waiting and expired invites sends a new `adminRoles.invite` for the same number, role and place.

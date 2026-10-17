@@ -10,3 +10,5 @@ Affected lanes: contracts, api-core, console.
 Workaround meanwhile: fan-out over per-session exports, merged only when all succeed. No attendance option, no history table (the Audit log page shows export entries).
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
+
+Applied in console 2026-10-17: the Exports page uses `adminRegistrations.export` for a venue or a whole city with From and To dates, one call and one audit row; the per-session fan-out and merge are removed. The byte order mark is still added when saving. An empty file is reported, not saved; `too_many_rows` and refused dates are shown at the right place. Attendance export and the recent-exports history are still not built (not in the contract).

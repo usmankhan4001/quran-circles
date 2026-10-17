@@ -1,5 +1,4 @@
-import type { Invite } from '@qc/contracts';
-import type { StaffRoleAssignment } from '../api/types';
+import type { Invite, StaffRoleAssignment } from '@qc/contracts';
 import { useDirectory } from '../api/directory';
 import { useI18n } from '../i18n';
 

@@ -1,4 +1,4 @@
-import { ApiClientError, ERROR_CODES, type ErrorCode } from '@qc/contracts';
+import { ApiClientError, ERROR_CODES, type ErrorCode, type ValidationIssue } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 
 /**
@@ -61,4 +61,38 @@ export function retryAfterOf(error: unknown): number | null {
 export function isAuthLost(error: unknown): boolean {
   const kind = errorKind(error);
   return kind === 'unauthenticated' || kind === 'token_expired' || kind === 'refresh_token_invalid';
+}
+
+/**
+ * Where the server rejected the input of a `validation_failed` answer, as `{ path, code }`. The
+ * path is dotted (`phone`, `name.en`); the input itself is never included. Empty for any other
+ * error.
+ */
+export function issuesOf(error: unknown): readonly ValidationIssue[] {
+  return error instanceof ApiClientError && error.code === 'validation_failed'
+    ? (error.issues ?? [])
+    : [];
+}
+
+/**
+ * The form fields the server rejected. `fields` maps the first segments of an issue path to a
+ * field name (`{ phone: 'phone', displayName: 'name' }`); issues on other paths are left out so
+ * the caller can show its general message for them.
+ */
+export function fieldIssues<F extends string>(
+  error: unknown,
+  fields: Readonly<Record<string, F>>,
+): Partial<Record<F, ValidationIssue>> {
+  const out: Partial<Record<F, ValidationIssue>> = {};
+  for (const issue of issuesOf(error)) {
+    const parts = issue.path.split('.');
+    for (let n = parts.length; n > 0; n--) {
+      const field = fields[parts.slice(0, n).join('.')];
+      if (field !== undefined) {
+        out[field] ??= issue;
+        break;
+      }
+    }
+  }
+  return out;
 }

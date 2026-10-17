@@ -1,5 +1,11 @@
-import { InviteBody, type City, type Invite, type Role, type Venue } from '@qc/contracts';
-import type { StaffRoleAssignment } from '../api/types';
+import {
+  InviteBody,
+  type City,
+  type Invite,
+  type Role,
+  type StaffRoleAssignment,
+  type Venue,
+} from '@qc/contracts';
 import type { CsvTable } from '../lib/csv';
 import { canAssignRole } from '../lib/permissions';
 import { maskPhone, normalizePhone } from '../lib/phone';
@@ -23,7 +29,7 @@ export const COORDINATOR_COLUMNS: readonly ColumnSpec[] = [
   { name: 'venue', aliases: ['venue_slug', 'venue_name', 'venue_id'] },
 ];
 
-const PATH_COLUMNS: Record<string, string> = {
+export const COORDINATOR_PATH_COLUMNS: Readonly<Record<string, string>> = {
   phone: 'phone',
   displayName: 'name',
   role: 'role',
@@ -142,7 +148,7 @@ export function validateCoordinators(
       status,
       issues,
       label,
-      ...(status === 'valid' && built ? { body: built.body } : {}),
+      ...(status !== 'invalid' && built ? { body: built.body } : {}),
     });
   }
   return buildReport('coordinators', read.fileIssues, rows);
@@ -244,7 +250,7 @@ function buildInvite(
   });
   if (!parsed.success) {
     for (const zodIssue of parsed.error.issues) {
-      const column = columnForPath(PATH_COLUMNS, zodIssue.path);
+      const column = columnForPath(COORDINATOR_PATH_COLUMNS, zodIssue.path);
       issues.push(issue(line, column, 'invalid_value', { column: column ?? 'row' }));
     }
     return null;

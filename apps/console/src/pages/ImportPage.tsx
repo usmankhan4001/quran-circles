@@ -2,8 +2,8 @@ import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { canSomewhere } from '../lib/permissions';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
-import { applyImport, type ApplyProgress, type ApplyReport } from '../import/apply';
 import { dryRun, issueMessage, reportToCsv } from '../import/run';
+import { commitImport } from '../import/server';
 import { templateCsv } from '../import/templates';
 import {
   IMPORT_KINDS,
@@ -65,14 +65,22 @@ type Phase =
   | { name: 'choose' }
   | { name: 'checking' }
   | { name: 'failed'; error: unknown }
-  | { name: 'reviewed'; report: DryRunReport<unknown> }
-  | { name: 'applying'; report: DryRunReport<unknown>; progress: ApplyProgress }
-  | { name: 'applied'; report: DryRunReport<unknown>; result: ApplyReport };
+  | {
+      name: 'reviewed';
+      report: DryRunReport<unknown>;
+      /** The import was refused by the server: nothing was written, the report says why. */
+      refused?: boolean;
+      /** The import call failed (offline, rate limited...): nothing was written. */
+      failure?: unknown;
+    }
+  | { name: 'applying'; report: DryRunReport<unknown> }
+  | { name: 'applied'; report: DryRunReport<unknown>; created: number; skipped: number };
 
 /**
- * Bulk import with a dry run. Choosing a file only reads it and checks it: nothing is sent to the
- * API until the person reviews the report and confirms. A file with any invalid row cannot be
- * applied, so a half-correct file never half-applies by accident.
+ * Bulk import with a dry run. Choosing a file checks it twice, and neither check writes: first in
+ * the browser, then with the server's dry run, which has the final say. The import itself is one
+ * call after the person confirms, and the server applies it all or nothing, so a file never
+ * half-applies.
  */
 export default function ImportPage() {
   const { t, tp, number } = useI18n();
@@ -138,19 +146,23 @@ export default function ImportPage() {
     if (phase.name !== 'reviewed') return;
     const { report: current } = phase;
     setConfirming(false);
-    setPhase({
-      name: 'applying',
-      report: current,
-      progress: { done: 0, total: current.counts.valid },
-    });
+    setPhase({ name: 'applying', report: current });
     try {
-      const result = await applyImport(current, api, (progress) =>
-        setPhase({ name: 'applying', report: current, progress }),
-      );
-      setPhase({ name: 'applied', report: current, result });
-      dir.reload();
+      const outcome = await commitImport(current, api);
+      if (outcome.applied) {
+        setPhase({
+          name: 'applied',
+          report: current,
+          created: outcome.created,
+          skipped: outcome.skipped,
+        });
+        dir.reload();
+      } else {
+        setShowAll(false);
+        setPhase({ name: 'reviewed', report: outcome.report, refused: true });
+      }
     } catch (error) {
-      setPhase({ name: 'failed', error });
+      setPhase({ name: 'reviewed', report: current, failure: error });
     }
   };
 
@@ -280,6 +292,20 @@ export default function ImportPage() {
       {report && phase.name !== 'applied' ? (
         <Section title={t('console.import.step.check')}>
           <Banner tone="warning">{t('console.import.nothingSaved')}</Banner>
+          {phase.name === 'reviewed' && phase.refused ? (
+            <Banner tone="danger" title={t('console.import.refused.title')}>
+              {t('console.import.refused.body')}
+            </Banner>
+          ) : null}
+          {phase.name === 'reviewed' && phase.failure !== undefined ? (
+            <Banner tone="danger" title={t('console.import.refused.title')}>
+              <p>{t(errorMessageKeyOf(phase.failure))}</p>
+              <p>{t('console.import.failed.nothingSaved')}</p>
+            </Banner>
+          ) : null}
+          {report.serverChecked ? (
+            <p className="field-hint">{t('console.import.serverChecked')}</p>
+          ) : null}
           <dl className="stats stats-four" aria-label={t('console.import.summary')}>
             <div className="stat">
               <dt className="stat-label">{t('console.import.count.total')}</dt>
@@ -395,46 +421,18 @@ export default function ImportPage() {
               {t('console.import.startAgain')}
             </Button>
           </div>
-          {phase.name === 'applying' ? (
-            <p role="status">
-              {t('console.import.applying', {
-                done: number(phase.progress.done),
-                total: number(phase.progress.total),
-              })}
-            </p>
-          ) : null}
+          {phase.name === 'applying' ? <p role="status">{t('console.import.importing')}</p> : null}
           <p className="field-hint">{fileName}</p>
         </Section>
       ) : null}
 
       {phase.name === 'applied' ? (
         <Section title={t('console.import.result')}>
-          {phase.result.status === 'done' ? (
-            <Banner tone="success">
-              {t('console.import.done', { count: number(phase.result.created) })}
-              {phase.result.skipped > 0
-                ? ` ${tp('console.import.skippedExisting', phase.result.skipped)}`
-                : ''}
-            </Banner>
-          ) : (
-            <Banner tone="danger" title={t('console.import.stopped.title')}>
-              <p>
-                {t('console.import.stopped.body', {
-                  created: number(phase.result.created),
-                  remaining: number(phase.result.remaining),
-                  line: number(phase.result.failedLine),
-                })}
-              </p>
-              <p>{t(errorMessageKeyOf(phase.result.error))}</p>
-              <p>{t('console.import.stopped.next')}</p>
-            </Banner>
-          )}
+          <Banner tone="success">
+            {t('console.import.done', { count: number(phase.created) })}
+            {phase.skipped > 0 ? ` ${tp('console.import.skippedExisting', phase.skipped)}` : ''}
+          </Banner>
           <div className="form-actions">
-            {phase.result.status === 'stopped' && fileText !== null ? (
-              <Button variant="primary" onClick={() => void check(fileText, kind)}>
-                {t('console.import.checkAgain')}
-              </Button>
-            ) : null}
             <Button onClick={reset}>{t('console.import.another')}</Button>
           </div>
         </Section>
@@ -457,7 +455,7 @@ export default function ImportPage() {
           {report.counts.duplicate > 0 ? (
             <p>{tp('console.import.confirm.skipped', report.counts.duplicate)}</p>
           ) : null}
-          <p>{t('console.import.confirm.warning')}</p>
+          <p>{t('console.import.confirm.allOrNothing')}</p>
         </Modal>
       ) : null}
     </div>

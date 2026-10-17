@@ -56,6 +56,7 @@ export const SETTINGS = {
   seasonMode: 'circles',
   whatsappDailyCapPerPerson: 2,
   circleRequestAlertThreshold: 10,
+  reminderLeadMinutes: { dora: 60, circles: 45 },
 } as const;
 
 export interface Call {
@@ -182,8 +183,14 @@ export async function shellReady(locale: Locale = 'en') {
   await screen.findByRole('navigation', { name: text('console.shell.navLabel', locale) });
 }
 
-/** Requests that change something. Sign-in plumbing is not counted. */
+/** A bulk import dry run: a POST that checks the rows and changes nothing. */
+export const isDryRun = (c: Call) =>
+  c.method === 'POST' &&
+  c.path.startsWith('/v1/admin/import/') &&
+  (c.body as { dryRun?: unknown } | undefined)?.dryRun === true;
+
+/** Requests that change something. Sign-in plumbing and import dry runs are not counted. */
 export const writes = (calls: Call[]) =>
-  calls.filter((c) => c.method !== 'GET' && !c.path.startsWith('/v1/auth/'));
+  calls.filter((c) => c.method !== 'GET' && !c.path.startsWith('/v1/auth/') && !isDryRun(c));
 
 export { screen, waitFor };

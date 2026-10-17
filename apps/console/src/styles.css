@@ -752,8 +752,21 @@ html[dir='rtl'] .field-box-select::after {
   align-items: start;
 }
 .form-grid > .form-actions,
+.form-grid > .form-note,
 .form-grid > [role='status'] {
   grid-column: 1 / -1;
+}
+/* A group of related fields, such as the two reminder lead times in Settings. */
+.fieldset {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+.fieldset > legend {
+  padding: 0;
 }
 .form-actions {
   display: flex;

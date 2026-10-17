@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Locale } from '../i18n';
 import { parseCsv } from '../lib/csv';
 import { rawalpindi, venueA } from '../test/people';
-import { renderConsole, screen, text, waitFor, writes, type Call } from '../test/harness';
+import { isDryRun, renderConsole, screen, text, waitFor, writes, type Call } from '../test/harness';
 
 const HEADER =
   'city,area,name_en,name_ur,address_en,address_ur,lat,lng,contact_phone,women_section';
@@ -26,8 +26,37 @@ const venue = (name: string, over: Record<string, string> = {}) => {
 const csvFile = (rows: string[], header = HEADER, name = 'venues.csv') =>
   new File([[header, ...rows].join('\r\n')], name, { type: 'text/csv' });
 
-const creates = (calls: Call[]) =>
-  calls.filter((c) => c.method === 'POST' && c.path === '/v1/admin/venues');
+type ImportCall = { dryRun: boolean; rows: Record<string, unknown>[] };
+
+/** Calls to the bulk import endpoint of one kind, dry runs and imports alike. */
+const importCalls = (calls: Call[], kind = 'venues') =>
+  calls.filter((c) => c.method === 'POST' && c.path === `/v1/admin/import/${kind}`);
+/** The real imports (`dryRun: false`), with their bodies. */
+const imports = (calls: Call[], kind = 'venues') =>
+  importCalls(calls, kind)
+    .filter((c) => !isDryRun(c))
+    .map((c) => c.body as ImportCall);
+
+/** A mock import endpoint that refuses some rows (by index) with the given issue. */
+const refusing =
+  (when: 'dryRun' | 'import' | 'both', bad: Record<number, { path: string; code: string }>) =>
+  (c: { body: unknown }) => {
+    const body = c.body as ImportCall;
+    const active = when === 'both' || (when === 'dryRun') === body.dryRun;
+    const rows = body.rows.map((_r, index) => {
+      const issue = active ? bad[index] : undefined;
+      return issue
+        ? { index, status: 'invalid', issues: [issue] }
+        : { index, status: 'created', issues: [] };
+    });
+    const invalid = rows.filter((r) => r.status === 'invalid').length;
+    return {
+      dryRun: body.dryRun,
+      applied: !body.dryRun && invalid === 0,
+      counts: { created: rows.length - invalid, duplicate: 0, invalid },
+      rows,
+    };
+  };
 
 function captureDownloads() {
   const saved: Blob[] = [];
@@ -70,8 +99,13 @@ describe.each<Locale>(['en', 'ur'])('bulk import dry run (%s)', (locale) => {
     expect(
       screen.getByText(text('console.import.result.ready.other', locale).replace('{count}', '2')),
     ).toBeTruthy();
-    // Nothing was written: the check only reads.
+    // Nothing was written: the console's check reads, and the server's check is a dry run.
     expect(writes(calls)).toEqual([]);
+    const checks = importCalls(calls);
+    expect(checks).toHaveLength(1);
+    expect(checks[0]?.body).toMatchObject({ dryRun: true });
+    expect((checks[0]?.body as ImportCall).rows).toHaveLength(2);
+    expect(screen.getByText(text('console.import.serverChecked', locale))).toBeTruthy();
     const importButton = screen.getByRole('button', { name: applyLabel(2, locale) });
     expect(importButton).toHaveProperty('disabled', false);
     await user.click(importButton);
@@ -83,17 +117,24 @@ describe.each<Locale>(['en', 'ur'])('bulk import dry run (%s)', (locale) => {
     expect(writes(calls)).toEqual([]);
     await user.click(within(dialog).getByRole('button', { name: applyLabel(2, locale) }));
 
-    await waitFor(() => expect(creates(calls)).toHaveLength(2));
-    expect(creates(calls).map((c) => (c.body as { name: { en: string } }).name.en)).toEqual([
+    // One call imports the whole file; there is no per-row create any more.
+    await waitFor(() => expect(imports(calls)).toHaveLength(1));
+    const sent = imports(calls)[0] as ImportCall;
+    expect(sent.dryRun).toBe(false);
+    expect(sent.rows.map((r) => (r.name as { en: string }).en)).toEqual([
       'Test Masjid One',
       'Test Masjid Two',
     ]);
-    expect(creates(calls)[0]?.body).toMatchObject({
+    expect(sent.rows[0]).toMatchObject({
       cityId: rawalpindi!.id,
       contactPhone: '+923000000011',
       facilities: { womenSection: true },
     });
+    expect(calls.some((c) => c.method === 'POST' && c.path === '/v1/admin/venues')).toBe(false);
     expect(await screen.findByText(text('console.import.result', locale))).toBeTruthy();
+    expect(
+      screen.getByText(text('console.import.done', locale).replace('{count}', '2')),
+    ).toBeTruthy();
     expect(document.documentElement.dir).toBe(locale === 'ur' ? 'rtl' : 'ltr');
   });
 });
@@ -177,7 +218,9 @@ describe('bulk import report', () => {
     expect(within(dialog).getByText('1 row will be added.')).toBeTruthy();
     expect(within(dialog).getByText('1 row is already there and will be skipped.')).toBeTruthy();
     await user.click(within(dialog).getByRole('button', { name: 'Import 1 row' }));
-    await waitFor(() => expect(creates(calls)).toHaveLength(1));
+    // Both rows go to the server, which skips the one that is already there.
+    await waitFor(() => expect(imports(calls)).toHaveLength(1));
+    expect(imports(calls)[0]?.rows).toHaveLength(2);
     expect(await screen.findByText(/1 row was already there and was skipped/)).toBeTruthy();
   });
 
@@ -191,27 +234,119 @@ describe('bulk import report', () => {
     expect(writes(calls)).toEqual([]);
   });
 
-  it('stops at the first failure and says how far it got', async () => {
-    let n = 0;
+  it('takes the server dry run as the authority, and shows its problems by line and column', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: {
+        'adminImport.venues': refusing('dryRun', {
+          1: { path: 'areaId', code: 'area_not_in_city' },
+          2: { path: 'cityId', code: 'forbidden' },
+        }),
+      },
+    });
+    await choose(
+      user,
+      csvFile([
+        venue('Test Masjid One'),
+        venue('Test Masjid Two', { address_en: 'SECRETADDRESS7' }),
+        venue('Test Masjid Three'),
+      ]),
+    );
+    const table = await screen.findByRole('table', { name: text('console.import.table.caption') });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.map((r) => within(r).getByRole('rowheader').textContent)).toEqual(['3', '4']);
+    expect(within(table).getByText(/area.*belongs to another city/i)).toBeTruthy();
+    expect(within(table).getByText(/outside the places you look after/)).toBeTruthy();
+    expect(screen.getByText('2 rows need fixing')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Import 1 row' })).toHaveProperty('disabled', true);
+    expect(document.body.textContent).not.toContain('SECRETADDRESS7');
+    expect(writes(calls)).toEqual([]);
+  });
+
+  it('marks a row the server already has as skipped, even when the console thought it new', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: {
+        'adminImport.venues': (c: { body: unknown }) => {
+          const body = c.body as ImportCall;
+          return {
+            dryRun: body.dryRun,
+            applied: false,
+            counts: { created: 1, duplicate: 1, invalid: 0 },
+            rows: [
+              { index: 0, status: 'duplicate', issues: [] },
+              { index: 1, status: 'created', issues: [] },
+            ],
+          };
+        },
+      },
+    });
+    await choose(user, csvFile([venue('Test Masjid One'), venue('Test Masjid Two')]));
+    await screen.findByText(text('console.import.nothingSaved'));
+    expect(screen.getByText(text('console.import.status.duplicate'))).toBeTruthy();
+    expect(screen.getByText(text('console.import.issue.alreadyThere'))).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Import 1 row' })).toHaveProperty('disabled', false);
+  });
+
+  it('writes nothing when the server refuses a row at import time, and shows which', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: {
+        'adminImport.venues': refusing('import', {
+          1: { path: 'areaId', code: 'invalid_reference' },
+        }),
+      },
+    });
+    await choose(user, csvFile([venue('Test Masjid One'), venue('Test Masjid Two')]));
+    await user.click(await screen.findByRole('button', { name: 'Import 2 rows' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(text('console.import.confirm.allOrNothing'))).toBeTruthy();
+    await user.click(within(dialog).getByRole('button', { name: 'Import 2 rows' }));
+    expect(await screen.findByText(text('console.import.refused.title'))).toBeTruthy();
+    expect(screen.getByText(text('console.import.refused.body'))).toBeTruthy();
+    const table = screen.getByRole('table', { name: text('console.import.table.caption') });
+    expect(within(table).getByRole('rowheader').textContent).toBe('3');
+    expect(within(table).getByText(/area.*not on our list/i)).toBeTruthy();
+    expect(screen.queryByText(text('console.import.result'))).toBeNull();
+    expect(imports(calls)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Import 1 row' })).toHaveProperty('disabled', true);
+  });
+
+  it('says nothing was imported when the import call fails, and lets the person try again', async () => {
+    let fail = true;
     const { user, calls } = renderConsole({
       role: 'national',
       path: '/import',
       forceError: (c) =>
-        c.method === 'POST' && c.path === '/v1/admin/venues' && ++n === 2 ? 'conflict' : undefined,
+        fail && c.path === '/v1/admin/import/venues' && !isDryRun(c) ? 'rate_limited' : undefined,
     });
+    await choose(user, csvFile([venue('Test Masjid One'), venue('Test Masjid Two')]));
+    await user.click(await screen.findByRole('button', { name: 'Import 2 rows' }));
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import 2 rows' }),
+    );
+    expect(await screen.findByText(text('errors.rate_limited'))).toBeTruthy();
+    expect(screen.getByText(text('console.import.failed.nothingSaved'))).toBeTruthy();
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Import 2 rows' }));
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import 2 rows' }),
+    );
+    expect(await screen.findByText(text('console.import.result'))).toBeTruthy();
+    expect(imports(calls)).toHaveLength(2);
+  });
+
+  it('does not ask the server about a file with a broken header', async () => {
+    const { user, calls } = renderConsole({ role: 'national', path: '/import' });
     await choose(
       user,
-      csvFile([venue('Test Masjid One'), venue('Test Masjid Two'), venue('Test Masjid Three')]),
+      new File(['city,area\r\nrawalpindi,saddar\r\n'], 'short.csv', { type: 'text/csv' }),
     );
-    await user.click(await screen.findByRole('button', { name: 'Import 3 rows' }));
-    const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Import 3 rows' }));
-    expect(await screen.findByText(text('console.import.stopped.title'))).toBeTruthy();
-    expect(screen.getByText(text('errors.conflict'))).toBeTruthy();
-    expect(
-      screen.getByText('1 rows were added. 2 rows were not added. It stopped at line 3.'),
-    ).toBeTruthy();
-    expect(creates(calls)).toHaveLength(2);
+    expect(await screen.findByText(/The column “name_en” is missing/)).toBeTruthy();
+    expect(importCalls(calls)).toEqual([]);
   });
 });
 
@@ -259,25 +394,8 @@ describe('bulk import by role', () => {
     expect(document.body.textContent).not.toContain('0000081');
   });
 
-  it('sends invites one by one after confirmation', async () => {
-    const { user, calls } = renderConsole({
-      role: 'national',
-      path: '/import',
-      handlers: {
-        'adminRoles.invite': (c: { body: unknown }) => ({
-          id: '00000000-0000-4000-8000-0e0000000099',
-          displayName: null,
-          status: 'pending',
-          scopeType: 'venue',
-          cityId: null,
-          venueId: null,
-          createdAt: '2027-02-10T05:00:00Z',
-          expiresAt: '2027-02-17T05:00:00Z',
-          role: 'venue_coordinator',
-          ...(c.body as object),
-        }),
-      },
-    });
+  it('sends the invites in one import call after confirmation', async () => {
+    const { user, calls } = renderConsole({ role: 'national', path: '/import' });
     await user.selectOptions(
       await screen.findByLabelText(text('console.import.kind.label')),
       'coordinators',
@@ -296,17 +414,19 @@ describe('bulk import by role', () => {
     await user.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import 1 row' }),
     );
-    await waitFor(() =>
-      expect(
-        calls.filter((c) => c.path === '/v1/admin/invites' && c.method === 'POST'),
-      ).toHaveLength(1),
-    );
-    expect(calls.find((c) => c.path === '/v1/admin/invites' && c.method === 'POST')?.body).toEqual({
-      role: 'venue_coordinator',
-      venueId: venueA!.id,
-      phone: '+923000000091',
-      displayName: 'Test One',
+    await waitFor(() => expect(imports(calls, 'coordinators')).toHaveLength(1));
+    expect(imports(calls, 'coordinators')[0]).toEqual({
+      dryRun: false,
+      rows: [
+        {
+          role: 'venue_coordinator',
+          venueId: venueA!.id,
+          phone: '+923000000091',
+          displayName: 'Test One',
+        },
+      ],
     });
+    expect(calls.some((c) => c.path === '/v1/admin/invites' && c.method === 'POST')).toBe(false);
   });
 
   it('keeps venue coordinators out', async () => {

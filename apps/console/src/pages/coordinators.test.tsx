@@ -1,10 +1,10 @@
 import { within } from '@testing-library/react';
-import { ERROR_CODES, makeApiError, type Invite } from '@qc/contracts';
+import { ERROR_CODES, makeApiError, type Invite, type StaffRoleAssignment } from '@qc/contracts';
+import { venues } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
-import type { StaffRoleAssignment } from '../api/types';
 import type { Locale } from '../i18n';
 import { rawalpindi, venueA, venueB } from '../test/people';
-import { renderConsole, screen, text, writes, type Call } from '../test/harness';
+import { renderConsole, screen, text, waitFor, writes, type Call } from '../test/harness';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-0e00000000${String(n).padStart(2, '0')}`;
 
@@ -69,6 +69,31 @@ const errorResponse = (code: keyof typeof ERROR_CODES) => (_c: unknown, id: stri
 const find = (calls: Call[], method: string, path: string) =>
   calls.filter((c) => c.method === method && c.path === path);
 
+const validationError = (issues: { path: string; code: string }[]) => (_c: unknown, id: string) =>
+  new Response(JSON.stringify(makeApiError('validation_failed', id, { issues })), {
+    status: ERROR_CODES.validation_failed,
+    headers: { 'content-type': 'application/json' },
+  });
+
+const expired: Invite = {
+  ...invite,
+  id: uuid(22),
+  phone: '+923000000062',
+  displayName: 'Test Expired',
+  status: 'expired',
+};
+const accepted: Invite = {
+  ...invite,
+  id: uuid(23),
+  phone: '+923000000063',
+  displayName: 'Test Accepted',
+  status: 'accepted',
+};
+const allInvites = {
+  ...data,
+  'adminRoles.invites': () => ({ items: [invite, expired, accepted] }),
+};
+
 describe.each<Locale>(['en', 'ur'])('coordinators page (%s)', (locale) => {
   it('lists invites and people as accessible tables', async () => {
     renderConsole({ role: 'national', locale, path: '/coordinators', handlers: data });
@@ -90,6 +115,34 @@ describe.each<Locale>(['en', 'ur'])('coordinators page (%s)', (locale) => {
     const invites = await screen.findByRole('table', { name: text('console.invites.list.title') });
     expect(within(invites).getByText('+92••••061')).toBeTruthy();
     expect(within(invites).queryByText(/0000061/)).toBeNull();
+  });
+
+  it('draws the handover dialog with a left to right phone field and the resend action', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      locale,
+      path: '/coordinators',
+      handlers: data,
+    });
+    expect(
+      await screen.findByRole('button', {
+        name: new RegExp(`^${text('console.invites.resend', locale)}`),
+      }),
+    ).toBeTruthy();
+    const row = (await screen.findByText('Test Person One')).closest('tr') as HTMLElement;
+    await user.click(
+      within(row).getByRole('button', { name: text('console.invites.handover', locale) }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      within(dialog).getByLabelText(text('console.invites.handover.mode.label', locale)),
+      'phone',
+    );
+    const phone = within(dialog).getByLabelText(
+      new RegExp(text('console.invites.phone.label', locale)),
+    );
+    expect(phone.getAttribute('dir')).toBe('ltr');
+    expect(document.documentElement.dir).toBe(locale === 'ur' ? 'rtl' : 'ltr');
   });
 
   it('keeps phone numbers left to right even in Urdu', async () => {
@@ -171,6 +224,33 @@ describe('inviting a coordinator', () => {
       cityId: rawalpindi!.id,
       phone: '+923000000071',
     });
+  });
+
+  it('points a field the server rejected at that field', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...data,
+        'adminRoles.invite': validationError([{ path: 'cityId', code: 'invalid_reference' }]),
+      },
+    });
+    await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      'city_coordinator',
+    );
+    const city = within(dialog).getByLabelText(new RegExp(text('console.invites.scope.city')));
+    await user.selectOptions(city, rawalpindi!.id);
+    await user.type(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      '0300 0000073',
+    );
+    await user.click(within(dialog).getByRole('button', { name: text('console.invites.send') }));
+    expect(await within(dialog).findByText(text('console.invites.form.rejected'))).toBeTruthy();
+    expect(city.getAttribute('aria-invalid')).toBe('true');
+    expect(within(dialog).getByText(text('errors.validation_failed'))).toBeTruthy();
   });
 
   it('maps a server error code to its errors.* message', async () => {
@@ -259,7 +339,7 @@ describe('handover and removal', () => {
     });
   });
 
-  it('says so when there is nobody to hand over to', async () => {
+  it('offers a phone number when nobody else holds a role, and says so', async () => {
     const { user } = renderConsole({
       role: 'national',
       path: '/coordinators',
@@ -267,10 +347,87 @@ describe('handover and removal', () => {
     });
     await user.click(await screen.findByRole('button', { name: text('console.invites.handover') }));
     const dialog = await screen.findByRole('dialog');
-    expect(await within(dialog).findByText(text('console.invites.handover.nobody'))).toBeTruthy();
+    const mode = within(dialog).getByLabelText(
+      text('console.invites.handover.mode.label'),
+    ) as HTMLSelectElement;
+    await waitFor(() => expect(mode.value).toBe('phone'));
+    expect(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+    ).toBeTruthy();
+    await user.selectOptions(mode, 'existing');
+    expect(
+      await within(dialog).findByText(text('console.invites.handover.nobodyYet')),
+    ).toBeTruthy();
     expect(
       within(dialog).getByRole('button', { name: text('console.invites.handover.submit') }),
     ).toHaveProperty('disabled', true);
+  });
+
+  it('hands a venue over to a phone number with an invite that replaces the old assignment', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...data,
+        'adminRoles.invite': (c: { body: unknown }) => ({ ...invite, ...(c.body as object) }),
+      },
+    });
+    const people = await screen.findByRole('table', { name: text('console.invites.active.title') });
+    const row = within(people).getByText('Test Person One').closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: text('console.invites.handover') }));
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      within(dialog).getByLabelText(text('console.invites.handover.mode.label')),
+      'phone',
+    );
+    expect(within(dialog).getByText(/When they accept it, they get access/)).toBeTruthy();
+    const send = within(dialog).getByRole('button', {
+      name: text('console.invites.handover.sendInvite'),
+    });
+    await user.click(send);
+    expect(within(dialog).getByText(text('console.phone.error.empty'))).toBeTruthy();
+    expect(writes(calls)).toEqual([]);
+
+    await user.type(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      '0300 0000074',
+    );
+    await user.click(send);
+    expect(await screen.findByText(text('console.invites.handoverInvited'))).toBeTruthy();
+    const sent = find(calls, 'POST', '/v1/admin/invites');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toEqual({
+      role: 'venue_coordinator',
+      venueId: venueA!.id,
+      phone: '+923000000074',
+      replacesAssignmentId: personA.id,
+    });
+    expect(find(calls, 'POST', '/v1/admin/role-assignments')).toEqual([]);
+  });
+
+  it('points a handover number the server refused at the phone field', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...data,
+        'adminRoles.invite': validationError([{ path: 'phone', code: 'invalid_format' }]),
+      },
+    });
+    const row = (await screen.findByText('Test Person Two')).closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: text('console.invites.handover') }));
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      within(dialog).getByLabelText(text('console.invites.handover.mode.label')),
+      'phone',
+    );
+    const phone = within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label')));
+    await user.type(phone, '0300 0000075');
+    await user.click(
+      within(dialog).getByRole('button', { name: text('console.invites.handover.sendInvite') }),
+    );
+    expect(await within(dialog).findByText(text('console.phone.error.invalid'))).toBeTruthy();
+    expect(phone.getAttribute('aria-invalid')).toBe('true');
   });
 
   it('does not offer a national admin a handover, only removal', async () => {
@@ -364,5 +521,111 @@ describe('handover and removal', () => {
       within(dialog).getByRole('button', { name: text('console.invites.remove.confirm') }),
     );
     expect(await within(dialog).findByText(text('errors.last_national_admin'))).toBeTruthy();
+  });
+});
+
+describe('invite status and resend', () => {
+  it('filters invites by status, showing all of them at first', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: allInvites,
+    });
+    const table = await screen.findByRole('table', { name: text('console.invites.list.title') });
+    expect(within(table).getAllByRole('row')).toHaveLength(4);
+    const filter = screen.getByLabelText(text('console.invites.filter.label'));
+    await user.selectOptions(filter, 'accepted');
+    const narrowed = screen.getByRole('table', { name: text('console.invites.list.title') });
+    expect(
+      within(narrowed)
+        .getAllByRole('rowheader')
+        .map((r) => r.textContent),
+    ).toEqual(['Test Accepted']);
+    await user.selectOptions(filter, 'revoked');
+    expect(screen.getByText(text('console.invites.filter.empty'))).toBeTruthy();
+  });
+
+  it('offers Send again for waiting and expired invites, and Cancel only while waiting', async () => {
+    renderConsole({ role: 'national', path: '/coordinators', handlers: allInvites });
+    const resend = (digits: string) =>
+      screen.queryByRole('button', {
+        name: `${text('console.invites.resend')} for the number ending ${digits}`,
+      });
+    const cancel = (digits: string) =>
+      screen.queryByRole('button', {
+        name: `${text('console.invites.revoke')} for the number ending ${digits}`,
+      });
+    await screen.findByRole('table', { name: text('console.invites.list.title') });
+    expect(resend('061')).toBeTruthy();
+    expect(cancel('061')).toBeTruthy();
+    expect(resend('062')).toBeTruthy();
+    expect(cancel('062')).toBeNull();
+    expect(resend('063')).toBeNull();
+    expect(cancel('063')).toBeNull();
+  });
+
+  it('sends an invite again as a new invite for the same number, role and place', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...allInvites,
+        'adminRoles.invite': (c: { body: unknown }) => ({ ...invite, ...(c.body as object) }),
+      },
+    });
+    await user.click(
+      await screen.findByRole('button', {
+        name: `${text('console.invites.resend')} for the number ending 062`,
+      }),
+    );
+    expect(await screen.findByText(text('console.invites.resent'))).toBeTruthy();
+    const sent = find(calls, 'POST', '/v1/admin/invites');
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.body).toEqual({
+      role: 'venue_coordinator',
+      venueId: venueA!.id,
+      phone: '+923000000062',
+      displayName: 'Test Expired',
+    });
+  });
+
+  it('shows why sending again failed', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: allInvites,
+      forceError: (c) =>
+        c.method === 'POST' && c.path === '/v1/admin/invites' ? 'rate_limited' : undefined,
+    });
+    await user.click(
+      await screen.findByRole('button', {
+        name: `${text('console.invites.resend')} for the number ending 061`,
+      }),
+    );
+    expect(await screen.findByText(text('errors.rate_limited'))).toBeTruthy();
+  });
+
+  it('lets a city coordinator send again only the invites in their city', async () => {
+    const elsewhere: Invite = {
+      ...invite,
+      id: uuid(24),
+      phone: '+923000000064',
+      displayName: 'Test Elsewhere',
+      venueId: venues[2]!.id,
+    };
+    renderConsole({
+      role: 'city',
+      path: '/coordinators',
+      handlers: { ...data, 'adminRoles.invites': () => ({ items: [invite, elsewhere] }) },
+    });
+    await screen.findByRole('table', { name: text('console.invites.list.title') });
+    const resendFor = (digits: string) =>
+      screen.queryByRole('button', {
+        name: `${text('console.invites.resend')} for the number ending ${digits}`,
+      });
+    expect(resendFor('061')).toBeTruthy();
+    // The other invite is for a venue in another city.
+    expect(venues[2]!.cityId).not.toBe(rawalpindi!.id);
+    expect(resendFor('064')).toBeNull();
   });
 });

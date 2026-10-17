@@ -40,7 +40,7 @@ export const VENUE_COLUMNS: readonly ColumnSpec[] = [
   { name: 'entrance_notes_ur' },
 ];
 
-const PATH_COLUMNS: Record<string, string> = {
+export const VENUE_PATH_COLUMNS: Readonly<Record<string, string>> = {
   cityId: 'city',
   areaId: 'area',
   'name.en': 'name_en',
@@ -129,7 +129,7 @@ export function validateVenues(table: CsvTable, ctx: VenueContext): DryRunReport
       status,
       issues,
       label,
-      ...(status === 'valid' && body ? { body } : {}),
+      ...(status !== 'invalid' && body ? { body } : {}),
     });
   }
   return buildReport('venues', read.fileIssues, rows);
@@ -210,7 +210,7 @@ function buildVenue(row: ReadRow, ctx: VenueContext, issues: ImportIssue[]): Ven
   });
   if (!parsed.success) {
     for (const zodIssue of parsed.error.issues) {
-      const column = columnForPath(PATH_COLUMNS, zodIssue.path);
+      const column = columnForPath(VENUE_PATH_COLUMNS, zodIssue.path);
       issues.push(issue(line, column, 'invalid_value', { column: column ?? 'row' }));
     }
     return null;

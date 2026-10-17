@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ApiClient } from '@qc/contracts';
+import type { AuditEntry } from '@qc/contracts';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { usePaged } from '../api/hooks';
@@ -32,8 +32,6 @@ export function dayEndUtc(date: string): string | undefined {
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
-
-type AuditEntry = Awaited<ReturnType<ApiClient['adminAudit']['list']>>['items'][number];
 
 /** Who did what, within the person's scope. Rows name actions and records, not personal data. */
 export default function AuditPage() {

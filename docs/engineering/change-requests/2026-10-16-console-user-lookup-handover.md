@@ -9,3 +9,5 @@ Affected lanes: contracts, auth-scopes, api-core, console.
 Workaround meanwhile: the handover dialog lists current role holders (from `adminRoles.list`) and says, when nobody else is available, to invite the person first and come back after they sign in.
 
 Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.
+
+Applied in console 2026-10-17: the handover dialog offers "Someone who already has a role" (`adminRoles.assign` with `replacesAssignmentId`) or "A phone number" (`adminRoles.invite` with `replacesAssignmentId`; nothing changes until the invite is accepted).

@@ -51,7 +51,7 @@ export const SESSION_COLUMNS: readonly ColumnSpec[] = [
   { name: 'status' },
 ];
 
-const PATH_COLUMNS: Record<string, string> = {
+export const SESSION_PATH_COLUMNS: Readonly<Record<string, string>> = {
   venueId: 'venue',
   'title.en': 'title_en',
   'title.ur': 'title_ur',
@@ -172,7 +172,7 @@ export function validateSessions(table: CsvTable, ctx: SessionContext): DryRunRe
       status,
       issues,
       label,
-      ...(status === 'valid' && body ? { body } : {}),
+      ...(status !== 'invalid' && body ? { body } : {}),
     });
   }
   return buildReport('sessions', read.fileIssues, rows);
@@ -328,7 +328,7 @@ function buildSession(
   );
   if (!parsed.success) {
     for (const zodIssue of parsed.error.issues) {
-      const column = columnForPath(PATH_COLUMNS, zodIssue.path);
+      const column = columnForPath(SESSION_PATH_COLUMNS, zodIssue.path);
       issues.push(issue(line, column, 'invalid_value', { column: column ?? 'row' }));
     }
     return null;

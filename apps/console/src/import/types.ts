@@ -1,8 +1,12 @@
 import type { MessageKey } from '@qc/i18n';
-import type { Principal } from '@qc/contracts';
+import {
+  IMPORT_KINDS as CONTRACT_IMPORT_KINDS,
+  type ImportKind,
+  type Principal,
+} from '@qc/contracts';
 
-export type ImportKind = 'venues' | 'coordinators' | 'sessions';
-export const IMPORT_KINDS: readonly ImportKind[] = ['venues', 'coordinators', 'sessions'];
+export type { ImportKind };
+export const IMPORT_KINDS: readonly ImportKind[] = CONTRACT_IMPORT_KINDS;
 
 /**
  * Everything that can be wrong with a file or a row. Each code has a message in English and Urdu
@@ -38,7 +42,10 @@ export type IssueCode =
   | 'phone_repeated'
   | 'already_exists'
   | 'already_invited'
-  | 'already_assigned';
+  | 'already_assigned'
+  | 'invalid_reference'
+  | 'area_not_in_city'
+  | 'already_there';
 
 export const ISSUE_KEYS = {
   csv_empty_file: 'console.import.issue.csvEmptyFile',
@@ -70,6 +77,9 @@ export const ISSUE_KEYS = {
   already_exists: 'console.import.issue.alreadyExists',
   already_invited: 'console.import.issue.alreadyInvited',
   already_assigned: 'console.import.issue.alreadyAssigned',
+  invalid_reference: 'console.import.issue.invalidReference',
+  area_not_in_city: 'console.import.issue.areaNotInCity',
+  already_there: 'console.import.issue.alreadyThere',
 } as const satisfies Record<IssueCode, MessageKey>;
 
 export type Severity = 'error' | 'warning';
@@ -86,6 +96,7 @@ export interface ImportIssue {
 /**
  * - `valid`: will be created.
  * - `duplicate`: the same record already exists, so the row is skipped. Safe to run twice.
+ *   The row keeps its body, so the server can decide; it skips true duplicates itself.
  * - `invalid`: must be fixed in the file. One invalid row stops the whole import.
  */
 export type RowStatus = 'valid' | 'duplicate' | 'invalid';
@@ -96,7 +107,7 @@ export interface DryRunRow<T> {
   issues: ImportIssue[];
   /** A short label for the report that carries no personal data. */
   label: string;
-  /** The contract request body, present for `valid` rows. */
+  /** The contract request body, present for `valid` and `duplicate` rows. */
   body?: T;
 }
 
@@ -107,12 +118,15 @@ export interface DryRunReport<T> {
   counts: { total: number; valid: number; duplicate: number; invalid: number };
   /** True only when nothing needs fixing and at least one row would be created. */
   canApply: boolean;
+  /** True once the server's dry run has checked the rows. Only then can a report be applied. */
+  serverChecked: boolean;
 }
 
 export function buildReport<T>(
   kind: ImportKind,
   fileIssues: ImportIssue[],
   rows: DryRunRow<T>[],
+  serverChecked = false,
 ): DryRunReport<T> {
   const counts = {
     total: rows.length,
@@ -127,6 +141,7 @@ export function buildReport<T>(
     rows,
     counts,
     canApply: !fileBlocked && counts.invalid === 0 && counts.valid > 0,
+    serverChecked,
   };
 }
 

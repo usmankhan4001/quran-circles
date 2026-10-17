@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectDelimiter, mergeCsvParts, parseCsv, toCsv } from './csv';
+import { csvDataRowCount, detectDelimiter, parseCsv, toCsv } from './csv';
 
 describe('parseCsv', () => {
   it('reads a header and data rows with their line numbers', () => {
@@ -67,7 +67,7 @@ describe('parseCsv', () => {
   });
 });
 
-describe('toCsv and mergeCsvParts', () => {
+describe('toCsv and csvDataRowCount', () => {
   it('quotes only what needs quotes and round-trips', () => {
     const rows = [
       ['a', 'b'],
@@ -80,26 +80,9 @@ describe('toCsv and mergeCsvParts', () => {
     expect([back.header, ...back.records.map((r) => r.cells)]).toEqual(rows);
   });
 
-  it('merges exports by header name and adds the session column first', () => {
-    const merged = mergeCsvParts([
-      { key: 's1', csv: 'name,phone\r\nA,1\r\n' },
-      { key: 's2', csv: 'phone,name,extra\r\n2,B,x\r\n' },
-    ]);
-    expect(merged).not.toBeNull();
-    const t = parseCsv(merged as string);
-    expect(t.header).toEqual(['session_id', 'name', 'phone', 'extra']);
-    expect(t.records.map((r) => r.cells)).toEqual([
-      ['s1', 'A', '1', ''],
-      ['s2', 'B', '2', 'x'],
-    ]);
-  });
-
-  it('returns null when one part is unreadable, so nothing is silently dropped', () => {
-    expect(
-      mergeCsvParts([
-        { key: 's1', csv: 'a\n1\n' },
-        { key: 's2', csv: 'a\n"open\n' },
-      ]),
-    ).toBeNull();
+  it('counts the data rows of an export, not the header or quoted line breaks', () => {
+    expect(csvDataRowCount('session_id,name\r\n')).toBe(0);
+    expect(csvDataRowCount('\uFEFFsession_id,name\r\ns1,"two\nlines"\r\ns2,B\r\n')).toBe(2);
+    expect(csvDataRowCount('')).toBe(0);
   });
 });
