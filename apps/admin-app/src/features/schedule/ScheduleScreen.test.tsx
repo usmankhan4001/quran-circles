@@ -13,7 +13,9 @@ const open = async (
   });
   await waitFor(() =>
     expect(
-      screen.queryByTestId('schedule-form') ?? screen.queryByTestId('schedule-forbidden'),
+      screen.queryByTestId('schedule-form') ??
+        screen.queryByTestId('schedule-forbidden') ??
+        screen.queryByTestId('schedule-data-not-available'),
     ).toBeTruthy(),
   );
   return { ...view };
@@ -123,6 +125,18 @@ describe('ScheduleScreen', () => {
     expect(screen.queryByTestId('schedule-done')).toBeNull();
   });
 
+  it('marks the field the server rejected', async () => {
+    const { backend } = await open();
+    backend.failWith('adminSessions.changeSchedule', 'validation_failed', {
+      issues: [{ path: 'localStartTime', code: 'invalid_format' }],
+    });
+    typeInto('schedule-time', '20:00');
+    fireEvent.click(screen.getByTestId('schedule-review'));
+    fireEvent.click(await screen.findByTestId('schedule-confirm-confirm'));
+    expect(await screen.findByText('This was not accepted. Check it and try again.')).toBeTruthy();
+    expect(screen.queryByTestId('schedule-done')).toBeNull();
+  });
+
   it('still lets the change go ahead when the registrant count is unavailable', async () => {
     const backend = createBackend({ me: meFor('venue') });
     backend.failWith('registrations.forSession', 'service_unavailable');
@@ -136,7 +150,7 @@ describe('ScheduleScreen', () => {
 
   it('hides the form from a venue coordinator on a session outside their venue', async () => {
     const { backend } = await open(createBackend({ me: meFor('venue') }), ids.sessionLahore);
-    expect(await screen.findByTestId('schedule-forbidden')).toBeTruthy();
+    expect(await screen.findByTestId('schedule-data-not-available')).toBeTruthy();
     expect(screen.queryByTestId('schedule-review')).toBeNull();
     expect(backend.callsTo('adminSessions.changeSchedule')).toHaveLength(0);
   });

@@ -1,7 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import type { Locale, Session } from '@qc/contracts';
-import { Button, Card, Select, SegmentedControl, Switch, Text, TextField, spacing } from '@qc/ui';
+import type { AdminSession, Locale } from '@qc/contracts';
+import {
+  Button,
+  Card,
+  ConfirmSheet,
+  Select,
+  SegmentedControl,
+  Switch,
+  Text,
+  TextField,
+  spacing,
+} from '@qc/ui';
+import { rejectedFields, serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { hasMessage, type Translator } from '../../i18n/translate';
 import { useT } from '../../appearance/AppearanceProvider';
@@ -28,24 +39,42 @@ import {
   type VenueChoice,
 } from './scopes';
 import { groupTemplates, type TemplateChoice } from './templates';
+import {
+  PREVIEW_DELAY_MS,
+  useRecipientPreview,
+  type RecipientPreview,
+} from './useRecipientPreview';
+
+/** Where the server's validation paths land on this form. */
+const POST_FIELDS = {
+  scope: 'scope',
+  title: 'title',
+  body: 'body',
+  templateKey: 'template',
+} as const;
 
 export interface PostUpdateScreenProps {
   /** Set when the update is about one session. */
   sessionId?: string;
+  /** How long the draft must stay still before the recipient count is asked for. Tests shorten it. */
+  previewDelayMs?: number;
 }
 
 interface Loaded {
   options: ScopeOptions;
   venues: VenueChoice[];
   templates: TemplateChoice[];
-  session: Session | null;
+  session: AdminSession | null;
 }
 
 /**
  * Post an update: pick where it goes (only places the role allows), write or start from an
  * approved template, preview what people will see, send, and read the recipient count back.
  */
-export function PostUpdateScreen({ sessionId }: PostUpdateScreenProps) {
+export function PostUpdateScreen({
+  sessionId,
+  previewDelayMs = PREVIEW_DELAY_MS,
+}: PostUpdateScreenProps) {
   const { t, locale } = useT();
   const api = useApi();
   const nav = useNavigation();
@@ -57,7 +86,7 @@ export function PostUpdateScreen({ sessionId }: PostUpdateScreenProps) {
       api.adminVenues.list({ query: { ...filter, limit: 100 } }),
       // Templates are optional: without them the coordinator writes the message.
       api.adminTemplates.list().catch(() => ({ items: [] })),
-      sessionId ? api.sessions.get({ params: { sessionId } }) : Promise.resolve(null),
+      sessionId ? api.adminSessions.get({ params: { sessionId } }) : Promise.resolve(null),
     ]);
     const cityChoices = cities.items.map((c) => ({
       id: c.id,
@@ -83,14 +112,28 @@ export function PostUpdateScreen({ sessionId }: PostUpdateScreenProps) {
       onBack={nav.back}
       testID="post-update"
     >
-      <QueryBoundary query={query} testID="post-update-data">
-        {(loaded) => <PostUpdateFlow loaded={loaded} sessionId={sessionId ?? null} />}
+      <QueryBoundary query={query} testID="post-update-data" notFoundIsNotAvailable>
+        {(loaded) => (
+          <PostUpdateFlow
+            loaded={loaded}
+            sessionId={sessionId ?? null}
+            previewDelayMs={previewDelayMs}
+          />
+        )}
       </QueryBoundary>
     </Screen>
   );
 }
 
-function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: string | null }) {
+function PostUpdateFlow({
+  loaded,
+  sessionId,
+  previewDelayMs,
+}: {
+  loaded: Loaded;
+  sessionId: string | null;
+  previewDelayMs: number;
+}) {
   const { t, locale } = useT();
   const api = useApi();
   const nav = useNavigation();
@@ -108,9 +151,20 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
   });
   const [errors, setErrors] = useState<PostUpdateErrors>({});
   const [step, setStep] = useState<'compose' | 'preview' | 'done'>('compose');
+  const [confirming, setConfirming] = useState(false);
   const post = useMutation(api.adminUpdates.post);
 
   const template = templates.find((x) => x.key === form.templateKey) ?? null;
+  // The draft as it would be sent; while it is complete, the count of who it reaches is kept fresh.
+  const draft = validatePostUpdate(form, principal, venues, template);
+  const reach = useRecipientPreview(draft.body, previewDelayMs);
+  const serverRejected = rejectedFields(post.error, POST_FIELDS).length > 0;
+  const shown = { ...serverFieldErrors(post.error, POST_FIELDS), ...errors };
+
+  // When the server rejects a field, go back to the form so the field can be seen and fixed.
+  useEffect(() => {
+    if (serverRejected && step === 'preview') setStep('compose');
+  }, [serverRejected, step]);
   const patch = (p: Partial<PostUpdateForm>) => setForm((f) => ({ ...f, ...p }));
   const noPlace = options.levels.length === 0 || (session !== null && form.venueId === null);
 
@@ -125,19 +179,23 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
   }, [form.level, form.cityId, form.venueId, options, t]);
 
   const toPreview = () => {
-    const result = validatePostUpdate(form, principal, venues, template);
-    setErrors(result.errors);
-    if (result.body) setStep('preview');
+    setErrors(draft.errors);
+    if (draft.body) {
+      post.reset();
+      setStep('preview');
+    }
   };
 
   const send = async () => {
-    const result = validatePostUpdate(form, principal, venues, template);
-    if (!result.body) {
-      setErrors(result.errors);
+    if (!draft.body) {
+      setErrors(draft.errors);
+      setConfirming(false);
       setStep('compose');
       return;
     }
-    const posted = await post.run({ body: result.body });
+    const posted = await post.run({ body: draft.body });
+    // On a refusal the sheet closes and the message shows on the page (the sheet takes text only).
+    setConfirming(false);
     if (posted) setStep('done');
   };
 
@@ -198,6 +256,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
               {t('admin.postUpdate.whoWillSee')}
             </Text>
             <Text testID="post-update-reach">{scopeText}</Text>
+            <ReachCount reach={reach} />
             <Text variant="caption" color="textSecondary">
               {form.notify ? t('admin.postUpdate.willNotify') : t('admin.postUpdate.feedOnly')}
             </Text>
@@ -211,7 +270,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
             <Text lang={previewBody.lang}>{previewBody.text}</Text>
           </View>
         </Card>
-        <ErrorNotice error={post.error} onDismiss={post.reset} />
+        <ErrorNotice error={confirming ? null : post.error} onDismiss={post.reset} />
         <ScreenFooter>
           <Button
             testID="post-update-send"
@@ -219,7 +278,10 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
             size="large"
             fullWidth
             loading={post.status === 'running'}
-            onPress={() => void send()}
+            onPress={() => {
+              post.reset();
+              setConfirming(true);
+            }}
           />
           <Button
             testID="post-update-edit"
@@ -233,6 +295,21 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
             }}
           />
         </ScreenFooter>
+        <ConfirmSheet
+          testID="post-update-confirm"
+          visible={confirming}
+          title={
+            reach.status === 'ready' && reach.recipients !== null
+              ? t.plural('admin.postUpdate.confirmTo', reach.recipients)
+              : t('admin.postUpdate.confirmNoCount')
+          }
+          message={t('admin.postUpdate.confirm.body')}
+          confirmLabel={t('admin.postUpdate.confirm.send')}
+          cancelLabel={t('admin.postUpdate.confirm.cancel')}
+          busy={post.status === 'running'}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => void send()}
+        />
       </View>
     );
   }
@@ -251,6 +328,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
             {t('admin.postUpdate.about')}
           </Text>
           <Text variant="label">{pickLocalized(session.title, locale)}</Text>
+          <ReachCount reach={reach} />
         </Card>
       ) : (
         <View style={{ gap: spacing.sm }}>
@@ -281,7 +359,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
                   value={form.cityId ?? undefined}
                   onChange={(cityId) => patch({ cityId })}
                   options={options.cities.map((c) => ({ value: c.id, label: c.label }))}
-                  error={errors.scope ? t(errors.scope) : undefined}
+                  error={shown.scope ? t(shown.scope) : undefined}
                 />
               ) : null}
               {form.level === 'venue' ? (
@@ -292,12 +370,13 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
                   value={form.venueId ?? undefined}
                   onChange={(venueId) => patch({ venueId })}
                   options={options.venues.map((v) => ({ value: v.id, label: v.label }))}
-                  error={errors.scope ? t(errors.scope) : undefined}
+                  error={shown.scope ? t(shown.scope) : undefined}
                 />
               ) : null}
               <Text variant="caption" color="textSecondary">
                 {scopeText}
               </Text>
+              <ReachCount reach={reach} />
             </View>
           </Card>
         </View>
@@ -339,7 +418,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
                         ),
                       )
                     }
-                    error={errors.template ? t(errors.template) : undefined}
+                    error={shown.template ? t(shown.template) : undefined}
                   />
                 ))
               : null}
@@ -359,7 +438,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
               value={form.title}
               onChange={(title) => patch({ title })}
               required
-              error={errors.title ? t(errors.title) : undefined}
+              error={shown.title ? t(shown.title) : undefined}
             />
             <BilingualField
               testID="post-update-body"
@@ -368,7 +447,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
               onChange={(body) => patch({ body })}
               multiline
               required
-              error={errors.body ? t(errors.body) : undefined}
+              error={shown.body ? t(shown.body) : undefined}
             />
             <Text variant="caption" color="textSecondary">
               {t('admin.postUpdate.language.help')}
@@ -391,6 +470,7 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
           />
         </Card>
       </View>
+      <ErrorNotice error={post.error} onDismiss={post.reset} />
       <ScreenFooter>
         <Button
           testID="post-update-preview"
@@ -401,6 +481,24 @@ function PostUpdateFlow({ loaded, sessionId }: { loaded: Loaded; sessionId: stri
         />
       </ScreenFooter>
     </View>
+  );
+}
+
+/** "This will reach 37 people", once the server has counted. Nothing while there is no full draft. */
+function ReachCount({ reach }: { reach: RecipientPreview }) {
+  const { t } = useT();
+  if (reach.status === 'counting') {
+    return (
+      <Text variant="caption" color="textSecondary" testID="post-update-counting">
+        {t('admin.postUpdate.counting')}
+      </Text>
+    );
+  }
+  if (reach.status !== 'ready' || reach.recipients === null) return null;
+  return (
+    <Text variant="label" testID="post-update-count">
+      {t.plural('admin.postUpdate.willReach', reach.recipients)}
+    </Text>
   );
 }
 
@@ -428,7 +526,7 @@ function pickLocalizedPair(
 /** Blanks the app can guess from the session: its title and venue. The coordinator can change them. */
 function suggestedValues(
   template: TemplateChoice,
-  session: Session | null,
+  session: AdminSession | null,
   locale: Locale,
   current: Record<string, string>,
 ): Record<string, string> {

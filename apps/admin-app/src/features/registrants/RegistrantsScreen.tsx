@@ -17,6 +17,7 @@ import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
+import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { RoundButton } from '../../components/RoundButton';
 import { Screen } from '../../components/Screen';
@@ -27,7 +28,7 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
-import { useSession } from '../home/sessionDirectory';
+import { sessionNotAvailable, useSession } from '../home/useSession';
 import { contactUrl, openContact, type ContactOpener } from './contact';
 import { useRegistrants } from './useRegistrants';
 
@@ -79,7 +80,10 @@ export function RegistrantsScreen({
 
   const datesSettledEmpty =
     dates.status === 'error' || (dates.status === 'success' && (dates.data?.length ?? 0) === 0);
-  const allowed = session.data ? sessionAbilities(principal, session.data).seeRegistrants : true;
+  const notAvailable = sessionNotAvailable(session);
+  const allowed =
+    !notAvailable &&
+    (session.data ? sessionAbilities(principal, session.data).seeRegistrants : true);
   const list = useRegistrants({
     sessionId,
     occurrenceId,
@@ -114,7 +118,9 @@ export function RegistrantsScreen({
         ) : undefined
       }
     >
-      {!allowed ? (
+      {notAvailable ? (
+        <NotAvailable testID="registrants-not-available" />
+      ) : !allowed ? (
         <Card variant="flat" testID="registrants-forbidden">
           <Text>{t('errors.forbidden')}</Text>
         </Card>

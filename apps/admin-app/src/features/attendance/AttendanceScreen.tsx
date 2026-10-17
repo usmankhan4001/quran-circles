@@ -1,6 +1,6 @@
 import { useReducer, useState } from 'react';
 import { View } from 'react-native';
-import type { AdminOccurrence } from '@qc/contracts';
+import type { AdminOccurrence, Attendance } from '@qc/contracts';
 import { ApiClientError } from '@qc/contracts';
 import {
   Button,
@@ -18,6 +18,7 @@ import { useT } from '../../appearance/AppearanceProvider';
 import type { MessageKey } from '../../i18n/translate';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
+import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
@@ -25,7 +26,7 @@ import { formatInstantDate, formatInstantTime } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
-import { useSession } from '../home/sessionDirectory';
+import { sessionNotAvailable, useSession } from '../home/useSession';
 import { useRegistrants } from '../registrants/useRegistrants';
 import {
   attendanceReducer,
@@ -34,7 +35,6 @@ import {
   MAX_ENTRY_COUNT,
   MAX_HEADCOUNT,
   validateAttendance,
-  type Attendance,
 } from './state';
 
 export interface AttendanceScreenProps {
@@ -83,7 +83,9 @@ export function AttendanceScreen({
       onBack={nav.back}
       testID="attendance"
     >
-      {!allowed ? (
+      {sessionNotAvailable(session) ? (
+        <NotAvailable testID="attendance-not-available" />
+      ) : !allowed ? (
         <Card variant="flat" testID="attendance-forbidden">
           <Text>{t('errors.forbidden')}</Text>
         </Card>

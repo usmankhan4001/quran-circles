@@ -3,7 +3,6 @@ import type { ReactElement, ReactNode } from 'react';
 import type { Locale, Tokens } from '@qc/contracts';
 import { AppearanceProvider, type Appearance } from '../appearance/AppearanceProvider';
 import { AuthProvider, useAuth } from '../auth/AuthProvider';
-import { SessionDirectoryProvider } from '../features/home/sessionDirectory';
 import { NavigationContext, type Navigation } from '../navigation/NavigationContext';
 import { WorkingScopeProvider } from '../scope/WorkingScopeProvider';
 import { createMemoryStore, type KeyValueStore } from '../storage/storage';
@@ -81,7 +80,7 @@ export interface Rendered extends RenderResult {
 
 /**
  * Renders a screen the way the app does, signed in as the backend's person: appearance,
- * sign-in, working scope and the session cache around it, with the API answered by the
+ * sign-in and working scope around it, with the API answered by the
  * in-memory backend and navigation recorded instead of performed.
  */
 export function renderScreen(ui: ReactElement, options: ScreenOptions = {}): Rendered {
@@ -103,9 +102,7 @@ export function renderScreen(ui: ReactElement, options: ScreenOptions = {}): Ren
       >
         <SignedInOnly>
           <NavigationContext.Provider value={nav}>
-            <WorkingScopeProvider store={prefs}>
-              <SessionDirectoryProvider>{ui}</SessionDirectoryProvider>
-            </WorkingScopeProvider>
+            <WorkingScopeProvider store={prefs}>{ui}</WorkingScopeProvider>
           </NavigationContext.Provider>
         </SignedInOnly>
       </AuthProvider>

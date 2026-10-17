@@ -32,6 +32,39 @@ export function errorMessageKey(error: unknown): MessageKey {
   return 'errors.internal_error';
 }
 
+/** True when the server says the record is not there or not in the person's scope. */
+export function isNotAvailable(error: unknown): boolean {
+  return isErrorCode(error, 'not_found');
+}
+
+/**
+ * For a `validation_failed` answer: the form fields the server rejected, found by matching each
+ * issue path (`name.en`, `portion.para`) in `fields`, first in full and then by its first part.
+ * Paths with no matching field are left to the general message. The input itself is never read.
+ */
+export function rejectedFields<F extends string>(
+  error: unknown,
+  fields: Readonly<Record<string, F>>,
+): F[] {
+  if (!(error instanceof ApiClientError) || error.code !== 'validation_failed') return [];
+  const out = new Set<F>();
+  for (const issue of error.issues ?? []) {
+    const field = fields[issue.path] ?? fields[issue.path.split('.')[0] ?? ''];
+    if (field) out.add(field);
+  }
+  return [...out];
+}
+
+/** The rejected fields as form errors, each with the "not accepted" message. */
+export function serverFieldErrors<F extends string>(
+  error: unknown,
+  fields: Readonly<Record<string, F>>,
+): Partial<Record<F, MessageKey>> {
+  const out: Partial<Record<F, MessageKey>> = {};
+  for (const f of rejectedFields(error, fields)) out[f] = 'admin.common.notAccepted';
+  return out;
+}
+
 /** Seconds to wait before trying again, when the server said so. */
 export function retryAfterOf(error: unknown): number | undefined {
   return error instanceof ApiClientError ? error.retryAfterSeconds : undefined;

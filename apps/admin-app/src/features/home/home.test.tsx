@@ -147,16 +147,57 @@ describe('SessionScreen', () => {
     expect(await screen.findByText(/40 of 40 seats taken/)).toBeTruthy();
   });
 
-  it("hides every coordinator action on a session outside the person's scope", async () => {
-    renderScreen(<SessionScreen sessionId={ids.sessionLahore} now={FIXTURE_NOW} />, {
-      backend: createBackend({ me: meFor('venue') }),
-    });
-    await settled('session-data');
+  it("says a session outside the person's scope is not available, with no actions", async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    renderScreen(<SessionScreen sessionId={ids.sessionLahore} now={FIXTURE_NOW} />, { backend });
+    expect(await screen.findByTestId('session-data-not-available')).toBeTruthy();
+    within(screen.getByTestId('session')).getByText(/not available to you/);
     expect(screen.queryByTestId('session-registrants')).toBeNull();
     expect(screen.queryByTestId('session-change-time')).toBeNull();
     expect(screen.queryByTestId('session-post-update')).toBeNull();
     expect(screen.queryAllByTestId(/-attendance$/)).toHaveLength(0);
     expect(screen.queryAllByTestId(/-edit$/)).toHaveLength(0);
-    within(screen.getByTestId('session')).getByText(/Johar Town Dora/);
+    expect(screen.queryByText(/Johar Town Dora/)).toBeNull();
+    // No retry button: trying again cannot help.
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull();
+  });
+
+  it('reads the session with adminSessions.get, drafts included', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.state.sessions.find((s) => s.id === ids.sessionCircle)!.status = 'draft';
+    renderScreen(<SessionScreen sessionId={ids.sessionCircle} now={FIXTURE_NOW} />, { backend });
+    await settled('session-data');
+    expect(await screen.findByText('Draft')).toBeTruthy();
+    expect(backend.callsTo('adminSessions.get')).toHaveLength(1);
+    expect(backend.callsTo('sessions.get')).toHaveLength(0);
+    expect(backend.callsTo('adminSessions.list')).toHaveLength(0);
+  });
+
+  it('shows a retryable error when the read fails for another reason', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.failWith('adminSessions.get', 'service_unavailable');
+    renderScreen(<SessionScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} />, { backend });
+    fireEvent.click(await screen.findByRole('button', { name: /try again/i }));
+    await screen.findByTestId('session-registrants');
+  });
+});
+
+describe.each(combos)('SessionScreen in $name', (combo) => {
+  it('shows the session with the right direction', async () => {
+    const { container } = renderScreen(
+      <SessionScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} />,
+      { backend: createBackend({ me: meFor('venue') }), combo },
+    );
+    await settled('session-data');
+    expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
+  });
+
+  it('shows not available with the right direction', async () => {
+    const { container } = renderScreen(
+      <SessionScreen sessionId={ids.sessionLahore} now={FIXTURE_NOW} />,
+      { backend: createBackend({ me: meFor('venue') }), combo },
+    );
+    await settled('session-data-not-available');
+    expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 });

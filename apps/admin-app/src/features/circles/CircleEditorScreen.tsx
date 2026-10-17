@@ -14,6 +14,7 @@ import {
   spacing,
   type TagKind,
 } from '@qc/ui';
+import { serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -31,7 +32,15 @@ import {
   type CircleErrors,
   type CircleForm,
 } from './form';
-import { findCircle } from './find';
+
+/** Where the server's validation paths land on this form. */
+const CIRCLE_FIELDS = {
+  venueId: 'venue',
+  name: 'name',
+  teacherName: 'teacher',
+  description: 'description',
+  onlineLink: 'link',
+} as const;
 
 export interface CircleEditorScreenProps {
   /** Leave out to create a circle. */
@@ -59,7 +68,7 @@ export function CircleEditorScreen({ circleId, venueId }: CircleEditorScreenProp
       api.adminVenues.list({
         query: { ...(filter.cityId ? { cityId: filter.cityId } : {}), limit: 100 },
       }),
-      circleId ? findCircle(api, circleId) : Promise.resolve(null),
+      circleId ? api.adminCircles.get({ params: { circleId } }) : Promise.resolve(null),
     ]);
     return { circle, venues: venues.items };
   }, [circleId, filter.cityId]);
@@ -69,7 +78,7 @@ export function CircleEditorScreen({ circleId, venueId }: CircleEditorScreenProp
       onBack={nav.back}
       testID="circle-editor"
     >
-      <QueryBoundary query={query} testID="circle-editor-data">
+      <QueryBoundary query={query} testID="circle-editor-data" notFoundIsNotAvailable>
         {(loaded) => (
           <CircleEditorFlow loaded={loaded} presetVenueId={venueId} onChanged={query.refetch} />
         )}
@@ -107,9 +116,16 @@ function CircleEditorFlow({
   const [errors, setErrors] = useState<CircleErrors>({});
   const [created, setCreated] = useState<AdminCircle | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const create = useMutation(api.adminCircles.create);
   const update = useMutation(api.adminCircles.update);
   const decide = useMutation(api.adminCircles.decide);
+  const archive = useMutation(api.adminCircles.update);
+  // What the form found, else what the server rejected on save (`ApiClientError.issues`).
+  const shown = {
+    ...serverFieldErrors(original ? update.error : create.error, CIRCLE_FIELDS),
+    ...errors,
+  };
   const patch = (p: Partial<CircleForm>) => setForm((f) => ({ ...f, ...p }));
 
   const venueOfForm = loaded.venues.find((v) => v.id === (original?.venueId ?? form.venueId));
@@ -119,6 +135,8 @@ function CircleEditorFlow({
   };
   const canEdit = original ? can(principal, 'circle.update', resource) : venueOptions.length > 0;
   const canDecide = can(principal, 'circle.approve', resource);
+  // Archiving is an edit (`circle.update`); the server checks it again and stays the authority.
+  const canArchive = original?.status === 'published' && can(principal, 'circle.update', resource);
   const willBePending = !original && !can(principal, 'circle.approve', resource);
 
   if (!canEdit && !original) {
@@ -165,6 +183,17 @@ function CircleEditorFlow({
     }
   };
 
+  const archiveNow = async () => {
+    if (!original) return;
+    const res = await archive.run({
+      params: { circleId: original.id },
+      body: { status: 'archived' },
+    });
+    // On a refusal the sheet closes and the message shows on the page (the sheet takes text only).
+    setArchiving(false);
+    if (res) await onChanged();
+  };
+
   const decideNow = async (decision: 'approve' | 'reject') => {
     if (!original) return;
     // There is no free-text note: personal text must not reach the audit log.
@@ -180,6 +209,7 @@ function CircleEditorFlow({
   return (
     <View style={{ gap: spacing.lg }} testID="circle-editor-form">
       {original ? <StatusBanner status={original.status} canDecide={canDecide} /> : null}
+      <ErrorNotice error={archiving ? null : archive.error} onDismiss={archive.reset} />
 
       {original?.status === 'pending_approval' && canDecide ? (
         <Card variant="outlined" testID="circle-decision">
@@ -224,7 +254,7 @@ function CircleEditorFlow({
               value: v.id,
               label: pickLocalized(v.name, locale),
             }))}
-            error={errors.venue ? t(errors.venue) : undefined}
+            error={shown.venue ? t(shown.venue) : undefined}
           />
           <BilingualField
             testID="circle-name"
@@ -232,7 +262,7 @@ function CircleEditorFlow({
             value={form.name}
             onChange={(name) => patch({ name })}
             required
-            error={errors.name ? t(errors.name) : undefined}
+            error={shown.name ? t(shown.name) : undefined}
             disabled={busy}
           />
           <TextField
@@ -241,7 +271,7 @@ function CircleEditorFlow({
             helper={t('admin.circleEditor.teacher.help')}
             value={form.teacherName}
             onChangeText={(teacherName) => patch({ teacherName })}
-            error={errors.teacher ? t(errors.teacher) : undefined}
+            error={shown.teacher ? t(shown.teacher) : undefined}
             maxLength={80}
             loading={busy}
           />
@@ -251,6 +281,7 @@ function CircleEditorFlow({
             value={form.description}
             onChange={(description) => patch({ description })}
             multiline
+            error={shown.description ? t(shown.description) : undefined}
             disabled={busy}
           />
         </View>
@@ -293,11 +324,35 @@ function CircleEditorFlow({
         helper={t('admin.circleEditor.online.help')}
         value={form.onlineLink}
         onChangeText={(onlineLink) => patch({ onlineLink })}
-        error={errors.link ? t(errors.link) : undefined}
+        error={shown.link ? t(shown.link) : undefined}
         keyboardType="url"
         contentDirection="ltr"
         loading={busy}
       />
+
+      {canArchive ? (
+        <Card variant="outlined" testID="circle-archive">
+          <View style={{ gap: spacing.sm }}>
+            <Text variant="title3" heading={2}>
+              {t('admin.circleEditor.archive.title')}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              {t('admin.circleEditor.archive.help')}
+            </Text>
+            <Button
+              testID="circle-archive-start"
+              label={t('admin.circleEditor.archive.action')}
+              variant="outline"
+              fullWidth
+              disabled={busy || archive.status === 'running'}
+              onPress={() => {
+                archive.reset();
+                setArchiving(true);
+              }}
+            />
+          </View>
+        </Card>
+      ) : null}
 
       {willBePending ? (
         <Toast
@@ -307,9 +362,9 @@ function CircleEditorFlow({
           message={t('admin.circleEditor.pendingNote')}
         />
       ) : null}
-      {errors.nothing ? (
+      {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="circle-nothing">
-          {t(errors.nothing)}
+          {t(shown.nothing)}
         </Text>
       ) : null}
       <ErrorNotice
@@ -335,6 +390,18 @@ function CircleEditorFlow({
         </ScreenFooter>
       ) : null}
 
+      <ConfirmSheet
+        testID="circle-archive-confirm"
+        visible={archiving}
+        title={t('admin.circleEditor.archive.confirmTitle')}
+        message={t('admin.circleEditor.archive.confirmBody')}
+        confirmLabel={t('admin.circleEditor.archive.action')}
+        cancelLabel={t('admin.common.cancel')}
+        destructive
+        busy={archive.status === 'running'}
+        onCancel={() => setArchiving(false)}
+        onConfirm={() => void archiveNow()}
+      />
       <ConfirmSheet
         testID="circle-reject-confirm"
         visible={rejecting}
@@ -362,7 +429,9 @@ function StatusBanner({
   const text =
     status === 'pending_approval' && !canDecide
       ? t('admin.circleEditor.statusWaiting')
-      : t(`admin.circleEditor.status.${status}`);
+      : status === 'archived'
+        ? t('admin.circleEditor.archivedNote')
+        : t(`admin.circleEditor.status.${status}`);
   const kind: Record<AdminCircle['status'], TagKind> = {
     draft: 'neutral',
     pending_approval: 'gilt',

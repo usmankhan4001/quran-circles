@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { can, type City, type Venue } from '@qc/contracts';
 import { Button, Card, Checkbox, Select, Text, TextField, spacing } from '@qc/ui';
-import { isErrorCode } from '../../api/errors';
+import { isErrorCode, serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -21,6 +21,17 @@ import {
   type VenueErrors,
   type VenueForm,
 } from './form';
+
+/** Where the server's validation paths land on this form. */
+const VENUE_FIELDS = {
+  cityId: 'city',
+  areaId: 'area',
+  name: 'name',
+  address: 'address',
+  lat: 'lat',
+  lng: 'lng',
+  contactPhone: 'phone',
+} as const;
 
 export interface VenueEditorScreenProps {
   /** Leave out to create a venue. */
@@ -108,6 +119,8 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
   }
 
   const failure = original ? update.error : create.error;
+  // What the form found, else what the server rejected (`ApiClientError.issues`).
+  const shown = { ...serverFieldErrors(failure, VENUE_FIELDS), ...errors };
   const busy = create.status === 'running' || update.status === 'running';
 
   const submit = async () => {
@@ -140,7 +153,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
                 value: c.id,
                 label: pickLocalized(c.name, locale),
               }))}
-              error={errors.city ? t(errors.city) : undefined}
+              error={shown.city ? t(shown.city) : undefined}
             />
           ) : null}
           <Select
@@ -153,7 +166,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
               value: a.id,
               label: pickLocalized(a.name, locale),
             }))}
-            error={errors.area ? t(errors.area) : undefined}
+            error={shown.area ? t(shown.area) : undefined}
             disabled={areas.status === 'loading'}
           />
           <BilingualField
@@ -162,7 +175,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
             value={form.name}
             onChange={(name) => patch({ name })}
             required
-            error={errors.name ? t(errors.name) : undefined}
+            error={shown.name ? t(shown.name) : undefined}
             disabled={busy}
           />
           <BilingualField
@@ -172,7 +185,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
             onChange={(address) => patch({ address })}
             multiline
             required
-            error={errors.address ? t(errors.address) : undefined}
+            error={shown.address ? t(shown.address) : undefined}
             disabled={busy}
           />
         </View>
@@ -189,7 +202,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
             helper={t('admin.venueEditor.coords.help')}
             value={form.lat}
             onChangeText={(lat) => patch({ lat })}
-            error={errors.lat ? t(errors.lat) : undefined}
+            error={shown.lat ? t(shown.lat) : undefined}
             keyboardType="numbers-and-punctuation"
             contentDirection="ltr"
             required
@@ -200,7 +213,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
             label={t('admin.venueEditor.lng.label')}
             value={form.lng}
             onChangeText={(lng) => patch({ lng })}
-            error={errors.lng ? t(errors.lng) : undefined}
+            error={shown.lng ? t(shown.lng) : undefined}
             keyboardType="numbers-and-punctuation"
             contentDirection="ltr"
             required
@@ -220,7 +233,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
             helper={t('admin.venueEditor.phone.help')}
             value={form.contactPhone}
             onChangeText={(contactPhone) => patch({ contactPhone })}
-            error={errors.phone ? t(errors.phone) : undefined}
+            error={shown.phone ? t(shown.phone) : undefined}
             keyboardType="phone-pad"
             contentDirection="ltr"
             loading={busy}
@@ -257,9 +270,9 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
         />
       </Card>
 
-      {errors.nothing ? (
+      {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="venue-nothing">
-          {t(errors.nothing)}
+          {t(shown.nothing)}
         </Text>
       ) : null}
       <ErrorNotice error={failure} onDismiss={original ? update.reset : create.reset} />

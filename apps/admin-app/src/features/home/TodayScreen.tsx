@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { View } from 'react-native';
 import type { Session } from '@qc/contracts';
 import { EmptyState, SessionCard, Text, isolate, spacing } from '@qc/ui';
@@ -22,7 +21,6 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { canPostAnywhere } from '../post-update/scopes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
-import { useSessionDirectory } from './sessionDirectory';
 import { whenSummary } from './sessionText';
 
 export interface TodayScreenProps {
@@ -35,7 +33,6 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const { t, locale } = useT();
   const api = useApi();
   const nav = useNavigation();
-  const dir = useSessionDirectory();
   const { me } = useAuth();
   const { active, filter, principal } = useWorkingScope();
 
@@ -43,10 +40,6 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
     const page = await api.adminSessions.list({ query: { ...filter, limit: 50 } });
     return page.items;
   }, [filter.cityId, filter.venueId, active?.id]);
-
-  useEffect(() => {
-    if (query.data) dir.remember(query.data);
-  }, [query.data, dir]);
 
   const row = (s: Session, withDate: boolean) => {
     const next = s.nextOccurrence;

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import type { AdminOccurrence, Session } from '@qc/contracts';
+import type { AdminOccurrence, AdminSession } from '@qc/contracts';
 import {
   Button,
   Card,
@@ -13,6 +13,7 @@ import {
   spacing,
   useTheme,
 } from '@qc/ui';
+import { serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -32,7 +33,7 @@ import {
 import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
-import { useSession, useSessionDirectory } from '../home/sessionDirectory';
+import { useSession } from '../home/useSession';
 import { whenSummary } from '../home/sessionText';
 import {
   initialScheduleForm,
@@ -44,13 +45,21 @@ import {
   type ScheduleForm,
 } from './form';
 
+/** Where the server's validation paths land on this form. */
+const SCHEDULE_FIELDS = {
+  localStartTime: 'time',
+  durationMinutes: 'duration',
+  daysOfWeek: 'days',
+  effectiveFrom: 'effectiveFrom',
+} as const;
+
 export interface ScheduleScreenProps {
   sessionId: string;
   now?: Date;
 }
 
 interface Loaded {
-  session: Session;
+  session: AdminSession;
   occurrences: AdminOccurrence[];
   /** People registered, counting party sizes. Null when the person cannot see it. */
   people: number | null;
@@ -63,7 +72,7 @@ export function ScheduleScreen({ sessionId, now = new Date() }: ScheduleScreenPr
   const sessionQuery = useSession(sessionId);
   return (
     <Screen title={t('admin.schedule.title')} onBack={nav.back} testID="schedule">
-      <QueryBoundary query={sessionQuery} testID="schedule-data">
+      <QueryBoundary query={sessionQuery} testID="schedule-data" notFoundIsNotAvailable>
         {(session) => <ScheduleGate session={session} now={now} />}
       </QueryBoundary>
     </Screen>
@@ -71,7 +80,7 @@ export function ScheduleScreen({ sessionId, now = new Date() }: ScheduleScreenPr
 }
 
 /** Checks the right before anything protected is requested, so a refusal never reaches the server. */
-function ScheduleGate({ session, now }: { session: Session; now: Date }) {
+function ScheduleGate({ session, now }: { session: AdminSession; now: Date }) {
   const { t } = useT();
   const { principal } = useWorkingScope();
   if (!sessionAbilities(principal, session).changeSchedule) {
@@ -84,7 +93,7 @@ function ScheduleGate({ session, now }: { session: Session; now: Date }) {
   return <ScheduleLoader session={session} now={now} />;
 }
 
-function ScheduleLoader({ session, now }: { session: Session; now: Date }) {
+function ScheduleLoader({ session, now }: { session: AdminSession; now: Date }) {
   const api = useApi();
   const query = useQuery<Loaded>(async () => {
     const [occ, regs] = await Promise.all([
@@ -110,7 +119,6 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
   const { t, locale, n } = useT();
   const api = useApi();
   const nav = useNavigation();
-  const dir = useSessionDirectory();
   const { session, occurrences, people } = loaded;
   const { colors } = useTheme();
 
@@ -128,6 +136,8 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
   const [errors, setErrors] = useState<ScheduleErrors>({});
   const [confirming, setConfirming] = useState(false);
   const change = useMutation(api.adminSessions.changeSchedule);
+  // What the form found, else what the server rejected (`ApiClientError.issues`).
+  const shown = { ...serverFieldErrors(change.error, SCHEDULE_FIELDS), ...errors };
   const patch = (p: Partial<ScheduleForm>) => setForm((f) => ({ ...f, ...p }));
 
   const checked = validateSchedule(form, session);
@@ -142,8 +152,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
 
   const save = async () => {
     if (!checked.body) return;
-    const res = await change.run({ params: { sessionId: session.id }, body: checked.body });
-    if (res) dir.remember([res.session]);
+    await change.run({ params: { sessionId: session.id }, body: checked.body });
     setConfirming(false);
   };
 
@@ -219,7 +228,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
             value={form.time}
             onChangeText={(time) => patch({ time })}
             onBlur={() => patch({ time: tidyTime(form.time) })}
-            error={errors.time ? t(errors.time) : undefined}
+            error={shown.time ? t(shown.time) : undefined}
             keyboardType="numbers-and-punctuation"
             contentDirection="ltr"
             maxLength={5}
@@ -234,9 +243,9 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
             step={5}
             onChange={(durationMinutes) => patch({ durationMinutes })}
           />
-          {errors.duration ? (
+          {shown.duration ? (
             <Text variant="caption" color="textDanger">
-              {t(errors.duration)}
+              {t(shown.duration)}
             </Text>
           ) : null}
         </View>
@@ -263,9 +272,9 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
                 />
               ))}
             </View>
-            {errors.days ? (
+            {shown.days ? (
               <Text variant="caption" color="textDanger">
-                {t(errors.days)}
+                {t(shown.days)}
               </Text>
             ) : null}
           </View>
@@ -283,7 +292,7 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
           value: d,
           label: formatLocalDate(d, locale),
         }))}
-        error={errors.effectiveFrom ? t(errors.effectiveFrom) : undefined}
+        error={shown.effectiveFrom ? t(shown.effectiveFrom) : undefined}
       />
 
       <Card>
@@ -301,9 +310,9 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
         </View>
       </Card>
 
-      {errors.nothing ? (
+      {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="schedule-nothing">
-          {t(errors.nothing)}
+          {t(shown.nothing)}
         </Text>
       ) : null}
       <ErrorNotice error={confirming ? null : change.error} onDismiss={change.reset} />

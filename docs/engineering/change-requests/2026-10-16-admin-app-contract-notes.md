@@ -22,3 +22,10 @@ Affected lanes: contracts, api-core, console (if it shares the reads), admin-app
 Workaround meanwhile: the app keeps a small session cache filled from `sessions.get`, finds a circle by paging `adminCircles.list` (up to ten pages of 100), shows who will be reached ("everyone who follows this venue") in the preview and the real count after sending, fills template blanks itself, copies Urdu-only text into `en`, and derives the `Attendance` type from the client.
 
 Partly applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008. Applied: items 1 (`adminSessions.get`, `adminCircles.get`), 2 (`adminUpdates.preview`) and 5 (`Attendance` type exported). Deferred by the owner: item 3 (server-side template values) and item 4 (optional English in `LocalizedInput`). Items 6 to 8 are confirmations: registrants keep `phone` and `allowsWhatsapp` in the contract, the owner wants the number hidden in the UI with the call and WhatsApp buttons kept, and recap and portion stay on `adminOccurrences.update`.
+
+Applied in admin-app 2026-10-17, item 1: the session page, schedule, occurrence, attendance, registrants and post-an-update read the session with `adminSessions.get`, and the circle editor reads the circle with `adminCircles.get`. The session cache and the circle list walk are deleted. A `not_found` answer reads "This is not available to you".
+Applied in admin-app 2026-10-17, item 2: post an update calls `adminUpdates.preview` with the draft (debounced, never sends) and shows "This will reach N people" before the confirm sheet; the done step shows the count from the post response.
+Applied in admin-app 2026-10-17, item 5: the app uses the exported `Attendance` type; the derived type is gone.
+Applied in admin-app 2026-10-17, items 3 and 4 (deferred): no change; the app still fills template blanks itself and copies Urdu-only text into `en`.
+Applied in admin-app 2026-10-17, item 6: the registrants screen shows no number and keeps the call and WhatsApp buttons (done in the redesign pass).
+Applied in admin-app 2026-10-17, item 7: recap and portion stay on the occurrence screen (`adminOccurrences.update`).

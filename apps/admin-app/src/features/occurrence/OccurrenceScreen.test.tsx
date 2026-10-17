@@ -145,6 +145,18 @@ describe('OccurrenceScreen', () => {
     expect(await screen.findByText('This session has been cancelled.')).toBeTruthy();
   });
 
+  it('marks the field the server rejected', async () => {
+    const { backend, nav } = await open();
+    backend.failWith('adminOccurrences.update', 'validation_failed', {
+      issues: [{ path: 'recapNote', code: 'too_big' }],
+    });
+    await screen.findByTestId('occurrence-form');
+    typeInto('occurrence-recap', 'A short recap.');
+    fireEvent.click(screen.getByTestId('occurrence-save'));
+    expect(await screen.findByText('This was not accepted. Check it and try again.')).toBeTruthy();
+    expect(nav.backs).toBe(0);
+  });
+
   it('does not offer to cancel a date that has passed, but still takes a recap', async () => {
     const { backend } = await open({ now: new Date('2027-03-20T00:00:00Z') });
     // The past is outside the 60-day window of the first date? Not here: Feb 15 is 33 days back.
@@ -176,7 +188,8 @@ describe('OccurrenceScreen', () => {
 
   it('is closed to a venue coordinator on another venue', async () => {
     const { backend } = await open({ sessionId: ids.sessionLahore });
-    expect(await screen.findByTestId('occurrence-forbidden')).toBeTruthy();
+    expect(await screen.findByTestId('occurrence-not-available')).toBeTruthy();
+    expect(screen.getByText(/not available to you/)).toBeTruthy();
     expect(backend.callsTo('adminOccurrences.update')).toHaveLength(0);
   });
 

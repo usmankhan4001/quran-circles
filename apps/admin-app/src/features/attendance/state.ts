@@ -1,7 +1,4 @@
-import { AttendancePut, type ApiClient } from '@qc/contracts';
-
-/** What the server holds for one occurrence (the contract exports the schema, not the type). */
-export type Attendance = Awaited<ReturnType<ApiClient['adminAttendance']['get']>>;
+import { AttendancePut, type Attendance } from '@qc/contracts';
 import type { MessageKey } from '../../i18n/translate';
 
 export interface DropIn {

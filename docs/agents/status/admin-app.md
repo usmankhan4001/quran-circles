@@ -1,6 +1,6 @@
 # Status: admin-app
 
-Updated: 2026-10-17
+Updated: 2026-10-17 (contract rc.2 pass)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -32,8 +32,20 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - The circle reject note field is gone and `adminCircles.decide` sends only `decision`, as the contract now requires.
 - When the server refuses a change made from a confirm sheet, the sheet closes and the error shows on the page (the kit sheet takes only a message).
 - Not built (later wave or no contract): hero gradient (solid colour), "Archive this venue", "Save draft", offline queue, session picker, whole-session cancel from the schedule screen, map pin picker, portion field on the attendance screen (it lives on the occurrence screen), reject reason chips.
-- i18n: 15 keys added in this redesign (en and ur together, Urdu draft). `admin.home.ofCapacity` and `admin.home.quickActions` are not used yet.
+- i18n: 15 keys added in this redesign (en and ur together, Urdu draft). `admin.home.ofCapacity` and `admin.home.quickActions` were never used and were removed in the rc.2 pass below.
 - Tests: 452 in 34 files. Typecheck, eslint and prettier pass; `expo export --platform web` bundles to a scratch folder.
+
+## Contract 1.0.0-rc.2 pass (2026-10-17)
+
+- One-record reads: the session page, schedule, occurrence, attendance, registrants and post-an-update (about a session) read the session with `adminSessions.get` (drafts included); the circle editor reads the circle with `adminCircles.get`. The session cache (`sessionDirectory`) and the circle list walk (`findCircle`, ten pages of 100) are deleted, with their tests. A `not_found` answer reads "This is not available to you" (no retry button): the server says `not_found` for a record outside the scope too, so the wording does not say which. `QueryBoundary` has a `notFoundIsNotAvailable` option and a kit-based `NotAvailable` card.
+- Post an update: while the draft is complete, `adminUpdates.preview` is called with the draft body and the screen shows "This will reach N people" (plural forms) on the form and on the review step. Debounced (600 ms) and keyed on what decides the audience (scope, session, kind, notify, template), so typing the text does not ask again; only the latest answer counts; the preview never posts. "Send now" opens a kit `ConfirmSheet` ("Send to N people?", or "Send this update?" when the count could not be read; the update can still go). The done step keeps the count from the `adminUpdates.post` response.
+- Circle editor: a published circle shows an "Archive this circle" card when `can(principal, 'circle.update', circle)` allows it (principal from `me.roles`; venue coordinators of that venue, city coordinators of that city, admins). A destructive `ConfirmSheet` sends `adminCircles.update` with `{ status: 'archived' }` only; the page reloads and shows the archived tag and note. A refusal closes the sheet and shows the mapped message on the page. Not offered on pending, rejected, draft or archived circles. No "publish again" button (not asked for).
+- Types: `Attendance` comes from `@qc/contracts`; the derived type in `features/attendance/state.ts` is gone. Session screens use `AdminSession`.
+- Field errors from the server: `rejectedFields` / `serverFieldErrors` (`api/errors.ts`) read `ApiClientError.issues` of a `validation_failed` answer and mark the matching field with "This was not accepted. Check it and try again." on the circle, venue, post-an-update, schedule and occurrence forms (the general message still shows). A rejected post goes back to the form so the marked field is visible. Only paths are read, never the input.
+- Test backend: serves `adminSessions.get` and `adminCircles.get` scoped like the lists (not_found outside the scope) and `adminUpdates.preview` (same counts as the post unless a test overrides it); `failWith` can attach `issues`.
+- i18n (en and ur together, Urdu draft): added `admin.common.notAvailable`, `admin.common.notAccepted`, `admin.postUpdate.counting`, `admin.postUpdate.willReach.one/other`, `admin.postUpdate.confirmTo.one/other`, `admin.postUpdate.confirmNoCount`, `admin.circleEditor.archive.title/help/action/confirmTitle/confirmBody`, `admin.circleEditor.archivedNote`. The existing `admin.postUpdate.confirm.body/send/cancel` keys are now used. Removed `admin.home.ofCapacity` and `admin.home.quickActions` (added by this lane in the redesign, never used, no other app or package refers to them). No other key removed. The orchestrator already committed these i18n lines with the console commit (5d5deae), since the file is shared.
+- Tests: 494 passing in 33 files (was 452 in 34; `find.test.ts` went with the code it tested). New: not-available for every session screen and the circle editor, one `adminSessions.get` call and no list call, drafts through the admin read, recipient count (debounce, text changes do not ask again, singular, failure, cancel, final count from the post, never sends), archive per role (venue, city, admin), cancel, refusal, multi-role, no archive on pending/archived, server refusal on another venue, field marking on five forms, LTR/RTL x light/dark x text size for the session page (loaded and not available), the circle editor edit/archived states and the post update count and confirm sheet.
+- Checks: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `pnpm exec eslint apps/admin-app`, `pnpm exec prettier --check` on touched paths pass; `expo export --platform web` bundles to a scratch folder.
 
 ## In progress
 
@@ -54,4 +66,4 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 ## Contract change requests
 
 - `docs/engineering/change-requests/2026-10-16-admin-app-kit-needs.md`: `Stepper`, date and time pickers, phone/chat/search icons.
-- `docs/engineering/change-requests/2026-10-16-admin-app-contract-notes.md`: `adminSessions.get` and `adminCircles.get`, a recipient count before sending, server-side template blanks, optional `en` in `LocalizedInput`, export the `Attendance` type, confirm phone fields and where recap/portion live, new i18n namespaces.
+- `docs/engineering/change-requests/2026-10-16-admin-app-contract-notes.md`: `adminSessions.get` and `adminCircles.get`, a recipient count before sending, server-side template blanks, optional `en` in `LocalizedInput`, export the `Attendance` type, confirm phone fields and where recap/portion live, new i18n namespaces. Items 1, 2 and 5 applied in rc.2 and now used by the app; 3 and 4 deferred (the app still fills template blanks and copies Urdu-only text into `en`).

@@ -14,17 +14,19 @@ import {
   spacing,
 } from '@qc/ui';
 import { ApiClientError } from '@qc/contracts';
+import { serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
+import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import { formatInstantDate, formatInstantTime } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
-import { useSession } from '../home/sessionDirectory';
+import { sessionNotAvailable, useSession } from '../home/useSession';
 import {
   initialOccurrenceForm,
   isPast,
@@ -41,6 +43,17 @@ export interface OccurrenceScreenProps {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Where the server's validation paths land on this form. */
+const OCCURRENCE_FIELDS = {
+  'portion.para': 'para',
+  'portion.surah': 'surah',
+  'portion.fromAyah': 'ayahs',
+  'portion.toAyah': 'ayahs',
+  'portion.title': 'lesson',
+  portionLabel: 'portionLabel',
+  recapNote: 'recap',
+} as const;
 
 /** Set the portion and the recap of one date, or cancel just that date. */
 export function OccurrenceScreen({
@@ -68,7 +81,9 @@ export function OccurrenceScreen({
 
   return (
     <Screen title={t('admin.occurrence.title')} onBack={nav.back} testID="occurrence">
-      {!allowed ? (
+      {sessionNotAvailable(session) ? (
+        <NotAvailable testID="occurrence-not-available" />
+      ) : !allowed ? (
         <Card variant="flat" testID="occurrence-forbidden">
           <Text>{t('errors.forbidden')}</Text>
         </Card>
@@ -89,6 +104,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
   const [errors, setErrors] = useState<OccurrenceErrors>({});
   const [confirming, setConfirming] = useState(false);
   const save = useMutation(api.adminOccurrences.update);
+  // What the form found, else what the server rejected (`ApiClientError.issues`).
+  const shown = { ...serverFieldErrors(save.error, OCCURRENCE_FIELDS), ...errors };
   const past = isPast(occurrence, now);
   const patch = (p: Partial<OccurrenceForm>) => setForm((f) => ({ ...f, ...p }));
 
@@ -147,7 +164,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
               helper={t('admin.occurrence.para.help')}
               value={form.para}
               onChangeText={(para) => patch({ para })}
-              error={errors.para ? t(errors.para) : undefined}
+              error={shown.para ? t(shown.para) : undefined}
               keyboardType="number-pad"
               contentDirection="ltr"
               required
@@ -160,7 +177,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
               helper={t('admin.occurrence.surah.help')}
               value={form.surah}
               onChangeText={(surah) => patch({ surah })}
-              error={errors.surah ? t(errors.surah) : undefined}
+              error={shown.surah ? t(shown.surah) : undefined}
               keyboardType="number-pad"
               contentDirection="ltr"
               required
@@ -182,7 +199,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
                 label={t('admin.occurrence.toAyah')}
                 value={form.toAyah}
                 onChangeText={(toAyah) => patch({ toAyah })}
-                error={errors.ayahs ? t(errors.ayahs) : undefined}
+                error={shown.ayahs ? t(shown.ayahs) : undefined}
                 keyboardType="number-pad"
                 contentDirection="ltr"
                 required
@@ -195,7 +212,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
               label={t('admin.occurrence.lesson.label')}
               value={form.lesson}
               onChangeText={(lesson) => patch({ lesson })}
-              error={errors.lesson ? t(errors.lesson) : undefined}
+              error={shown.lesson ? t(shown.lesson) : undefined}
               maxLength={200}
               required
             />
@@ -207,7 +224,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
               helper={t('admin.occurrence.portionLabel.help')}
               value={form.portionLabel}
               onChangeText={(portionLabel) => patch({ portionLabel })}
-              error={errors.portionLabel ? t(errors.portionLabel) : undefined}
+              error={shown.portionLabel ? t(shown.portionLabel) : undefined}
               maxLength={200}
             />
           ) : null}
@@ -225,7 +242,7 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
             helper={t('admin.occurrence.recap.help')}
             value={form.recapNote}
             onChangeText={(recapNote) => patch({ recapNote })}
-            error={errors.recap ? t(errors.recap) : undefined}
+            error={shown.recap ? t(shown.recap) : undefined}
             multiline
             maxLength={2000}
             contentDirection={form.recapLocale === 'ur' ? 'rtl' : 'ltr'}
@@ -264,9 +281,9 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
         </Card>
       ) : null}
 
-      {errors.nothing ? (
+      {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="occurrence-nothing">
-          {t(errors.nothing)}
+          {t(shown.nothing)}
         </Text>
       ) : null}
       <ErrorNotice error={confirming ? null : save.error} onDismiss={save.reset} />

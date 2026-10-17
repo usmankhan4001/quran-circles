@@ -176,8 +176,8 @@ describe('RegistrantsScreen behaviour', () => {
     renderScreen(<RegistrantsScreen sessionId={ids.sessionLahore} now={FIXTURE_NOW} pollMs={0} />, {
       backend,
     });
-    expect(await screen.findByTestId('registrants-forbidden')).toBeTruthy();
-    expect(screen.getByText(/do not have permission/i)).toBeTruthy();
+    expect(await screen.findByTestId('registrants-not-available')).toBeTruthy();
+    expect(screen.getByText(/not available to you/i)).toBeTruthy();
     expect(backend.callsTo('registrations.forSession')).toHaveLength(0);
   });
 

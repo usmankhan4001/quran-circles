@@ -1,3 +1,4 @@
+import type { Attendance } from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   attendanceReducer,
@@ -6,7 +7,6 @@ import {
   MAX_ENTRY_COUNT,
   MAX_HEADCOUNT,
   validateAttendance,
-  type Attendance,
 } from './state';
 
 const A = '00000000-0000-4000-8000-0b0000001001';

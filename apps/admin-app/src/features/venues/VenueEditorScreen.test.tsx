@@ -85,6 +85,18 @@ describe('VenueEditorScreen create', () => {
     expect(await screen.findByText(/clashes with something that already exists/)).toBeTruthy();
   });
 
+  it('marks the field the server rejected', async () => {
+    const backend = createBackend({ me: meFor('city') });
+    backend.failWith('adminVenues.create', 'validation_failed', {
+      issues: [{ path: 'address.en', code: 'too_big' }],
+    });
+    renderScreen(<VenueEditorScreen />, { backend });
+    await fillNewVenue();
+    fireEvent.click(screen.getByTestId('venue-save'));
+    expect(await screen.findByText('This was not accepted. Check it and try again.')).toBeTruthy();
+    expect(screen.getAllByText('This was not accepted. Check it and try again.')).toHaveLength(1);
+  });
+
   it('does not let a venue coordinator add venues', async () => {
     const backend = createBackend({ me: meFor('venue') });
     renderScreen(<VenueEditorScreen />, { backend });

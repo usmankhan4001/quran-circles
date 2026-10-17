@@ -12,6 +12,7 @@ import {
   type Me,
   type Principal,
   type ScopeAction,
+  type ValidationIssue,
   type Session,
   type StaffRegistration,
   type Venue,
@@ -150,8 +151,15 @@ export interface Backend {
   /** Every request, in order. */
   calls: RecordedCall[];
   callsTo: (endpointId: string) => RecordedCall[];
-  /** Makes the next requests to an endpoint fail with a contract error code. */
-  failWith: (endpointId: string, code: ErrorCode, options?: { times?: number }) => void;
+  /**
+   * Makes the next requests to an endpoint fail with a contract error code. `issues` go with a
+   * `validation_failed` answer, as the real server sends them.
+   */
+  failWith: (
+    endpointId: string,
+    code: ErrorCode,
+    options?: { times?: number; issues?: ValidationIssue[] },
+  ) => void;
   /** While offline every request fails like a dropped connection. */
   setOffline: (offline: boolean) => void;
   /** What the server holds. */
@@ -233,7 +241,10 @@ export function createBackend(options: BackendOptions = {}): Backend {
   const principal = principalOf(me);
   const count = options.registrantCount ?? 3;
   const calls: RecordedCall[] = [];
-  const failures = new Map<string, { code: ErrorCode; times: number }>();
+  const failures = new Map<
+    string,
+    { code: ErrorCode; times: number; issues?: ValidationIssue[] }
+  >();
   let offline = false;
 
   const state: Backend['state'] = {
@@ -253,6 +264,9 @@ export function createBackend(options: BackendOptions = {}): Backend {
   const occurrenceOf = (id: string) => state.occurrences.find((o) => o.id === id);
   const okFor = (action: ScopeAction, r: { cityId?: string | null; venueId?: string | null }) =>
     can(principal, action, r);
+  /** Followers in reach of an update, by scope. Preview and post agree unless a test says not. */
+  const recipientsFor = (scope: 'national' | 'city' | 'venue') =>
+    scope === 'national' ? 1200 : scope === 'city' ? 140 : 37;
   const page = <T>(items: T[], query: Record<string, unknown>) => {
     const start = query.cursor ? Number.parseInt(String(query.cursor), 10) || 0 : 0;
     const limit = (query.limit as number | undefined) ?? 20;
@@ -292,6 +306,18 @@ export function createBackend(options: BackendOptions = {}): Backend {
         )
         .map((s) => ({ ...s, circleStatus: s.circle ? ('published' as const) : null }));
       return page(items, c.query);
+    },
+    'adminSessions.get': (c) => {
+      // Scoped like the list. Outside the scope the answer is not_found, so nothing is revealed.
+      const filter = scopeFilter(principal, 'session.list_admin');
+      const s = sessionOf(c.params.sessionId!);
+      const inScope =
+        s &&
+        (filter.national ||
+          filter.cityIds.includes(s.cityId) ||
+          filter.venueIds.includes(s.venueId));
+      if (!s || !inScope) return errorResponse('not_found');
+      return { ...s, circleStatus: s.circle ? ('published' as const) : null };
     },
     'adminSessions.occurrences': (c) => {
       const from = c.query.from as string | undefined;
@@ -423,6 +449,16 @@ export function createBackend(options: BackendOptions = {}): Backend {
         );
       return page(items, c.query);
     },
+    'adminCircles.get': (c) => {
+      const filter = scopeFilter(principal, 'circle.list_admin');
+      const circle = state.circles.find((x) => x.id === c.params.circleId);
+      const inScope =
+        circle &&
+        (filter.national ||
+          filter.cityIds.includes(circle.cityId) ||
+          filter.venueIds.includes(circle.venueId));
+      return inScope ? circle : errorResponse('not_found');
+    },
     'adminCircles.create': (c) => {
       const body = c.body as { venueId: string } & Record<string, unknown>;
       const venue = state.venues.find((v) => v.id === body.venueId);
@@ -499,6 +535,10 @@ export function createBackend(options: BackendOptions = {}): Backend {
       ],
     }),
     'adminUpdates.list': (c) => page(state.updates, c.query),
+    'adminUpdates.preview': (c) => {
+      const body = c.body as { scope: { type: 'national' | 'city' | 'venue' } };
+      return { recipients: recipientsFor(body.scope.type) };
+    },
     'adminUpdates.post': (c) => {
       const body = c.body as {
         scope: { type: 'national' | 'city' | 'venue'; cityId?: string; venueId?: string };
@@ -521,7 +561,7 @@ export function createBackend(options: BackendOptions = {}): Backend {
         sessionId: body.sessionId ?? null,
         publishedAt: fx.FIXTURE_NOW,
         authorName: me.displayName,
-        recipients: body.scope.type === 'national' ? 1200 : body.scope.type === 'city' ? 140 : 37,
+        recipients: recipientsFor(body.scope.type),
       };
       state.updates.push(posted);
       return posted;
@@ -563,7 +603,10 @@ export function createBackend(options: BackendOptions = {}): Backend {
       if (v) resource = { cityId: v.cityId, venueId: v.id };
     } else if (def.id === 'adminVenues.create' && typeof body?.cityId === 'string') {
       resource = { cityId: body.cityId };
-    } else if (def.id === 'adminUpdates.post' && body?.scope) {
+    } else if (
+      (def.id === 'adminUpdates.post' || def.id === 'adminUpdates.preview') &&
+      body?.scope
+    ) {
       const scope = body.scope as {
         type: 'national' | 'city' | 'venue';
         cityId?: string;
@@ -610,7 +653,11 @@ export function createBackend(options: BackendOptions = {}): Backend {
       forced.times -= 1;
       return errorResponse(
         forced.code,
-        forced.code === 'rate_limited' ? { retryAfterSeconds: 30 } : undefined,
+        forced.code === 'rate_limited'
+          ? { retryAfterSeconds: 30 }
+          : forced.issues
+            ? { issues: forced.issues }
+            : undefined,
       );
     }
     const denied = await guard(request);
@@ -625,7 +672,7 @@ export function createBackend(options: BackendOptions = {}): Backend {
     calls,
     callsTo: (endpointId) => calls.filter((c) => c.endpoint === endpointId),
     failWith: (endpointId, code, opts) => {
-      failures.set(endpointId, { code, times: opts?.times ?? 1 });
+      failures.set(endpointId, { code, times: opts?.times ?? 1, issues: opts?.issues });
     },
     setOffline: (value) => {
       offline = value;

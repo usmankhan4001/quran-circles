@@ -161,9 +161,10 @@ describe('AttendanceScreen', () => {
     expect(screen.queryByTestId('attendance-saved')).toBeNull();
   });
 
-  it('is closed to a venue coordinator on another venue', async () => {
+  it('is closed to a venue coordinator on another venue: not available, nothing loaded', async () => {
     const { backend } = await open({ sessionId: ids.sessionLahore });
-    expect(await screen.findByTestId('attendance-forbidden')).toBeTruthy();
+    expect(await screen.findByTestId('attendance-not-available')).toBeTruthy();
+    expect(screen.getByText(/not available to you/)).toBeTruthy();
     expect(backend.callsTo('adminAttendance.get')).toHaveLength(0);
     expect(backend.callsTo('adminAttendance.put')).toHaveLength(0);
   });

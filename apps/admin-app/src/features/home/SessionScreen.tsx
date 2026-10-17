@@ -13,7 +13,7 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
-import { useSession } from './sessionDirectory';
+import { useSession } from './useSession';
 import { whenSummary } from './sessionText';
 
 export interface SessionScreenProps {
@@ -45,7 +45,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
       onBack={nav.back}
       testID="session"
     >
-      <QueryBoundary query={session} testID="session-data">
+      <QueryBoundary query={session} testID="session-data" notFoundIsNotAvailable>
         {(s) => {
           const can = sessionAbilities(principal, s);
           const todayOccurrence = occurrences.data?.find((o) => isToday(o.startsAt, now));
