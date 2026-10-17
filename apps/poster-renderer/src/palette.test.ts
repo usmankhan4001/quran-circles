@@ -1,5 +1,6 @@
+import { POSTER_ACCENTS as ACCENTS } from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
-import { ACCENTS, contrastRatio } from './palette';
+import { contrastRatio } from './palette';
 import { TEMPLATES } from './templates';
 
 describe('contrastRatio', () => {

@@ -14,7 +14,10 @@ Branch: lane/renderer/poster-renderer (not committed; the orchestrator commits)
 - **Job, cache, out of date**: cache key = template and version, format, language, fields, the whole snapshot including `sessionVersion`, and the link (in-memory LRU with a byte budget). `runPosterJob` (`src/job.ts`) stores files under content-addressed keys and returns what `posters` needs. `outOfDate(made, current)` returns `time` and/or `venue` from the stored `source_snapshot`. `pnpm --filter @qc/poster-renderer render:sample [out-dir]` renders all 32 combinations from synthetic data and shows the job, a cache hit and a time change being flagged.
 - **Fonts**: unmodified copies of Figtree (400, 600, 700; OFL) and Mehr Nastaliq Web (CC BY-SA 4.0) in `apps/poster-renderer/assets/fonts/` with `LICENSES.md`, the OFL text and checksums; checked at start and in tests. KFGQPC is not bundled (no Quran text on posters). PDFs embed font subsets, which is normal PDF embedding; KFGQPC would need a different decision if it is ever added.
 - **Dockerfile**: `apps/poster-renderer/Dockerfile` (+ `.dockerignore`), target `poster-renderer`, following `infra/docker` conventions. Not built here (no Docker daemon); the same esbuild bundle was built and run locally and served real renders.
-- Checks: `pnpm --filter @qc/poster-renderer test` (14 files, 134 tests, about 10 s with real Chromium), typecheck, eslint and prettier on the renderer's files all pass.
+- **Contract 1.0.0-rc.5 adopted** (follow-up to the change request). The renderer's own copies are gone: `src/snapshot.ts` deleted; `src/input.ts` is now `RendererRenderRequest` from `@qc/contracts` plus one rule (a well-formed key with no template here is refused as `validation_failed`, issue `{ path: 'templateId', code: 'invalid_value' }`, which the worker maps to `invalid_request`; own keys only, so `constructor` is refused too); `PosterLanguage`, `PosterAccent` (`POSTER_ACCENTS`), `PosterQrTarget`, `PosterFields`, `PosterSourceSnapshot`, `posterOutOfDate`, `posterLanguagesOf`/`posterLocaleOf`, `POSTER_FAILURE_RETRYABLE` (in `classify`) and `posterStorageKey` (in `runPosterJob`) come from the contract. `/render` answers are typed `RendererRenderResponse` (`renderBody`), every error body `RendererErrorResponse`. `TEMPLATES` (`src/templates/index.ts`) is the list of keys this renderer draws; `cloud` and `night` are the contract's `DEMO_POSTER_TEMPLATES` and report `provisional: true` until the final designs.
+- **Poster wording moved to `@qc/i18n`**: the 12 `poster.*` keys (`scanToRegister`, `scanToOpen`, `dailyAt`, `onDateAt`, `listAnd`, `listComma`, `period.morning|noon|evening|night|lateNight`, `alt`) are in `packages/i18n/src/en.json` and `ur.json` (one insertion each, after `days.sun`; Urdu drafts under the file's `_meta.status` review marker). `src/strings.ts` now only reads the catalogue (`t`, `POSTER_KEYS`).
+- New `src/contract.test.ts` (36 tests): the request schema agrees with `RendererRenderRequest` on 20 valid and invalid inputs (same success, issue paths and parsed value); open-but-unknown keys are refused over HTTP with the contract error shape and fail a job as `invalid_request`; `/render` 200 and every error body round-trip through the contract schemas; `classify` codes and retry flags equal `POSTER_FAILURE_CODES` / `POSTER_FAILURE_RETRYABLE`; stored keys equal `posterStorageKey`; templates equal `DEMO_POSTER_TEMPLATES`, all provisional; a colour for every `POSTER_ACCENTS`; every `poster.*` key in both catalogues with matching placeholders.
+- Checks: `pnpm --filter @qc/poster-renderer test` (15 files, 170 tests: the 134 existing ones with imports adapted, plus 36 new; about 10 s with real Chromium), typecheck, `npx eslint apps/poster-renderer`, `npx prettier --check apps/poster-renderer packages/i18n` and `pnpm --filter @qc/i18n test` (2) all pass.
 
 ## In progress
 
@@ -22,7 +25,7 @@ Branch: lane/renderer/poster-renderer (not committed; the orchestrator commits)
 
 ## Blocked
 
-- Wiring into the API, the worker and the clients: change request `docs/engineering/change-requests/2026-10-17-poster-renderer.md`.
+- Nothing in this lane. The contract side of the change request landed in 1.0.0-rc.5; the API endpoints (api-core), the `poster-render` worker (messaging) and the container (platform) are other lanes' work.
 
 ## Infra change for the platform lane (do not apply from this lane)
 
@@ -75,14 +78,15 @@ Branch: lane/renderer/poster-renderer (not committed; the orchestrator commits)
 3. Chromium runs without its own sandbox (Playwright's default in containers); the container hardening above, the internal-only network and the in-browser blocks are the isolation. A seccomp profile that allows Chromium's sandbox is an option if the reviewer wants both.
 4. Storage for poster files (volume or object store) is not decided; `runPosterJob` takes any `FileStore`.
 5. CI: the root `pnpm test` now includes the renderer's browser tests, so the CI job needs Chromium's headless shell for Playwright 1.56.1 (`pnpm exec playwright install --only-shell chromium` or the e2e job's existing browser cache).
-6. `eslint.config.js`: add `@qc/poster-renderer` to `appPackages` so no app or package can import it.
+6. `eslint.config.js` (root, not this lane's file): add `@qc/poster-renderer` to `appPackages` so no app or package can import it. Still open; there is no such list inside `apps/poster-renderer`.
 
 ## Questions for the orchestrator
 
 - Accept decision 0012 (Urdu go)? Then add it to `docs/engineering/decisions/README.md` (not this lane's file).
 - `pnpm-lock.yaml` changed (new importer `apps/poster-renderer`, plus `qrcode-generator@2.0.4`); please commit it with this lane's files.
 - Human approvals needed: the two provisional templates (render them with `render:sample` and look at all four languages and formats), and the container (Dockerfile and compose block above).
-- Urdu wording on posters (`src/strings.ts`) is a draft for native review, like the rest of the Urdu.
+- Urdu wording on posters (now the `poster.*` keys in `packages/i18n/src/ur.json`) is a draft for native review, like the rest of the Urdu.
+- Final poster designs: the owner said they come later. They arrive as new template keys (no contract change) and need a template in `src/templates/` plus a `poster_templates` row; until then `cloud` and `night` stay provisional.
 - `docs/design/poster-direction.md` still names emerald, DM Sans and Gulzar; the templates follow D3/D4 instead (ui lane to update the file).
 - Editors cannot type the date, time or venue: the renderer prints them from the session, so a poster cannot disagree with the session. The poster direction lists them as editable; confirm this is acceptable.
 

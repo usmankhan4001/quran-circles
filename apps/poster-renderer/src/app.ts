@@ -1,12 +1,17 @@
 import { timingSafeEqual } from 'node:crypto';
+import {
+  POSTER_ACCENTS,
+  POSTER_LANGUAGES,
+  type RendererErrorResponse,
+  type RendererRenderResponse,
+} from '@qc/contracts';
 import { Hono, type Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { TextTooLongError } from './browser';
 import { classify } from './errors';
-import { POSTER_LANGUAGES, RenderRequest } from './input';
+import { RenderRequest } from './input';
 import type { Limiter } from './limiter';
 import type { Logger } from './logger';
-import { ACCENTS } from './palette';
 import type { PosterRenderer, RenderResult } from './renderer';
 import { TEMPLATES } from './templates';
 
@@ -27,15 +32,19 @@ const safeEqual = (a: string, b: string): boolean => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 
+/** Every error answer has the contract's `RendererErrorResponse` shape: codes, paths, box names. */
 const error = (
   c: Context,
-  status: 400 | 401 | 413 | 422 | 500 | 503 | 504,
+  status: 400 | 401 | 404 | 413 | 422 | 500 | 503 | 504,
   code: string,
-  extra: object = {},
-) => c.json({ error: { code, ...extra } }, status);
+  extra: Omit<RendererErrorResponse['error'], 'code'> = {},
+) => c.json({ error: { code, ...extra } } satisfies RendererErrorResponse, status);
 
-/** The JSON body of a render: the files as base64, with everything the API stores beside them. */
-export function renderBody(result: RenderResult) {
+/**
+ * The JSON body of a render (the contract's `RendererRenderResponse`): the files as base64, with
+ * everything the API stores beside them.
+ */
+export function renderBody(result: RenderResult): RendererRenderResponse {
   return {
     ...result,
     files: result.files.map(({ bytes, ...file }) => ({
@@ -50,8 +59,10 @@ export function renderBody(result: RenderResult) {
  * routed by the proxy):
  *
  * - `GET /healthz`: liveness and load.
- * - `GET /templates`: the locked templates, their formats, accents and languages.
- * - `POST /render`: a `RenderRequest`; answers the files and the source snapshot.
+ * - `GET /templates`: the locked templates, their formats, accents and languages. `cloud` and
+ *   `night` are the demo templates and say `provisional: true` until the final designs.
+ * - `POST /render`: a `RendererRenderRequest` for a template this renderer has; answers a
+ *   `RendererRenderResponse`, or a `RendererErrorResponse`.
  */
 export function createApp(deps: AppDeps): Hono {
   const app = new Hono();
@@ -75,7 +86,7 @@ export function createApp(deps: AppDeps): Hono {
         version: tpl.version,
         name: tpl.name,
         formats: tpl.formats,
-        accents: ACCENTS,
+        accents: POSTER_ACCENTS,
         languages: POSTER_LANGUAGES,
         provisional: tpl.provisional,
       })),
@@ -117,10 +128,10 @@ export function createApp(deps: AppDeps): Hono {
     },
   );
 
-  app.notFound((c) => c.json({ error: { code: 'not_found' } }, 404));
+  app.notFound((c) => error(c, 404, 'not_found'));
   app.onError((e, c) => {
     deps.logger.error('http.error', { error: e.name });
-    return c.json({ error: { code: 'internal_error' } }, 500);
+    return error(c, 500, 'internal_error');
   });
   return app;
 }

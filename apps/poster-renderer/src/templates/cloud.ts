@@ -1,6 +1,6 @@
-import { POSTER_FORMATS } from '@qc/contracts';
+import { POSTER_FORMATS, type PosterAccent } from '@qc/contracts';
 import { escapeHtml } from '../escape';
-import { COLOURS, type Accent } from '../palette';
+import { COLOURS } from '../palette';
 import { blockHtml, scanHtml } from './blocks';
 import { dirOf, page, px, star } from './layout';
 import type { PosterTemplate, PosterView, TextPair } from './view';
@@ -119,7 +119,7 @@ export const cloudTemplate: PosterTemplate = {
   formats: POSTER_FORMATS,
   provisional: true,
   build: (view) => (view.spec.orientation === 'landscape' ? preview(view) : portrait(view)),
-  textPairs: (accent: Accent): TextPair[] => [
+  textPairs: (accent: PosterAccent): TextPair[] => [
     { name: 'title', fg: COLOURS.ink, bg: COLOURS.cloud, small: false },
     { name: 'when', fg: COLOURS[accent], bg: COLOURS.cloud, small: false },
     { name: 'venue', fg: COLOURS.ink, bg: COLOURS.cloud, small: false },

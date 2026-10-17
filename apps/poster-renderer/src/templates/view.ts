@@ -1,7 +1,5 @@
-import type { PosterFormat } from '@qc/contracts';
+import type { PosterAccent, PosterFormat, PosterLanguage } from '@qc/contracts';
 import type { FormatSpec } from '../formats';
-import type { PosterLanguage } from '../input';
-import type { Accent } from '../palette';
 import type { QrCode } from '../qr';
 import type { PosterLocale } from '../strings';
 
@@ -19,7 +17,7 @@ export interface PosterBlock {
 export interface PosterView {
   spec: FormatSpec;
   language: PosterLanguage;
-  accent: Accent;
+  accent: PosterAccent;
   /** Leading language first. One block, or two for a bilingual poster. */
   blocks: PosterBlock[];
   /** Null for the link preview. */
@@ -48,5 +46,5 @@ export interface PosterTemplate {
   /** The ui lane has not signed off the art yet (brief, stand-ins). */
   provisional: boolean;
   build(view: PosterView): string;
-  textPairs(accent: Accent): TextPair[];
+  textPairs(accent: PosterAccent): TextPair[];
 }

@@ -1,17 +1,16 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { POSTER_FORMATS } from '@qc/contracts';
+import { POSTER_FORMATS, POSTER_LANGUAGES, posterOutOfDate } from '@qc/contracts';
 import { BrowserPool } from '../browser';
 import { classify } from '../errors';
 import { MemoryCache } from '../cache';
-import { POSTER_LANGUAGES, TEMPLATE_IDS } from '../input';
 import { runPosterJob, type FileStore } from '../job';
 import { Limiter } from '../limiter';
 import { createConsoleLogger } from '../logger';
 import { PosterRenderer } from '../renderer';
 import { SAMPLE_SESSION, SAMPLE_SESSION_NO_URDU_VENUE, sampleRequest } from '../sample';
-import { outOfDate } from '../snapshot';
+import { TEMPLATE_IDS } from '../templates';
 
 /**
  * Stand-in for the api and worker endpoints (brief): renders every template in every language and
@@ -94,7 +93,7 @@ try {
     localStartTime: '20:00',
     sessionVersion: '2026-10-18T12:00:00.000Z',
   };
-  const reasons = first.status === 'ready' ? outOfDate(first.sourceSnapshot, moved) : [];
+  const reasons = first.status === 'ready' ? posterOutOfDate(first.sourceSnapshot, moved) : [];
   const regenerated = await runPosterJob(
     { request: sampleRequest({ formats: ['story', 'print_a4'], session: moved }) },
     { renderer, store },

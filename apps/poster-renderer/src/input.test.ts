@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { languagesOf, RenderRequest } from './input';
+import { posterLanguagesOf as languagesOf } from '@qc/contracts';
+import { RenderRequest } from './input';
 import { sampleRequest } from './sample';
 
 const paths = (input: unknown): string[] => {

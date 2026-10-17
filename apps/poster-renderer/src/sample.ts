@@ -1,10 +1,10 @@
+import type { PosterSourceSnapshot } from '@qc/contracts';
 import type { RenderRequestInput } from './input';
-import type { SourceSnapshot } from './snapshot';
 
 /**
  * Synthetic sample data for the sample script and the tests. No real venue, person or session.
  */
-export const SAMPLE_SESSION: SourceSnapshot = {
+export const SAMPLE_SESSION: PosterSourceSnapshot = {
   sessionId: '0f6f1e4a-7c2b-4d1e-9a3b-5c8d2e1f4a60',
   sessionVersion: '2026-10-17T09:00:00.000Z',
   localStartTime: '21:30',
@@ -21,7 +21,7 @@ export const SAMPLE_SESSION: SourceSnapshot = {
 };
 
 /** A venue with no Urdu name yet: Urdu posters print the English name inside Urdu text. */
-export const SAMPLE_SESSION_NO_URDU_VENUE: SourceSnapshot = {
+export const SAMPLE_SESSION_NO_URDU_VENUE: PosterSourceSnapshot = {
   ...SAMPLE_SESSION,
   sessionId: '6a1c9e2b-4d7f-4a3e-8b1c-9d2e5f7a3b41',
   daysOfWeek: [],

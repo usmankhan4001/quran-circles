@@ -1,48 +1,35 @@
-import { buildDeepLink, type PosterFormat } from '@qc/contracts';
+import {
+  buildDeepLink,
+  posterLanguagesOf,
+  posterLocaleOf,
+  type PosterFormat,
+  type RendererRenderedFile,
+  type RendererRenderResponse,
+} from '@qc/contracts';
 import type { PageJob, PageResult } from './browser';
 import { cacheKey, MemoryCache, sha256 } from './cache';
 import { CONTENT_TYPES, FORMAT_SPECS } from './formats';
 import { formatWhen } from './format';
-import { languagesOf, RenderRequest, type RenderRequestInput } from './input';
+import { RenderRequest, type RenderRequestInput } from './input';
 import { Limiter } from './limiter';
 import type { Logger } from './logger';
 import { makeQr } from './qr';
-import type { SourceSnapshot } from './snapshot';
 import { t, type PosterLocale } from './strings';
-import { TEMPLATES, type PosterBlock, type PosterView } from './templates';
+import { templateOf, type PosterBlock, type PosterTemplate, type PosterView } from './templates';
 
 /** Whatever draws one page: the browser pool, or a fake in tests. */
 export interface PageRenderer {
   render(job: PageJob, deadline: number): Promise<PageResult>;
 }
 
-export interface RenderedFile {
-  format: PosterFormat;
-  contentType: string;
-  filename: string;
-  cacheKey: string;
-  sha256: string;
-  byteLength: number;
-  /** True when the file came from the cache rather than a fresh render. */
-  cached: boolean;
-  bytes: Buffer;
-}
+/** One rendered file: the contract's `RendererRenderedFile` with the bytes instead of base64. */
+export type RenderedFile = Omit<RendererRenderedFile, 'base64'> & { bytes: Buffer };
 
-export interface RenderResult {
-  templateId: string;
-  templateVersion: number;
-  provisional: boolean;
-  language: RenderRequest['language'];
-  /** The leading language, for `posters.locale`. */
-  locale: PosterLocale;
-  /** What the QR code opens. */
-  deepLink: string;
-  /** Store with the poster (`posters.source_snapshot`) to detect a later change. */
-  sourceSnapshot: SourceSnapshot;
-  /** A plain sentence per language shown, for the share sheet and the preview tag. */
-  altText: Partial<Record<PosterLocale, string>>;
-  files: RenderedFile[];
-}
+/**
+ * A render: the contract's `RendererRenderResponse` with the bytes instead of base64. `provisional`
+ * is the template's own flag (true for the demo templates `cloud` and `night`).
+ */
+export type RenderResult = Omit<RendererRenderResponse, 'files'> & { files: RenderedFile[] };
 
 export interface RendererOptions {
   pages: PageRenderer;
@@ -61,7 +48,7 @@ const pick = (
 
 function blocksOf(request: RenderRequest): PosterBlock[] {
   const { session, fields } = request;
-  return languagesOf(request.language).map((locale) => ({
+  return posterLanguagesOf(request.language).map((locale) => ({
     locale,
     title: fields.title[locale] ?? '',
     when: formatWhen(session, locale),
@@ -79,7 +66,7 @@ export function buildView(
   webBase?: string,
 ): PosterView {
   const spec = FORMAT_SPECS[format];
-  const locales = languagesOf(request.language);
+  const locales = posterLanguagesOf(request.language);
   const link = deepLinkOf(request, webBase);
   const scanKey =
     request.fields.qrTarget === 'register' ? 'poster.scanToRegister' : 'poster.scanToOpen';
@@ -102,8 +89,8 @@ export function deepLinkOf(request: RenderRequest, webBase?: string): string {
   );
 }
 
-function altTextOf(request: RenderRequest): Partial<Record<PosterLocale, string>> {
-  const out: Partial<Record<PosterLocale, string>> = {};
+function altTextOf(request: RenderRequest): RenderResult['altText'] {
+  const out: RenderResult['altText'] = {};
   for (const block of blocksOf(request)) {
     out[block.locale] = t(block.locale, 'poster.alt', {
       title: block.title,
@@ -112,6 +99,13 @@ function altTextOf(request: RenderRequest): Partial<Record<PosterLocale, string>
     });
   }
   return out;
+}
+
+/** `RenderRequest` has already refused unknown keys; this only narrows the type. */
+function requireTemplate(key: string): PosterTemplate {
+  const template = templateOf(key);
+  if (!template) throw new RangeError('no template with this key');
+  return template;
 }
 
 /**
@@ -124,7 +118,7 @@ export class PosterRenderer {
 
   async render(input: RenderRequestInput | RenderRequest): Promise<RenderResult> {
     const request = RenderRequest.parse(input);
-    const template = TEMPLATES[request.templateId];
+    const template = requireTemplate(request.templateId);
     const deepLink = deepLinkOf(request, this.options.webBase);
     const keyed = request.formats.map((format) => ({
       format,
@@ -208,7 +202,7 @@ export class PosterRenderer {
       templateVersion: template.version,
       provisional: template.provisional,
       language: request.language,
-      locale: languagesOf(request.language)[0] ?? 'en',
+      locale: posterLocaleOf(request.language),
       deepLink,
       sourceSnapshot: request.session,
       altText: altTextOf(request),

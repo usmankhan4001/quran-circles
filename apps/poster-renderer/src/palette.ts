@@ -1,6 +1,10 @@
-import { z } from 'zod';
+import type { PosterAccent } from '@qc/contracts';
 
-/** The colours posters may use: D3 in `docs/design/redesign-decisions.md`. */
+/**
+ * The colours posters may use: D3 in `docs/design/redesign-decisions.md`. The accents an editor can
+ * pick are the contract's `PosterAccent` (`POSTER_ACCENTS`); each has a colour here, and every
+ * template checks each one against its text in `palette.test.ts`.
+ */
 export const COLOURS = {
   tanzeem: '#226836',
   deep: '#154a27',
@@ -14,15 +18,7 @@ export const COLOURS = {
   ink: '#0c2a17',
   /** Quiet text on light posters. */
   muted: '#33503e',
-} as const;
-
-/**
- * The only accent colours an editor can pick. Every template checks each one against its text in
- * `palette.test.ts`; a value outside this list is refused by the request schema.
- */
-export const ACCENTS = ['tanzeem', 'deep', 'night'] as const;
-export const Accent = z.enum(ACCENTS);
-export type Accent = z.infer<typeof Accent>;
+} as const satisfies Record<PosterAccent, string> & Record<string, string>;
 
 const channel = (v: number): number => {
   const c = v / 255;

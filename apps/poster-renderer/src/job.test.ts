@@ -1,8 +1,8 @@
+import { posterOutOfDate as outOfDate } from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
 import { TextTooLongError } from './browser';
 import { runPosterJob, type FileStore } from './job';
 import { SAMPLE_SESSION, sampleRequest } from './sample';
-import { outOfDate } from './snapshot';
 import { fakeRenderer } from './test/fakes';
 
 class MemoryStore implements FileStore {

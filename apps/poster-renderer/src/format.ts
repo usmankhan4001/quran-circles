@@ -1,6 +1,6 @@
+import type { PosterSourceSnapshot } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { t, type PosterLocale } from './strings';
-import type { SourceSnapshot } from './snapshot';
 
 const DAY_KEYS: readonly MessageKey[] = [
   'days.sun',
@@ -57,7 +57,7 @@ export function formatDate(localDate: string, locale: PosterLocale): string {
  * When the session meets, from the snapshot, in one language. Weekly sessions: "Every Friday at
  * 9:30 pm"; a one-off lecture (no days): its date and time.
  */
-export function formatWhen(snapshot: SourceSnapshot, locale: PosterLocale): string {
+export function formatWhen(snapshot: PosterSourceSnapshot, locale: PosterLocale): string {
   const time = formatTime(snapshot.localStartTime, locale);
   const days = [...new Set(snapshot.daysOfWeek)].sort((a, b) => a - b);
   if (days.length === 0) {

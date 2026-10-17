@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { POSTER_FORMATS } from '@qc/contracts';
-import { POSTER_LANGUAGES, RenderRequest } from '../input';
+import { POSTER_FORMATS, POSTER_LANGUAGES } from '@qc/contracts';
+import { RenderRequest } from '../input';
 import { buildView } from '../renderer';
 import { sampleRequest } from '../sample';
 import { CSP, richText } from './layout';

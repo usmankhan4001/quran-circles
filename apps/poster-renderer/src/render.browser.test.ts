@@ -1,21 +1,20 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { POSTER_FORMATS, type PosterFormat } from '@qc/contracts';
+import {
+  POSTER_FORMATS,
+  POSTER_LANGUAGES,
+  type PosterFormat,
+  type PosterLanguage,
+} from '@qc/contracts';
 import { BrowserPool, TextTooLongError } from './browser';
 import { MemoryCache } from './cache';
 import { FORMAT_SPECS } from './formats';
-import {
-  POSTER_LANGUAGES,
-  RenderRequest,
-  TEMPLATE_IDS,
-  type PosterLanguage,
-  type TemplateId,
-} from './input';
+import { RenderRequest } from './input';
 import { Limiter } from './limiter';
 import { silentLogger } from './logger';
 import { makeQr, QUIET_ZONE } from './qr';
 import { buildView, PosterRenderer } from './renderer';
 import { SAMPLE_SESSION, SAMPLE_SESSION_NO_URDU_VENUE, sampleRequest } from './sample';
-import { TEMPLATES } from './templates';
+import { TEMPLATE_IDS, TEMPLATES, type TemplateId } from './templates';
 import { Inspector, pdfFacts, pngSize } from './test/inspect';
 
 /**

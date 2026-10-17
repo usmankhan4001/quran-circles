@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import type { Session } from '@qc/contracts';
+import {
+  posterOutOfDate as outOfDate,
+  posterSnapshotFromSession as snapshotFromSession,
+  PosterSourceSnapshot as SourceSnapshot,
+  type Session,
+} from '@qc/contracts';
 import { SAMPLE_SESSION } from './sample';
-import { outOfDate, snapshotFromSession, SourceSnapshot } from './snapshot';
+
+// The snapshot comparison moved to `@qc/contracts` (1.0.0-rc.5). These tests stay here so the
+// renderer's own sample sessions keep being checked against the shared rule it now relies on.
 
 const made = SAMPLE_SESSION;
 const later = (change: Partial<SourceSnapshot>): SourceSnapshot => ({

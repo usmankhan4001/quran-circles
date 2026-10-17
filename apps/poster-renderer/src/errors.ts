@@ -1,15 +1,18 @@
-import { RenderTimeoutError, TextTooLongError } from './browser';
+import { POSTER_FAILURE_RETRYABLE, type PosterFailureCode } from '@qc/contracts';
 import { ZodError } from 'zod';
+import { RenderTimeoutError, TextTooLongError } from './browser';
 import { BusyError } from './limiter';
 
-export type RenderFailure =
-  'invalid_request' | 'text_too_long' | 'busy' | 'render_timeout' | 'render_failed';
+const failure = (code: PosterFailureCode) => ({ code, retryable: POSTER_FAILURE_RETRYABLE[code] });
 
-/** The failure code for an error from `PosterRenderer.render`, and whether trying again may help. */
-export function classify(error: unknown): { code: RenderFailure; retryable: boolean } {
-  if (error instanceof ZodError) return { code: 'invalid_request', retryable: false };
-  if (error instanceof TextTooLongError) return { code: 'text_too_long', retryable: false };
-  if (error instanceof BusyError) return { code: 'busy', retryable: true };
-  if (error instanceof RenderTimeoutError) return { code: 'render_timeout', retryable: true };
-  return { code: 'render_failed', retryable: true };
+/**
+ * The contract's `posters.failure_code` for an error from `PosterRenderer.render`, and whether
+ * trying again may help (`POSTER_FAILURE_RETRYABLE`, the rule the worker's retry follows).
+ */
+export function classify(error: unknown): { code: PosterFailureCode; retryable: boolean } {
+  if (error instanceof ZodError) return failure('invalid_request');
+  if (error instanceof TextTooLongError) return failure('text_too_long');
+  if (error instanceof BusyError) return failure('busy');
+  if (error instanceof RenderTimeoutError) return failure('render_timeout');
+  return failure('render_failed');
 }
