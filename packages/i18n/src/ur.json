@@ -1318,5 +1318,10 @@
   "admin.circleEditor.archive.action": "حلقہ محفوظ شدہ میں ڈالیں",
   "admin.circleEditor.archive.confirmTitle": "کیا یہ حلقہ محفوظ شدہ میں ڈالیں؟",
   "admin.circleEditor.archive.confirmBody": "یہ سب کے لیے ایپ میں دکھنا بند ہو جائے گا۔",
-  "admin.circleEditor.archivedNote": "یہ حلقہ محفوظ شدہ ہے۔ لوگ اسے ایپ میں نہیں دیکھتے۔"
+  "admin.circleEditor.archivedNote": "یہ حلقہ محفوظ شدہ ہے۔ لوگ اسے ایپ میں نہیں دیکھتے۔",
+  "home.map.countNearest.one": "آپ کے قریب 1 حلقہ · قریب ترین {distance}",
+  "home.map.countNearest.other": "آپ کے قریب {count} حلقے · قریب ترین {distance}",
+  "home.distance.metres": "{distance} میٹر",
+  "home.distance.km": "{distance} کلومیٹر",
+  "home.hijri.date": "{day} {month} {year} ہجری"
 }

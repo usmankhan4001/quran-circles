@@ -1,15 +1,16 @@
 import { fireEvent, within } from '@testing-library/react';
-import { fixtures } from '@qc/contracts/fixtures';
+import { FIXTURE_NOW, fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import {
   AREA_SADDAR,
+  CITY_ISLAMABAD,
   CITY_RAWALPINDI,
   SESSIONS,
   followFor,
   registrationFor,
 } from '../test/factories';
-import { createWorld, renderScreen, waitFor } from '../test/harness';
+import { act, createWorld, renderScreen, waitFor } from '../test/harness';
 import { ayahOfTheDay } from '../features/home/ayah';
 import { HomeScreen } from './HomeScreen';
 import { JourneyScreen } from './JourneyScreen';
@@ -23,6 +24,27 @@ import { VenueScreen } from './VenueScreen';
 
 const en = messages.en;
 const noor = fixtures.venues[0]!;
+
+/** `config.get` with the circle requests flag on only for the cities listed. */
+function circleRequestsIn(...cityIds: string[]) {
+  return {
+    'config.get': (c: { query: Record<string, unknown> }) => ({
+      seasonMode: 'dora',
+      hijriOffsetDays: 0,
+      featureFlags: {
+        circle_requests: typeof c.query.cityId === 'string' && cityIds.includes(c.query.cityId),
+        session_companion: false,
+        invite_friends: false,
+        poster_sharing: false,
+        quran_offline_copy: false,
+        whatsapp_fallback_reminders: false,
+      },
+      supportedLocales: ['en', 'ur'],
+      minimumAppVersion: { ios: '1.0.0', android: '1.0.0' },
+      serverTime: FIXTURE_NOW,
+    }),
+  };
+}
 
 describe('Home (H4)', () => {
   it('holds the next circle in the green header, then search, map, pictures, ayah and the app row', async () => {
@@ -111,14 +133,78 @@ describe('Nearby (N2)', () => {
     expect(within(header).getByTestId('nearby-view')).toBeTruthy();
   });
 
-  it('ends the list with "Ask for a circle near you", which says it is coming soon', async () => {
-    const view = await renderScreen(<NearbyScreen />, { cityId: CITY_RAWALPINDI.id });
+  it('ends the list with "Ask for a circle near you" when the flag is on, which says it is coming soon', async () => {
+    const view = await renderScreen(<NearbyScreen />, {
+      cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: circleRequestsIn(CITY_RAWALPINDI.id) },
+    });
     const list = await view.findByTestId('nearby-list');
-    const ask = within(list).getByTestId('nearby-ask');
+    const ask = await within(list).findByTestId('nearby-ask');
     expect(within(ask).getByText(en['nearby.ask.title'])).toBeTruthy();
     expect(list.lastElementChild).toBe(ask);
     fireEvent.click(within(ask).getByTestId('nearby-ask-action'));
     expect(await view.findByText(en['nearby.request.soon'])).toBeTruthy();
+  });
+
+  it('hides "Ask for a circle near you" while the circle requests flag is off', async () => {
+    const world = await createWorld({
+      cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: circleRequestsIn() },
+    });
+    const view = await renderScreen(<NearbyScreen />, { world });
+    const list = await view.findByTestId('nearby-list');
+    await waitFor(() => expect(world.http.callsTo('GET /v1/config').length).toBeGreaterThan(0));
+    expect(within(list).getAllByText(SESSIONS.taraweeh.title.en).length).toBeGreaterThan(0);
+    expect(view.queryByTestId('nearby-ask')).toBeNull();
+    expect(view.queryByText(en['nearby.ask.title'])).toBeNull();
+  });
+
+  it('reads the flag for the city being browsed, and follows a change of city', async () => {
+    const world = await createWorld({
+      cityId: CITY_ISLAMABAD.id,
+      mock: { handlers: circleRequestsIn(CITY_RAWALPINDI.id) },
+    });
+    const view = await renderScreen(<NearbyScreen />, { world });
+    await view.findByTestId('nearby-list');
+    expect(view.queryByTestId('nearby-ask')).toBeNull();
+
+    await act(() => world.services.preferences.update({ cityId: CITY_RAWALPINDI.id }));
+    expect(await view.findByTestId('nearby-ask')).toBeTruthy();
+    const searches = world.http.callsTo('GET /v1/config').map((c) => c.search);
+    expect(searches.some((q) => q.includes(`cityId=${CITY_ISLAMABAD.id}`))).toBe(true);
+    expect(searches.some((q) => q.includes(`cityId=${CITY_RAWALPINDI.id}`))).toBe(true);
+
+    await act(() => world.services.preferences.update({ cityId: CITY_ISLAMABAD.id }));
+    await waitFor(() => expect(view.queryByTestId('nearby-ask')).toBeNull());
+  });
+
+  it('keeps it hidden when the settings cannot be fetched', async () => {
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
+    world.http.failNext('GET /v1/config', 'internal_error', 10);
+    const view = await renderScreen(<NearbyScreen />, { world });
+    await view.findByTestId('nearby-list');
+    await waitFor(() => expect(world.http.callsTo('GET /v1/config').length).toBeGreaterThan(0));
+    expect(view.queryByTestId('nearby-ask')).toBeNull();
+  });
+
+  it('offers to request a circle from the empty list only when the flag is on', async () => {
+    const empty = { 'sessions.list': () => ({ items: [], nextCursor: null }) };
+    const on = await renderScreen(<NearbyScreen />, {
+      cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: { ...empty, ...circleRequestsIn(CITY_RAWALPINDI.id) } },
+    });
+    const withRequest = await on.findByTestId('nearby-empty');
+    expect(await within(withRequest).findByText(en['nearby.request.action'])).toBeTruthy();
+    on.unmount();
+
+    const world = await createWorld({
+      cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: { ...empty, ...circleRequestsIn() } },
+    });
+    const off = await renderScreen(<NearbyScreen />, { world });
+    const withoutRequest = await off.findByTestId('nearby-empty');
+    await waitFor(() => expect(world.http.callsTo('GET /v1/config').length).toBeGreaterThan(0));
+    expect(within(withoutRequest).queryByText(en['nearby.request.action'])).toBeNull();
   });
 
   it('shows small cards for the nearest places on the map and selects one when tapped', async () => {

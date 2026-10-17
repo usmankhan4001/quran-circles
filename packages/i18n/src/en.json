@@ -1317,5 +1317,10 @@
   "admin.circleEditor.archive.action": "Archive circle",
   "admin.circleEditor.archive.confirmTitle": "Archive this circle?",
   "admin.circleEditor.archive.confirmBody": "It stops showing in the app for everyone.",
-  "admin.circleEditor.archivedNote": "This circle is archived. People no longer see it in the app."
+  "admin.circleEditor.archivedNote": "This circle is archived. People no longer see it in the app.",
+  "home.map.countNearest.one": "1 circle near you · nearest {distance}",
+  "home.map.countNearest.other": "{count} circles near you · nearest {distance}",
+  "home.distance.metres": "{distance} m",
+  "home.distance.km": "{distance} km",
+  "home.hijri.date": "{day} {month} {year} AH"
 }

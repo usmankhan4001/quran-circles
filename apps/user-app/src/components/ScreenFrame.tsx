@@ -7,6 +7,8 @@ import { useInsets } from '../providers/insets';
 
 export interface ScreenFrameProps {
   title: string;
+  /** A short line above the title, such as the Hijri date on Home. */
+  eyebrow?: string;
   subtitle?: string;
   onBack?: () => void;
   actions?: ReactNode;
@@ -41,6 +43,7 @@ const styles = StyleSheet.create({
  */
 export function ScreenFrame({
   title,
+  eyebrow,
   subtitle,
   onBack,
   actions,
@@ -78,6 +81,7 @@ export function ScreenFrame({
       <HeroHeader
         testID="screen-header"
         title={title}
+        {...(eyebrow ? { eyebrow } : {})}
         {...(subtitle ? { subtitle } : {})}
         {...(onBack && !sheet ? { onBack } : {})}
         {...(close ? { actions: close } : actions ? { actions } : {})}

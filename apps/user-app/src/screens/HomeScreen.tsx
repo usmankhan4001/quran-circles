@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Text,
+  formatNumber,
   minTouchTarget,
   radii,
   spacing,
@@ -17,8 +18,10 @@ import { ScreenFrame } from '../components/ScreenFrame';
 import { Section } from '../components/Section';
 import { SessionCard } from '../components/SessionCard';
 import { UpdateItem } from '../components/UpdateItem';
+import { distanceParts, nearestMetres } from '../core/distance';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { ayahOfTheDay } from '../features/home/ayah';
+import { HIJRI_MONTH_KEYS, hijriToday } from '../features/home/hijri';
 import {
   nextRegisteredOccurrence,
   pickLeadOccurrence,
@@ -27,6 +30,7 @@ import {
 import { occurrenceAsSession } from '../features/home/occurrence';
 import { useMyRegistrations } from '../features/journey/hooks';
 import { describeOccurrence } from '../features/nearby/schedule';
+import { useOrigin } from '../features/nearby/useOrigin';
 import { useUnreadCount, useUpdatesFeed } from '../features/updates/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
@@ -84,6 +88,8 @@ export function HomeScreen() {
   const unread = useUnreadCount();
   const feed = useUpdatesFeed(3);
   const cities = useCities();
+  // The same "near me" point as Nearby: the chosen area's centre, no phone location needed.
+  const origin = useOrigin();
   const { NextPrayerCard, ContinueReadingCard } = content;
 
   const mine = registrations.data ? nextRegisteredOccurrence(registrations.data, now()) : undefined;
@@ -94,6 +100,31 @@ export function HomeScreen() {
   const lead = items ? pickLeadOccurrence(items, leadingProgram) : undefined;
   const other = items?.find((o) => o.session.program === otherProgram && o.id !== lead?.id);
   const ayah = ayahOfTheDay(now());
+  const hijri = hijriToday(now(), config.hijriOffsetDays);
+  const hijriText = hijri
+    ? t('home.hijri.date', {
+        day: formatNumber(hijri.day, locale),
+        month: t(HIJRI_MONTH_KEYS[hijri.month - 1] ?? 'prayer.hijriMonth.1'),
+        year: formatNumber(hijri.year, locale),
+      })
+    : null;
+  // Worked out on the phone from the area centre; without one the card keeps the plain count.
+  const nearest =
+    origin && items
+      ? nearestMetres(
+          origin,
+          items.map((o) => o.session.venue),
+        )
+      : null;
+  const mapTitle = (count: number) => {
+    if (nearest === null) return t('home.map.count', { count });
+    const parts = distanceParts(nearest, locale);
+    const distance =
+      parts.unit === 'km'
+        ? t('home.distance.km', { distance: parts.value })
+        : t('home.distance.metres', { distance: parts.value });
+    return t('home.map.countNearest', { count, distance });
+  };
 
   const heroCard = mine ? (
     <View testID="home-your-next">
@@ -150,6 +181,7 @@ export function HomeScreen() {
   return (
     <ScreenFrame
       title={t('tabs.home')}
+      {...(hijriText ? { eyebrow: hijriText } : {})}
       {...(city ? { subtitle: l(city.name).text } : {})}
       actions={
         <View style={styles.actions}>
@@ -194,7 +226,7 @@ export function HomeScreen() {
         {items && items.length > 0 ? (
           <MapPreviewCard
             pins={items.length}
-            title={t('home.map.count', { count: items.length })}
+            title={mapTitle(items.length)}
             caption={t('home.map.open')}
             onPress={() => nav.tab({ name: 'nearby' })}
             testID="home-map"

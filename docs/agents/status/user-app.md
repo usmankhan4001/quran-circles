@@ -3,6 +3,14 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Owner decisions, 2026-10-17 afternoon (digest "Further decisions")
+
+- "Ask for a circle near you" (end of the Nearby list) and "Request a circle near me" (empty Nearby list) show only when `featureFlags.circle_requests` from `config.get` is on. Flags come for the city being browsed (`preferences.cityId`, the same city Nearby lists); until `config.get` has answered once for that city (or when it fails with no saved copy) they are off. Tests: on, off, a city change both ways, and a failed `config.get`.
+- Home map card: "N circles near you · nearest 1.2 km". The distance is worked out on the phone (haversine, `src/core/distance.ts`) from the same point Nearby sorts by: the chosen area's centre (`useOrigin`). Nearby uses no phone location, so there is no permission to ask; with no area or an area without coordinates the card keeps the old text. Written as metres to the nearest 10 m under 1 km, km with one decimal under 10 km, whole km from 10 km; digits through the kit's `formatNumber` (Western in both languages today). The Home calculation logs nothing and sends nothing new to the server.
+- Home green header: today's Hijri date as the kit `HeroHeader` eyebrow ("8 Ramadan 1448 AH"), from `@qc/content`'s exported `hijriDate` and `todayAt` with Pakistan Standard Time (`PAKISTAN_UTC_OFFSET_MINUTES`) and `config.hijriOffsetDays` (`src/features/home/hijri.ts`). Month names reuse the `prayer.hijriMonth.*` keys. Tests with the fixed clock: offset 0, +1, -1, +2, clamping, the midnight turn in Pakistan, Urdu. `hijri.ts` imports these pure functions from `@qc/content` directly (as `platform/contentStorage.ts` does) rather than through the `ContentModules` mount points; the date is read when Home renders and does not tick over at midnight on an open screen.
+- i18n keys added to `en.json` and `ur.json` together (Urdu draft): `home.map.countNearest.one/other`, `home.distance.metres`, `home.distance.km`, `home.hijri.date`.
+- Tests: 612 passing in 42 files. `expo export --platform web` bundles.
+
 ## Redesign (2026-10-17)
 
 The approved redesign (D1 to D16) is applied to `apps/user-app`. Behaviour, hooks and i18n keys are unchanged; 16 keys were added to `en.json` and `ur.json` together (Urdu is a draft).
@@ -16,7 +24,7 @@ The approved redesign (D1 to D16) is applied to `apps/user-app`. Behaviour, hook
 - My Journey (J1): three numbers in the header (upcoming, waiting, following), registrations as kit `SessionCard`s with reminder switches in a card under each, followed masjids in a card.
 - Updates as cards, Profile with quick tiles, Sign-in with the kit `CodeField`, kit `ConfirmSheet` and kit `SessionCard` everywhere a session is listed.
 - Local stand-ins marked `TODO(kit)` in `src/ui/`: `Glyph`, `GlassButton`, `PictureCard`, `MapPreviewCard`, `ChoiceCards`, `Stepper`, `PhotoBlock`, `SearchButton`. Change request `2026-10-17-user-app-redesign-gaps.md`.
-- Not matched to the drawn screens: circle progress on My Journey (no data), real photos (no field), Arabic text on the ayah card (not in `@qc/content`), Hijri date in the Home header, distance on the map card, `DateStrip` and `PrayerStrip` unused (nothing in the app needs them), registration sheet is a modal route on phones but a full page on the web.
+- Not matched to the drawn screens: circle progress on My Journey (no data), real photos (no field), Arabic text on the ayah card (not in `@qc/content`), `DateStrip` and `PrayerStrip` unused (nothing in the app needs them), registration sheet is a modal route on phones but a full page on the web.
 - Tests: 577 passing in 40 files, including the green-header token check on every screen in the 16-combination matrix, a scan that screens, components and `ui/` hold no raw colours, and new tests for each redesigned layout. `expo export --platform web` bundles.
 
 ## Done
@@ -52,7 +60,7 @@ Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the we
 - Google Maps key: the web and phone map need a public key in `EXPO_PUBLIC_GOOGLE_MAPS_KEY`; until then the list-only view is shown. Who creates it, and which referrer restrictions apply?
 - Web push needs `EXPO_PUBLIC_VAPID_PUBLIC_KEY` and the API's matching private key (messaging lane). Confirmed who generates the pair?
 - Family sessions: decided by the owner: a family session accepts women, men or family. Kept.
-- Should "Ask for a circle near you" at the end of the Nearby list show when the `circle_requests` flag is off? It shows always, with the coming-soon message.
+- "Ask for a circle near you": decided by the owner, hidden unless `circle_requests` is on. Done. When the flag is on it still shows the coming-soon message (request-a-circle is a later wave).
 - Reminder lead time is fixed at 60 minutes on the device. The messaging lane asks for a per-program setting; if it ships, the app should read it from `config.get`.
 - Surah names for the Home reading card come from the content package; nothing needed here.
 - Phone numbers assume Pakistan (+92) when typed without a country code. Other countries need the code typed.

@@ -300,22 +300,25 @@ export function NearbyScreen() {
                 testID="nearby-load-more"
               />
             ) : null}
-            <Card testID="nearby-ask">
-              <View style={styles.list}>
-                <Text variant="title3" heading={2}>
-                  {t('nearby.ask.title')}
-                </Text>
-                <Text variant="body" color="textSecondary">
-                  {t('nearby.ask.body')}
-                </Text>
-                <Button
-                  variant="secondary"
-                  label={t('nearby.ask.action')}
-                  onPress={() => toast.show(t('nearby.request.soon'), 'info')}
-                  testID="nearby-ask-action"
-                />
-              </View>
-            </Card>
+            {/* Asking for a circle waits for the circle requests flag of the city browsed. */}
+            {config.featureFlags.circle_requests ? (
+              <Card testID="nearby-ask">
+                <View style={styles.list}>
+                  <Text variant="title3" heading={2}>
+                    {t('nearby.ask.title')}
+                  </Text>
+                  <Text variant="body" color="textSecondary">
+                    {t('nearby.ask.body')}
+                  </Text>
+                  <Button
+                    variant="secondary"
+                    label={t('nearby.ask.action')}
+                    onPress={() => toast.show(t('nearby.request.soon'), 'info')}
+                    testID="nearby-ask-action"
+                  />
+                </View>
+              </Card>
+            ) : null}
           </View>
         )}
       </View>
