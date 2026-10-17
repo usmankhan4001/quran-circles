@@ -85,6 +85,10 @@ Button (primary, tonal, outline, quiet, danger; pressed, loading, disabled), Ico
 
 Chosen by the owner on 2026-10-17 from [Buttons](https://claude.ai/artifact/HukdzsoECQXcpjkMCeEvvH). Rounded rectangles, corner radius 16 (12 on the small size), solid Tanzeem green for the main action with a soft green shadow, leaf tint for the second action, a 1.5 green outline, text-only, and a terracotta outline for careful actions. Sizes 36 (inside cards only), 48 and 56. States: pressed (darker, 98% scale), focused (2 px ring, 3 px gap), disabled (40%), loading (rotating eight-point star). Icon buttons 44 square, same radius. Pill, mihrab-arch, tile, mushaf-frame and lantern shapes were rejected.
 
+### D9. Text fields: outlined, label inside (A3)
+
+Chosen by the owner on 2026-10-17 from [Text fields](https://claude.ai/artifact/F3KpcvHrUmPRQxEmHGfTQf). White field with a 1 px border, radius 14, 60 tall, the label small at the top inside the field (66 tall in Urdu so Nastaliq has room). Focus is a 2 px green border with a green label; error is a 2 px terracotta border with the message and a warning icon below. Search and the 6-digit code have no inside label (52 tall, search is pill-shaped). Phone numbers stay left-to-right with a +92 prefix, even in Urdu. Disabled fields are filled grey with a lock.
+
 ## Open questions
 
 - Owner review of the component set.
