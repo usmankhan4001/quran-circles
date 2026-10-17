@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Quran Circles API",
-    "version": "1.0.0-rc.3",
+    "version": "1.0.0-rc.4",
     "description": "Generated from packages/contracts. Times are UTC; show Pakistan time (UTC+5). Phone numbers are E.164. Errors carry a stable code and an i18n message key."
   },
   "servers": [
@@ -142,6 +142,21 @@
                           "type": "boolean"
                         },
                         "whatsapp_fallback_reminders": {
+                          "type": "boolean"
+                        },
+                        "reading_days": {
+                          "type": "boolean"
+                        },
+                        "community_today": {
+                          "type": "boolean"
+                        },
+                        "ayah_of_the_day": {
+                          "type": "boolean"
+                        },
+                        "memorisation": {
+                          "type": "boolean"
+                        },
+                        "read_along": {
                           "type": "boolean"
                         }
                       },
@@ -1113,6 +1128,47 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "dailyGoal": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "unit": {
+                            "type": "string",
+                            "enum": [
+                              "pages",
+                              "rukus",
+                              "minutes"
+                            ]
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 604
+                          }
+                        },
+                        "required": [
+                          "unit",
+                          "amount"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "memorisationReviseAfterDays": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 365
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 }
               }
@@ -1358,7 +1414,8 @@
                               "registration_updates",
                               "session_reminders",
                               "venue_alerts",
-                              "announcements"
+                              "announcements",
+                              "ayah_daily"
                             ]
                           },
                           "venueId": {
@@ -1508,7 +1565,8 @@
                       "registration_updates",
                       "session_reminders",
                       "venue_alerts",
-                      "announcements"
+                      "announcements",
+                      "ayah_daily"
                     ]
                   },
                   "venueId": {
@@ -1568,7 +1626,8 @@
                         "registration_updates",
                         "session_reminders",
                         "venue_alerts",
-                        "announcements"
+                        "announcements",
+                        "ayah_daily"
                       ]
                     },
                     "venueId": {
@@ -3593,6 +3652,1068 @@
             "bearerAuth": []
           }
         ]
+      }
+    },
+    "/v1/me/reading-days": {
+      "post": {
+        "operationId": "readingDays.record",
+        "summary": "Record a day read (reader, goal met, \"I read today\" or the session portion)",
+        "description": "One row per person, Pakistan-time date and source; sending it again is safe and changes nothing but the totals. `pages` and `ayahs` are the day's totals so far for that source (not increments): a repeat keeps the larger of the stored and the sent value. `date` defaults to today in Pakistan; only today and yesterday are accepted, anything else is validation_failed with `{ path: \"date\", code: \"out_of_range\" }`. `attendance` cannot be sent: the server records it when a coordinator marks the person present by name. The first day read of a date adds one to the national readers total, and new pages add to the national pages total, counted without the user id. Returns the whole day, all sources together. Only the person can read their days; coordinators and admins cannot.",
+        "tags": [
+          "Quran"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "reader",
+                      "goal",
+                      "manual",
+                      "portion"
+                    ]
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "examples": [
+                      "2027-02-18"
+                    ]
+                  },
+                  "pages": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 604
+                  },
+                  "ayahs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 6236
+                  }
+                },
+                "required": [
+                  "source"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "examples": [
+                        "2027-02-18"
+                      ]
+                    },
+                    "sources": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "reader",
+                          "goal",
+                          "manual",
+                          "attendance",
+                          "portion"
+                        ]
+                      }
+                    },
+                    "pages": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "ayahs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "sources",
+                    "pages",
+                    "ayahs"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-scope-actions": [
+          "reading.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "operationId": "readingDays.list",
+        "summary": "Own days read between two dates",
+        "description": "Inclusive Pakistan-time dates, at most 366 days. A backwards range is validation_failed with `{ path: \"from\", code: \"invalid_range\" }`, a longer one `{ path: \"to\", code: \"too_big\" }`. Days without any reading are left out, in date order. There is no streak: the app counts days, for example \"4 of 7 days this week\".",
+        "tags": [
+          "Quran"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "examples": [
+                "2027-02-18"
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "examples": [
+                "2027-02-18"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "examples": [
+                              "2027-02-18"
+                            ]
+                          },
+                          "sources": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "reader",
+                                "goal",
+                                "manual",
+                                "attendance",
+                                "portion"
+                              ]
+                            }
+                          },
+                          "pages": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "ayahs": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "sources",
+                          "pages",
+                          "ayahs"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-scope-actions": [
+          "reading.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/me/memorisation": {
+      "get": {
+        "operationId": "memorisation.list",
+        "summary": "Own memorisation tracker and the \"revise after\" setting",
+        "tags": [
+          "Quran"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "surah": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 114
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "learning",
+                              "memorised",
+                              "revising"
+                            ]
+                          },
+                          "lastRevisedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "examples": [
+                                  "2027-02-18T01:15:00Z"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "examples": [
+                              "2027-02-18T01:15:00Z"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "surah",
+                          "status",
+                          "lastRevisedAt",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "reviseAfterDays": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 365
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "reviseAfterDays"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-scope-actions": [
+          "memorisation.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/me/memorisation/{surah}": {
+      "put": {
+        "operationId": "memorisation.put",
+        "summary": "Mark a surah learning, memorised or revising, or mark it revised",
+        "description": "`markRevised: true` stamps `lastRevisedAt` with now. Marking a surah `memorised` that was never revised stamps it too. No reminder is ever sent.",
+        "tags": [
+          "Quran"
+        ],
+        "parameters": [
+          {
+            "name": "surah",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 114
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "learning",
+                      "memorised",
+                      "revising"
+                    ]
+                  },
+                  "markRevised": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "surah": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 114
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "learning",
+                        "memorised",
+                        "revising"
+                      ]
+                    },
+                    "lastRevisedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "examples": [
+                            "2027-02-18T01:15:00Z"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "examples": [
+                        "2027-02-18T01:15:00Z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "surah",
+                    "status",
+                    "lastRevisedAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-scope-actions": [
+          "memorisation.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "memorisation.delete",
+        "summary": "Clear the mark on a surah",
+        "description": "Answers 204 whether or not the surah was marked, so a retry is safe.",
+        "tags": [
+          "Quran"
+        ],
+        "parameters": [
+          {
+            "name": "surah",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 114
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "user",
+        "x-scope-actions": [
+          "memorisation.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/community/today": {
+      "get": {
+        "operationId": "community.today",
+        "summary": "How many people read today, and pages read together, nationally",
+        "description": "One national number, counted without user ids; there is no city, venue or circle breakdown. Cacheable for a minute.",
+        "tags": [
+          "Quran"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "examples": [
+                        "2027-02-18"
+                      ]
+                    },
+                    "readersToday": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "pagesTogether": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "readersToday",
+                    "pagesTogether"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public",
+        "x-scope-actions": [
+          "community.read"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true
+      }
+    },
+    "/v1/ayah-of-the-day": {
+      "get": {
+        "operationId": "ayahOfTheDay.get",
+        "summary": "The ayah of the day: surah and ayah numbers only",
+        "description": "Rule (`resolveDailyAyah`): when exactly one pick of a followed venue or circle applies that day, that pick; otherwise the national pick; otherwise the built-in list (`BUILT_IN_DAILY_AYAHS`). Send the ids of the venues and circles the person follows as repeated `venueId` and `circleId` parameters; a signed-out visitor sends none. `date` defaults to today in Pakistan. No text is returned: the reader shows the Arabic and the translation from its own source.",
+        "tags": [
+          "Quran"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "examples": [
+                "2027-02-18"
+              ]
+            }
+          },
+          {
+            "name": "venueId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid",
+                "examples": [
+                  "00000000-0000-4000-8000-000000000001"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          },
+          {
+            "name": "circleId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "maxItems": 50,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid",
+                "examples": [
+                  "00000000-0000-4000-8000-000000000001"
+                ]
+              }
+            },
+            "style": "form",
+            "explode": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "examples": [
+                        "2027-02-18"
+                      ]
+                    },
+                    "surah": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 114
+                    },
+                    "ayah": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 286
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "national",
+                        "venue",
+                        "circle",
+                        "built_in"
+                      ]
+                    },
+                    "venueId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "circleId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "surah",
+                    "ayah",
+                    "source",
+                    "venueId",
+                    "circleId"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "public",
+        "x-scope-actions": [
+          "daily_ayah.read"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true
       }
     },
     "/v1/me/circle-requests": {
@@ -8709,6 +9830,666 @@
         "x-auth": "staff",
         "x-scope-actions": [
           "template.read"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/daily-ayahs": {
+      "get": {
+        "operationId": "adminDailyAyahs.list",
+        "summary": "Ayah of the day picks between two dates, national and in scope",
+        "description": "Inclusive dates, at most 366 days (`invalid_range` / `too_big` as for reading days). National picks are listed for every caller (coordinators see them read-only); venue and circle picks only inside the caller's scope (`scopeFilter` of `daily_ayah.manage`).",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "examples": [
+                "2027-02-18"
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "examples": [
+                "2027-02-18"
+              ]
+            }
+          },
+          {
+            "name": "scopeType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "national",
+                "venue",
+                "circle"
+              ]
+            }
+          },
+          {
+            "name": "venueId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          },
+          {
+            "name": "circleId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          },
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "examples": [
+                              "2027-02-18"
+                            ]
+                          },
+                          "scopeType": {
+                            "type": "string",
+                            "enum": [
+                              "national",
+                              "venue",
+                              "circle"
+                            ]
+                          },
+                          "cityId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "venueId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "circleId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "examples": [
+                                  "00000000-0000-4000-8000-000000000001"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "surah": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 114
+                          },
+                          "ayah": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 286
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "examples": [
+                              "2027-02-18T01:15:00Z"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "date",
+                          "scopeType",
+                          "cityId",
+                          "venueId",
+                          "circleId",
+                          "surah",
+                          "ayah",
+                          "updatedAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "daily_ayah.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "adminDailyAyahs.put",
+        "summary": "Set or replace the ayah of the day for a date: national, a venue or a circle",
+        "description": "One pick per date and scope; sending it again replaces the ayah. Checked with `daily_ayah.manage` at `dailyAyahResource(scope)`: a national pick needs a national admin; a venue pick, that venue in scope; a circle pick, the circle's venue in scope. An unknown venue or circle is `not_found`. Surah and ayah numbers only (the ayah must exist in the surah), never text. One audit row per change.",
+        "tags": [
+          "Admin"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "examples": [
+                      "2027-02-18"
+                    ]
+                  },
+                  "scope": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "national"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "venue"
+                          },
+                          "venueId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "venueId"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "const": "circle"
+                          },
+                          "circleId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "examples": [
+                              "00000000-0000-4000-8000-000000000001"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "circleId"
+                        ]
+                      }
+                    ]
+                  },
+                  "surah": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 114
+                  },
+                  "ayah": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 286
+                  }
+                },
+                "required": [
+                  "date",
+                  "scope",
+                  "surah",
+                  "ayah"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "examples": [
+                        "00000000-0000-4000-8000-000000000001"
+                      ]
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date",
+                      "examples": [
+                        "2027-02-18"
+                      ]
+                    },
+                    "scopeType": {
+                      "type": "string",
+                      "enum": [
+                        "national",
+                        "venue",
+                        "circle"
+                      ]
+                    },
+                    "cityId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "venueId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "circleId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "examples": [
+                            "00000000-0000-4000-8000-000000000001"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "surah": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 114
+                    },
+                    "ayah": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 286
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "examples": [
+                        "2027-02-18T01:15:00Z"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "scopeType",
+                    "cityId",
+                    "venueId",
+                    "circleId",
+                    "surah",
+                    "ayah",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "daily_ayah.manage"
+        ],
+        "x-rate-limit": "default",
+        "x-idempotent": true,
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/daily-ayahs/{dailyAyahId}": {
+      "delete": {
+        "operationId": "adminDailyAyahs.delete",
+        "summary": "Remove a pick; the day falls back to the next rule",
+        "description": "Checked like `adminDailyAyahs.put` for the pick's scope. A pick outside the caller's scope is `forbidden`; an unknown id is `not_found`.",
+        "tags": [
+          "Admin"
+        ],
+        "parameters": [
+          {
+            "name": "dailyAyahId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "examples": [
+                "00000000-0000-4000-8000-000000000001"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "description": "Error codes: validation_failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error codes: unauthenticated, token_expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error codes: account_suspended, forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error codes: not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error codes: rate_limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error codes: internal_error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error codes: service_unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        },
+        "x-auth": "staff",
+        "x-scope-actions": [
+          "daily_ayah.manage"
         ],
         "x-rate-limit": "default",
         "x-idempotent": true,
@@ -17521,6 +19302,48 @@
                       "en",
                       "ur"
                     ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "dailyGoal": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "unit": {
+                        "type": "string",
+                        "enum": [
+                          "pages",
+                          "rukus",
+                          "minutes"
+                        ]
+                      },
+                      "amount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 604
+                      }
+                    },
+                    "required": [
+                      "unit",
+                      "amount"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "memorisationReviseAfterDays": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
                   },
                   {
                     "type": "null"

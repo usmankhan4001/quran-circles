@@ -14,6 +14,8 @@ Staff are also attendees. A revoked assignment never counts. `own data` means th
 | `venues.read` | Browse and read published venues | public | yes | yes | yes | yes | yes |
 | `sessions.read` | Browse and read published sessions and occurrences | public | yes | yes | yes | yes | yes |
 | `content.read` | Read published About, FAQ and help pages | public | yes | yes | yes | yes | yes |
+| `community.read` | Read the national number of people who read today | public | yes | yes | yes | yes | yes |
+| `daily_ayah.read` | Read the ayah of the day | public | yes | yes | yes | yes | yes |
 | `auth.sign_out` | Sign out | self | — | own data | own data | own data | own data |
 | `me.read` | Read own account and profile | self | — | own data | own data | own data | own data |
 | `me.update` | Edit own profile | self | — | own data | own data | own data | own data |
@@ -27,6 +29,8 @@ Staff are also attendees. A revoked assignment never counts. `own data` means th
 | `bookmark.manage` | Manage own bookmarks and reading position | self | — | own data | own data | own data | own data |
 | `circle_request.manage` | Request a circle near me, and cancel the request | self | — | own data | own data | own data | own data |
 | `updates.read_feed` | Read the Updates feed and mark items read | self | — | own data | own data | own data | own data |
+| `reading.manage` | Record and read own days read | self | — | own data | own data | own data | own data |
+| `memorisation.manage` | Read and change own memorisation tracker | self | — | own data | own data | own data | own data |
 | `registration.list` | See registrants of a session, with their numbers | venue | — | — | own venue | venues in own city | everywhere |
 | `registration.export` | Export the registrants of a session | venue | — | — | own venue | venues in own city | everywhere |
 | `attendance.read` | Read attendance of an occurrence | venue | — | — | own venue | venues in own city | everywhere |
@@ -49,6 +53,7 @@ Staff are also attendees. A revoked assignment never counts. `own data` means th
 | `update.post_venue` | Post an update to a venue | venue | — | — | own venue | venues in own city | everywhere |
 | `update.list_admin` | List updates posted in scope | any | — | — | own venue | own city | everywhere |
 | `template.read` | Read approved message templates | any | — | — | own venue | own city | everywhere |
+| `daily_ayah.manage` | Set the ayah of the day: national picks, or picks for venues and circles | venue | — | — | own venue | venues in own city | everywhere |
 | `role.list` | List role assignments and invites in scope | any | — | — | — | own city | everywhere |
 | `role.assign_national_admin` | Invite or assign a national admin | national | — | — | — | — | everywhere |
 | `role.assign_city_coordinator` | Invite or assign a city coordinator | city | — | — | — | — | everywhere |

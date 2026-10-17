@@ -29,6 +29,8 @@ Branch: claude/peaceful-archimedes-ain95k
   - `@qc/db/testing` (new export): `guardTransactions(pglite)` makes a PGlite transaction client throw `OverlappingQueryError` on overlapping queries, as node-postgres 9 will (F-02). Used by the db, API and worker test databases.
 - **For the platform lane** (do not edit `infra/` from here): add to `infra/README.md` the first-admin step after `migrate` on a fresh staging or production database: `DATABASE_URL=... pnpm --filter @qc/db bootstrap-admin --phone <E.164> [--yes]` (`--yes` is required when `APP_ENV=production`), then the person signs in to the console with a code. Staging demos: `pnpm --filter @qc/db seed` now dates the sample sessions to the current week.
 
+- 2026-10-17: **contract 1.0.0-rc.4 and migration 0009** from the accepted next-features change request (`docs/engineering/change-requests/2026-10-17-next-features.md`, items 1 to 7, marked accepted). Additive; new response fields optional in the type only. 10 new endpoints (80 to 90): `readingDays.record`/`list`, `community.today`, `ayahOfTheDay.get`, `adminDailyAyahs.list`/`put`/`delete`, `memorisation.list`/`put`/`delete`. Five scope actions (`community.read`, `daily_ayah.read` public; `reading.manage`, `memorisation.manage` self; `daily_ayah.manage` venue level, all staff, national picks national admin only via `dailyAyahResource`); `SCOPES.md` regenerated. `Profile.dailyGoal`, `Profile.memorisationReviseAfterDays` (per person). Consent purpose `ayah_daily` (push only, default on: `consentDefault`, `consentGranted`). Flags `reading_days`, `community_today`, `ayah_of_the_day`, `memorisation`, `read_along` (off by default; `featureOn`). `DeepLink` `quran`. Pure rules in `src/reading.ts` (`resolveDailyAyah`, `BUILT_IN_DAILY_AYAHS` with 93 references, `readingDayDateIssue`, `readingRangeIssue`, `needsRevision`, `pakistanDate`). Mock and fixtures cover every new endpoint; `openapi.json` regenerated. Migration 0009: `reading_days`, `community_days`, `daily_ayahs`, `memorisation`, profile columns, `consents_purpose_chk`; seed adds 5 sample picks. `@qc/contracts`: 1706 tests. `@qc/db`: 213 tests. Root `pnpm typecheck` passes; `@qc/api` has 4 expected failing contract tests until it serves the new endpoints; messaging, worker, console, admin-app, user-app and tools/migration tests pass.
+
 ## In progress
 
 - Seed from fixtures in `packages/db` after the schema lands.
@@ -41,7 +43,7 @@ Branch: claude/peaceful-archimedes-ain95k
 
 - Posters, message-template editing, content-page editing, reports, bulk import and the demand map are not in the P0 contract. The lanes that need them (console WP7/WP15/WP19, renderer WP16) file change requests.
 - Confirm the Hijri offset range (-2 to +2 days) and the OTP rules: 6 digits, channel WhatsApp with SMS fallback.
-- Contract version is `1.0.0-rc.3` until Gate 1 is signed.
+- Contract version is `1.0.0-rc.4` until Gate 1 is signed.
 - The only pending-approval fixture circle is in Lahore, so the mock's Rawalpindi city coordinator (`mock-city`) has no circle to approve. Adding a pending Rawalpindi circle would change the `@qc/db` seed too; say if the drawings need it.
 
 ## Contract change requests
@@ -53,6 +55,15 @@ Partly applied: admin-app-contract-notes (items 1, 2, 5; 3 and 4 deferred; 6 to 
 Deferred (Wave 4): push-delivery-ack.
 
 Not touched by this lane: auth-failure-reason, user-app-content-mount, and the ui-kit requests.
+
+## Next steps for other lanes (rc.4)
+
+- **api-core**: serve the 10 new endpoints (its contract and scope-matrix tests fail until then). Reading days: upsert per (user, day, source) keeping the larger `pages`/`ayahs`, `readingDayDateIssue` with server time, and in the same transaction add 1 to `community_days.readers` on the person's first row of the date and the page increase to `community_days.pages` (single `INSERT ... ON CONFLICT (day) DO UPDATE` with increments). Add an `attendance` row when `adminAttendance.put` marks a named registrant (occurrence's Pakistan date). `community.today` reads today's row (zeros if none). `ayahOfTheDay.get` loads the date's picks and calls `resolveDailyAyah`. Admin picks: `dailyAyahResource` + `can`, `scopeFilter` on the list (national picks visible to all staff), `not_found` for unknown places, `set_by`, one audit row. Memorisation per the endpoint descriptions. `me.get`/`me.update` map the three new profile columns. `me.delete`: `reading_days` and `memorisation` cascade with the user row (delete them explicitly if the account is anonymised instead); `community_days` stays.
+- **messaging** + **contracts**: a joint small change adding `PushData.type` `ayah_of_the_day` and `PUSH_TYPE_PURPOSE.ayah_of_the_day = 'ayah_daily'`.
+- **worker**: morning ayah job (after the push type lands): people with a live push device, flag `ayah_of_the_day` on, `consentGranted('push', 'ayah_daily', rows)`; `resolveDailyAyah` with their follows; `quran` deep link; key `ayah_daily:<date>:<userId>:push`.
+- **user-app**: behind the flags: days read (record `reader`, `goal`, `manual`, `portion`; week and month counts, no streaks), daily goal and revise-after in Profile, community card, ayah card (send followed ids; open the `quran` route), ayah notification switch (`consents.set` push `ayah_daily`), memorisation tracker with `needsRevision`, read-along card. English and Urdu keys in `@qc/i18n`.
+- **console**: national ayah list (`adminDailyAyahs.*` with scope national), with the venue and circle picks visible.
+- **admin-app**: coordinator picks for their venue and its circles (`adminDailyAyahs.*` with scope venue or circle).
 
 ## Findings from integration
 

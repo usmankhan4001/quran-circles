@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  smallint,
   text,
   unique,
   uniqueIndex,
@@ -12,6 +13,7 @@ import {
 import {
   ACCOUNT_STATUSES,
   AGE_BANDS,
+  DAILY_GOAL_UNITS,
   DEVICE_PLATFORMS,
   INVITE_STATUSES,
   LOCALES,
@@ -27,6 +29,7 @@ import {
   e164Check,
   enumCheck,
   pk,
+  rangeCheck,
   rawCheck,
   roleScopeCheck,
   scopeShapeCheck,
@@ -72,11 +75,23 @@ export const profiles = pgTable(
     education: text('education'),
     priorReading: text('prior_reading', { enum: PRIOR_READING }),
     preferredLanguage: text('preferred_language', { enum: LOCALES }),
+    /** Optional daily goal (rc.4): both set, or both NULL. */
+    dailyGoalUnit: text('daily_goal_unit', { enum: DAILY_GOAL_UNITS }),
+    dailyGoalAmount: smallint('daily_goal_amount'),
+    /** NULL means the contract default (14 days). */
+    memorisationReviseAfterDays: smallint('memorisation_revise_after_days'),
   },
   () => [
     enumCheck('profiles', 'age_band', AGE_BANDS),
     enumCheck('profiles', 'prior_reading', PRIOR_READING),
     enumCheck('profiles', 'preferred_language', LOCALES),
+    enumCheck('profiles', 'daily_goal_unit', DAILY_GOAL_UNITS),
+    rangeCheck('profiles', 'daily_goal_amount', 1, 604),
+    rawCheck(
+      'profiles_daily_goal_shape_chk',
+      '("daily_goal_unit" IS NULL) = ("daily_goal_amount" IS NULL)',
+    ),
+    rangeCheck('profiles', 'memorisation_revise_after_days', 1, 365),
   ],
 );
 

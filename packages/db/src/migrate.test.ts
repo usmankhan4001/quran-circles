@@ -321,7 +321,7 @@ describe('migration 0008: change requests of 2026-10-17', () => {
       `INSERT INTO users (phone_e164, phone_verified_at, display_name) VALUES ('+923000000801', now(), 'Kept');
        INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('+923000000802');`,
     );
-    expect(await migrateUp(test.exec)).toEqual([NAME]);
+    expect(await migrateUp(test.exec, { dir: upTo(8) })).toEqual([NAME]);
     const users = await test.exec.query<{ display_name: string }>(`SELECT display_name FROM users`);
     expect(users.rows).toEqual([{ display_name: 'Kept' }]);
     const subscribers = await test.exec.query(`SELECT city_id FROM legacy_whatsapp_subscribers`);
@@ -334,28 +334,32 @@ describe('migration 0008: change requests of 2026-10-17', () => {
     await test.exec.exec(
       `INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('+923000000803'), ('+923000000803');`,
     );
-    await expect(migrateUp(test.exec)).rejects.toThrow(/duplicate \(season_tag, phone_raw\)/);
+    await expect(migrateUp(test.exec, { dir: upTo(8) })).rejects.toThrow(
+      /duplicate \(season_tag, phone_raw\)/,
+    );
     await test.exec.exec(`DELETE FROM legacy_whatsapp_subscribers WHERE true;
       INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('0300-0000001');`);
-    await expect(migrateUp(test.exec)).rejects.toThrow(/not E\.164/);
+    await expect(migrateUp(test.exec, { dir: upTo(8) })).rejects.toThrow(/not E\.164/);
     // Nothing half-applied: fix the data and it goes through.
     await test.exec.exec(`DELETE FROM legacy_whatsapp_subscribers WHERE true;`);
-    expect(await migrateUp(test.exec)).toEqual([NAME]);
+    expect(await migrateUp(test.exec, { dir: upTo(8) })).toEqual([NAME]);
   });
 
   it('refuses to roll back while any account has no name, and rolls back once all have one', async () => {
     const test = await freshDb();
-    await migrateUp(test.exec);
+    await migrateUp(test.exec, { dir: upTo(8) });
     await test.exec.exec(
       `INSERT INTO users (phone_e164, phone_verified_at) VALUES ('+923000000804', now());
        INSERT INTO users (phone_e164, phone_verified_at, display_name) VALUES ('+923000000805', now(), 'Named');`,
     );
-    await expect(migrateDown(test.exec)).rejects.toThrow(/1 account\(s\) have no display_name/);
+    await expect(migrateDown(test.exec, { dir: upTo(8) })).rejects.toThrow(
+      /1 account\(s\) have no display_name/,
+    );
     // Still applied, nothing changed.
-    const status = await migrationStatus(test.exec);
+    const status = await migrationStatus(test.exec, { dir: upTo(8) });
     expect(status.at(-1)).toMatchObject({ name: NAME, applied: true });
     await test.exec.exec(`UPDATE users SET display_name = 'Now Named' WHERE display_name IS NULL`);
-    expect(await migrateDown(test.exec)).toEqual([NAME]);
+    expect(await migrateDown(test.exec, { dir: upTo(8) })).toEqual([NAME]);
     // The old rules are back: the name is required and may not be blank.
     await expect(
       test.exec.exec(
@@ -380,7 +384,7 @@ describe('migration 0008: change requests of 2026-10-17', () => {
       return rows.map((r) => r.c);
     };
     const before = await columns();
-    await migrateUp(test.exec);
+    await migrateUp(test.exec, { dir: upTo(8) });
     const after = await columns();
     expect(after.filter((c) => !before.includes(c))).toEqual([
       'auth_sessions.previous_refresh_token_hash',
@@ -392,7 +396,7 @@ describe('migration 0008: change requests of 2026-10-17', () => {
       'otp_challenges.locale',
     ]);
     expect(before.filter((c) => !after.includes(c))).toEqual([]);
-    await migrateDown(test.exec);
+    await migrateDown(test.exec, { dir: upTo(8) });
     expect(await columns()).toEqual(before);
     const leftovers = await test.exec.query(
       `SELECT conname FROM pg_constraint WHERE conname IN (
@@ -402,6 +406,124 @@ describe('migration 0008: change requests of 2026-10-17', () => {
     );
     expect(leftovers.rows).toEqual([]);
     expect(await publicIndexes(test)).not.toContain('message_outbox_provider_message_id_idx');
+  });
+});
+
+describe('migration 0009: next features (contract 1.0.0-rc.4)', () => {
+  const NAME = '0009_reading_ayah_memorisation';
+  const upTo = (count: number) => prefixDir(count);
+  const NEW_TABLES = ['community_days', 'daily_ayahs', 'memorisation', 'reading_days'];
+
+  const columns = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    const { rows } = await test.exec.query<{ c: string }>(
+      `SELECT table_name || '.' || column_name AS c FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name <> '${MIGRATIONS_TABLE}' ORDER BY 1`,
+    );
+    return rows.map((r) => r.c);
+  };
+  const purposeCheck = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    const { rows } = await test.exec.query<{ def: string }>(
+      `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'consents_purpose_chk'`,
+    );
+    return [...rows[0]!.def.matchAll(/'([^']*)'::text/g)].map((m) => m[1]).sort();
+  };
+
+  it('is the ninth migration', () => {
+    expect(listMigrations()[8]?.name).toBe(NAME);
+  });
+
+  it('applies on top of 0008 with people, profiles and consents in place, and keeps them', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(8) });
+    await test.exec.exec(
+      `INSERT INTO users (id, phone_e164, phone_verified_at, display_name)
+         VALUES ('00000000-0000-4000-8000-0a0000000901', '+923000000901', now(), 'Kept');
+       INSERT INTO profiles (user_id, profession) VALUES ('00000000-0000-4000-8000-0a0000000901', 'Teacher');
+       INSERT INTO consents (user_id, channel, purpose, source)
+         VALUES ('00000000-0000-4000-8000-0a0000000901', 'push', 'session_reminders', 'test');`,
+    );
+    expect(await migrateUp(test.exec)).toEqual([NAME]);
+    const profile = await test.exec.query(
+      `SELECT profession, daily_goal_unit, daily_goal_amount, memorisation_revise_after_days FROM profiles`,
+    );
+    expect(profile.rows).toEqual([
+      {
+        profession: 'Teacher',
+        daily_goal_unit: null,
+        daily_goal_amount: null,
+        memorisation_revise_after_days: null,
+      },
+    ]);
+    const consents = await test.exec.query(`SELECT purpose FROM consents`);
+    expect(consents.rows).toEqual([{ purpose: 'session_reminders' }]);
+  });
+
+  it('adds exactly the tables and profile columns it promises, and takes them away again', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(8) });
+    const tablesBefore = await publicTables(test);
+    const columnsBefore = await columns(test);
+    const indexesBefore = await publicIndexes(test);
+    await migrateUp(test.exec);
+    expect((await publicTables(test)).filter((t) => !tablesBefore.includes(t))).toEqual(NEW_TABLES);
+    const added = (await columns(test)).filter((c) => !columnsBefore.includes(c));
+    expect(added.filter((c) => c.startsWith('profiles.'))).toEqual([
+      'profiles.daily_goal_amount',
+      'profiles.daily_goal_unit',
+      'profiles.memorisation_revise_after_days',
+    ]);
+    expect(
+      added.every((c) => c.startsWith('profiles.') || NEW_TABLES.includes(c.split('.')[0]!)),
+    ).toBe(true);
+    // No column anywhere holds Quran text: picks and logs are numbers only.
+    expect(added.filter((c) => /text|translation|arabic/.test(c))).toEqual([]);
+    expect(await purposeCheck(test)).toContain('ayah_daily');
+
+    expect(await migrateDown(test.exec)).toEqual([NAME]);
+    expect(await publicTables(test)).toEqual(tablesBefore);
+    expect(await columns(test)).toEqual(columnsBefore);
+    expect(await publicIndexes(test)).toEqual(indexesBefore);
+    expect(await purposeCheck(test)).toEqual(
+      ['announcements', 'registration_updates', 'session_reminders', 'venue_alerts'].sort(),
+    );
+    const leftovers = await test.exec.query(
+      `SELECT conname FROM pg_constraint WHERE conname LIKE 'profiles_daily_goal%'
+          OR conname = 'profiles_memorisation_revise_after_days_range_chk'`,
+    );
+    expect(leftovers.rows).toEqual([]);
+  });
+
+  it('rolls back with feature data in place: removes it and the ayah_daily preferences only', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec);
+    await test.exec.exec(
+      `INSERT INTO users (id, phone_e164, phone_verified_at, display_name)
+         VALUES ('00000000-0000-4000-8000-0a0000000902', '+923000000902', now(), 'Reader');
+       INSERT INTO profiles (user_id, daily_goal_unit, daily_goal_amount)
+         VALUES ('00000000-0000-4000-8000-0a0000000902', 'pages', 2);
+       INSERT INTO reading_days (user_id, day, source, pages)
+         VALUES ('00000000-0000-4000-8000-0a0000000902', '2027-02-15', 'reader', 2);
+       INSERT INTO community_days (day, readers, pages) VALUES ('2027-02-15', 1, 2);
+       INSERT INTO daily_ayahs (day, scope_type, surah, ayah) VALUES ('2027-02-15', 'national', 2, 255);
+       INSERT INTO memorisation (user_id, surah, status)
+         VALUES ('00000000-0000-4000-8000-0a0000000902', 1, 'memorised');
+       INSERT INTO consents (user_id, channel, purpose, source) VALUES
+         ('00000000-0000-4000-8000-0a0000000902', 'push', 'ayah_daily', 'test'),
+         ('00000000-0000-4000-8000-0a0000000902', 'push', 'session_reminders', 'test');`,
+    );
+    expect(await migrateDown(test.exec)).toEqual([NAME]);
+    const consents = await test.exec.query(`SELECT purpose FROM consents`);
+    expect(consents.rows).toEqual([{ purpose: 'session_reminders' }]);
+    const users = await test.exec.query(`SELECT display_name FROM users`);
+    expect(users.rows).toEqual([{ display_name: 'Reader' }]);
+    await expect(
+      test.exec.exec(
+        `INSERT INTO consents (user_id, channel, purpose, source)
+           VALUES ('00000000-0000-4000-8000-0a0000000902', 'push', 'ayah_daily', 'test')`,
+      ),
+    ).rejects.toThrow(/consents_purpose_chk/);
+    // And forward again cleanly.
+    expect(await migrateUp(test.exec)).toEqual([NAME]);
   });
 });
 

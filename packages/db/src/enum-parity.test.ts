@@ -11,9 +11,12 @@ import {
   CONSENT_PURPOSES,
   CONTENT_STATUSES,
   COST_CATEGORIES,
+  DAILY_AYAH_SCOPES,
+  DAILY_GOAL_UNITS,
   DEVICE_PLATFORMS,
   INVITE_STATUSES,
   LOCALES,
+  MEMORISATION_STATUSES,
   MESSAGE_CHANNELS,
   OCCURRENCE_STATUSES,
   OTP_CHANNELS,
@@ -24,6 +27,7 @@ import {
   PRIOR_READING,
   PROGRAMS,
   PUSH_PROVIDERS,
+  READING_DAY_SOURCES,
   REGISTRATION_STATUSES,
   ROLES,
   SCOPE_TYPES,
@@ -99,6 +103,10 @@ const EXPECTED: ReadonlyArray<readonly [table: string, column: string, values: r
     ['posters', 'status', POSTER_STATUSES],
     ['content_pages', 'status', CONTENT_STATUSES],
     ['audit_log', 'scope_type', SCOPE_TYPES],
+    ['profiles', 'daily_goal_unit', DAILY_GOAL_UNITS],
+    ['reading_days', 'source', READING_DAY_SOURCES],
+    ['daily_ayahs', 'scope_type', DAILY_AYAH_SCOPES],
+    ['memorisation', 'status', MEMORISATION_STATUSES],
   ];
 
 /** The quoted literals in a CHECK definition, e.g. 'a'::text, 'b'::text. */
@@ -237,7 +245,27 @@ describe('enum parity: the database really accepts the contract values and rejec
       `INSERT INTO circle_progress (circle_id, kind, label) VALUES ($1, 'para', 'Para 1') RETURNING id`,
       [circle.id],
     );
+    const readingDay = await insert(
+      `INSERT INTO reading_days (user_id, day, source) VALUES ($1, '2027-02-15', 'reader') RETURNING id`,
+      [user.id],
+    );
+    const memorised = await insert(
+      `INSERT INTO memorisation (user_id, surah, status) VALUES ($1, 67, 'learning') RETURNING id`,
+      [user.id],
+    );
+    await test.pg.query(
+      `INSERT INTO profiles (user_id, daily_goal_unit, daily_goal_amount) VALUES ($1, 'pages', 1)`,
+      [user.id],
+    );
     targets = [
+      { table: 'reading_days', idColumn: 'id', id: readingDay, columns: ['source'] },
+      { table: 'memorisation', idColumn: 'id', id: memorised, columns: ['status'] },
+      {
+        table: 'profiles',
+        idColumn: 'user_id',
+        id: user.id,
+        columns: ['age_band', 'prior_reading', 'preferred_language', 'daily_goal_unit'],
+      },
       { table: 'venues', idColumn: 'id', id: world.venue.id, columns: ['status'] },
       { table: 'programs', idColumn: 'id', id: world.program.id, columns: ['key'] },
       {

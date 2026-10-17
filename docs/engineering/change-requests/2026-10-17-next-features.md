@@ -1,5 +1,7 @@
 # Change request: contracts and tables for the next features
 
+Status: **accepted** by the orchestrator as proposed (items 1 to 7), 2026-10-17. Implemented by the contracts lane in contract `1.0.0-rc.4` and migration `0009_reading_ayah_memorisation` (see `packages/contracts/CHANGELOG.md`). Choices made while implementing: the ayah endpoint is public and takes the followed venue and circle ids as query parameters; `pagesTogether` counts today's pages; `memorisationReviseAfterDays` is a per-person profile setting; `DELETE /v1/admin/daily-ayahs/{id}` was added for the console list; the `ayah_of_the_day` push type waits for the messaging lane (it breaks an exhaustive map there). One flag per feature: `reading_days`, `community_today`, `ayah_of_the_day`, `memorisation`, `read_along`, all off by default.
+
 Requested by: product discussion with the owner (see `docs/product/features-next.md`)
 Contract: `@qc/contracts` (people, admin, config schemas, endpoints, scopes), `packages/db` schema
 What I need: the data and endpoints for days read, the community total, ayah of the day and the memorisation tracker. Read-along needs nothing new beyond the reading log.

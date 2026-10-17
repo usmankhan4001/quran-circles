@@ -25,6 +25,12 @@ export const DeepLink = z.discriminatedUnion('type', [
   z.object({ type: z.literal('update'), updateId: Uuid }),
   z.object({ type: z.literal('updates') }),
   z.object({ type: z.literal('journey') }),
+  /** Opens the reader at an ayah (rc.4: ayah of the day, read along). Same path as the app's route. */
+  z.object({
+    type: z.literal('quran'),
+    surah: z.number().int().min(1).max(114),
+    ayah: z.number().int().min(1).max(286),
+  }),
 ]);
 export type DeepLink = z.infer<typeof DeepLink>;
 
@@ -46,6 +52,8 @@ const linkPath = (link: DeepLink): string => {
       return '/updates';
     case 'journey':
       return '/journey';
+    case 'quran':
+      return `/quran?surah=${link.surah}&ayah=${link.ayah}`;
   }
 };
 
@@ -60,10 +68,12 @@ export function buildDeepLink(link: DeepLink, webBase?: string): string {
 
 export function parseDeepLink(url: string): DeepLink | null {
   let path: string;
+  let search: URLSearchParams;
   try {
     const u = new URL(url);
     path =
       u.protocol === `${APP_SCHEME}:` ? `/${u.host}${u.pathname}`.replace(/\/+$/, '') : u.pathname;
+    search = u.searchParams;
   } catch {
     return null;
   }
@@ -76,6 +86,7 @@ export function parseDeepLink(url: string): DeepLink | null {
     circle: { type: 'circle', circleId: arg },
     updates: arg ? { type: 'update', updateId: arg } : { type: 'updates' },
     journey: { type: 'journey' },
+    quran: { type: 'quran', surah: Number(search.get('surah')), ayah: Number(search.get('ayah')) },
   };
   const parsed = DeepLink.safeParse(head ? candidates[head] : undefined);
   return parsed.success ? parsed.data : null;

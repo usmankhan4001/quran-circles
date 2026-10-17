@@ -30,6 +30,21 @@ import {
   type ScopeFilter,
 } from './scopes';
 import type { Me } from './schemas/people';
+import type {
+  DailyAyahEntry,
+  DailyAyahPut,
+  MemorisationPut,
+  ReadingDay,
+  ReadingDayRecord,
+} from './schemas/reading';
+import { READING_DAY_SOURCES } from './enums';
+import {
+  pakistanDate as pakistanDateOf,
+  readingDayDateIssue,
+  readingRangeIssue,
+  resolveDailyAyah,
+} from './reading';
+import { MEMORISATION_REVISE_AFTER_DAYS_DEFAULT } from './schemas/reading';
 import type { Role } from './enums';
 
 /**
@@ -154,7 +169,22 @@ const staffResource = (
     const x = fx.circles.find((y) => y.id === p.circleId);
     return withActions(x ? { cityId: x.cityId, venueId: x.venueId } : null);
   }
+  if (p.dailyAyahId) {
+    const pick = fx.dailyAyahs.find((x) => x.id === p.dailyAyahId);
+    if (!pick) return null;
+    return {
+      resource: pick.scopeType === 'national' ? {} : { cityId: pick.cityId, venueId: pick.venueId },
+      actions,
+    };
+  }
   switch (def.id) {
+    case 'adminDailyAyahs.put': {
+      const scope = (body as DailyAyahPut).scope;
+      if (scope.type === 'national') return { resource: {}, actions };
+      if (scope.type === 'venue') return withActions(venueScope(scope.venueId));
+      const x = fx.circles.find((y) => y.id === scope.circleId);
+      return withActions(x ? { cityId: x.cityId, venueId: x.venueId } : null);
+    }
     case 'adminVenues.create':
       return fx.cities.some((x) => x.id === body.cityId)
         ? { resource: { cityId: body.cityId as string }, actions: ['venue.create'] }
@@ -331,6 +361,13 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
       poster_sharing: false,
       quran_offline_copy: false,
       whatsapp_fallback_reminders: false,
+      // rc.4 features: on in the mock so the screens can be built against it. Off by default on
+      // a real server until a feature_flags row turns them on.
+      reading_days: true,
+      community_today: true,
+      ayah_of_the_day: true,
+      memorisation: true,
+      read_along: true,
     },
     supportedLocales: ['en', 'ur'],
     minimumAppVersion: { ios: '1.0.0', android: '1.0.0' },
@@ -599,6 +636,110 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
   'adminUpdates.preview': (c) => {
     const scope = (c.body as { scope: { type: 'national' | 'city' | 'venue' } }).scope.type;
     return { recipients: scope === 'national' ? 4200 : scope === 'city' ? 640 : 85 };
+  },
+  'readingDays.record': (c, id) => {
+    const body = c.body as ReadingDayRecord;
+    const issue = readingDayDateIssue(body.date, new Date(fx.FIXTURE_NOW));
+    if (issue) return errorResponse('validation_failed', id, { issues: [issue] });
+    const date = body.date ?? pakistanDateOf(fx.FIXTURE_NOW);
+    const known = fx.fixtureReadingDays.find((d) => d.date === date);
+    const sources = new Set([...(known?.sources ?? []), body.source]);
+    const day: ReadingDay = {
+      date,
+      sources: READING_DAY_SOURCES.filter((x) => sources.has(x)),
+      pages: Math.max(known?.pages ?? 0, body.pages ?? 0),
+      ayahs: Math.max(known?.ayahs ?? 0, body.ayahs ?? 0),
+    };
+    return day;
+  },
+  'readingDays.list': (c, id) => {
+    const q = c.query as { from: string; to: string };
+    const issue = readingRangeIssue(q);
+    if (issue) return errorResponse('validation_failed', id, { issues: [issue] });
+    return { items: fx.fixtureReadingDays.filter((d) => d.date >= q.from && d.date <= q.to) };
+  },
+  'memorisation.list': (c) => ({
+    items: [...fx.fixtureMemorisation].sort((a, b) => a.surah - b.surah),
+    reviseAfterDays:
+      c.me?.profile.memorisationReviseAfterDays ?? MEMORISATION_REVISE_AFTER_DAYS_DEFAULT,
+  }),
+  'memorisation.put': (c) => {
+    const surah = Number(c.params.surah);
+    const body = c.body as MemorisationPut;
+    const known = fx.fixtureMemorisation.find((m) => m.surah === surah);
+    const stamp =
+      body.markRevised === true || (body.status === 'memorised' && !known?.lastRevisedAt);
+    return {
+      surah,
+      status: body.status,
+      lastRevisedAt: stamp ? fx.FIXTURE_NOW : (known?.lastRevisedAt ?? null),
+      updatedAt: fx.FIXTURE_NOW,
+    };
+  },
+  'community.today': () => fx.fixtureCommunityToday,
+  'ayahOfTheDay.get': (c) => {
+    const q = c.query as { date?: string; venueId?: string[]; circleId?: string[] };
+    return resolveDailyAyah({
+      date: q.date ?? pakistanDateOf(fx.FIXTURE_NOW),
+      picks: fx.dailyAyahs,
+      followedVenueIds: q.venueId ?? [],
+      followedCircleIds: q.circleId ?? [],
+    });
+  },
+  'adminDailyAyahs.list': (c, id) => {
+    const q = c.query as {
+      from: string;
+      to: string;
+      scopeType?: string;
+      venueId?: string;
+      circleId?: string;
+    };
+    const issue = readingRangeIssue(q);
+    if (issue) return errorResponse('validation_failed', id, { issues: [issue] });
+    const scope = filterFor(c, 'daily_ayah.manage');
+    const items = fx.dailyAyahs.filter(
+      (x) =>
+        x.date >= q.from &&
+        x.date <= q.to &&
+        (x.scopeType === 'national' ||
+          inScope(scope, { cityId: x.cityId ?? '', venueId: x.venueId ?? '' })) &&
+        (!q.scopeType || x.scopeType === q.scopeType) &&
+        (!q.venueId || x.venueId === q.venueId) &&
+        (!q.circleId || x.circleId === q.circleId),
+    );
+    return { items };
+  },
+  'adminDailyAyahs.put': (c, id) => {
+    const b = c.body as DailyAyahPut;
+    let place: { cityId: string | null; venueId: string | null; circleId: string | null };
+    if (b.scope.type === 'national') place = { cityId: null, venueId: null, circleId: null };
+    else if (b.scope.type === 'venue') {
+      const v = venueScope(b.scope.venueId);
+      if (!v) return notFound(id);
+      place = { cityId: v.cityId ?? null, venueId: v.venueId ?? null, circleId: null };
+    } else {
+      const circleId = b.scope.circleId;
+      const x = fx.circles.find((y) => y.id === circleId);
+      if (!x) return notFound(id);
+      place = { cityId: x.cityId, venueId: x.venueId, circleId: x.id };
+    }
+    const existing = fx.dailyAyahs.find(
+      (x) =>
+        x.date === b.date &&
+        x.scopeType === b.scope.type &&
+        x.venueId === place.venueId &&
+        x.circleId === place.circleId,
+    );
+    const entry: DailyAyahEntry = {
+      id: existing?.id ?? fx.fixtureId('dailyAyah', 900),
+      date: b.date,
+      scopeType: b.scope.type,
+      ...place,
+      surah: b.surah,
+      ayah: b.ayah,
+      updatedAt: fx.FIXTURE_NOW,
+    };
+    return entry;
   },
   'adminImport.venues': importHandler('venues'),
   'adminImport.coordinators': importHandler('coordinators'),

@@ -80,6 +80,11 @@ export const CONSENT_PURPOSES = [
   'session_reminders',
   'venue_alerts',
   'announcements',
+  /**
+   * The ayah of the day push (rc.4). Push only, and on by default: no consent row means on, a
+   * revoked row means off. See `DEFAULT_ON_CONSENTS` in `schemas/people.ts`.
+   */
+  'ayah_daily',
 ] as const;
 export const ConsentPurpose = z.enum(CONSENT_PURPOSES);
 export type ConsentPurpose = z.infer<typeof ConsentPurpose>;
@@ -171,3 +176,36 @@ export type AccountStatus = z.infer<typeof AccountStatus>;
 export const SEASON_MODES = ['dora', 'circles'] as const;
 export const SeasonMode = z.enum(SEASON_MODES);
 export type SeasonMode = z.infer<typeof SeasonMode>;
+
+// Next features (contract 1.0.0-rc.4): days read, ayah of the day, memorisation.
+
+/**
+ * What made a day count as a day read. `attendance` is added by the server when a coordinator
+ * marks a named registrant present; clients never send it (`READING_DAY_CLIENT_SOURCES`).
+ */
+export const READING_DAY_SOURCES = ['reader', 'goal', 'manual', 'attendance', 'portion'] as const;
+export const ReadingDaySource = z.enum(READING_DAY_SOURCES);
+export type ReadingDaySource = z.infer<typeof ReadingDaySource>;
+
+/** The sources a client may record with `POST /v1/me/reading-days`. */
+export const READING_DAY_CLIENT_SOURCES = ['reader', 'goal', 'manual', 'portion'] as const;
+export const ReadingDayClientSource = z.enum(READING_DAY_CLIENT_SOURCES);
+export type ReadingDayClientSource = z.infer<typeof ReadingDayClientSource>;
+
+export const DAILY_GOAL_UNITS = ['pages', 'rukus', 'minutes'] as const;
+export const DailyGoalUnit = z.enum(DAILY_GOAL_UNITS);
+export type DailyGoalUnit = z.infer<typeof DailyGoalUnit>;
+
+export const MEMORISATION_STATUSES = ['learning', 'memorised', 'revising'] as const;
+export const MemorisationStatus = z.enum(MEMORISATION_STATUSES);
+export type MemorisationStatus = z.infer<typeof MemorisationStatus>;
+
+/** Who an ayah of the day pick is for. A circle pick also carries the circle's venue. */
+export const DAILY_AYAH_SCOPES = ['national', 'venue', 'circle'] as const;
+export const DailyAyahScope = z.enum(DAILY_AYAH_SCOPES);
+export type DailyAyahScope = z.infer<typeof DailyAyahScope>;
+
+/** Where the resolved ayah of the day came from: a pick, or the built-in list. */
+export const AYAH_OF_THE_DAY_SOURCES = ['national', 'venue', 'circle', 'built_in'] as const;
+export const AyahOfTheDaySource = z.enum(AYAH_OF_THE_DAY_SOURCES);
+export type AyahOfTheDaySource = z.infer<typeof AyahOfTheDaySource>;

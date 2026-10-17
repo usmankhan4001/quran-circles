@@ -49,6 +49,8 @@ export const ACTIONS = {
   'venues.read': pub('Browse and read published venues'),
   'sessions.read': pub('Browse and read published sessions and occurrences'),
   'content.read': pub('Read published About, FAQ and help pages'),
+  'community.read': pub('Read the national number of people who read today'),
+  'daily_ayah.read': pub('Read the ayah of the day'),
 
   // Attendee: any signed-in person, on their own data
   'auth.sign_out': self('Sign out'),
@@ -64,6 +66,8 @@ export const ACTIONS = {
   'bookmark.manage': self('Manage own bookmarks and reading position'),
   'circle_request.manage': self('Request a circle near me, and cancel the request'),
   'updates.read_feed': self('Read the Updates feed and mark items read'),
+  'reading.manage': self('Record and read own days read'),
+  'memorisation.manage': self('Read and change own memorisation tracker'),
 
   // Registrations and attendance
   'registration.list': staff(
@@ -104,6 +108,13 @@ export const ACTIONS = {
   'update.post_venue': staff('Post an update to a venue', 'venue', ALL_STAFF),
   'update.list_admin': staff('List updates posted in scope', 'any', ALL_STAFF),
   'template.read': staff('Read approved message templates', 'any', ALL_STAFF),
+  // A national pick is checked with no place, so only national admins pass; a venue or circle
+  // pick is checked at its venue (`dailyAyahResource`).
+  'daily_ayah.manage': staff(
+    'Set the ayah of the day: national picks, or picks for venues and circles',
+    'venue',
+    ALL_STAFF,
+  ),
 
   // People and roles
   'role.list': staff('List role assignments and invites in scope', 'any', CITY_UP),
@@ -224,6 +235,17 @@ export const updatePostAction = (scopeType: 'national' | 'city' | 'venue'): Scop
     : scopeType === 'city'
       ? 'update.post_city'
       : 'update.post_venue';
+
+/**
+ * The resource to check `daily_ayah.manage` against for a pick's scope. A national pick has no
+ * place, so only a national admin is allowed; a venue pick is checked at the venue; a circle pick
+ * at the circle's venue (pass that venue and its city).
+ */
+export const dailyAyahResource = (
+  scopeType: 'national' | 'venue' | 'circle',
+  place: { cityId: string; venueId: string } | null,
+): ResourceScope =>
+  scopeType === 'national' || !place ? {} : { cityId: place.cityId, venueId: place.venueId };
 
 const cell = (def: ActionDef, actor: Actor): string => {
   if (def.level === 'public') return 'yes';

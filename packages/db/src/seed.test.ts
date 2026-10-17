@@ -67,7 +67,36 @@ describe('seed counts', () => {
       content_pages: fx.contentPages.length,
       updates: fx.fixtureUpdates.length,
       message_templates: TEMPLATE_KEYS.length * LOCALES.length,
+      daily_ayahs: fx.dailyAyahs.length,
     });
+  });
+
+  it('seeds the ayah of the day picks with their ids, places and numbers, set by nobody', async () => {
+    const { rows } = await test.pg.query<{
+      id: string;
+      day: string;
+      scope_type: string;
+      venue_id: string | null;
+      circle_id: string | null;
+      surah: number;
+      ayah: number;
+      set_by: string | null;
+    }>(
+      `SELECT id, to_char(day, 'YYYY-MM-DD') AS day, scope_type, venue_id, circle_id, surah, ayah, set_by
+         FROM daily_ayahs ORDER BY id`,
+    );
+    expect(rows).toEqual(
+      fx.dailyAyahs.map((a) => ({
+        id: a.id,
+        day: a.date,
+        scope_type: a.scopeType,
+        venue_id: a.venueId,
+        circle_id: a.circleId,
+        surah: a.surah,
+        ayah: a.ayah,
+        set_by: null,
+      })),
+    );
   });
 
   it('reports what it added on the first run', () => {
@@ -239,6 +268,9 @@ describe('no person data', () => {
     schema.circleRequests,
     schema.bookmarks,
     schema.readingPositions,
+    schema.readingDays,
+    schema.memorisation,
+    schema.communityDays,
     schema.updateReads,
     schema.messageOutbox,
     schema.posters,
@@ -356,6 +388,10 @@ describe('date anchor (F-07)', () => {
     moved.seasons.forEach((s, i) => {
       expect(s.startsOn).toBe(addDays(base.seasons[i]!.startsOn, shift));
       expect(s.endsOn).toBe(addDays(base.seasons[i]!.endsOn, shift));
+    });
+    moved.dailyAyahs.forEach((a, i) => {
+      expect(a.day).toBe(addDays(base.dailyAyahs[i]!.day, shift));
+      expect([a.surah, a.ayah]).toEqual([base.dailyAyahs[i]!.surah, base.dailyAyahs[i]!.ayah]);
     });
     moved.updates.forEach((u, i) => {
       expect((u.publishAt as Date).getTime() - (base.updates[i]!.publishAt as Date).getTime()).toBe(

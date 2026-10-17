@@ -7,3 +7,4 @@ export * from './content';
 export * from './settings';
 export * from './safety';
 export * from './legacy';
+export * from './reading';

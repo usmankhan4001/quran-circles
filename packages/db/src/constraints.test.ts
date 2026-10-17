@@ -1243,6 +1243,234 @@ describe('bookmarks and reading positions', () => {
   });
 });
 
+describe('days read, community total, ayah of the day and memorisation (0009)', () => {
+  it('keeps one reading row per person, date and source', async () => {
+    const user = await world.make.user();
+    const day = (v: Partial<s.NewReadingDayRow> = {}) =>
+      db
+        .insert(s.readingDays)
+        .values({ userId: user.id, day: '2027-02-15', source: 'reader', ...v });
+    await day({ pages: 2, ayahs: 30 });
+    expect((await violation(day())).constraint).toBe('reading_days_user_day_source_uq');
+    await day({ source: 'manual' });
+    await day({ day: '2027-02-16' });
+    await db.insert(s.readingDays).values({
+      userId: (await world.make.user()).id,
+      day: '2027-02-15',
+      source: 'reader',
+    });
+    const [row] = await db
+      .select()
+      .from(s.readingDays)
+      .where(sql`${s.readingDays.userId} = ${user.id} AND ${s.readingDays.source} = 'manual'`);
+    expect(row).toMatchObject({ pages: 0, ayahs: 0, day: '2027-02-15' });
+  });
+
+  it('keeps pages and ayahs within one day of reading, and needs a person', async () => {
+    const user = await world.make.user();
+    const day = (v: Partial<s.NewReadingDayRow>) =>
+      db.insert(s.readingDays).values({ userId: user.id, day: '2027-02-15', source: 'goal', ...v });
+    expect((await violation(day({ pages: 605 }))).constraint).toBe('reading_days_pages_range_chk');
+    expect((await violation(day({ pages: -1 }))).constraint).toBe('reading_days_pages_range_chk');
+    expect((await violation(day({ ayahs: 6237 }))).constraint).toBe('reading_days_ayahs_range_chk');
+    await day({ pages: 604, ayahs: 6236 });
+    expect(
+      (
+        await violation(
+          db.insert(s.readingDays).values({
+            userId: '00000000-0000-4000-8000-0a0000009999',
+            day: '2027-02-15',
+            source: 'reader',
+          }),
+        )
+      ).code,
+    ).toBe(FOREIGN_KEY_VIOLATION);
+  });
+
+  it('counts the national total per date, never below zero', async () => {
+    await db.insert(s.communityDays).values({ day: '2027-03-01' });
+    const [fresh] = await db
+      .select()
+      .from(s.communityDays)
+      .where(eq(s.communityDays.day, '2027-03-01'));
+    expect(fresh).toMatchObject({ readers: 0, pages: 0 });
+    expect(
+      (await violation(db.insert(s.communityDays).values({ day: '2027-03-01' }))).constraint,
+    ).toBe('community_days_pkey');
+    expect(
+      (await violation(db.insert(s.communityDays).values({ day: '2027-03-02', readers: -1 })))
+        .constraint,
+    ).toBe('community_days_readers_chk');
+    expect(
+      (await violation(db.insert(s.communityDays).values({ day: '2027-03-02', pages: -1 })))
+        .constraint,
+    ).toBe('community_days_pages_chk');
+    // The API adds to a day with one statement, so two readers at once both count.
+    await test.pg.query(
+      `INSERT INTO community_days (day, readers, pages) VALUES ('2027-03-01', 1, 4)
+       ON CONFLICT (day) DO UPDATE SET readers = community_days.readers + 1, pages = community_days.pages + 4`,
+    );
+    expect(await count('community_days', `day = '2027-03-01' AND readers = 1 AND pages = 4`)).toBe(
+      1,
+    );
+  });
+
+  describe('ayah of the day picks', () => {
+    const pick = (v: Partial<s.NewDailyAyahRow> & { day: string }) =>
+      db.insert(s.dailyAyahs).values({ scopeType: 'national', surah: 2, ayah: 255, ...v });
+
+    it('keeps one pick per date and scope, national, venue or circle', async () => {
+      const circle = await world.make.circle(world.venue.id);
+      await pick({ day: '2027-04-01' });
+      expect((await violation(pick({ day: '2027-04-01', ayah: 1 }))).constraint).toBe(
+        'daily_ayahs_day_scope_uq',
+      );
+      const atVenue = {
+        scopeType: 'venue' as const,
+        cityId: world.city.id,
+        venueId: world.venue.id,
+      };
+      await pick({ day: '2027-04-01', ...atVenue });
+      expect((await violation(pick({ day: '2027-04-01', ...atVenue }))).constraint).toBe(
+        'daily_ayahs_day_scope_uq',
+      );
+      const atCircle = { ...atVenue, scopeType: 'circle' as const, circleId: circle.id };
+      await pick({ day: '2027-04-01', ...atCircle });
+      expect((await violation(pick({ day: '2027-04-01', ...atCircle }))).constraint).toBe(
+        'daily_ayahs_day_scope_uq',
+      );
+      await pick({ day: '2027-04-02' });
+    });
+
+    it('requires the place that belongs to each scope, and only that', async () => {
+      const circle = await world.make.circle(world.venue.id);
+      const shape = 'daily_ayahs_scope_shape_chk';
+      const c = world.city.id;
+      const v = world.venue.id;
+      expect((await violation(pick({ day: '2027-04-03', cityId: c }))).constraint).toBe(shape);
+      expect(
+        (await violation(pick({ day: '2027-04-03', scopeType: 'venue', cityId: c }))).constraint,
+      ).toBe(shape);
+      expect(
+        (await violation(pick({ day: '2027-04-03', scopeType: 'venue', venueId: v }))).constraint,
+      ).toBe(shape);
+      expect(
+        (
+          await violation(
+            pick({
+              day: '2027-04-03',
+              scopeType: 'venue',
+              cityId: c,
+              venueId: v,
+              circleId: circle.id,
+            }),
+          )
+        ).constraint,
+      ).toBe(shape);
+      expect(
+        (
+          await violation(
+            pick({ day: '2027-04-03', scopeType: 'circle', cityId: c, circleId: circle.id }),
+          )
+        ).constraint,
+      ).toBe(shape);
+      expect(
+        (await violation(pick({ day: '2027-04-03', scopeType: 'city' as never, cityId: c }))).code,
+      ).toBe(CHECK_VIOLATION);
+    });
+
+    it('only stores ayat that exist in their surah', async () => {
+      expect((await violation(pick({ day: '2027-04-04', surah: 115 }))).constraint).toBe(
+        'daily_ayahs_surah_range_chk',
+      );
+      expect((await violation(pick({ day: '2027-04-04', ayah: 0 }))).constraint).toBe(
+        'daily_ayahs_ayah_range_chk',
+      );
+      expect((await violation(pick({ day: '2027-04-04', ayah: 287 }))).code).toBe(CHECK_VIOLATION);
+      expect((await violation(pick({ day: '2027-04-04', surah: 1, ayah: 8 }))).constraint).toBe(
+        'daily_ayahs_ayah_in_surah_chk',
+      );
+      expect((await violation(pick({ day: '2027-04-04', surah: 114, ayah: 7 }))).constraint).toBe(
+        'daily_ayahs_ayah_in_surah_chk',
+      );
+      await pick({ day: '2027-04-04', surah: 114, ayah: 6 });
+      await pick({ day: '2027-04-05', surah: 2, ayah: 286 });
+      await pick({ day: '2027-04-06', surah: 1, ayah: 7 });
+    });
+
+    it('goes with the venue or circle it was set for', async () => {
+      const area = await world.make.area(world.city.id);
+      const venue = await world.make.venue(world.city.id, area.id);
+      const circle = await world.make.circle(venue.id);
+      const [p] = await pick({
+        day: '2027-04-07',
+        scopeType: 'circle',
+        cityId: world.city.id,
+        venueId: venue.id,
+        circleId: circle.id,
+      }).returning();
+      await db.delete(s.circles).where(eq(s.circles.id, circle.id));
+      expect(await count('daily_ayahs', 'id = $1', [p!.id])).toBe(0);
+    });
+  });
+
+  it('keeps one memorisation row per person and surah, in range and state', async () => {
+    const user = await world.make.user();
+    const mark = (v: Partial<s.NewMemorisationRow> = {}) =>
+      db.insert(s.memorisation).values({ userId: user.id, surah: 67, status: 'learning', ...v });
+    await mark();
+    expect((await violation(mark({ status: 'memorised' }))).constraint).toBe(
+      'memorisation_user_surah_uq',
+    );
+    expect((await violation(mark({ surah: 0 }))).constraint).toBe('memorisation_surah_range_chk');
+    expect((await violation(mark({ surah: 115 }))).constraint).toBe('memorisation_surah_range_chk');
+    expect((await violation(mark({ surah: 1, status: 'forgotten' as never }))).constraint).toBe(
+      'memorisation_status_chk',
+    );
+    await mark({ surah: 114, status: 'revising', lastRevisedAt: new Date('2027-02-15T08:00:00Z') });
+    await db
+      .insert(s.memorisation)
+      .values({ userId: (await world.make.user()).id, surah: 67, status: 'memorised' });
+  });
+
+  it('stores a daily goal as both unit and amount, or neither, and the revise setting in range', async () => {
+    const profile = async (v: Partial<s.NewProfileRow>) =>
+      db.insert(s.profiles).values({ userId: (await world.make.user()).id, ...v });
+    await profile({
+      dailyGoalUnit: 'minutes',
+      dailyGoalAmount: 10,
+      memorisationReviseAfterDays: 7,
+    });
+    await profile({});
+    expect((await violation(profile({ dailyGoalUnit: 'pages' }))).constraint).toBe(
+      'profiles_daily_goal_shape_chk',
+    );
+    expect((await violation(profile({ dailyGoalAmount: 2 }))).constraint).toBe(
+      'profiles_daily_goal_shape_chk',
+    );
+    expect(
+      (await violation(profile({ dailyGoalUnit: 'pages', dailyGoalAmount: 605 }))).constraint,
+    ).toBe('profiles_daily_goal_amount_range_chk');
+    expect(
+      (await violation(profile({ dailyGoalUnit: 'pages', dailyGoalAmount: 0 }))).constraint,
+    ).toBe('profiles_daily_goal_amount_range_chk');
+    expect((await violation(profile({ memorisationReviseAfterDays: 0 }))).constraint).toBe(
+      'profiles_memorisation_revise_after_days_range_chk',
+    );
+    expect((await violation(profile({ memorisationReviseAfterDays: 366 }))).constraint).toBe(
+      'profiles_memorisation_revise_after_days_range_chk',
+    );
+  });
+
+  it('accepts the ayah_daily preference as a consent purpose', async () => {
+    const user = await world.make.user();
+    await db
+      .insert(s.consents)
+      .values({ userId: user.id, channel: 'push', purpose: 'ayah_daily', source: 'profile' });
+    expect(await count('consents', `user_id = $1 AND purpose = 'ayah_daily'`, [user.id])).toBe(1);
+  });
+});
+
 describe('attendance and progress', () => {
   it('counts at least one person per row and keeps the headcount when a registration goes', async () => {
     const session = await world.make.session(world.venue.id, world.program.id);
@@ -1416,6 +1644,16 @@ describe('deleting an account', () => {
     });
     await db.insert(s.bookmarks).values({ userId: user.id, kind: 'surah', surah: 1 });
     await db.insert(s.readingPositions).values({ userId: user.id, surah: 1, ayah: 1 });
+    await db.insert(s.readingDays).values({ userId: user.id, day: '2027-02-15', source: 'reader' });
+    await db.insert(s.memorisation).values({ userId: user.id, surah: 1, status: 'memorised' });
+    await db
+      .insert(s.communityDays)
+      .values({ day: '2027-01-15', readers: 1, pages: 3 })
+      .onConflictDoNothing();
+    const [pick] = await db
+      .insert(s.dailyAyahs)
+      .values({ day: '2027-01-15', scopeType: 'national', surah: 2, ayah: 255, setBy: user.id })
+      .returning();
     await db.insert(s.circleRequests).values({
       userId: user.id,
       areaId: world.area.id,
@@ -1478,12 +1716,21 @@ describe('deleting an account', () => {
       'auth_sessions',
       'bookmarks',
       'reading_positions',
+      'reading_days',
+      'memorisation',
       'circle_requests',
       'role_assignments',
       'update_reads',
     ]) {
       expect(await count(table, 'user_id = $1', [user.id]), table).toBe(0);
     }
+
+    // The national total keeps the anonymous count; a pick the person set stays, unattributed.
+    expect(await count('community_days', `day = '2027-01-15' AND readers = 1 AND pages = 3`)).toBe(
+      1,
+    );
+    const [pickAfter] = await db.select().from(s.dailyAyahs).where(eq(s.dailyAyahs.id, pick!.id));
+    expect(pickAfter).toMatchObject({ setBy: null, surah: 2, ayah: 255 });
 
     // Things the person made stay, with the author cleared.
     const [feedItem] = await db.select().from(s.updates).where(eq(s.updates.id, update!.id));

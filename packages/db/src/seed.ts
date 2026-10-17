@@ -10,10 +10,12 @@ import * as schema from './schema/index';
  * so the mock server, the API tests and a seeded database agree.
  *
  * What it inserts: provinces (the cities' foreign key needs them), cities, areas, venues,
- * programs, seasons, circles, sessions, occurrences, content pages, the feed updates, and the
- * message template catalog.
+ * programs, seasons, circles, sessions, occurrences, content pages, the feed updates, the
+ * message template catalog, and the sample ayah of the day picks (rc.4: national, venue and
+ * circle picks, numbers only, `set_by` NULL).
  * What it never inserts: users, phone numbers, registrations, OTPs, consents, devices,
- * sessions of sign-in, follows or any other person-like row. Venue contact numbers are the
+ * sessions of sign-in, follows, days read, memorisation rows, national reading totals or any
+ * other person-like row. Venue contact numbers are the
  * fixtures' synthetic +92300000000x numbers (venue-public, not people).
  * It refuses to run when APP_ENV or NODE_ENV is "production". There is no override.
  *
@@ -303,6 +305,18 @@ export function buildSeedRows(options: SeedRowOptions = {}) {
     },
   );
 
+  const dailyAyahs: (typeof schema.dailyAyahs.$inferInsert)[] = fixtures.dailyAyahs.map((a) => ({
+    id: a.id,
+    day: date(a.date),
+    scopeType: a.scopeType,
+    cityId: a.cityId,
+    venueId: a.venueId,
+    circleId: a.circleId,
+    surah: a.surah,
+    ayah: a.ayah,
+    updatedAt: instant(a.updatedAt),
+  }));
+
   return {
     provinces,
     cities,
@@ -316,6 +330,7 @@ export function buildSeedRows(options: SeedRowOptions = {}) {
     contentPages,
     updates,
     messageTemplates,
+    dailyAyahs,
   };
 }
 
@@ -343,6 +358,7 @@ export async function seedDatabase(
     [schema.contentPages, rows.contentPages],
     [schema.updates, rows.updates],
     [schema.messageTemplates, rows.messageTemplates],
+    [schema.dailyAyahs, rows.dailyAyahs],
   ];
 
   const tables = await db.transaction(async (tx) => {

@@ -1,5 +1,62 @@
 # Contract changelog
 
+## 1.0.0-rc.4 (2026-10-17)
+
+The next features decided with the owner (`docs/product/features-next.md`), from the change request `docs/engineering/change-requests/2026-10-17-next-features.md`, accepted by the orchestrator as proposed (items 1 to 7). Database migration 0009 goes with it. Additive only: no endpoint, field, error code or scope action is removed or renamed, and no new error code. New response fields are optional in the TypeScript type only (the server always sends them), so rc.3 payloads, fixtures and hand-written test data still parse and typecheck. Quran text is never stored or returned: an ayah is a surah and an ayah number.
+
+### New endpoints (80 to 90 operations)
+
+| Endpoint                 | Call                                                           | Auth   | Action                |
+| ------------------------ | -------------------------------------------------------------- | ------ | --------------------- |
+| `readingDays.record`     | `POST /v1/me/reading-days`                                     | user   | `reading.manage`      |
+| `readingDays.list`       | `GET /v1/me/reading-days?from&to`                              | user   | `reading.manage`      |
+| `community.today`        | `GET /v1/community/today`                                      | public | `community.read`      |
+| `ayahOfTheDay.get`       | `GET /v1/ayah-of-the-day?date&venueId&circleId`                | public | `daily_ayah.read`     |
+| `adminDailyAyahs.list`   | `GET /v1/admin/daily-ayahs?from&to&scopeType&venueId&circleId` | staff  | `daily_ayah.manage`   |
+| `adminDailyAyahs.put`    | `PUT /v1/admin/daily-ayahs`                                    | staff  | `daily_ayah.manage`   |
+| `adminDailyAyahs.delete` | `DELETE /v1/admin/daily-ayahs/{dailyAyahId}`                   | staff  | `daily_ayah.manage`   |
+| `memorisation.list`      | `GET /v1/me/memorisation`                                      | user   | `memorisation.manage` |
+| `memorisation.put`       | `PUT /v1/me/memorisation/{surah}`                              | user   | `memorisation.manage` |
+| `memorisation.delete`    | `DELETE /v1/me/memorisation/{surah}`                           | user   | `memorisation.manage` |
+
+- **Days read.** `readingDays.record` body `ReadingDayRecord { source: reader | goal | manual | portion, date?, pages?, ayahs? }`, answers the whole day as `ReadingDay { date, sources[], pages, ayahs }` (200, idempotent). One row per person, Pakistan date and source; `pages`/`ayahs` are the day's totals for that source, and a repeat keeps the larger value. `date` defaults to today in Pakistan; only today and yesterday are accepted (`readingDayDateIssue`, issue `{ path: 'date', code: 'out_of_range' }`). `attendance` is never sent by a client: the server adds it when a coordinator marks a named registrant. `readingDays.list` takes inclusive dates, at most 366 days (`readingRangeIssue`: `invalid_range` on `from`, `too_big` on `to`), days without reading left out. Own data only, for every role.
+- **Community total.** `CommunityToday { date, readersToday, pagesTogether }`, one national number for today's Pakistan date, counted without user ids (table `community_days`), no breakdown. `pagesTogether` is today's pages (it grows through the day), not an all-time sum.
+- **Ayah of the day.** `AyahOfTheDay { date, surah, ayah, source: national | venue | circle | built_in, venueId, circleId }`. Rule in `resolveDailyAyah`: exactly one pick of a followed venue or circle that day wins; otherwise the national pick; otherwise the built-in list (`BUILT_IN_DAILY_AYAHS`, 93 well-known references, numbers only; `builtInAyahFor(date)` walks it day by day). The endpoint is public: the app sends the ids it follows as repeated `venueId` / `circleId` (max 50 each), a signed-out visitor sends none. The worker's morning push resolves the same rule from the `follows` table.
+- **Admin picks.** `DailyAyahPut { date, scope: { type: 'national' } | { type: 'venue', venueId } | { type: 'circle', circleId }, surah, ayah }` sets or replaces the pick for that date and scope and answers `DailyAyahEntry { id, date, scopeType, cityId, venueId, circleId, surah, ayah, updatedAt }`. The ayah must exist in the surah (`isAyahInSurah`, `AyahRef`). Unknown venue or circle: `not_found`. `adminDailyAyahs.delete` (not in the request; added so the console's curated list can remove a pick) answers 204. The list shows national picks to every caller and place picks in scope.
+- **Memorisation.** `MemorisationResponse { items: MemorisationEntry[], reviseAfterDays }`, `MemorisationEntry { surah, status: learning | memorised | revising, lastRevisedAt, updatedAt }`. `memorisation.put` body `{ status, markRevised? }`: `markRevised` stamps `lastRevisedAt`; marking a never-revised surah `memorised` stamps it too. `memorisation.delete` is 204 whether or not the surah was marked. `needsRevision(entry, now, days)` is the "revise this week" rule (memorised and not revised within the setting). No reminders.
+
+### Changed, additive
+
+- `Profile.dailyGoal` (`DailyGoal { unit: pages | rukus | minutes, amount: 1..604 }` or null) and `Profile.memorisationReviseAfterDays` (1..365 or null = `MEMORISATION_REVISE_AFTER_DAYS_DEFAULT`, 14). Both optional in the type only. `ProfileUpdate` accepts both; null clears. The revise-after setting is per person (on the profile), because the tracker is private; it is not a platform setting.
+- `CONSENT_PURPOSES` gains `ayah_daily`: the morning ayah push, push only and on by default. `DEFAULT_ON_CONSENTS`, `consentDefault(channel, purpose)` and `consentGranted(channel, purpose, rows)`: no row means on, a revoked row means off. `ConsentSet` refuses `ayah_daily` on any channel but push, or with a venue (issue on `channel`). `CONSENT_PURPOSE_CHANNELS` says so.
+- Feature flags (Gate 4: each feature behind a flag): `reading_days`, `community_today`, `ayah_of_the_day`, `memorisation`, `read_along` (`NEXT_FEATURE_FLAGS`, in `FEATURE_FLAGS`). Off unless a `feature_flags` row turns them on, like every flag. In `AppConfig.featureFlags` they are optional in the type only; read them with `featureOn(flags, key)` (missing is off). The API's flag resolver already covers new keys.
+- `DeepLink` gains `{ type: 'quran', surah, ayah }`, built as `/quran?surah=…&ayah=…` (the user app's existing reader route) and parsed back.
+- New vocabularies: `READING_DAY_SOURCES`, `READING_DAY_CLIENT_SOURCES`, `DAILY_GOAL_UNITS`, `MEMORISATION_STATUSES`, `DAILY_AYAH_SCOPES`, `AYAH_OF_THE_DAY_SOURCES`. Helpers: `pakistanDate`, `addDays`, `readingDayDateIssue`, `readingRangeIssue`, `resolveDailyAyah`, `builtInAyahFor`, `needsRevision`, `dailyAyahResource`.
+- Mock server: handlers for every new endpoint from new fixtures (`dailyAyahs`, `fixtureReadingDays`, `fixtureMemorisation`, `fixtureCommunityToday`, all synthetic); the rc.4 flags are on in the mock config; staff picks are scope-checked per role. `fixtureMe.profile` has `dailyGoal: null` and `memorisationReviseAfterDays: null`.
+
+### Scopes
+
+Five new actions; `SCOPES.md` regenerated.
+
+| Action                | Level  | Who                                                                                                                                                           |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `community.read`      | public | everyone                                                                                                                                                      |
+| `daily_ayah.read`     | public | everyone                                                                                                                                                      |
+| `reading.manage`      | self   | the signed-in person, own data only (no staff access)                                                                                                         |
+| `memorisation.manage` | self   | the signed-in person, own data only (no staff access)                                                                                                         |
+| `daily_ayah.manage`   | venue  | national admin everywhere, including national picks; city coordinator for venues and circles in their city; venue coordinator for their venue and its circles |
+
+Check a pick with `can(principal, 'daily_ayah.manage', dailyAyahResource(scopeType, place))`: a national pick is checked with no place, so only a national admin passes; a circle pick at the circle's venue. Lists use `scopeFilter(principal, 'daily_ayah.manage')`.
+
+### Database (migration 0009)
+
+Tables `reading_days` (unique user, day, source; cascade on user delete), `community_days` (day primary key, readers, pages; no user id, kept on account deletion), `daily_ayahs` (unique day, scope and place; scope shape check; ayah-in-surah check; cascade with its city, venue or circle; `set_by` set null), `memorisation` (unique user, surah; cascade). `profiles.daily_goal_unit`, `daily_goal_amount` (both or neither), `memorisation_revise_after_days`. `consents_purpose_chk` allows `ayah_daily`. The rollback removes the feature data, including `ayah_daily` consent rows. The seed adds the five sample picks.
+
+### Not in this version
+
+- `PushData.type` `ayah_of_the_day`: adding it breaks `@qc/messaging` (`PUSH_TYPE_PURPOSE` is an exhaustive record), so it lands as a small joint change with the messaging lane's mapping `ayah_of_the_day -> ayah_daily`, before the worker's morning job sends anything.
+- Push and Home wording (English and Urdu draft) belongs to `@qc/i18n` and the apps.
+
 ## 1.0.0-rc.3 (2026-10-17)
 
 Closes the gaps the Wave 2 follow-up left between rc.2 and the API. Additive only: no endpoint, field, error code or scope action is removed or renamed, no new endpoint, no database change (migration 0008 already has `coordinator_invites.replaces_assignment_id`). The `SCOPES.md` matrix is unchanged.

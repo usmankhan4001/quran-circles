@@ -45,6 +45,8 @@ function validRequest(d: EndpointDef, extra: Record<string, string> = {}): Reque
     headers['content-type'] = 'application/json';
     const sample = fakeFromSchema(d.body, rng, 'input') as Record<string, unknown>;
     if ('sessionId' in sample) sample.sessionId = fixtureId('session', 1);
+    // A day read may only be recorded for today or yesterday: let the date default to today.
+    if (d.id === 'readingDays.record') delete sample.date;
     body = JSON.stringify(sample);
   }
   return new Request(url, { method: d.method, headers, body });

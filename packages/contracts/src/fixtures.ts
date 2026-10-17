@@ -4,6 +4,12 @@ import type { AdminCircle, VenueCreate } from './schemas/admin';
 import type { ContentPage } from './schemas/config';
 import type { Me, StaffRegistration } from './schemas/people';
 import type { Update } from './schemas/updates';
+import type {
+  CommunityToday,
+  DailyAyahEntry,
+  MemorisationEntry,
+  ReadingDay,
+} from './schemas/reading';
 
 /**
  * Synthetic development data in the shape of the contract. No real people, venues or numbers.
@@ -26,6 +32,7 @@ const KIND = {
   registration: '0c',
   role: '0d',
   challenge: '0e',
+  dailyAyah: '0f',
 } as const;
 
 /** A stable, valid UUID for fixture number `n` of a kind. */
@@ -629,6 +636,8 @@ export const fixtureMe: Me = {
     education: null,
     priorReading: null,
     preferredLanguage: null,
+    dailyGoal: null,
+    memorisationReviseAfterDays: null,
   },
   roles: [],
 };
@@ -789,6 +798,109 @@ export const fixtureUpdates: Update[] = [
   },
 ];
 
+// Days read, ayah of the day, memorisation (rc.4) ---------------------------------------------
+
+/**
+ * Ayah of the day picks around `FIXTURE_NOW`: numbers only. National picks on the first two days;
+ * a venue pick for Sample Masjid Al-Noor (Rawalpindi) and one for a Lahore venue on the first day;
+ * a circle pick for the Tuesday Tajweed Circle (at Al-Noor) on the second day. No person set them.
+ */
+export const dailyAyahs: DailyAyahEntry[] = [
+  {
+    id: fixtureId('dailyAyah', 1),
+    date: FIRST_DAY,
+    scopeType: 'national',
+    cityId: null,
+    venueId: null,
+    circleId: null,
+    surah: 2,
+    ayah: 255,
+    updatedAt: '2027-02-10T04:00:00Z',
+  },
+  {
+    id: fixtureId('dailyAyah', 2),
+    date: '2027-02-16',
+    scopeType: 'national',
+    cityId: null,
+    venueId: null,
+    circleId: null,
+    surah: 94,
+    ayah: 5,
+    updatedAt: '2027-02-10T04:00:00Z',
+  },
+  {
+    id: fixtureId('dailyAyah', 3),
+    date: FIRST_DAY,
+    scopeType: 'venue',
+    cityId: venues[0]!.cityId,
+    venueId: venues[0]!.id,
+    circleId: null,
+    surah: 13,
+    ayah: 28,
+    updatedAt: '2027-02-12T04:00:00Z',
+  },
+  {
+    id: fixtureId('dailyAyah', 4),
+    date: '2027-02-16',
+    scopeType: 'circle',
+    cityId: circles[0]!.cityId,
+    venueId: circles[0]!.venueId,
+    circleId: circles[0]!.id,
+    surah: 73,
+    ayah: 4,
+    updatedAt: '2027-02-12T04:00:00Z',
+  },
+  {
+    id: fixtureId('dailyAyah', 5),
+    date: FIRST_DAY,
+    scopeType: 'venue',
+    cityId: venues[4]!.cityId,
+    venueId: venues[4]!.id,
+    circleId: null,
+    surah: 39,
+    ayah: 53,
+    updatedAt: '2027-02-12T04:00:00Z',
+  },
+];
+
+/** The attendee's days read in the fixture week (mock only; the seed stores no person data). */
+export const fixtureReadingDays: ReadingDay[] = [
+  { date: '2027-02-11', sources: ['reader'], pages: 2, ayahs: 31 },
+  { date: '2027-02-12', sources: ['manual'], pages: 0, ayahs: 0 },
+  { date: '2027-02-13', sources: ['goal', 'attendance'], pages: 1, ayahs: 0 },
+  { date: '2027-02-15', sources: ['reader', 'portion'], pages: 3, ayahs: 42 },
+];
+
+/** The attendee's memorisation tracker (mock only). */
+export const fixtureMemorisation: MemorisationEntry[] = [
+  {
+    surah: 1,
+    status: 'memorised',
+    lastRevisedAt: '2027-02-10T16:00:00Z',
+    updatedAt: '2027-02-10T16:00:00Z',
+  },
+  {
+    surah: 67,
+    status: 'revising',
+    lastRevisedAt: '2027-01-20T16:00:00Z',
+    updatedAt: '2027-01-20T16:00:00Z',
+  },
+  {
+    surah: 112,
+    status: 'memorised',
+    lastRevisedAt: '2027-01-02T16:00:00Z',
+    updatedAt: '2027-01-02T16:00:00Z',
+  },
+  { surah: 36, status: 'learning', lastRevisedAt: null, updatedAt: '2027-02-14T16:00:00Z' },
+];
+
+/** The national total the mock serves for the fixture day. */
+export const fixtureCommunityToday: CommunityToday = {
+  date: FIRST_DAY,
+  readersToday: 1240,
+  pagesTogether: 3815,
+};
+
 export const fixtures = {
   provinces,
   cities,
@@ -802,4 +914,5 @@ export const fixtures = {
   contentPages,
   updates: fixtureUpdates,
   me: fixtureMe,
+  dailyAyahs,
 };

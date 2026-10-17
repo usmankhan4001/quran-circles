@@ -120,6 +120,8 @@ describe('schema parity: Drizzle definition against the migrated database', () =
       ['settings', 'key'],
       ['update_reads', 'user_id,update_id'],
       ['audit_log', 'id'],
+      // The national total is keyed by its date and holds no user id (migration 0009).
+      ['community_days', 'day'],
     ]);
     for (const table of tables) {
       const name = getTableName(table);

@@ -56,6 +56,24 @@ import {
   SessionRegistrationsResponse,
 } from './schemas/people';
 import {
+  AdminDailyAyahsQuery,
+  AdminDailyAyahsResponse,
+  AyahOfTheDay,
+  AyahOfTheDayQuery,
+  CommunityToday,
+  DailyAyahEntry,
+  DailyAyahPut,
+  MemorisationEntry,
+  MemorisationParams,
+  MemorisationPut,
+  MemorisationResponse,
+  READING_RANGE_MAX_DAYS,
+  ReadingDay,
+  ReadingDayRecord,
+  ReadingDaysQuery,
+  ReadingDaysResponse,
+} from './schemas/reading';
+import {
   RefreshBody,
   RequestCodeBody,
   RequestCodeResponse,
@@ -397,6 +415,105 @@ export const endpoints = {
     body: ReadingPositionPut,
     success: json(200, ReadingPosition),
   }),
+
+  // Days read, community total, ayah of the day, memorisation (rc.4)
+  'readingDays.record': endpoint({
+    id: 'readingDays.record',
+    method: 'POST',
+    path: '/v1/me/reading-days',
+    summary: 'Record a day read (reader, goal met, "I read today" or the session portion)',
+    description:
+      'One row per person, Pakistan-time date and source; sending it again is safe and changes nothing but the totals. ' +
+      "`pages` and `ayahs` are the day's totals so far for that source (not increments): a repeat keeps the larger of the stored and the sent value. " +
+      '`date` defaults to today in Pakistan; only today and yesterday are accepted, anything else is validation_failed with `{ path: "date", code: "out_of_range" }`. ' +
+      '`attendance` cannot be sent: the server records it when a coordinator marks the person present by name. ' +
+      'The first day read of a date adds one to the national readers total, and new pages add to the national pages total, counted without the user id. ' +
+      'Returns the whole day, all sources together. Only the person can read their days; coordinators and admins cannot.',
+    tag: 'Quran',
+    auth: 'user',
+    actions: ['reading.manage'],
+    body: ReadingDayRecord,
+    success: json(200, ReadingDay),
+    idempotent: true,
+  }),
+  'readingDays.list': endpoint({
+    id: 'readingDays.list',
+    method: 'GET',
+    path: '/v1/me/reading-days',
+    summary: 'Own days read between two dates',
+    description:
+      `Inclusive Pakistan-time dates, at most ${READING_RANGE_MAX_DAYS} days. A backwards range is validation_failed with \`{ path: "from", code: "invalid_range" }\`, a longer one \`{ path: "to", code: "too_big" }\`. ` +
+      'Days without any reading are left out, in date order. There is no streak: the app counts days, for example "4 of 7 days this week".',
+    tag: 'Quran',
+    auth: 'user',
+    actions: ['reading.manage'],
+    query: ReadingDaysQuery,
+    success: json(200, ReadingDaysResponse),
+  }),
+  'memorisation.list': endpoint({
+    id: 'memorisation.list',
+    method: 'GET',
+    path: '/v1/me/memorisation',
+    summary: 'Own memorisation tracker and the "revise after" setting',
+    tag: 'Quran',
+    auth: 'user',
+    actions: ['memorisation.manage'],
+    success: json(200, MemorisationResponse),
+  }),
+  'memorisation.put': endpoint({
+    id: 'memorisation.put',
+    method: 'PUT',
+    path: '/v1/me/memorisation/{surah}',
+    summary: 'Mark a surah learning, memorised or revising, or mark it revised',
+    description:
+      '`markRevised: true` stamps `lastRevisedAt` with now. Marking a surah `memorised` that was never revised stamps it too. No reminder is ever sent.',
+    tag: 'Quran',
+    auth: 'user',
+    actions: ['memorisation.manage'],
+    params: MemorisationParams,
+    body: MemorisationPut,
+    success: json(200, MemorisationEntry),
+  }),
+  'memorisation.delete': endpoint({
+    id: 'memorisation.delete',
+    method: 'DELETE',
+    path: '/v1/me/memorisation/{surah}',
+    summary: 'Clear the mark on a surah',
+    description: 'Answers 204 whether or not the surah was marked, so a retry is safe.',
+    tag: 'Quran',
+    auth: 'user',
+    actions: ['memorisation.manage'],
+    params: MemorisationParams,
+    success: noContent,
+  }),
+  'community.today': endpoint({
+    id: 'community.today',
+    method: 'GET',
+    path: '/v1/community/today',
+    summary: 'How many people read today, and pages read together, nationally',
+    description:
+      'One national number, counted without user ids; there is no city, venue or circle breakdown. Cacheable for a minute.',
+    tag: 'Quran',
+    auth: 'public',
+    actions: ['community.read'],
+    success: json(200, CommunityToday),
+  }),
+  'ayahOfTheDay.get': endpoint({
+    id: 'ayahOfTheDay.get',
+    method: 'GET',
+    path: '/v1/ayah-of-the-day',
+    summary: 'The ayah of the day: surah and ayah numbers only',
+    description:
+      'Rule (`resolveDailyAyah`): when exactly one pick of a followed venue or circle applies that day, that pick; otherwise the national pick; otherwise the built-in list (`BUILT_IN_DAILY_AYAHS`). ' +
+      'Send the ids of the venues and circles the person follows as repeated `venueId` and `circleId` parameters; a signed-out visitor sends none. `date` defaults to today in Pakistan. ' +
+      'No text is returned: the reader shows the Arabic and the translation from its own source.',
+    tag: 'Quran',
+    auth: 'public',
+    actions: ['daily_ayah.read'],
+    query: AyahOfTheDayQuery,
+    success: json(200, AyahOfTheDay),
+  }),
+
   'circleRequests.list': endpoint({
     id: 'circleRequests.list',
     method: 'GET',
@@ -730,6 +847,50 @@ export const endpoints = {
     auth: 'staff',
     actions: ['template.read'],
     success: json(200, MessageTemplatesResponse),
+  }),
+
+  // Admin: ayah of the day picks (rc.4)
+  'adminDailyAyahs.list': endpoint({
+    id: 'adminDailyAyahs.list',
+    method: 'GET',
+    path: '/v1/admin/daily-ayahs',
+    summary: 'Ayah of the day picks between two dates, national and in scope',
+    description:
+      `Inclusive dates, at most ${READING_RANGE_MAX_DAYS} days (\`invalid_range\` / \`too_big\` as for reading days). ` +
+      "National picks are listed for every caller (coordinators see them read-only); venue and circle picks only inside the caller's scope (`scopeFilter` of `daily_ayah.manage`).",
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['daily_ayah.manage'],
+    query: AdminDailyAyahsQuery,
+    success: json(200, AdminDailyAyahsResponse),
+  }),
+  'adminDailyAyahs.put': endpoint({
+    id: 'adminDailyAyahs.put',
+    method: 'PUT',
+    path: '/v1/admin/daily-ayahs',
+    summary: 'Set or replace the ayah of the day for a date: national, a venue or a circle',
+    description:
+      "One pick per date and scope; sending it again replaces the ayah. Checked with `daily_ayah.manage` at `dailyAyahResource(scope)`: a national pick needs a national admin; a venue pick, that venue in scope; a circle pick, the circle's venue in scope. " +
+      'An unknown venue or circle is `not_found`. Surah and ayah numbers only (the ayah must exist in the surah), never text. One audit row per change.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['daily_ayah.manage'],
+    body: DailyAyahPut,
+    success: json(200, DailyAyahEntry),
+    errors: ['not_found'],
+  }),
+  'adminDailyAyahs.delete': endpoint({
+    id: 'adminDailyAyahs.delete',
+    method: 'DELETE',
+    path: '/v1/admin/daily-ayahs/{dailyAyahId}',
+    summary: 'Remove a pick; the day falls back to the next rule',
+    description:
+      "Checked like `adminDailyAyahs.put` for the pick's scope. A pick outside the caller's scope is `forbidden`; an unknown id is `not_found`.",
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['daily_ayah.manage'],
+    params: id('dailyAyahId'),
+    success: noContent,
   }),
 
   // Admin: roles and invites

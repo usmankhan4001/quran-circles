@@ -16,6 +16,7 @@ import {
   Section,
 } from '../enums';
 import { Session } from './sessions';
+import { DailyGoal, MemorisationReviseAfterDays } from './reading';
 
 export const Profile = z.object({
   areaId: Uuid.nullable(),
@@ -24,6 +25,16 @@ export const Profile = z.object({
   education: z.string().max(80).nullable(),
   priorReading: PriorReading.nullable(),
   preferredLanguage: Locale.nullable(),
+  /**
+   * Optional daily goal (rc.4), null when not set. The server always sends it; optional in the
+   * type only so profiles written for rc.3 still parse and typecheck.
+   */
+  dailyGoal: DailyGoal.nullable().optional(),
+  /**
+   * Days after which a memorised surah shows in "revise this week" (rc.4). Null means the default,
+   * `MEMORISATION_REVISE_AFTER_DAYS_DEFAULT` (14). Optional in the type only, as `dailyGoal`.
+   */
+  memorisationReviseAfterDays: MemorisationReviseAfterDays.nullable().optional(),
 });
 export type Profile = z.infer<typeof Profile>;
 
@@ -36,6 +47,10 @@ export const ProfileUpdate = z.object({
   education: z.string().trim().max(80).nullable().optional(),
   priorReading: PriorReading.nullable().optional(),
   preferredLanguage: Locale.nullable().optional(),
+  /** Set a daily goal, or null to remove it. */
+  dailyGoal: DailyGoal.nullable().optional(),
+  /** 1 to 365 days, or null for the default (14). */
+  memorisationReviseAfterDays: MemorisationReviseAfterDays.nullable().optional(),
 });
 export type ProfileUpdate = z.infer<typeof ProfileUpdate>;
 
@@ -146,12 +161,48 @@ export const Consent = z.object({
 });
 export type Consent = z.infer<typeof Consent>;
 
-export const ConsentSet = z.object({
+/**
+ * Notification preferences that are on until the person turns them off (rc.4). For these, no
+ * consent row means granted, and a revoked row means off. Every other consent is off until granted.
+ */
+export const DEFAULT_ON_CONSENTS: readonly {
+  channel: ConsentChannel;
+  purpose: ConsentPurpose;
+}[] = [{ channel: 'push', purpose: 'ayah_daily' }];
+
+/** Purposes that only exist on one channel. `ayah_daily` is a push notification only. */
+export const CONSENT_PURPOSE_CHANNELS: Partial<Record<ConsentPurpose, readonly ConsentChannel[]>> =
+  { ayah_daily: ['push'] };
+
+/** Whether a consent is granted when the person has no row for it. */
+export const consentDefault = (channel: ConsentChannel, purpose: ConsentPurpose): boolean =>
+  DEFAULT_ON_CONSENTS.some((c) => c.channel === channel && c.purpose === purpose);
+
+/**
+ * Whether a person has a consent, from their rows for that channel, purpose and venue: the live
+ * (not revoked) row decides; with no rows at all, `consentDefault` does.
+ */
+export const consentGranted = (
   channel: ConsentChannel,
   purpose: ConsentPurpose,
-  venueId: Uuid.nullable().optional(),
-  granted: z.boolean(),
-});
+  rows: readonly { revokedAt: string | Date | null }[],
+): boolean =>
+  rows.length === 0 ? consentDefault(channel, purpose) : rows.some((r) => r.revokedAt === null);
+
+export const ConsentSet = z
+  .object({
+    channel: ConsentChannel,
+    purpose: ConsentPurpose,
+    venueId: Uuid.nullable().optional(),
+    granted: z.boolean(),
+  })
+  .refine(
+    (v) => {
+      const only = CONSENT_PURPOSE_CHANNELS[v.purpose];
+      return !only || (only.includes(v.channel) && v.venueId == null);
+    },
+    { path: ['channel'] },
+  );
 export const ConsentsResponse = z.object({ items: z.array(Consent) });
 
 export const Follow = z.object({
