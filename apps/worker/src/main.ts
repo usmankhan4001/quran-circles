@@ -3,7 +3,8 @@ import { PgBoss } from 'pg-boss';
 import pg from 'pg';
 import { schema } from '@qc/db';
 import { createConsoleLogger, createMessaging } from '@qc/messaging';
-import { parseWorkerEnv } from './config';
+import { missingPosterEnv, parseWorkerEnv } from './config';
+import { LocalDiskPosterStorage } from './posters/storage';
 import { startRuntime } from './runtime';
 import { applyWhatsAppEvents } from './whatsapp/apply';
 import { createWebhookHandler, createWebhookServer } from './whatsapp/handler';
@@ -29,6 +30,27 @@ export async function main(env: Record<string, string | undefined> = process.env
   boss.on('error', (error) => logger.error('worker.boss_error', { error: error.name }));
   await boss.start();
 
+  // Posters are optional: without the renderer or storage the worker runs and poster jobs fail
+  // with a log line naming the missing variables.
+  const missingPoster = missingPosterEnv(config);
+  if (missingPoster.length > 0) {
+    logger.warn('posters.not_configured', { missing: missingPoster.join(',') });
+  }
+  const posters = {
+    renderer:
+      config.RENDERER_URL && config.RENDERER_TOKEN
+        ? {
+            url: config.RENDERER_URL,
+            token: config.RENDERER_TOKEN,
+            timeoutMs: config.RENDERER_TIMEOUT_MS,
+          }
+        : null,
+    storage: config.POSTER_STORAGE_DIR
+      ? new LocalDiskPosterStorage(config.POSTER_STORAGE_DIR)
+      : null,
+    missing: missingPoster,
+  };
+
   const runtime = await startRuntime({
     db,
     boss,
@@ -45,6 +67,8 @@ export async function main(env: Record<string, string | undefined> = process.env
     dispatchIntervalMs: config.WORKER_POLL_MS,
     sendConcurrency: config.WORKER_SEND_CONCURRENCY,
     occurrenceHorizonDays: config.OCCURRENCE_HORIZON_DAYS,
+    posters,
+    posterConcurrency: config.WORKER_POSTER_CONCURRENCY,
     ...(config.PUBLIC_WEB_BASE ? { webBase: config.PUBLIC_WEB_BASE } : {}),
   });
 

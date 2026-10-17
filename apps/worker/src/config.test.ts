@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WorkerConfigError, parseWorkerEnv } from './config';
+import { POSTER_ENV_NAMES, WorkerConfigError, missingPosterEnv, parseWorkerEnv } from './config';
 
 const base = { DATABASE_URL: 'postgres://qc:qc@localhost:5432/qc' };
 
@@ -69,6 +69,73 @@ describe('worker configuration', () => {
     } catch (error) {
       expect((error as Error).message).toContain('WORKER_POLL_MS');
       expect((error as Error).message).not.toContain('super-secret-looking-value');
+    }
+  });
+});
+
+describe('poster configuration', () => {
+  const posterEnv = {
+    RENDERER_URL: 'http://poster-renderer:8090',
+    RENDERER_TOKEN: 'test-token-not-a-secret',
+    POSTER_STORAGE_DIR: '/var/lib/qc/posters',
+  };
+
+  it('is optional: the worker configuration parses without it and names what is missing', () => {
+    const config = parseWorkerEnv(base);
+    expect(config.RENDERER_URL).toBeUndefined();
+    expect(missingPosterEnv(config)).toEqual([...POSTER_ENV_NAMES]);
+    expect(
+      missingPosterEnv(
+        parseWorkerEnv({
+          ...base,
+          APP_ENV: 'production',
+          WHATSAPP_APP_SECRET: 's',
+          WHATSAPP_VERIFY_TOKEN: 'v',
+        }),
+      ),
+    ).toEqual([...POSTER_ENV_NAMES]);
+  });
+
+  it('reads the renderer, the storage directory and their defaults', () => {
+    const config = parseWorkerEnv({ ...base, ...posterEnv });
+    expect(config).toMatchObject({
+      ...posterEnv,
+      RENDERER_TIMEOUT_MS: 90_000,
+      WORKER_POSTER_CONCURRENCY: 2,
+    });
+    expect(missingPosterEnv(config)).toEqual([]);
+    expect(
+      missingPosterEnv(parseWorkerEnv({ ...base, RENDERER_URL: posterEnv.RENDERER_URL })),
+    ).toEqual(['RENDERER_TOKEN', 'POSTER_STORAGE_DIR']);
+  });
+
+  it('refuses a renderer URL that is not http(s) and a relative storage directory', () => {
+    for (const bad of ['poster-renderer:8090', 'ftp://x', 'http://', 'http://a b']) {
+      expect(() => parseWorkerEnv({ ...base, RENDERER_URL: bad }), bad).toThrow(/RENDERER_URL/);
+    }
+    expect(() => parseWorkerEnv({ ...base, POSTER_STORAGE_DIR: 'data/posters' })).toThrow(
+      /POSTER_STORAGE_DIR/,
+    );
+  });
+
+  it('keeps the renderer timeout under the queue expiry of 120 s', () => {
+    expect(parseWorkerEnv({ ...base, RENDERER_TIMEOUT_MS: '30000' }).RENDERER_TIMEOUT_MS).toBe(
+      30_000,
+    );
+    for (const bad of ['500', '120000', 'slow']) {
+      expect(() => parseWorkerEnv({ ...base, RENDERER_TIMEOUT_MS: bad })).toThrow(
+        /RENDERER_TIMEOUT_MS/,
+      );
+    }
+  });
+
+  it('never prints the token', () => {
+    try {
+      parseWorkerEnv({ ...base, RENDERER_TOKEN: 'leaky-test-token', RENDERER_URL: 'nope' });
+      throw new Error('should have thrown');
+    } catch (error) {
+      expect((error as Error).message).toContain('RENDERER_URL');
+      expect((error as Error).message).not.toContain('leaky-test-token');
     }
   });
 });

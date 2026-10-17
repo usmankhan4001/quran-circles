@@ -242,3 +242,61 @@ export async function seedAuthSession(
       .returning(),
   );
 }
+
+/** A poster template row (the dev seed's demo templates are not in the test database). */
+export async function seedPosterTemplate(
+  db: Db,
+  over: Partial<typeof tables.posterTemplates.$inferInsert> = {},
+): Promise<typeof tables.posterTemplates.$inferSelect> {
+  return first(
+    db
+      .insert(tables.posterTemplates)
+      .values({
+        key: slug('tpl'),
+        nameEn: 'Test template',
+        nameUr: 'ٹیسٹ سانچہ',
+        formats: ['story', 'print_a4', 'print_a3', 'link_preview'],
+        ...over,
+      })
+      .returning(),
+  );
+}
+
+/** A queued poster as the API inserts it. The snapshot is a stand-in; the worker builds its own. */
+export async function seedPoster(
+  db: Db,
+  input: {
+    sessionId: string;
+    templateId: string;
+    format?: 'story' | 'print_a4' | 'print_a3' | 'link_preview';
+    language?: 'en' | 'ur' | 'en_ur' | 'ur_en' | null;
+    locale?: 'en' | 'ur';
+    fields?: unknown;
+    status?: 'queued' | 'ready' | 'failed';
+    storageKey?: string | null;
+    replacesPosterId?: string | null;
+  },
+): Promise<typeof tables.posters.$inferSelect> {
+  const language = input.language === undefined ? 'en_ur' : input.language;
+  return first(
+    db
+      .insert(tables.posters)
+      .values({
+        sessionId: input.sessionId,
+        templateId: input.templateId,
+        format: input.format ?? 'story',
+        language,
+        locale: input.locale ?? (language ? (language.slice(0, 2) as 'en' | 'ur') : 'en'),
+        fields: input.fields ?? {
+          title: { en: 'Weekly tafsir', ur: 'ہفتہ وار تفسیر' },
+          accent: 'tanzeem',
+          qrTarget: 'register',
+        },
+        sourceSnapshot: { stale: true },
+        status: input.status ?? 'queued',
+        storageKey: input.storageKey ?? null,
+        replacesPosterId: input.replacesPosterId ?? null,
+      })
+      .returning(),
+  );
+}

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { z } from 'zod';
 import { DEFAULT_OCCURRENCE_HORIZON_DAYS } from '@qc/db';
 import { MessagingEnv } from '@qc/messaging';
@@ -21,6 +22,16 @@ export const WorkerEnv = MessagingEnv.extend({
     .default(DEFAULT_OCCURRENCE_HORIZON_DAYS),
   /** The public https origin of the web app, for links in messages. */
   PUBLIC_WEB_BASE: optional,
+  /** The poster renderer on the internal network, e.g. `http://poster-renderer:8090`. */
+  RENDERER_URL: optional,
+  /** The renderer's shared bearer token. Never logged. */
+  RENDERER_TOKEN: optional,
+  /** One renderer call gives up after this long; under the `poster-render` queue's 120 s expiry. */
+  RENDERER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(110_000).default(90_000),
+  /** Absolute directory for rendered poster files (a volume); the API reads the same directory. */
+  POSTER_STORAGE_DIR: optional,
+  /** Poster jobs handled at once on this node. */
+  WORKER_POSTER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
 });
 export type WorkerEnv = z.infer<typeof WorkerEnv>;
 
@@ -42,6 +53,12 @@ export function parseWorkerEnv(env: Record<string, string | undefined>): WorkerE
   if (value.PUBLIC_WEB_BASE && !/^https?:\/\/[^\s/]+(\/.*)?$/.test(value.PUBLIC_WEB_BASE)) {
     throw new WorkerConfigError('Invalid worker environment: PUBLIC_WEB_BASE');
   }
+  if (value.RENDERER_URL && !/^https?:\/\/[^\s/]+(\/\S*)?$/.test(value.RENDERER_URL)) {
+    throw new WorkerConfigError('Invalid worker environment: RENDERER_URL');
+  }
+  if (value.POSTER_STORAGE_DIR && !path.isAbsolute(value.POSTER_STORAGE_DIR)) {
+    throw new WorkerConfigError('Invalid worker environment: POSTER_STORAGE_DIR must be absolute');
+  }
   if (value.APP_ENV === 'production') {
     if (!value.WHATSAPP_APP_SECRET || !value.WHATSAPP_VERIFY_TOKEN) {
       // Without these the webhook would answer 503 forever: delivery receipts and STOP replies lost.
@@ -52,3 +69,13 @@ export function parseWorkerEnv(env: Record<string, string | undefined>): WorkerE
   }
   return value;
 }
+
+/** The poster variables, of which every one must be set for the `poster-render` queue to work. */
+export const POSTER_ENV_NAMES = ['RENDERER_URL', 'RENDERER_TOKEN', 'POSTER_STORAGE_DIR'] as const;
+
+/**
+ * The poster variables that are unset. The worker starts without them; poster jobs then fail with
+ * `render_failed` and a log line naming these variables (never their values).
+ */
+export const missingPosterEnv = (config: WorkerEnv): string[] =>
+  POSTER_ENV_NAMES.filter((name) => !config[name]);

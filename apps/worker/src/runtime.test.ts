@@ -1,4 +1,8 @@
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { PgBoss, fromPglite } from 'pg-boss';
+import { POSTER_RENDER_QUEUE } from '@qc/contracts';
 import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { tables } from './db';
@@ -9,6 +13,8 @@ import {
   AYAH_CRON,
   AYAH_QUEUE,
   AYAH_TIMEZONE,
+  POSTER_DEAD_QUEUE,
+  POSTER_QUEUE,
   RECONCILE_QUEUE,
   SEND_QUEUE,
   TOP_UP_CRON,
@@ -17,13 +23,17 @@ import {
   startRuntime,
   type Runtime,
 } from './runtime';
+import { LocalDiskPosterStorage, type PosterStorage } from './posters/storage';
 import { createTestDb, type TestDb } from './test/db';
+import { FAKE_RENDERER_TOKEN, FakeRenderer } from './test/fake-renderer';
 import { createHarness, pushDraft, type Harness } from './test/harness';
 import {
   seedAuthSession,
   seedDevice,
   seedOccurrence,
   seedOtpChallenge,
+  seedPoster,
+  seedPosterTemplate,
   seedRegistration,
   seedUser,
   seedWorld,
@@ -392,5 +402,172 @@ describe('pg-boss runtime', () => {
     const row = await h.queue_(pushDraft('boss-stopped', user.id, h.clock.now()));
     await new Promise((r) => setTimeout(r, 300));
     expect((await h.row(row.id)).status).toBe('queued');
+  });
+});
+
+describe('poster-render queue', () => {
+  let fake: FakeRenderer;
+  let dir: string;
+  let storage: LocalDiskPosterStorage;
+
+  beforeAll(async () => {
+    fake = await new FakeRenderer().start();
+  });
+  afterAll(async () => {
+    await fake.stop();
+  });
+  beforeEach(async () => {
+    fake.reset();
+    dir = await mkdtemp(path.join(tmpdir(), 'qc-runtime-posters-'));
+    storage = new LocalDiskPosterStorage(dir);
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  const configured = (over: { storage?: PosterStorage } = {}) => ({
+    posters: {
+      renderer: { url: fake.url, token: FAKE_RENDERER_TOKEN, timeoutMs: 5_000 },
+      storage: over.storage ?? storage,
+      missing: [],
+    },
+    posterRetryDelaySeconds: 1,
+  });
+
+  const queuedPoster = async () => {
+    const world = await seedWorld(test.db);
+    const template = await seedPosterTemplate(test.db, { key: 'cloud' });
+    return seedPoster(test.db, { sessionId: world.session.id, templateId: template.id });
+  };
+  const posterRow = async (id: string) => {
+    const [r] = await test.db.select().from(tables.posters).where(eq(tables.posters.id, id));
+    if (!r) throw new Error('poster not found');
+    return r;
+  };
+
+  it('uses the contract queue name, retry 3 with backoff, 120 s expiry and a dead letter', async () => {
+    await start(configured());
+    expect(POSTER_QUEUE).toBe(POSTER_RENDER_QUEUE);
+    expect(await boss.getQueue(POSTER_QUEUE)).toMatchObject({
+      retryLimit: 3,
+      retryBackoff: true,
+      expireInSeconds: 120,
+      deadLetter: POSTER_DEAD_QUEUE,
+    });
+  });
+
+  it('applies its settings to a queue the API created first', async () => {
+    await boss.deleteQueue(POSTER_QUEUE).catch(() => {});
+    await boss.createQueue(POSTER_QUEUE, { retryLimit: 0, expireInSeconds: 900 });
+    await start(configured());
+    expect(await boss.getQueue(POSTER_QUEUE)).toMatchObject({
+      retryLimit: 3,
+      expireInSeconds: 120,
+      deadLetter: POSTER_DEAD_QUEUE,
+    });
+  });
+
+  it('renders a job the API put on the queue, once even when it is sent twice', async () => {
+    await start(configured());
+    const poster = await queuedPoster();
+    await boss.send(POSTER_QUEUE, { posterIds: [poster.id] });
+    const ready = await until(
+      () => posterRow(poster.id),
+      (r) => r.status === 'ready',
+    );
+    expect(await storage.get(ready.storageKey!)).not.toBeNull();
+
+    await boss.send(POSTER_QUEUE, { posterIds: [poster.id] });
+    const done = () => Promise.resolve(h.logger.lines.filter((l) => l.event === 'posters.render'));
+    const lines = await until(done, (l) => l.length === 2);
+    expect(lines[1]!.fields).toMatchObject({ skipped: 1, renderCalls: 0 });
+    expect(fake.requests).toHaveLength(1);
+  });
+
+  it('retries a busy renderer through pg-boss, then fills the row', async () => {
+    await start(configured());
+    const poster = await queuedPoster();
+    fake.next({ kind: 'status', status: 503, body: { error: { code: 'busy' } } });
+    await boss.send(POSTER_QUEUE, { posterIds: [poster.id] });
+    const ready = await until(
+      () => posterRow(poster.id),
+      (r) => r.status === 'ready',
+    );
+    expect(ready.failureCode).toBeNull();
+    expect(fake.requests).toHaveLength(2);
+  });
+
+  it('does not retry text_too_long', async () => {
+    await start(configured());
+    const poster = await queuedPoster();
+    fake.always({ kind: 'status', status: 422, body: { error: { code: 'text_too_long' } } });
+    await boss.send(POSTER_QUEUE, { posterIds: [poster.id] });
+    await until(
+      () => posterRow(poster.id),
+      (r) => r.status === 'failed',
+    );
+    await new Promise((r) => setTimeout(r, 2_500));
+    expect((await posterRow(poster.id)).failureCode).toBe('text_too_long');
+    expect(fake.requests).toHaveLength(1);
+  });
+
+  it('fails the rows of a job that ran out of retries in the dead-letter queue', async () => {
+    const failing: PosterStorage = {
+      put: () => Promise.reject(new Error('disk full')),
+      get: () => Promise.resolve(null),
+      delete: () => Promise.resolve(),
+    };
+    await start(configured({ storage: failing }));
+    const poster = await queuedPoster();
+    await boss.send(POSTER_QUEUE, { posterIds: [poster.id] });
+    const failed = await until(
+      () => posterRow(poster.id),
+      (r) => r.status === 'failed',
+      40_000,
+    );
+    expect(failed.failureCode).toBe('render_failed');
+    expect(fake.requests).toHaveLength(4); // the first try and three retries
+    expect(h.logger.lines.some((l) => l.event === 'posters.job_dead')).toBe(true);
+  }, 60_000);
+
+  it('starts without poster settings; a job then fails its rows and says what is missing', async () => {
+    await start({ posterRetryDelaySeconds: 1 });
+    const poster = await queuedPoster();
+    await boss.send(POSTER_QUEUE, { posterIds: [poster.id] });
+    const failed = await until(
+      () => posterRow(poster.id),
+      (r) => r.status === 'failed',
+    );
+    expect(failed.failureCode).toBe('render_failed');
+    const line = h.logger.lines.find((l) => l.event === 'posters.render');
+    expect(line).toMatchObject({
+      level: 'error',
+      fields: { notConfigured: true, missing: 'RENDERER_URL,RENDERER_TOKEN,POSTER_STORAGE_DIR' },
+    });
+    // The rest of the worker still runs.
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    const row = await h.queue_(pushDraft('boss-posters-off', user.id, h.clock.now()));
+    await runtime!.dispatchNow();
+    await until(
+      () => h.row(row.id),
+      (r) => r.status === 'sent',
+    );
+  });
+
+  it('logs and drops a malformed job without retrying it', async () => {
+    await start(configured());
+    await boss.send(POSTER_QUEUE, { posterIds: 'nope' });
+    const invalid = () =>
+      Promise.resolve(h.logger.lines.filter((l) => l.event === 'posters.job_invalid'));
+    await until(invalid, (l) => l.length === 1);
+    await new Promise((r) => setTimeout(r, 2_500));
+    expect(await invalid()).toHaveLength(1);
+  });
+
+  it('renders on demand through the runtime', async () => {
+    const rt = await start(configured());
+    const poster = await queuedPoster();
+    expect(await rt.renderPostersNow({ posterIds: [poster.id] })).toMatchObject({ ready: 1 });
   });
 });
