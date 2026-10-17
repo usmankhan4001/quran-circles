@@ -1,7 +1,7 @@
 import type { ApiClient, DevicePlatform } from '@qc/contracts';
 import { AuthSession } from '../auth/session';
 import { createAppApi, createPublicApi } from '../core/api';
-import { Connectivity } from '../core/connectivity';
+import { Connectivity, type NetworkStatusSource } from '../core/connectivity';
 import { defaultPreferences, PreferencesStore } from '../core/preferences';
 import type { KeyValueStore } from '../core/storage';
 import { QueryCache } from '../data/cache';
@@ -25,6 +25,8 @@ export interface BootOptions {
   openUrl: (url: string) => Promise<void>;
   appVersion?: string;
   now?: () => Date;
+  /** The platform's connection state, for the offline banner. Null where there is none. */
+  network?: NetworkStatusSource | null;
 }
 
 /**
@@ -33,6 +35,7 @@ export interface BootOptions {
  */
 export function createServices(options: BootOptions): AppServices {
   const connectivity = new Connectivity();
+  if (options.network) connectivity.watch(options.network);
   const preferences = new PreferencesStore(
     options.deviceStore,
     defaultPreferences(options.deviceLanguages),

@@ -92,7 +92,8 @@ Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the we
 ## Questions for the orchestrator
 
 - App id: iOS bundle id and Android package are unset in `app.config.ts`. What are they, and who owns the store accounts?
-- Google Maps key: the web and phone map need a public key in `EXPO_PUBLIC_GOOGLE_MAPS_KEY`; until then the list-only view is shown. Who creates it, and which referrer restrictions apply?
+- Google Maps key: the web and phone map need a public key in `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (the name `src/platform/env.ts` reads); until then the list-only view is shown. Who creates it, and which referrer restrictions apply?
+- For the platform lane: the root `.env.example` and the deploy env docs should carry `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (not `EXPO_PUBLIC_GOOGLE_MAPS_KEY`), next to `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_VAPID_PUBLIC_KEY`. This lane did not edit `.env.example`. The full list is in the header comment of `apps/user-app/app.config.ts`.
 - Web push needs `EXPO_PUBLIC_VAPID_PUBLIC_KEY` and the API's matching private key (messaging lane). Confirmed who generates the pair?
 - Family sessions: decided by the owner: a family session accepts women, men or family. Kept.
 - "Ask for a circle near you": decided by the owner, hidden unless `circle_requests` is on. Done. When the flag is on it still shows the coming-soon message (request-a-circle is a later wave).
@@ -114,5 +115,6 @@ Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the we
 From the WP11 end-to-end run of the PWA (web export, `EXPO_PUBLIC_API_URL` = real API) (details in `tests/e2e/FINDINGS.md`): find, code sign-in, registration, Journey, the feed, the manifest, the service worker's offline shell and deep links all work against the real API.
 
 - F-05 (medium, pending outside dependency): web push needs `EXPO_PUBLIC_VAPID_PUBLIC_KEY` and the worker's VAPID keys.
-- F-06 (low, open): this file names the maps key `EXPO_PUBLIC_GOOGLE_MAPS_KEY`; `src/platform/env.ts` reads `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`.
-- F-10 (low, open): offline, the banner shows only after an API call fails (`core/connectivity.ts`); on an offline start served from the cache it did not show in one run, so old data can show with no offline sign. `navigator.onLine` is not consulted.
+- F-04 (admin-app finding; user app aligned 2026-10-17): the phone step (`signIn.phone.intro`) now says "We will send a code on WhatsApp, or by SMS if WhatsApp is not available.", the same as the admin app. Urdu draft updated together; test in `screens/SignInScreen.test.tsx`.
+- F-06 (low, fixed 2026-10-17): this file now names the maps key `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`, as `src/platform/env.ts` reads it; `app.config.ts` lists the public variables. The root `.env.example` is the platform lane's (note under Questions).
+- F-10 (low, fixed 2026-10-17): the offline banner now follows the platform's connection state as well as failed calls. `core/connectivity.ts` combines two signals: the device state (`watch(source)`) and the last call. `platform/networkStatus.ts` gives the web target a source from `navigator.onLine` and the `online`/`offline` events, wired in `bootstrap.ts` through `createServices({ network })`: the banner shows at once on an offline start or when the connection drops, and clears when it returns. Native has no network-status module installed (no new dependency added), so it keeps the failed-call signal only. Tests: `core/connectivity.test.ts`, `platform/networkStatus.test.ts`, `platform/networkStatus.androidOs.test.ts`, and two in `screens/NearbyScreen.test.tsx` (banner over the saved list as soon as the device goes offline, with no API call, and gone when back online; banner on an offline start).

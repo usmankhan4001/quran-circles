@@ -7,6 +7,7 @@ import { createTranslator } from './i18n/translate';
 import { readEnv } from './platform/env';
 import { createContentStorage } from './platform/contentStorage';
 import { openExternalUrl } from './platform/linking';
+import { deviceNetworkStatus } from './platform/networkStatus';
 import { createPushRegistrar } from './platform/push';
 import { ExpoReminderScheduler, UnsupportedReminderScheduler } from './platform/scheduler';
 import { createDeviceStore, createTokenStore } from './platform/stores';
@@ -42,6 +43,7 @@ export function createDeviceServices(appVersion: string): AppServices {
     deviceLanguages,
     openUrl: openExternalUrl,
     appVersion,
+    network: deviceNetworkStatus(),
   });
   late.services = services;
   return services;

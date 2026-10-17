@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import * as fx from '@qc/contracts/fixtures';
+import { messages } from '@qc/i18n';
 import { TOKENS_KEY } from '../auth/AuthProvider';
 import { createMemoryStore } from '../storage/storage';
 import { WORKING_SCOPE_KEY, useWorkingScope } from '../scope/WorkingScopeProvider';
@@ -181,10 +182,27 @@ describe('AuthGate and phone-code sign-in', () => {
     expect(await prefsStore.get(WORKING_SCOPE_KEY)).toBe(second);
   });
 
+  it('says the code goes on WhatsApp with SMS as the fallback, and asks for WhatsApp', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    mountApp(backend);
+    await screen.findByTestId('sign-in');
+    const helper = messages.en['admin.signIn.phoneHelper'];
+    expect(helper).toMatch(/WhatsApp/);
+    expect(helper).toMatch(/SMS/);
+    expect(helper).not.toMatch(/text message/);
+    expect(screen.getByText(helper)).toBeTruthy();
+    type('sign-in-phone', '0300 1234567');
+    fireEvent.click(screen.getByTestId('sign-in-send-code'));
+    await screen.findByTestId('sign-in-code');
+    expect(backend.callsTo('auth.requestCode')[0]!.body).toMatchObject({ channel: 'whatsapp' });
+  });
+
   it('shows the sign-in screen in Urdu, right to left', async () => {
     mountApp(createBackend({ me: meFor('venue') }), { locale: 'ur' });
     const root = await screen.findByTestId('sign-in');
     expect(root.closest('[dir]')?.getAttribute('dir')).toBe('rtl');
     expect(screen.getByTestId('sign-in-send-code').textContent).toBe('کوڈ بھیجیں');
+    expect(screen.getByText(messages.ur['admin.signIn.phoneHelper'])).toBeTruthy();
+    expect(messages.ur['admin.signIn.phoneHelper']).toMatch(/واٹس ایپ/);
   });
 });

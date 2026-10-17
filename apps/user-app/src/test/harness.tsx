@@ -7,6 +7,7 @@ import { ERROR_CODES, makeApiError } from '@qc/contracts';
 import { FIXTURE_NOW, fixtures } from '@qc/contracts/fixtures';
 import { semanticColors, textSizeSteps, type TextSizeStep } from '@qc/ui';
 import { TOKENS_KEY } from '../auth/session';
+import type { NetworkStatusSource } from '../core/connectivity';
 import type { ColorPreference } from '../core/preferences';
 import { MemoryStore } from '../core/storage';
 import type { ContentModules } from '../features/content/modules';
@@ -141,6 +142,26 @@ export class FakeRegistrar implements PushRegistrar {
   }
 }
 
+/** A platform connection state the test switches by hand, like the browser's online events. */
+export class FakeNetwork implements NetworkStatusSource {
+  private readonly listeners = new Set<(online: boolean) => void>();
+  constructor(private online = true) {}
+  isOnline = () => this.online;
+  subscribe = (listener: (online: boolean) => void) => {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
+  get listenerCount(): number {
+    return this.listeners.size;
+  }
+  set(online: boolean): void {
+    this.online = online;
+    for (const listener of [...this.listeners]) listener(online);
+  }
+}
+
 export interface TestNavigator extends Navigator {
   calls: { type: 'go' | 'replace' | 'back' | 'tab'; route?: Route }[];
   last(): { type: string; route?: Route } | undefined;
@@ -191,6 +212,8 @@ export interface WorldOptions {
   tokenStore?: MemoryStore;
   tokens?: Tokens;
   platform?: 'web' | 'ios' | 'android';
+  /** The platform's connection state; none by default, so only failed calls count. */
+  network?: NetworkStatusSource;
 }
 
 /** Everything a screen needs, wired to in-memory parts and the mock server. */
@@ -220,6 +243,7 @@ export async function createWorld(options: WorldOptions = {}): Promise<TestWorld
       opened.push(url);
     },
     now: () => new Date(current),
+    ...(options.network ? { network: options.network } : {}),
   });
   await loadServices(services);
   await services.preferences.update({

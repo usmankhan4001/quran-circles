@@ -95,4 +95,4 @@ Nothing else blocking. Items below work around gaps and wait on the change reque
 
 From the WP11 end-to-end run of the admin app's web export against the real API (details in `tests/e2e/FINDINGS.md`): posting an update and changing a session time both work end to end.
 
-- F-04 (low, open): `admin.signIn.phoneHelper` says "We send a code by text message", but the app requests `channel: 'whatsapp'` and staff codes go WhatsApp first.
+- F-04 (low, fixed 2026-10-17): `admin.signIn.phoneHelper` now says "The number your admin invited. We will send a code on WhatsApp, or by SMS if WhatsApp is not available." (owner: staff codes go WhatsApp first, SMS as the fallback; the API falls back on its own). Urdu updated together (draft). The app still requests `channel: 'whatsapp'`. Test in `src/shell/AuthGate.test.tsx` checks the copy (English and Urdu) and the requested channel. The user app's phone step (`signIn.phone.intro`) now says the same.

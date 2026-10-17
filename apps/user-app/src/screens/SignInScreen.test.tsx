@@ -114,6 +114,13 @@ describe('SignInScreen', () => {
     expect(world.nav.last()).toEqual({ type: 'replace', route: { name: 'home' } });
   });
 
+  it('says the code goes on WhatsApp, with SMS as the fallback', () => {
+    expect(en['signIn.phone.intro']).toMatch(/WhatsApp/);
+    expect(en['signIn.phone.intro']).toMatch(/SMS/);
+    expect(ur['signIn.phone.intro']).toMatch(/واٹس ایپ/);
+    expect(ur['signIn.phone.intro']).toMatch(/ایس ایم ایس/);
+  });
+
   it('keeps the phone number left to right inside an Urdu screen', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await openWorld({}, 'ur') });
     expect(view.getByTestId('phone-input').getAttribute('dir')).toBe('ltr');

@@ -1,9 +1,10 @@
-import { fireEvent, within } from '@testing-library/react';
+import { act, fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { fixtures } from '@qc/contracts/fixtures';
 import { CITY_RAWALPINDI, SESSIONS } from '../test/factories';
 import {
+  FakeNetwork,
   MATRIX,
   createWorld,
   directionOf,
@@ -134,6 +135,29 @@ describe('NearbyScreen', () => {
     expect(within(list).getByText(SESSIONS.taraweeh.title.en)).toBeTruthy();
     expect(await second.findByTestId('saved-copy-note')).toBeTruthy();
     expect(await second.findByTestId('offline-banner')).toBeTruthy();
+  });
+
+  it('shows the offline banner over the saved list as soon as the device loses its connection', async () => {
+    const network = new FakeNetwork(true);
+    const world = await createWorld({ network });
+    const view = await renderScreen(<NearbyScreen />, { world });
+    await view.findByTestId('nearby-list');
+    expect(view.queryByTestId('offline-banner')).toBeNull();
+    const callsBefore = world.http.calls.length;
+
+    act(() => network.set(false));
+    expect(await view.findByTestId('offline-banner')).toBeTruthy();
+    expect(view.getByTestId('nearby-list')).toBeTruthy();
+    expect(world.http.calls.length).toBe(callsBefore);
+
+    act(() => network.set(true));
+    await waitFor(() => expect(view.queryByTestId('offline-banner')).toBeNull());
+  });
+
+  it('shows the offline banner on a start with no connection, from the device state alone', async () => {
+    const world = await createWorld({ network: new FakeNetwork(false) });
+    const view = await renderScreen(<NearbyScreen />, { world });
+    expect(await view.findByTestId('offline-banner')).toBeTruthy();
   });
 
   it('searches by name', async () => {
