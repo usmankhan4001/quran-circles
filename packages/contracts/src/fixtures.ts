@@ -1,6 +1,6 @@
 import type { Area, City, Province, Venue } from './schemas/places';
-import type { AdminOccurrence, Occurrence, Session } from './schemas/sessions';
-import type { AdminCircle } from './schemas/admin';
+import type { AdminOccurrence, AdminSession, Occurrence, Session } from './schemas/sessions';
+import type { AdminCircle, VenueCreate } from './schemas/admin';
 import type { ContentPage } from './schemas/config';
 import type { Me } from './schemas/people';
 import type { Update } from './schemas/updates';
@@ -525,6 +525,76 @@ export const sessions: Session[] = sessionRows.map((s) => {
     nextOccurrence: nextOccurrence(fixtureId('session', s.n)),
   };
 });
+
+/** Sessions as staff see them: the public record plus the status of the circle behind it. */
+export const adminSessions: AdminSession[] = sessions.map((s) => ({
+  ...s,
+  circleStatus: s.circle ? (circles.find((c) => c.id === s.circle!.id)?.status ?? null) : null,
+}));
+
+/** When the sample registrants below signed up. */
+export const FIXTURE_REGISTERED_AT = '2027-02-14T10:00:00Z';
+
+/** One sample registrant for each fixture session, for the scoped export in the mock. */
+export const sampleRegistrants = sessions.map((s) => ({
+  sessionId: s.id,
+  venueId: s.venueId,
+  cityId: s.cityId,
+  name: 'Sample Person',
+  phone: '+923000000099',
+  partySize: 2,
+  section: s.section,
+  status: 'confirmed' as const,
+  registeredAt: FIXTURE_REGISTERED_AT,
+}));
+
+/**
+ * Rows that pass the import checks, for tests and the console's template. Ids come from the
+ * fixtures above, so a dry run against the fixture data reports them `created`.
+ */
+export const importExamples = {
+  venues: [
+    {
+      cityId: cityId('multan'),
+      areaId: areaId('multan', 'gulgasht'),
+      name: loc('Sample Masjid Al-Falah', 'نمونہ مسجد الفلاح'),
+      address: loc('Street 9, Gulgasht (sample address)', 'گلی 9، گلگشت (نمونہ پتہ)'),
+      lat: 30.2112,
+      lng: 71.4968,
+      contactPhone: null,
+      facilities: {},
+    },
+  ] satisfies VenueCreate[],
+  coordinators: [
+    {
+      role: 'venue_coordinator' as const,
+      venueId: fixtureId('venue', 7),
+      phone: '+923000000101',
+      displayName: 'Sample Coordinator',
+    },
+  ],
+  sessions: [
+    {
+      kind: 'recurring' as const,
+      venueId: fixtureId('venue', 7),
+      circleId: null,
+      program: 'circles' as const,
+      seasonId: null,
+      title: loc('Thursday Tafsir (sample)', 'جمعرات تفسیر (نمونہ)'),
+      description: null,
+      section: 'family' as const,
+      language: 'ur' as const,
+      localStartTime: '20:00',
+      durationMinutes: 60,
+      registrationEnabled: true,
+      capacity: null,
+      status: 'published' as const,
+      daysOfWeek: [4],
+      startsOn: '2027-03-01',
+      endsOn: null,
+    },
+  ],
+};
 
 export const contentPages: ContentPage[] = [
   {

@@ -71,6 +71,7 @@ const EXPECTED: ReadonlyArray<readonly [table: string, column: string, values: r
     ['devices', 'provider', PUSH_PROVIDERS],
     ['devices', 'locale', LOCALES],
     ['otp_challenges', 'channel', OTP_CHANNELS],
+    ['otp_challenges', 'locale', LOCALES],
     ['coordinator_invites', 'role', ROLES],
     ['coordinator_invites', 'scope_type', SCOPE_TYPES],
     ['coordinator_invites', 'status', INVITE_STATUSES],
@@ -285,7 +286,7 @@ describe('enum parity: the database really accepts the contract values and rejec
         id: request,
         columns: ['section', 'language', 'status'],
       },
-      { table: 'otp_challenges', idColumn: 'id', id: otp, columns: ['channel'] },
+      { table: 'otp_challenges', idColumn: 'id', id: otp, columns: ['channel', 'locale'] },
       { table: 'content_pages', idColumn: 'id', id: page, columns: ['status'] },
       { table: 'circle_progress', idColumn: 'id', id: progress, columns: ['kind'] },
     ];

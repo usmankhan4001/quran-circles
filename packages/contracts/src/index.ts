@@ -13,6 +13,7 @@ export * from './endpoints';
 export * from './client';
 export * from './messages';
 export * from './health';
+export * from './csv';
 export * from './schemas/places';
 export * from './schemas/sessions';
 export * from './schemas/people';

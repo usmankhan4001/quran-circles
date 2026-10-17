@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiClientError, createApiClient } from './client';
-import { fixtureId } from './fixtures';
+import { fixtureId, importExamples } from './fixtures';
 import { createMockHandler } from './mock';
 
 const mock = createMockHandler();
@@ -135,5 +135,96 @@ describe('typed API client', () => {
       code: 'rate_limited',
       retryAfterSeconds: 30,
     });
+  });
+});
+
+describe('typed API client, endpoints added in 1.0.0-rc.2', () => {
+  it('keeps the issues of a validation_failed response on the error', async () => {
+    const forced = createApiClient({
+      baseUrl: 'http://mock.test',
+      fetch: (async (url: string | URL | Request, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        headers.set('x-mock-error', 'not-a-code');
+        return mock(new Request(url as string, { ...init, headers }));
+      }) as typeof fetch,
+    });
+    const rejected = (await forced.config.get().catch((e: unknown) => e)) as ApiClientError;
+    expect(rejected.code).toBe('validation_failed');
+    expect(rejected.issues).toEqual([{ path: 'x-mock-error', code: 'invalid_value' }]);
+    expect(rejected.requestId).toMatch(/^mock-/);
+  });
+
+  it('leaves issues empty for other errors', async () => {
+    const err = (await make(null)
+      .me.get()
+      .catch((e: unknown) => e)) as ApiClientError;
+    expect(err.code).toBe('unauthenticated');
+    expect(err.issues).toBeUndefined();
+  });
+
+  it('shows which field a bulk import row failed on, from the typed result', async () => {
+    const api = make('mock-staff');
+    const result = await api.adminImport.venues({
+      body: { dryRun: true, rows: [{ ...importExamples.venues[0]!, lat: 500 }] },
+    });
+    expect(result.applied).toBe(false);
+    expect(result.rows[0]).toEqual({
+      index: 0,
+      status: 'invalid',
+      issues: [{ path: 'lat', code: 'too_big' }],
+    });
+    const clean = await api.adminImport.sessions({
+      body: { dryRun: true, rows: importExamples.sessions },
+    });
+    expect(clean.counts.created).toBe(1);
+    const invites = await api.adminImport.coordinators({
+      body: { dryRun: false, rows: importExamples.coordinators },
+    });
+    expect(invites.applied).toBe(true);
+  });
+
+  it('exports with filters and reads single records through the typed client', async () => {
+    const api = make('mock-staff');
+    const csv = await api.adminRegistrations.export({
+      query: { venueId: fixtureId('venue', 1), from: '2027-02-01', to: '2027-02-28' },
+    });
+    expect(csv.startsWith('session_id,venue_id,city_id,name,phone')).toBe(true);
+    expect(calls.at(-1)!.url).toContain('venueId=');
+    expect(calls.at(-1)!.url).toContain('from=2027-02-01');
+    const session = await api.adminSessions.get({ params: { sessionId: fixtureId('session', 1) } });
+    expect(session.id).toBe(fixtureId('session', 1));
+    const circle = await api.adminCircles.get({ params: { circleId: fixtureId('circle', 1) } });
+    expect(circle.status).toBe('published');
+    const preview = await api.adminUpdates.preview({
+      body: { scope: { type: 'national' }, title: { en: 'Hi' }, body: { en: 'There' } },
+    });
+    expect(preview.recipients).toBeGreaterThan(0);
+  });
+
+  it('sends a handover invite and archives a circle', async () => {
+    const api = make('mock-staff');
+    const invite = await api.adminRoles.invite({
+      body: {
+        role: 'venue_coordinator',
+        venueId: fixtureId('venue', 1),
+        phone: '+923000000101',
+        replacesAssignmentId: fixtureId('user', 5),
+      },
+    });
+    expect(invite.status).toBeTruthy();
+    const circle = await api.adminCircles.update({
+      params: { circleId: fixtureId('circle', 1) },
+      body: { status: 'archived' },
+    });
+    expect(circle.id).toBeTruthy();
+  });
+
+  it('reads settings with reminder lead times and updates just one program', async () => {
+    const api = make('mock-staff');
+    const settings = await api.adminSettings.get();
+    expect(settings.reminderLeadMinutes.dora).toBeGreaterThanOrEqual(5);
+    await api.adminSettings.update({ body: { reminderLeadMinutes: { circles: 30 } } });
+    const sent = calls.at(-1)!;
+    expect(sent.method).toBe('PATCH');
   });
 });

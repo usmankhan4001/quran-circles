@@ -1,5 +1,14 @@
 import { sql } from 'drizzle-orm';
-import { index, integer, pgTable, text, unique, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import {
+  foreignKey,
+  index,
+  integer,
+  pgTable,
+  text,
+  unique,
+  uniqueIndex,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import {
   ACCOUNT_STATUSES,
   AGE_BANDS,
@@ -32,7 +41,8 @@ export const users = pgTable(
     id: pk(),
     phoneE164: text('phone_e164').notNull().unique(),
     phoneVerifiedAt: tstz('phone_verified_at').notNull(),
-    displayName: text('display_name').notNull(),
+    /** NULL until registration asks for the name. A non-null name is never blank. */
+    displayName: text('display_name'),
     locale: text('locale', { enum: LOCALES }).notNull().default('ur'),
     status: text('status', { enum: ACCOUNT_STATUSES }).notNull().default('active'),
     createdAt: createdAt(),
@@ -42,7 +52,10 @@ export const users = pgTable(
     e164Check('users', 'phone_e164'),
     enumCheck('users', 'locale', LOCALES),
     enumCheck('users', 'status', ACCOUNT_STATUSES),
-    rawCheck('users_display_name_chk', 'char_length(btrim("display_name")) > 0'),
+    rawCheck(
+      'users_display_name_chk',
+      '"display_name" IS NULL OR char_length(btrim("display_name")) > 0',
+    ),
   ],
 );
 
@@ -129,6 +142,8 @@ export const otpChallenges = pgTable(
     phoneE164: text('phone_e164').notNull(),
     channel: text('channel', { enum: OTP_CHANNELS }).notNull(),
     codeHash: text('code_hash').notNull(),
+    /** Language the person was using when they asked for the code; copied to a new account. */
+    locale: text('locale', { enum: LOCALES }).notNull().default('ur'),
     attempts: integer('attempts').notNull().default(0),
     expiresAt: tstz('expires_at').notNull(),
     consumedAt: tstz('consumed_at'),
@@ -140,6 +155,7 @@ export const otpChallenges = pgTable(
     index('otp_challenges_phone_created_idx').on(t.phoneE164, t.createdAt),
     e164Check('otp_challenges', 'phone_e164'),
     enumCheck('otp_challenges', 'channel', OTP_CHANNELS),
+    enumCheck('otp_challenges', 'locale', LOCALES),
     rawCheck('otp_challenges_attempts_chk', '"attempts" >= 0'),
   ],
 );
@@ -153,6 +169,12 @@ export const authSessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     refreshTokenHash: text('refresh_token_hash').notNull().unique(),
+    /**
+     * The hash this session held before its last rotation, kept for a short grace window so a
+     * lost response or a second tab can retry. `rotated_at` says when the rotation happened.
+     */
+    previousRefreshTokenHash: text('previous_refresh_token_hash'),
+    rotatedAt: tstz('rotated_at'),
     deviceLabel: text('device_label'),
     createdAt: createdAt(),
     expiresAt: tstz('expires_at').notNull(),
@@ -173,6 +195,11 @@ export const coordinatorInvites = pgTable(
     cityId: uuid('city_id').references(() => cities.id, { onDelete: 'cascade' }),
     venueId: uuid('venue_id').references(() => venues.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+    /**
+     * Handover: the assignment this invite replaces. When the invite is accepted the new
+     * assignment is created and this one is revoked in the same transaction.
+     */
+    replacesAssignmentId: uuid('replaces_assignment_id'),
     status: text('status', { enum: INVITE_STATUSES }).notNull().default('pending'),
     createdAt: createdAt(),
     expiresAt: tstz('expires_at').notNull(),
@@ -184,6 +211,11 @@ export const coordinatorInvites = pgTable(
       .on(t.phoneE164, t.role, sql`coalesce(${t.venueId}, ${t.cityId}, ${NIL_UUID})`)
       .where(sql`${t.status} = 'pending'`),
     index('coordinator_invites_phone_idx').on(t.phoneE164),
+    foreignKey({
+      name: 'coordinator_invites_replaces_assignment_fk',
+      columns: [t.replacesAssignmentId],
+      foreignColumns: [roleAssignments.id],
+    }).onDelete('set null'),
     e164Check('coordinator_invites', 'phone_e164'),
     enumCheck('coordinator_invites', 'role', ROLES),
     enumCheck('coordinator_invites', 'scope_type', SCOPE_TYPES),

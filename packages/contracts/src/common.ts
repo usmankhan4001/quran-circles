@@ -72,7 +72,12 @@ export const pageOf = <T extends z.ZodType>(item: T) =>
     nextCursor: z.string().nullable(),
   });
 
-/** Query-string booleans arrive as 'true' or 'false'. */
+/**
+ * Query-string booleans arrive as strings. The server accepts `true`/`false` (and Zod's other
+ * spellings: `1`/`0`, `yes`/`no`, `on`/`off`, any case). Clients send exactly `'true'` or
+ * `'false'`; the typed client types these parameters as strings, so pass `'true'`, not `true`.
+ * Every `z.stringbool()` query parameter in the registry follows this rule.
+ */
 export const QueryBool = z.stringbool();
 
 export const Empty = z.object({});

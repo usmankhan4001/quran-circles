@@ -7,3 +7,5 @@ Why: today a refresh swaps the stored hash in place, so a token that no longer m
 Proposed change: add `previous_refresh_token_hash text NULL` and `rotated_at timestamptz NULL` to `auth_sessions`. On refresh, move the current hash into `previous_refresh_token_hash` and set `rotated_at`. Then: a token matching the current hash rotates as now; a token matching the previous hash within 10 seconds of `rotated_at` gets the same new pair again (a retry); a token matching the previous hash after that is reuse and revokes the session; a token matching neither is simply invalid and revokes nothing. The reverse migration drops the columns.
 Affected lanes: contracts (db), auth-scopes.
 Workaround meanwhile: any mismatch revokes the session (implemented and tested). Clients must send one refresh at a time (single-flight) and must not retry a refresh whose response was lost without signing in again.
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.

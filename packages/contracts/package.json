@@ -10,6 +10,7 @@
     "./mock": "./src/mock.ts",
     "./openapi": "./src/openapi.ts",
     "./fixtures": "./src/fixtures.ts",
+    "./bookmarks": "./src/bookmarks.ts",
     "./openapi.json": "./openapi.json"
   },
   "scripts": {

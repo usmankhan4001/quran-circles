@@ -118,6 +118,101 @@ describe('endpoint registry', () => {
   });
 });
 
+describe('endpoints added in 1.0.0-rc.2', () => {
+  const added = {
+    'adminImport.venues': ['POST', '/v1/admin/import/venues', ['venue.create']],
+    'adminImport.coordinators': [
+      'POST',
+      '/v1/admin/import/coordinators',
+      [
+        'role.assign_national_admin',
+        'role.assign_city_coordinator',
+        'role.assign_venue_coordinator',
+      ],
+    ],
+    'adminImport.sessions': ['POST', '/v1/admin/import/sessions', ['session.create']],
+    'adminRegistrations.export': ['GET', '/v1/admin/registrations/export', ['registration.export']],
+    'adminSessions.get': ['GET', '/v1/admin/sessions/{sessionId}', ['session.list_admin']],
+    'adminCircles.get': ['GET', '/v1/admin/circles/{circleId}', ['circle.list_admin']],
+    'adminUpdates.preview': [
+      'POST',
+      '/v1/admin/updates/preview',
+      ['update.post_national', 'update.post_city', 'update.post_venue'],
+    ],
+  } as const;
+
+  for (const [id, [method, path, actions]] of Object.entries(added)) {
+    it(`${id}: ${method} ${path}, guarded by existing actions only`, () => {
+      const d = endpoints[id as keyof typeof endpoints] as EndpointDef;
+      expect(d.method).toBe(method);
+      expect(d.path).toBe(path);
+      expect(d.auth).toBe('staff');
+      // No new power: each endpoint reuses the action of the call it is equivalent to.
+      expect([...d.actions]).toEqual(actions);
+    });
+  }
+
+  it('runs the three imports as safe-to-retry POSTs with a dry-run flag and a 2000-row cap', () => {
+    for (const id of [
+      'adminImport.venues',
+      'adminImport.coordinators',
+      'adminImport.sessions',
+    ] as const) {
+      const d = endpoints[id] as EndpointDef;
+      expect(d.idempotent, id).toBe(true);
+      expect(d.success.status, id).toBe(200);
+      expect(d.description, id).toMatch(/dryRun/);
+      const ok = d.body!.safeParse({ dryRun: true, rows: [{}] });
+      expect(ok.success, id).toBe(true);
+      expect(
+        d.body!.safeParse({ dryRun: true, rows: Array.from({ length: 2001 }, () => ({})) }).success,
+        id,
+      ).toBe(false);
+    }
+    expect(endpoints['adminImport.coordinators'].rateLimit).toBe('messaging');
+  });
+
+  it('returns the scoped export as CSV and keeps the one-session export', () => {
+    expect(endpoints['adminRegistrations.export'].success.contentType).toBe('text/csv');
+    expect(endpoints['registrations.export'].path).toBe(
+      '/v1/admin/sessions/{sessionId}/registrations/export',
+    );
+  });
+
+  it('documents resend as a new invite for the same number, and the handover field', () => {
+    const description = (endpoints['adminRoles.invite'] as EndpointDef).description ?? '';
+    expect(description).toMatch(/resend/i);
+    expect(description).toMatch(/same number/);
+    expect(description).toMatch(/replacesAssignmentId/);
+  });
+
+  it('lets me.delete fail with last_national_admin', () => {
+    expect(errorsFor(endpoints['me.delete'] as EndpointDef)).toContain('last_national_admin');
+  });
+
+  it('allows not_found where the body points at an id that may not exist', () => {
+    for (const id of [
+      'registrations.create',
+      'adminCircles.create',
+      'adminSessions.create',
+      'adminRoles.invite',
+      'adminRoles.assign',
+      'adminUpdates.post',
+      'adminUpdates.preview',
+      'follows.create',
+    ] as const) {
+      const d = endpoints[id] as EndpointDef;
+      expect(d.params, id).toBeUndefined();
+      expect(errorsFor(d), id).toContain('not_found');
+    }
+  });
+
+  it('reads single records for sessions and circles with not_found', () => {
+    expect(errorsFor(endpoints['adminSessions.get'] as EndpointDef)).toContain('not_found');
+    expect(errorsFor(endpoints['adminCircles.get'] as EndpointDef)).toContain('not_found');
+  });
+});
+
 describe('error codes', () => {
   it('has a stable status for each code', () => {
     expect(ERROR_CODES.validation_failed).toBe(400);
@@ -126,6 +221,11 @@ describe('error codes', () => {
     expect(ERROR_CODES.not_found).toBe(404);
     expect(ERROR_CODES.rate_limited).toBe(429);
     expect(ERROR_CODES.internal_error).toBe(500);
+    expect(ERROR_CODES.last_national_admin).toBe(409);
+  });
+
+  it('has 24 codes, none removed or renamed since Gate 1', () => {
+    expect(ERROR_CODE_LIST).toHaveLength(24);
   });
 
   it('has an English and an Urdu message for every code', () => {

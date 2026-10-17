@@ -1,5 +1,6 @@
-import { boolean, integer, jsonb, pgTable, text, unique } from 'drizzle-orm/pg-core';
-import { createdAt, pk, rawCheck, tstz } from './_helpers';
+import { boolean, integer, jsonb, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
+import { createdAt, e164Check, pk, rawCheck, tstz } from './_helpers';
+import { cities } from './places';
 
 /**
  * Ramadan 2026 registrations kept apart from new accounts. Raw values as they were in V1;
@@ -25,15 +26,27 @@ export const legacyRegistrations = pgTable(
   ],
 );
 
-/** V1 WhatsApp subscribers. Marked as needing re-consent; no consent is carried over. */
-export const legacyWhatsappSubscribers = pgTable('legacy_whatsapp_subscribers', {
-  id: pk(),
-  seasonTag: text('season_tag').notNull().default('ramadan-2026'),
-  phoneRaw: text('phone_raw').notNull(),
-  name: text('name'),
-  needsReconsent: boolean('needs_reconsent').notNull().default(true),
-  createdAt: createdAt(),
-});
+/**
+ * V1 WhatsApp subscribers. Marked as needing re-consent; no consent is carried over.
+ * `phone_raw` holds the normalised E.164 number (the name is historical) and is unique per
+ * season. `city_id` is the city they signed up for, when it could be matched.
+ */
+export const legacyWhatsappSubscribers = pgTable(
+  'legacy_whatsapp_subscribers',
+  {
+    id: pk(),
+    seasonTag: text('season_tag').notNull().default('ramadan-2026'),
+    phoneRaw: text('phone_raw').notNull(),
+    name: text('name'),
+    needsReconsent: boolean('needs_reconsent').notNull().default(true),
+    createdAt: createdAt(),
+    cityId: uuid('city_id').references(() => cities.id),
+  },
+  (t) => [
+    unique('legacy_whatsapp_subscribers_season_phone_unique').on(t.seasonTag, t.phoneRaw),
+    e164Check('legacy_whatsapp_subscribers', 'phone_raw'),
+  ],
+);
 
 export type LegacyRegistrationRow = typeof legacyRegistrations.$inferSelect;
 export type NewLegacyRegistrationRow = typeof legacyRegistrations.$inferInsert;

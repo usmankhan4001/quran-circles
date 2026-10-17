@@ -7,3 +7,5 @@ Why: the contract says `Me.displayName` can be null and that registration asks f
 Proposed change: make `display_name` nullable and keep the non-blank check for non-null values (`display_name IS NULL OR char_length(btrim(display_name)) > 0`). The reverse migration needs a backfill, so it should refuse to run while any row is NULL.
 Affected lanes: contracts (db), api-core (anything that reads the name), auth-scopes.
 Workaround meanwhile: new accounts get the one-character placeholder `-` (`UNNAMED_DISPLAY_NAME`, exported from the auth lane). `PersonName` needs two characters or more, so a real name can never equal it, and `loadMe` reports it as `null`. Other code that reads `users.display_name` directly (for example a coordinator's registrant list) should treat `-` as no name until this lands.
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.

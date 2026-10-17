@@ -7,3 +7,5 @@ Why: the handover uses `adminRoles.assign({ role, userId, venueId | cityId, repl
 Proposed change: option (a) is the smaller one. An invite with `replacesAssignmentId` stays pending; when the person accepts, the server creates the new assignment and ends the old one in the same transaction. Option (b) leaks whether a number has an account, so it must be limited to exact matches, rate limited and audited.
 Affected lanes: contracts, auth-scopes, api-core, console.
 Workaround meanwhile: the handover dialog lists current role holders (from `adminRoles.list`) and says, when nobody else is available, to invite the person first and come back after they sign in.
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.

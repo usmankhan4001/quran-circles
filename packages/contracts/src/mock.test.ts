@@ -5,7 +5,8 @@ import { ENDPOINT_IDS, endpoints } from './endpoints';
 import { ApiError, ERROR_CODES } from './errors';
 import { fakeFromSchema, seeded } from './fake';
 import { createMockHandler } from './mock';
-import { fixtureId } from './fixtures';
+import { fixtureId, importExamples } from './fixtures';
+import { REGISTRATION_EXPORT_COLUMNS, type ImportResult } from './schemas/admin';
 
 const mock = createMockHandler();
 const BASE = 'http://mock.test';
@@ -22,6 +23,7 @@ function validRequest(d: EndpointDef, extra: Record<string, string> = {}): Reque
     if (k === 'sessionId') params[k] = fixtureId('session', 1);
     if (k === 'venueId') params[k] = fixtureId('venue', 1);
     if (k === 'occurrenceId') params[k] = fixtureId('occurrence', 101);
+    if (k === 'circleId') params[k] = fixtureId('circle', 1);
     if (k === 'slug') params[k] = 'about';
   }
   const path = d.path.replace(/\{(\w+)\}/g, (_m, n: string) => params[n]!);
@@ -235,5 +237,185 @@ describe('mock server, behaviour with realistic data', () => {
     expect(((await (await get('/v1/me', 'mock-suspended')).json()) as ApiError).error.code).toBe(
       'account_suspended',
     );
+  });
+});
+
+describe('mock server, endpoints added in 1.0.0-rc.2', () => {
+  const staff = (path: string, init: { method?: string; body?: unknown } = {}) =>
+    mock(
+      new Request(`${BASE}${path}`, {
+        method: init.method ?? 'GET',
+        headers: { authorization: 'Bearer mock-staff', 'content-type': 'application/json' },
+        body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      }),
+    );
+  const importRows = async (kind: string, dryRun: boolean, rows: unknown[]) => {
+    const response = await staff(`/v1/admin/import/${kind}`, {
+      method: 'POST',
+      body: { dryRun, rows },
+    });
+    expect(response.status).toBe(200);
+    return (await response.json()) as ImportResult;
+  };
+
+  it('dry-runs a clean venue file: created, nothing applied', async () => {
+    const result = await importRows('venues', true, importExamples.venues);
+    expect(result).toEqual({
+      dryRun: true,
+      applied: false,
+      counts: { created: 1, duplicate: 0, invalid: 0 },
+      rows: [{ index: 0, status: 'created', issues: [] }],
+    });
+  });
+
+  it('applies a clean file only when it is not a dry run', async () => {
+    const result = await importRows('venues', false, importExamples.venues);
+    expect(result.applied).toBe(true);
+    expect(result.counts).toEqual({ created: 1, duplicate: 0, invalid: 0 });
+  });
+
+  it('reports a repeated row and an existing venue as duplicate, not as an error', async () => {
+    const existing = {
+      ...importExamples.venues[0]!,
+      cityId: fixtureId('city', 1),
+      areaId: fixtureId('area', 1),
+      name: { en: 'sample masjid al-noor', ur: null },
+    };
+    const result = await importRows('venues', false, [
+      importExamples.venues[0],
+      importExamples.venues[0],
+      existing,
+    ]);
+    expect(result.rows.map((r) => r.status)).toEqual(['created', 'duplicate', 'duplicate']);
+    expect(result.applied).toBe(true);
+  });
+
+  it('applies nothing when any row is invalid, and says where, by row index', async () => {
+    const result = await importRows('venues', false, [
+      importExamples.venues[0],
+      { ...importExamples.venues[0]!, lat: 500 },
+      { ...importExamples.venues[0]!, cityId: fixtureId('city', 99), name: { en: 'Other' } },
+      { ...importExamples.venues[0]!, areaId: fixtureId('area', 1), name: { en: 'Elsewhere' } },
+      { nonsense: true },
+    ]);
+    expect(result.applied).toBe(false);
+    expect(result.counts).toEqual({ created: 1, duplicate: 0, invalid: 4 });
+    expect(result.rows.map((r) => `${r.index}:${r.status}`)).toEqual([
+      '0:created',
+      '1:invalid',
+      '2:invalid',
+      '3:invalid',
+      '4:invalid',
+    ]);
+    expect(result.rows[1]!.issues.map((i) => i.path)).toEqual(['lat']);
+    expect(result.rows[2]!.issues).toContainEqual({ path: 'cityId', code: 'invalid_reference' });
+    expect(result.rows[3]!.issues).toContainEqual({ path: 'areaId', code: 'area_not_in_city' });
+    expect(JSON.stringify(result)).not.toContain('Elsewhere');
+  });
+
+  it('checks coordinators and sessions against fixture ids', async () => {
+    const coordinators = await importRows('coordinators', true, [
+      importExamples.coordinators[0],
+      importExamples.coordinators[0],
+      { ...importExamples.coordinators[0]!, venueId: fixtureId('venue', 99) },
+    ]);
+    expect(coordinators.rows.map((r) => r.status)).toEqual(['created', 'duplicate', 'invalid']);
+    const sessions = await importRows('sessions', true, [
+      importExamples.sessions[0],
+      { ...importExamples.sessions[0]!, venueId: fixtureId('venue', 99) },
+      { ...importExamples.sessions[0]!, circleId: fixtureId('circle', 99) },
+    ]);
+    expect(sessions.rows.map((r) => r.status)).toEqual(['created', 'invalid', 'invalid']);
+    expect(sessions.rows[1]!.issues).toEqual([{ path: 'venueId', code: 'invalid_reference' }]);
+    expect(sessions.rows[2]!.issues).toEqual([{ path: 'circleId', code: 'invalid_reference' }]);
+  });
+
+  it('refuses more than 2000 rows and an empty file as validation_failed', async () => {
+    for (const rows of [[], Array.from({ length: 2001 }, () => ({}))]) {
+      const response = await staff('/v1/admin/import/venues', {
+        method: 'POST',
+        body: { dryRun: true, rows },
+      });
+      expect(response.status).toBe(400);
+      expect(((await response.json()) as ApiError).error.code).toBe('validation_failed');
+    }
+  });
+
+  it('exports registrations as CSV with the fixed header, filtered by venue, city and date', async () => {
+    const all = await (await staff('/v1/admin/registrations/export')).text();
+    const [header, ...lines] = all.trimEnd().split('\r\n');
+    expect(header).toBe(REGISTRATION_EXPORT_COLUMNS.join(','));
+    expect(lines.length).toBeGreaterThan(2);
+    const venue = fixtureId('venue', 1);
+    const one = (await (await staff(`/v1/admin/registrations/export?venueId=${venue}`)).text())
+      .trimEnd()
+      .split('\r\n');
+    expect(one.length).toBeGreaterThan(1);
+    expect(one.slice(1).every((l) => l.includes(venue))).toBe(true);
+    const none = await (
+      await staff(`/v1/admin/registrations/export?from=2027-03-01&to=2027-03-31`)
+    ).text();
+    expect(none).toBe(`${REGISTRATION_EXPORT_COLUMNS.join(',')}\r\n`);
+    const inRange = await (
+      await staff(`/v1/admin/registrations/export?from=2027-02-14&to=2027-02-14`)
+    ).text();
+    expect(inRange.trimEnd().split('\r\n').length).toBe(lines.length + 1);
+  });
+
+  it('refuses a backwards date range with an issue on from', async () => {
+    const response = await staff('/v1/admin/registrations/export?from=2027-03-01&to=2027-02-01');
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as ApiError).error.issues).toEqual([
+      { path: 'from', code: 'invalid_range' },
+    ]);
+  });
+
+  it('reads one session and one circle, and says not_found for unknown ids', async () => {
+    const session = await staff(`/v1/admin/sessions/${fixtureId('session', 4)}`);
+    expect(session.status).toBe(200);
+    expect(await session.json()).toMatchObject({
+      id: fixtureId('session', 4),
+      circleStatus: 'published',
+    });
+    const circle = await staff(`/v1/admin/circles/${fixtureId('circle', 2)}`);
+    expect(((await circle.json()) as { status: string }).status).toBe('pending_approval');
+    for (const path of [
+      `/v1/admin/sessions/${fixtureId('session', 99)}`,
+      `/v1/admin/circles/${fixtureId('circle', 99)}`,
+    ]) {
+      const missing = await staff(path);
+      expect(missing.status).toBe(404);
+      expect(((await missing.json()) as ApiError).error.code).toBe('not_found');
+    }
+  });
+
+  it('counts the people an update would reach, by scope', async () => {
+    const preview = async (scope: unknown) =>
+      (await (
+        await staff('/v1/admin/updates/preview', {
+          method: 'POST',
+          body: { scope, title: { en: 'Hello' }, body: { en: 'World' } },
+        })
+      ).json()) as { recipients: number };
+    const national = await preview({ type: 'national' });
+    const city = await preview({ type: 'city', cityId: fixtureId('city', 1) });
+    const venue = await preview({ type: 'venue', venueId: fixtureId('venue', 1) });
+    expect(national.recipients).toBeGreaterThan(city.recipients);
+    expect(city.recipients).toBeGreaterThan(venue.recipients);
+  });
+
+  it('keeps every new endpoint behind a staff token', async () => {
+    const attendee = (path: string, method = 'GET', body?: unknown) =>
+      mock(
+        new Request(`${BASE}${path}`, {
+          method,
+          headers: { authorization: 'Bearer mock-user', 'content-type': 'application/json' },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        }),
+      );
+    expect((await attendee('/v1/admin/registrations/export')).status).toBe(403);
+    expect(
+      (await attendee('/v1/admin/import/venues', 'POST', { dryRun: true, rows: [{}] })).status,
+    ).toBe(403);
   });
 });

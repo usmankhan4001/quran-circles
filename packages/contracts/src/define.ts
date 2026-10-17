@@ -14,6 +14,8 @@ export interface EndpointDef {
   /** OpenAPI style, for example `/v1/venues/{venueId}`. */
   path: string;
   summary: string;
+  /** Longer explanation for the OpenAPI document: rules, limits and file formats. */
+  description?: string;
   tag: string;
   /** public: no token. user: any signed-in person. staff: needs a role, checked per action. */
   auth: 'public' | 'user' | 'staff';

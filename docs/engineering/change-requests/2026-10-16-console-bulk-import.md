@@ -7,3 +7,5 @@ Why: the console cannot offer a safe import without it. Today the console parses
 Proposed change: add the three endpoints (or one endpoint with a `kind` discriminator). Server checks scope with the same `can(...)` rules as the single create calls, treats an existing venue (same city and name), session or pending invite as `duplicate` (skipped, not an error) so a retry is safe, writes one audit row per import with the row counts and no cell contents, and applies all or nothing. Idempotency-Key supported.
 Affected lanes: contracts, api-core (handlers), auth-scopes (scope checks), console (switches `import/apply.ts` to the bulk call and keeps the client-side check as a fast first pass).
 Workaround meanwhile: client-side dry run, sequential create calls, stop at the first failure, duplicates skipped on re-check. Documented in `apps/console/src/import/apply.ts`.
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.

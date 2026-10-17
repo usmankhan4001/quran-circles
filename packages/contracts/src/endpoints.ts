@@ -72,11 +72,13 @@ import {
   PostUpdateBody,
   PostedUpdate,
   UnreadCountResponse,
+  UpdatePreview,
 } from './schemas/updates';
 import {
   AdminCircle,
   AdminCirclesQuery,
   AdminCirclesResponse,
+  AdminRegistrationsExportQuery,
   AdminVenuesQuery,
   Attendance,
   AttendancePut,
@@ -86,9 +88,13 @@ import {
   CircleCreate,
   CircleDecisionBody,
   CircleUpdate,
+  CoordinatorImportBody,
+  ImportResult,
   Invite,
   InviteBody,
   InvitesResponse,
+  REGISTRATION_EXPORT_COLUMNS,
+  REGISTRATION_EXPORT_MAX_ROWS,
   MessageTemplatesResponse,
   OccurrenceUpdate,
   OccurrenceView,
@@ -97,11 +103,13 @@ import {
   ScheduleChangeBody,
   ScheduleChangeResponse,
   SessionCreate,
+  SessionImportBody,
   SessionUpdate,
   Settings,
   SettingsUpdate,
   StaffRoleAssignment,
   VenueCreate,
+  VenueImportBody,
   VenueUpdate,
 } from './schemas/admin';
 
@@ -233,6 +241,7 @@ export const endpoints = {
     actions: ['me.delete'],
     body: DeleteAccountBody,
     success: noContent,
+    errors: ['last_national_admin'],
   }),
   'consents.list': endpoint({
     id: 'consents.list',
@@ -275,7 +284,7 @@ export const endpoints = {
     actions: ['follow.manage'],
     body: FollowCreate,
     success: json(201, Follow),
-    errors: ['conflict'],
+    errors: ['conflict', 'not_found'],
   }),
   'follows.update': endpoint({
     id: 'follows.update',
@@ -559,6 +568,7 @@ export const endpoints = {
     body: RegistrationCreate,
     success: json(201, Registration),
     errors: [
+      'not_found',
       'already_registered',
       'registration_closed',
       'session_full',
@@ -614,6 +624,24 @@ export const endpoints = {
     params: id('sessionId'),
     success: { status: 200, schema: z.string(), contentType: 'text/csv' },
   }),
+  'adminRegistrations.export': endpoint({
+    id: 'adminRegistrations.export',
+    method: 'GET',
+    path: '/v1/admin/registrations/export',
+    summary: 'CSV export of registrants for a city or venue, with dates, in one call',
+    description:
+      'One audited export for what the person asked for, instead of one per session. Filters: `cityId`, `venueId`, and `from` / `to` (inclusive local dates, Pakistan time, of the registration). ' +
+      'The caller must hold `registration.export` for every venue the file covers; a filter outside their scope is `forbidden`. With no filter a coordinator gets their whole scope. ' +
+      `More than ${REGISTRATION_EXPORT_MAX_ROWS} rows is refused with validation_failed and the issue code \`too_many_rows\`: narrow the filters. ` +
+      `The file is UTF-8 without a byte order mark (the console adds one when it saves) and its header row is exactly: ${REGISTRATION_EXPORT_COLUMNS.join(',')}. ` +
+      "Cells that start with '=', '+', '-', '@' or a tab in names are prefixed with an apostrophe so spreadsheets do not run them as formulas. " +
+      'One audit row records the filters and the row count, never the cells. `registrations.export` (one session) is unchanged.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['registration.export'],
+    query: AdminRegistrationsExportQuery,
+    success: { status: 200, schema: z.string(), contentType: 'text/csv' },
+  }),
 
   // Updates feed
   'updates.feed': endpoint({
@@ -661,8 +689,24 @@ export const endpoints = {
     actions: ['update.post_national', 'update.post_city', 'update.post_venue'],
     body: PostUpdateBody,
     success: json(201, PostedUpdate),
+    errors: ['not_found'],
     rateLimit: 'messaging',
     idempotent: false,
+  }),
+  'adminUpdates.preview': endpoint({
+    id: 'adminUpdates.preview',
+    method: 'POST',
+    path: '/v1/admin/updates/preview',
+    summary: 'How many people an update would reach, before it is sent',
+    description:
+      'Takes the same body as `adminUpdates.post` and the same scope check, sends nothing and stores nothing. `recipients` is the number of people the update would reach now; it can differ a little from the count on the posted update if people follow or register in between.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['update.post_national', 'update.post_city', 'update.post_venue'],
+    body: PostUpdateBody,
+    success: json(200, UpdatePreview),
+    errors: ['not_found'],
+    idempotent: true,
   }),
   'adminUpdates.list': endpoint({
     id: 'adminUpdates.list',
@@ -692,6 +736,9 @@ export const endpoints = {
     method: 'POST',
     path: '/v1/admin/invites',
     summary: 'Invite a coordinator by phone number. Checked by the role in the body',
+    description:
+      'Sends the invitation message and keeps a pending invite. To resend, send a new invite for the same number, role and place: it replaces the pending one with a fresh expiry and sends the message again (there is no separate resend call). ' +
+      'To hand a city or venue to someone with no account yet, add `replacesAssignmentId`: the invite stays pending and, when it is accepted, the new assignment is created and the replaced one is revoked in one transaction.',
     tag: 'Admin',
     auth: 'staff',
     actions: [
@@ -701,7 +748,7 @@ export const endpoints = {
     ],
     body: InviteBody,
     success: json(201, Invite),
-    errors: ['role_already_assigned', 'conflict'],
+    errors: ['role_already_assigned', 'conflict', 'not_found'],
     rateLimit: 'messaging',
     idempotent: false,
   }),
@@ -752,7 +799,7 @@ export const endpoints = {
     ],
     body: AssignRoleBody,
     success: json(201, StaffRoleAssignment),
-    errors: ['role_already_assigned'],
+    errors: ['role_already_assigned', 'not_found'],
     idempotent: false,
   }),
   'adminRoles.revoke': endpoint({
@@ -844,7 +891,21 @@ export const endpoints = {
     actions: ['circle.create'],
     body: CircleCreate,
     success: json(201, AdminCircle),
+    errors: ['not_found'],
     idempotent: false,
+  }),
+  'adminCircles.get': endpoint({
+    id: 'adminCircles.get',
+    method: 'GET',
+    path: '/v1/admin/circles/{circleId}',
+    summary: 'One circle in scope, including pending approval',
+    description:
+      "The same record `adminCircles.list` returns, scoped the same way. A circle outside the caller's scope is reported as not_found, so its existence is not revealed.",
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['circle.list_admin'],
+    params: id('circleId'),
+    success: json(200, AdminCircle),
   }),
   'adminCircles.update': endpoint({
     id: 'adminCircles.update',
@@ -896,7 +957,21 @@ export const endpoints = {
     actions: ['session.create'],
     body: SessionCreate,
     success: json(201, AdminSession),
+    errors: ['not_found'],
     idempotent: false,
+  }),
+  'adminSessions.get': endpoint({
+    id: 'adminSessions.get',
+    method: 'GET',
+    path: '/v1/admin/sessions/{sessionId}',
+    summary: 'One session in scope, including drafts',
+    description:
+      "The same record `adminSessions.list` returns, scoped the same way. A session outside the caller's scope is reported as not_found, so its existence is not revealed.",
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['session.list_admin'],
+    params: id('sessionId'),
+    success: json(200, AdminSession),
   }),
   'adminSessions.update': endpoint({
     id: 'adminSessions.update',
@@ -974,6 +1049,64 @@ export const endpoints = {
     params: id('occurrenceId'),
     body: AttendancePut,
     success: json(200, Attendance),
+  }),
+
+  // Admin: bulk import
+  'adminImport.venues': endpoint({
+    id: 'adminImport.venues',
+    method: 'POST',
+    path: '/v1/admin/import/venues',
+    summary: 'Import venues from a file: dry run, or all or nothing',
+    description:
+      "Rows are `VenueCreate`. Needs `venue.create` for each row's city; a row outside the caller's scope is invalid with the issue code `forbidden`. " +
+      'A venue with the same city and English name that already exists, or an earlier row with the same city and name in the same request, is `duplicate` (skipped, not an error). ' +
+      'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all rows are written in one transaction, or none if any row is invalid (`applied` says which). ' +
+      'One audit row records the row counts, never cell contents. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['venue.create'],
+    body: VenueImportBody,
+    success: json(200, ImportResult),
+    idempotent: true,
+  }),
+  'adminImport.coordinators': endpoint({
+    id: 'adminImport.coordinators',
+    method: 'POST',
+    path: '/v1/admin/import/coordinators',
+    summary: 'Invite many coordinators from a file: dry run, or all or nothing',
+    description:
+      'Rows are `InviteBody`. Each row is checked with the action for its role (`role.assign_*`), exactly as `adminRoles.invite`; a row the caller may not invite is invalid with the issue code `forbidden`. ' +
+      'A pending invite for the same number, role and place, or a person who already holds that role there, is `duplicate` (skipped, not an error). ' +
+      'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all invites are created in one transaction, or none if any row is invalid, and the invitation messages are queued only after it commits. ' +
+      'One audit row records the row counts, never phone numbers. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: [
+      'role.assign_national_admin',
+      'role.assign_city_coordinator',
+      'role.assign_venue_coordinator',
+    ],
+    body: CoordinatorImportBody,
+    success: json(200, ImportResult),
+    rateLimit: 'messaging',
+    idempotent: true,
+  }),
+  'adminImport.sessions': endpoint({
+    id: 'adminImport.sessions',
+    method: 'POST',
+    path: '/v1/admin/import/sessions',
+    summary: 'Import sessions from a file: dry run, or all or nothing',
+    description:
+      "Rows are `SessionCreate`. Needs `session.create` for each row's venue; a row outside the caller's scope is invalid with the issue code `forbidden`. " +
+      'A session at the same venue with the same English title, kind, start time and days (or date), or an earlier identical row in the same request, is `duplicate` (skipped, not an error). ' +
+      'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all sessions and their occurrences are written in one transaction, or none if any row is invalid. ' +
+      'One audit row records the row counts, never cell contents. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
+    tag: 'Admin',
+    auth: 'staff',
+    actions: ['session.create'],
+    body: SessionImportBody,
+    success: json(200, ImportResult),
+    idempotent: true,
   }),
 
   // Admin: oversight

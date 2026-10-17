@@ -68,6 +68,10 @@ export const PostedUpdate = Update.omit({ isRead: true }).extend({
   authorName: z.string().nullable(),
   recipients: z.number().int().min(0),
 });
+/** How many people an update would reach, before it is sent. */
+export const UpdatePreview = z.object({ recipients: z.number().int().min(0) });
+export type UpdatePreview = z.infer<typeof UpdatePreview>;
+
 export const AdminUpdatesQuery = PageQuery.extend({
   cityId: Uuid.optional(),
   venueId: Uuid.optional(),

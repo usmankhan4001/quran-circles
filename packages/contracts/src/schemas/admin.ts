@@ -28,6 +28,7 @@ import {
   SessionStatus,
   TemplateStatus,
 } from '../enums';
+import { issuesFromZod, ValidationIssue } from '../errors';
 import { Portion, Occurrence, AdminOccurrence, Session } from './sessions';
 import { VenueFacilities } from './places';
 
@@ -39,16 +40,28 @@ const roleTargetShapes = {
   venue_coordinator: z.object({ role: z.literal('venue_coordinator'), venueId: Uuid }),
 };
 
-/** Invite a person who may not have an account yet. Coordinators sign in with a phone code. */
+/**
+ * Invite a person who may not have an account yet. Coordinators sign in with a phone code.
+ *
+ * Handover: pass `replacesAssignmentId` (city or venue coordinator) to hand a place over to
+ * someone with no account yet. The invite stays pending; when the person accepts it, the new
+ * assignment is created and the replaced one is revoked in the same transaction. The caller
+ * needs the right to assign the role at that place and to revoke the replaced assignment.
+ *
+ * Resend: there is no separate "resend" call. Sending a new invite for the same number, role
+ * and place replaces the pending one (new expiry) and sends the message again.
+ */
 export const InviteBody = z.discriminatedUnion('role', [
   roleTargetShapes.national_admin.extend({ phone: PhoneE164, displayName: PersonName.optional() }),
   roleTargetShapes.city_coordinator.extend({
     phone: PhoneE164,
     displayName: PersonName.optional(),
+    replacesAssignmentId: Uuid.optional(),
   }),
   roleTargetShapes.venue_coordinator.extend({
     phone: PhoneE164,
     displayName: PersonName.optional(),
+    replacesAssignmentId: Uuid.optional(),
   }),
 ]);
 export type InviteBody = z.infer<typeof InviteBody>;
@@ -94,6 +107,7 @@ export const StaffRoleAssignment = z.object({
   createdAt: InstantUtc,
   revokedAt: InstantUtc.nullable(),
 });
+export type StaffRoleAssignment = z.infer<typeof StaffRoleAssignment>;
 export const RoleAssignmentsQuery = PageQuery.extend({
   cityId: Uuid.optional(),
   venueId: Uuid.optional(),
@@ -166,10 +180,19 @@ export const CircleUpdate = z.object({
   language: Locale.optional(),
   section: Section.optional(),
   onlineLink: z.url().nullable().optional(),
+  /**
+   * Archive a published circle, or publish an archived one again. Approving a pending circle
+   * stays `adminCircles.decide`; this cannot move a circle in or out of pending, rejected or draft.
+   */
+  status: z.enum(['published', 'archived']).optional(),
 });
+/**
+ * Approve or reject a pending circle. There is deliberately no free-text note: personal text
+ * must not reach the audit log, and there is no column for it. An old client that still sends
+ * `note` is not refused; the field is dropped.
+ */
 export const CircleDecisionBody = z.object({
   decision: z.enum(['approve', 'reject']),
-  note: z.string().trim().max(500).optional(),
 });
 export const AdminCirclesQuery = PageQuery.extend({
   cityId: Uuid.optional(),
@@ -265,6 +288,7 @@ export const Attendance = z.object({
   entries: z.array(AttendanceEntry),
   markedAt: InstantUtc.nullable(),
 });
+export type Attendance = z.infer<typeof Attendance>;
 
 // Audit, templates, settings
 
@@ -279,6 +303,7 @@ export const AuditEntry = z.object({
   venueId: Uuid.nullable(),
   createdAt: InstantUtc,
 });
+export type AuditEntry = z.infer<typeof AuditEntry>;
 export const AuditQuery = PageQuery.extend({
   cityId: Uuid.optional(),
   venueId: Uuid.optional(),
@@ -299,14 +324,178 @@ export const MessageTemplateView = z.object({
 });
 export const MessageTemplatesResponse = z.object({ items: z.array(MessageTemplateView) });
 
+/** Whole minutes before a session's start that its reminder is sent. */
+const ReminderLead = z.number().int().min(5).max(1440);
+export const REMINDER_LEAD_DEFAULT_MINUTES = 60;
+
+/** Reminder lead time per program. Stored under the settings key `reminder_lead_minutes`. */
+export const ReminderLeadMinutes = z.object({ dora: ReminderLead, circles: ReminderLead });
+export type ReminderLeadMinutes = z.infer<typeof ReminderLeadMinutes>;
+
 export const Settings = z.object({
   /** Days to add to the calculated Hijri date. Pakistan starts months by moon sighting. */
   hijriOffsetDays: z.number().int().min(-2).max(2),
   seasonMode: SeasonMode,
+  /** Most WhatsApp messages one person gets in a day. Settings key `whatsapp_daily_cap_per_person`. */
   whatsappDailyCapPerPerson: z.number().int().min(0).max(5),
   circleRequestAlertThreshold: z.number().int().min(1).max(1000),
+  /**
+   * How long before a session its reminder goes out, per program (5 to 1440 minutes, 60 each by
+   * default). A response from a server that predates this field reads as the default.
+   */
+  reminderLeadMinutes: ReminderLeadMinutes.prefault({
+    dora: REMINDER_LEAD_DEFAULT_MINUTES,
+    circles: REMINDER_LEAD_DEFAULT_MINUTES,
+  }),
 });
 export type Settings = z.infer<typeof Settings>;
-export const SettingsUpdate = Settings.partial();
+/** Send only what changes. `reminderLeadMinutes` may carry just one program. */
+export const SettingsUpdate = Settings.omit({ reminderLeadMinutes: true })
+  .extend({ reminderLeadMinutes: ReminderLeadMinutes.partial() })
+  .partial();
+export type SettingsUpdate = z.infer<typeof SettingsUpdate>;
+
+// Bulk import
+
+/** Rows allowed in one import call. */
+export const IMPORT_MAX_ROWS = 2000;
+
+export const IMPORT_KINDS = ['venues', 'coordinators', 'sessions'] as const;
+export const ImportKind = z.enum(IMPORT_KINDS);
+export type ImportKind = z.infer<typeof ImportKind>;
+
+/** The schema each row of an import is checked against: the same one as the single create call. */
+export const IMPORT_ROW_SCHEMAS = {
+  venues: VenueCreate,
+  coordinators: InviteBody,
+  sessions: SessionCreate,
+} as const;
+
+/**
+ * Issue codes the server adds on top of Zod's own (`invalid_type`, `too_small`, ...). `path` is
+ * the field inside the row, for example `cityId` or `name.en`.
+ * - `invalid_reference`: an id in the row points at nothing (city, area, venue, circle, season,
+ *   or the assignment to replace).
+ * - `area_not_in_city`: the area belongs to another city.
+ * - `forbidden`: the caller may not do this for that city, venue or role.
+ */
+export const IMPORT_SERVER_ISSUE_CODES = [
+  'invalid_reference',
+  'area_not_in_city',
+  'forbidden',
+] as const;
+
+/**
+ * A row is checked one by one on the server, so one bad row never rejects the whole request.
+ * The type is the input of the matching create schema; the runtime check only needs an object.
+ */
+const importRows = <S extends z.ZodType>(kind: ImportKind) =>
+  z
+    .array(
+      z.custom<z.input<S>>(
+        (value) => typeof value === 'object' && value !== null && !Array.isArray(value),
+        'Each row must be an object',
+      ),
+    )
+    .min(1)
+    .max(IMPORT_MAX_ROWS)
+    .meta({
+      description: `Up to ${IMPORT_MAX_ROWS} rows. Each row has the shape of the single create call for ${kind}, and is validated one by one; a malformed row is reported as invalid in the result.`,
+    });
+
+const importBody = <S extends z.ZodType>(kind: ImportKind) =>
+  z.object({
+    /** True checks every row and changes nothing. False applies the import if no row is invalid. */
+    dryRun: z.boolean(),
+    rows: importRows<S>(kind),
+  });
+
+export const VenueImportBody = importBody<typeof VenueCreate>('venues');
+export const CoordinatorImportBody = importBody<typeof InviteBody>('coordinators');
+export const SessionImportBody = importBody<typeof SessionCreate>('sessions');
+export type VenueImportBody = z.infer<typeof VenueImportBody>;
+export type CoordinatorImportBody = z.infer<typeof CoordinatorImportBody>;
+export type SessionImportBody = z.infer<typeof SessionImportBody>;
+
+export const IMPORT_ROW_STATUSES = ['created', 'duplicate', 'invalid'] as const;
+export const ImportRowStatus = z.enum(IMPORT_ROW_STATUSES);
+
+export const ImportRowResult = z.object({
+  /** Position in the request's `rows`, from 0. */
+  index: z.number().int().min(0),
+  /**
+   * created: added (or would be added, on a dry run). duplicate: already there or repeated
+   * earlier in the same request; skipped, not an error. invalid: see `issues`.
+   */
+  status: ImportRowStatus,
+  /** Empty unless the row is invalid. Never contains the cell values. */
+  issues: z.array(ValidationIssue),
+});
+export type ImportRowResult = z.infer<typeof ImportRowResult>;
+
+export const ImportResult = z.object({
+  dryRun: z.boolean(),
+  /**
+   * True only when the rows were written: not a dry run, and no row invalid. One invalid row
+   * means nothing is written (all or nothing); fix the file and send it again.
+   */
+  applied: z.boolean(),
+  counts: z.object({
+    created: z.number().int().min(0),
+    duplicate: z.number().int().min(0),
+    invalid: z.number().int().min(0),
+  }),
+  rows: z.array(ImportRowResult),
+});
+export type ImportResult = z.infer<typeof ImportResult>;
+
+export type ImportRowCheck<K extends ImportKind> =
+  | { index: number; ok: true; value: z.output<(typeof IMPORT_ROW_SCHEMAS)[K]> }
+  | { index: number; ok: false; issues: ValidationIssue[] };
+
+/**
+ * Checks each row against its create schema. The API uses this for the shape of every row, then
+ * adds the checks that need the database; the console uses it for a fast first pass.
+ */
+export function checkImportRows<K extends ImportKind>(
+  kind: K,
+  rows: readonly unknown[],
+): ImportRowCheck<K>[] {
+  const schema = IMPORT_ROW_SCHEMAS[kind] as z.ZodType;
+  return rows.map((row, index) => {
+    const parsed = schema.safeParse(row);
+    return parsed.success
+      ? ({ index, ok: true, value: parsed.data } as ImportRowCheck<K>)
+      : { index, ok: false, issues: issuesFromZod(parsed.error) };
+  });
+}
+
+// Scoped registrations export
+
+/** Most registration rows one scoped export may return. Over this the call is refused. */
+export const REGISTRATION_EXPORT_MAX_ROWS = 50_000;
+
+export const AdminRegistrationsExportQuery = z.object({
+  cityId: Uuid.optional(),
+  venueId: Uuid.optional(),
+  /** First day to include, a local date (Pakistan time) of the registration. */
+  from: LocalDate.optional(),
+  /** Last day to include, inclusive. */
+  to: LocalDate.optional(),
+});
+export type AdminRegistrationsExportQuery = z.infer<typeof AdminRegistrationsExportQuery>;
+
+/** The header row of the scoped export, in order. */
+export const REGISTRATION_EXPORT_COLUMNS = [
+  'session_id',
+  'venue_id',
+  'city_id',
+  'name',
+  'phone',
+  'party_size',
+  'section',
+  'status',
+  'registered_at',
+] as const;
 
 export { Occurrence };

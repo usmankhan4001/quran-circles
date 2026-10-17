@@ -45,6 +45,10 @@ export const errorStatus = (code: ErrorCode): number => ERROR_CODES[code];
 /** The i18n key for an error code's user-facing message. */
 export const errorMessageKey = (code: ErrorCode): `errors.${ErrorCode}` => `errors.${code}`;
 
+/** One thing wrong with input: where, and a short machine code. Never the input itself. */
+export const ValidationIssue = z.object({ path: z.string(), code: z.string() });
+export type ValidationIssue = z.infer<typeof ValidationIssue>;
+
 /** Every error response has this shape. `requestId` is for support; it carries no personal data. */
 export const ApiError = z.object({
   error: z.object({
@@ -52,7 +56,7 @@ export const ApiError = z.object({
     messageKey: z.string(),
     requestId: z.string(),
     /** Present for validation_failed: where the input was wrong, never the input itself. */
-    issues: z.array(z.object({ path: z.string(), code: z.string() })).optional(),
+    issues: z.array(ValidationIssue).optional(),
     /** Present for rate_limited and otp_too_many_attempts. */
     retryAfterSeconds: z.number().int().positive().optional(),
   }),
@@ -66,6 +70,10 @@ export const makeApiError = (
 ): ApiError => ({
   error: { code, messageKey: errorMessageKey(code), requestId, ...extra },
 });
+
+/** Turns a Zod error into issues, at most 20, for `validation_failed` and per-row import results. */
+export const issuesFromZod = (error: z.ZodError): ValidationIssue[] =>
+  error.issues.map((i) => ({ path: i.path.join('.'), code: i.code })).slice(0, 20);
 
 /** Errors every endpoint can return, so endpoints list only their own domain errors. */
 export const COMMON_ERRORS = [

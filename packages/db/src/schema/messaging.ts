@@ -133,6 +133,10 @@ export const messageOutbox = pgTable(
     lastErrorCode: text('last_error_code'),
     costCategory: text('cost_category', { enum: COST_CATEGORIES }).notNull(),
     cityId: uuid('city_id').references(() => cities.id),
+    /** The venue the message is about, for venue-scoped consent. NULL for city or national sends. */
+    venueId: uuid('venue_id').references(() => venues.id, { onDelete: 'set null' }),
+    /** The id the provider (Meta, FCM, the SMS gateway) returned, for delivery receipts. */
+    providerMessageId: text('provider_message_id'),
     sentBy: uuid('sent_by').references(() => users.id, { onDelete: 'set null' }),
     updateId: uuid('update_id').references(() => updates.id, { onDelete: 'set null' }),
     createdAt: createdAt(),
@@ -143,6 +147,9 @@ export const messageOutbox = pgTable(
     index('message_outbox_status_next_idx').on(t.status, t.nextAttemptAt),
     index('message_outbox_recipient_created_idx').on(t.recipientUserId, t.createdAt),
     index('message_outbox_city_created_idx').on(t.cityId, t.createdAt),
+    index('message_outbox_provider_message_id_idx')
+      .on(t.providerMessageId)
+      .where(sql`${t.providerMessageId} IS NOT NULL`),
     enumCheck('message_outbox', 'channel', MESSAGE_CHANNELS),
     enumCheck('message_outbox', 'locale', LOCALES),
     enumCheck('message_outbox', 'status', OUTBOX_STATUSES),

@@ -1,10 +1,21 @@
-import { ERROR_CODES, makeApiError, type ErrorCode } from './errors';
+import { ERROR_CODES, issuesFromZod, makeApiError, type ErrorCode } from './errors';
 import { endpoints } from './endpoints';
 import type { EndpointDef } from './define';
 import { fakeFromSchema, seeded } from './fake';
 import * as fx from './fixtures';
 import { z } from 'zod';
 import type { Session } from './schemas/sessions';
+import {
+  REGISTRATION_EXPORT_COLUMNS,
+  checkImportRows,
+  type ImportKind,
+  type ImportRowResult,
+  type SessionCreate,
+  type VenueCreate,
+  type InviteBody,
+} from './schemas/admin';
+import { csvCell, csvFile } from './csv';
+import { ValidationIssue } from './errors';
 import { CONTRACT_VERSION } from './openapi';
 
 /**
@@ -36,8 +47,7 @@ const errorResponse = (
   extra?: Parameters<typeof makeApiError>[2],
 ): Response => json(ERROR_CODES[code], makeApiError(code, requestId, extra));
 
-const issuesOf = (error: z.ZodError) =>
-  error.issues.map((i) => ({ path: i.path.join('.'), code: i.code })).slice(0, 20);
+const issuesOf = issuesFromZod;
 
 /** Query strings are flat; arrays are repeated keys. Decide by the schema's property types. */
 const queryObject = (def: EndpointDef, params: URLSearchParams): Record<string, unknown> => {
@@ -89,6 +99,78 @@ const sessionMatches = (s: Session, q: Record<string, unknown>): boolean => {
 };
 
 const notFound = (requestId: string) => errorResponse('not_found', requestId);
+
+const ref = (path: string): ValidationIssue => ({ path, code: 'invalid_reference' });
+
+/** What a bulk import checks beyond the shape: ids that exist, and what is already there. */
+const importChecks: {
+  [K in ImportKind]: (row: unknown) => { issues: ValidationIssue[]; key: string; exists: boolean };
+} = {
+  venues: (row) => {
+    const v = row as VenueCreate;
+    const issues: ValidationIssue[] = [];
+    if (!fx.cities.some((c) => c.id === v.cityId)) issues.push(ref('cityId'));
+    const area = fx.areas.find((a) => a.id === v.areaId);
+    if (!area) issues.push(ref('areaId'));
+    else if (area.cityId !== v.cityId) issues.push({ path: 'areaId', code: 'area_not_in_city' });
+    const key = `${v.cityId}|${v.name.en.toLowerCase()}`;
+    const exists = fx.venues.some(
+      (x) => x.cityId === v.cityId && x.name.en.toLowerCase() === v.name.en.toLowerCase(),
+    );
+    return { issues, key, exists };
+  },
+  coordinators: (row) => {
+    const b = row as InviteBody;
+    const issues: ValidationIssue[] = [];
+    if (b.role === 'city_coordinator' && !fx.cities.some((c) => c.id === b.cityId))
+      issues.push(ref('cityId'));
+    if (b.role === 'venue_coordinator' && !fx.venues.some((v) => v.id === b.venueId))
+      issues.push(ref('venueId'));
+    const place =
+      b.role === 'city_coordinator' ? b.cityId : b.role === 'venue_coordinator' ? b.venueId : '';
+    return { issues, key: `${b.phone}|${b.role}|${place}`, exists: false };
+  },
+  sessions: (row) => {
+    const x = row as SessionCreate;
+    const issues: ValidationIssue[] = [];
+    if (!fx.venues.some((v) => v.id === x.venueId)) issues.push(ref('venueId'));
+    if (x.circleId && !fx.circles.some((c) => c.id === x.circleId)) issues.push(ref('circleId'));
+    const when = x.kind === 'one_off' ? x.date : x.daysOfWeek.join(',');
+    const key = `${x.venueId}|${x.title.en.toLowerCase()}|${x.kind}|${x.localStartTime}|${when}`;
+    const exists = fx.sessions.some(
+      (s) =>
+        s.venueId === x.venueId &&
+        s.kind === x.kind &&
+        s.localStartTime === x.localStartTime &&
+        s.title.en.toLowerCase() === x.title.en.toLowerCase(),
+    );
+    return { issues, key, exists };
+  },
+};
+
+/** The bulk import in the mock: real per-row checks, nothing is stored. */
+const importHandler = (kind: ImportKind) => (c: Ctx) => {
+  const body = c.body as { dryRun: boolean; rows: unknown[] };
+  const seen = new Set<string>();
+  const rows: ImportRowResult[] = checkImportRows(kind, body.rows).map((check) => {
+    if (!check.ok) return { index: check.index, status: 'invalid', issues: check.issues };
+    const { issues, key, exists } = importChecks[kind](check.value);
+    if (issues.length) return { index: check.index, status: 'invalid', issues };
+    if (exists || seen.has(key)) return { index: check.index, status: 'duplicate', issues: [] };
+    seen.add(key);
+    return { index: check.index, status: 'created', issues: [] };
+  });
+  const counts = {
+    created: rows.filter((r) => r.status === 'created').length,
+    duplicate: rows.filter((r) => r.status === 'duplicate').length,
+    invalid: rows.filter((r) => r.status === 'invalid').length,
+  };
+  return { dryRun: body.dryRun, applied: !body.dryRun && counts.invalid === 0, counts, rows };
+};
+
+/** Pakistan is UTC+5 with no daylight saving. */
+const pakistanDate = (instant: string): string =>
+  new Date(Date.parse(instant) + 5 * 3600_000).toISOString().slice(0, 10);
 
 const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknown> = {
   'system.health': () => ({ ok: true, service: 'mock' }),
@@ -212,6 +294,46 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
   'updates.unreadCount': () => ({ unreadCount: fx.fixtureUpdates.filter((u) => !u.isRead).length }),
   'registrations.export': () =>
     'name,phone,party_size,section,status\nSample Person,+923000000099,2,family,confirmed\n',
+  'adminRegistrations.export': (c, id) => {
+    const q = c.query as { cityId?: string; venueId?: string; from?: string; to?: string };
+    if (q.from && q.to && q.from > q.to)
+      return errorResponse('validation_failed', id, {
+        issues: [{ path: 'from', code: 'invalid_range' }],
+      });
+    const day = pakistanDate(fx.FIXTURE_REGISTERED_AT);
+    const inRange = (!q.from || day >= q.from) && (!q.to || day <= q.to);
+    const lines = fx.sampleRegistrants
+      .filter(
+        (r) =>
+          inRange &&
+          (!q.cityId || r.cityId === q.cityId) &&
+          (!q.venueId || r.venueId === q.venueId),
+      )
+      .map((r) =>
+        [
+          csvCell(r.sessionId, { trusted: true }),
+          csvCell(r.venueId, { trusted: true }),
+          csvCell(r.cityId, { trusted: true }),
+          csvCell(r.name),
+          csvCell(r.phone, { trusted: true }),
+          csvCell(r.partySize),
+          csvCell(r.section, { trusted: true }),
+          csvCell(r.status, { trusted: true }),
+          csvCell(r.registeredAt, { trusted: true }),
+        ].join(','),
+      );
+    return csvFile(REGISTRATION_EXPORT_COLUMNS, lines);
+  },
+  'adminSessions.get': (c, id) =>
+    fx.adminSessions.find((s) => s.id === c.params.sessionId) ?? notFound(id),
+  'adminCircles.get': (c, id) => fx.circles.find((x) => x.id === c.params.circleId) ?? notFound(id),
+  'adminUpdates.preview': (c) => {
+    const scope = (c.body as { scope: { type: 'national' | 'city' | 'venue' } }).scope.type;
+    return { recipients: scope === 'national' ? 4200 : scope === 'city' ? 640 : 85 };
+  },
+  'adminImport.venues': importHandler('venues'),
+  'adminImport.coordinators': importHandler('coordinators'),
+  'adminImport.sessions': importHandler('sessions'),
 };
 
 export interface MockOptions {

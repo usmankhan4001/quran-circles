@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import { ApiError, type ErrorCode } from './errors';
+import { ApiError, type ErrorCode, type ValidationIssue } from './errors';
 import { endpoints, type Endpoints } from './endpoints';
 import type { EndpointDef } from './define';
 
@@ -31,6 +31,11 @@ export class ApiClientError extends Error {
     readonly code: ErrorCode | 'network_error' | 'invalid_response',
     readonly requestId: string | null,
     readonly retryAfterSeconds?: number,
+    /**
+     * For validation_failed: where the server rejected the input, as `{ path, code }`. Path is
+     * dotted (`name.en`, `rows.3.cityId`). Never contains the input itself.
+     */
+    readonly issues?: readonly ValidationIssue[],
   ) {
     super(`${code} (${status})`);
     this.name = 'ApiClientError';
@@ -112,6 +117,7 @@ export function createApiClient(options: ClientOptions): ApiClient {
           err.data.error.code,
           err.data.error.requestId,
           err.data.error.retryAfterSeconds,
+          err.data.error.issues,
         );
       }
       if (def.success.status === 204) return undefined;

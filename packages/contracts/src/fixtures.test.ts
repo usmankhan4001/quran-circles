@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as fx from './fixtures';
 import { Area, City, Province, Venue } from './schemas/places';
-import { AdminOccurrence, Session } from './schemas/sessions';
-import { AdminCircle } from './schemas/admin';
+import { AdminOccurrence, AdminSession, Session } from './schemas/sessions';
+import { AdminCircle, checkImportRows } from './schemas/admin';
 import { ContentPage } from './schemas/config';
 import { Me } from './schemas/people';
 import { Update } from './schemas/updates';
@@ -92,5 +92,33 @@ describe('fixtures', () => {
 
   it('give every published session a next occurrence', () => {
     expect(fx.sessions.every((s) => s.nextOccurrence !== null)).toBe(true);
+  });
+
+  it('give staff the session records the admin reads return', () => {
+    fx.adminSessions.forEach((x) => AdminSession.parse(x));
+    expect(fx.adminSessions).toHaveLength(fx.sessions.length);
+    const circleSession = fx.adminSessions.find((s) => s.circle !== null)!;
+    expect(circleSession.circleStatus).toBe('published');
+    expect(fx.adminSessions.find((s) => s.circle === null)!.circleStatus).toBeNull();
+  });
+
+  it('offer import rows that pass the shape checks and point at fixture ids', () => {
+    for (const kind of ['venues', 'coordinators', 'sessions'] as const) {
+      const checks = checkImportRows(kind, fx.importExamples[kind]);
+      expect(checks.length, kind).toBeGreaterThan(0);
+      for (const c of checks) expect(c.ok, `${kind} row ${c.index}`).toBe(true);
+    }
+    const venue = fx.importExamples.venues[0]!;
+    expect(fx.areas.find((a) => a.id === venue.areaId)?.cityId).toBe(venue.cityId);
+    expect(fx.venues.some((v) => v.name.en === venue.name.en)).toBe(false);
+  });
+
+  it('have sample registrants only for fixture sessions, with synthetic numbers', () => {
+    expect(fx.sampleRegistrants).toHaveLength(fx.sessions.length);
+    for (const r of fx.sampleRegistrants) {
+      expect(fx.sessions.some((s) => s.id === r.sessionId && s.venueId === r.venueId)).toBe(true);
+      expect(PhoneE164.safeParse(r.phone).success).toBe(true);
+      expect(r.phone.startsWith('+92300000')).toBe(true);
+    }
   });
 });

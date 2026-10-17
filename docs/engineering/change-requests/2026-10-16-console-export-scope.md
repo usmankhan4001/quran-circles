@@ -8,3 +8,5 @@ Proposed change: add the endpoint with the same scope check as `registration.exp
 Also: the spec's Attendance export and the "recent exports" history are not in the P0 contract. If wanted, add `attendance.export` and list exports from the audit log with `entityType=export`.
 Affected lanes: contracts, api-core, console.
 Workaround meanwhile: fan-out over per-session exports, merged only when all succeed. No attendance option, no history table (the Audit log page shows export entries).
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.

@@ -7,3 +7,5 @@ Why: FCM and APNs give no delivery receipt, so push rows end at `sent`. The cons
 Proposed change: `POST /me/notifications/ack` with `{ outboxId: uuid, event: 'received' | 'opened' }`, authenticated as the recipient. The push payload's `data` would carry `outboxId` (the worker would add it when sending). The handler calls the worker's `applyDeliveryReport` rule: only the recipient's own row, only forward, never undoing `delivered`. `PushPayload.data` needs an optional `outboxId`.
 Affected lanes: contracts, api-core, user-app, admin-app.
 Workaround meanwhile: push rows stay `sent`. Nothing else depends on `delivered` for push.
+
+Deferred 2026-10-17 to Wave 4 by the owner (digest of 2026-10-17). Not applied in contract 1.0.0-rc.2.

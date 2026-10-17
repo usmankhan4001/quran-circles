@@ -7,3 +7,5 @@ Why: `RequestCodeBody.locale` says which language the person is using when they 
 Proposed change: add `locale text NOT NULL DEFAULT 'ur'` with the usual enum check to `otp_challenges`. The lane then copies it to `users.locale` when it creates an account.
 Affected lanes: contracts (db), auth-scopes.
 Workaround meanwhile: new accounts start with the column default (`ur`). The app sends the person's language with its first profile update.
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008.

@@ -11,3 +11,5 @@ What I need:
    Why: each one removes a local workaround or a guess.
    Affected lanes: contracts, console, admin app (same types).
    Workaround meanwhile: as described above.
+
+Applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008. Item 1: types exported. Item 2: `ApiClientError.issues`. Item 3: documented on `QueryBool`. Item 4: answered, resend is a new `adminRoles.invite` for the same number (documented on the endpoint and in the changelog).

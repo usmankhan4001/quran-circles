@@ -49,6 +49,24 @@ describe('users and phone numbers', () => {
     expect(blankName).toEqual({ code: CHECK_VIOLATION, constraint: 'users_display_name_chk' });
   });
 
+  it('lets an account exist without a name until registration asks for one, but never a blank one', async () => {
+    const unnamed = await world.make.user({ displayName: null });
+    expect(unnamed.displayName).toBeNull();
+    // Omitting the column is the same as NULL.
+    const { rows } = await test.pg.query<{ display_name: string | null }>(
+      `INSERT INTO users (phone_e164, phone_verified_at) VALUES ($1, now()) RETURNING display_name`,
+      [nextPhone()],
+    );
+    expect(rows[0]!.display_name).toBeNull();
+    // Giving the name later works; clearing it back to blank does not; NULL again is allowed.
+    await db.update(s.users).set({ displayName: 'Ayesha' }).where(eq(s.users.id, unnamed.id));
+    const blank = await violation(
+      db.update(s.users).set({ displayName: '' }).where(eq(s.users.id, unnamed.id)),
+    );
+    expect(blank).toEqual({ code: CHECK_VIOLATION, constraint: 'users_display_name_chk' });
+    await db.update(s.users).set({ displayName: null }).where(eq(s.users.id, unnamed.id));
+  });
+
   it.each([
     ['a national number with a leading zero', '03001234567'],
     ['no plus sign', '923001234567'],
@@ -864,6 +882,108 @@ describe('devices, sessions and codes', () => {
     );
     expect(bad.constraint).toBe('otp_challenges_attempts_chk');
   });
+
+  it('keeps the sign-in language on the code, defaulting to Urdu and refusing other values', async () => {
+    const challenge = (locale?: string) =>
+      test.pg.query<{ locale: string }>(
+        locale === undefined
+          ? `INSERT INTO otp_challenges (phone_e164, channel, code_hash, expires_at)
+             VALUES ($1, 'sms', 'h', now()) RETURNING locale`
+          : `INSERT INTO otp_challenges (phone_e164, channel, code_hash, expires_at, locale)
+             VALUES ($1, 'sms', 'h', now(), '${locale}') RETURNING locale`,
+        [nextPhone()],
+      );
+    expect((await challenge()).rows[0]!.locale).toBe('ur');
+    expect((await challenge('en')).rows[0]!.locale).toBe('en');
+    expect((await violation(challenge('fr'))).constraint).toBe('otp_challenges_locale_chk');
+    const [typed] = await db
+      .insert(s.otpChallenges)
+      .values({
+        phoneE164: nextPhone(),
+        channel: 'whatsapp',
+        codeHash: 'h',
+        locale: 'en',
+        expiresAt: new Date('2027-01-01T00:00:00Z'),
+      })
+      .returning();
+    expect(typed!.locale).toBe('en');
+  });
+
+  it('remembers the previous refresh token hash and when it was rotated, both optional', async () => {
+    const user = await world.make.user();
+    const [fresh] = await db
+      .insert(s.authSessions)
+      .values({
+        userId: user.id,
+        refreshTokenHash: nextSlug('rt'),
+        expiresAt: new Date('2027-01-01T00:00:00Z'),
+      })
+      .returning();
+    expect(fresh).toMatchObject({ previousRefreshTokenHash: null, rotatedAt: null });
+    const rotatedAt = new Date('2026-10-17T10:00:00Z');
+    await db
+      .update(s.authSessions)
+      .set({
+        previousRefreshTokenHash: fresh!.refreshTokenHash,
+        refreshTokenHash: nextSlug('rt'),
+        rotatedAt,
+      })
+      .where(eq(s.authSessions.id, fresh!.id));
+    const [rotated] = await db
+      .select()
+      .from(s.authSessions)
+      .where(eq(s.authSessions.id, fresh!.id));
+    expect(rotated!.previousRefreshTokenHash).toBe(fresh!.refreshTokenHash);
+    expect(rotated!.rotatedAt).toEqual(rotatedAt);
+  });
+});
+
+describe('coordinator invites', () => {
+  const invite = (v: Partial<s.NewCoordinatorInviteRow> = {}) =>
+    db.insert(s.coordinatorInvites).values({
+      phoneE164: nextPhone(),
+      role: 'venue_coordinator',
+      scopeType: 'venue',
+      venueId: world.venue.id,
+      cityId: world.city.id,
+      expiresAt: new Date('2027-01-01T00:00:00Z'),
+      ...v,
+    });
+
+  it('can name the assignment it replaces, and lets go of it when that assignment is deleted', async () => {
+    const holder = await world.make.user();
+    const [assignment] = await db
+      .insert(s.roleAssignments)
+      .values({
+        userId: holder.id,
+        role: 'venue_coordinator',
+        scopeType: 'venue',
+        venueId: world.venue.id,
+        cityId: world.city.id,
+      })
+      .returning();
+    const [plain] = await invite().returning();
+    expect(plain!.replacesAssignmentId).toBeNull();
+    const [handover] = await invite({ replacesAssignmentId: assignment!.id }).returning();
+    expect(handover!.replacesAssignmentId).toBe(assignment!.id);
+    // Deleting the old coordinator's account removes the assignment; the invite stays.
+    await db.delete(s.users).where(eq(s.users.id, holder.id));
+    const [after] = await db
+      .select()
+      .from(s.coordinatorInvites)
+      .where(eq(s.coordinatorInvites.id, handover!.id));
+    expect(after).toMatchObject({ id: handover!.id, replacesAssignmentId: null });
+  });
+
+  it('refuses an assignment that does not exist', async () => {
+    const error = await violation(
+      invite({ replacesAssignmentId: '00000000-0000-4000-8000-000000000003' }),
+    );
+    expect(error).toEqual({
+      code: FOREIGN_KEY_VIOLATION,
+      constraint: 'coordinator_invites_replaces_assignment_fk',
+    });
+  });
 });
 
 describe('messaging', () => {
@@ -958,7 +1078,59 @@ describe('messaging', () => {
       attempts: 0,
       payload: {},
       recipientPhoneE164: null,
+      venueId: null,
+      providerMessageId: null,
     });
+  });
+
+  it('ties an outbox row to a venue that can be deleted without losing the row', async () => {
+    const venue = await world.make.venue(world.city.id, world.area.id);
+    const key = nextSlug('outbox-venue');
+    await db.insert(s.messageOutbox).values({
+      idempotencyKey: key,
+      channel: 'whatsapp',
+      costCategory: 'utility',
+      venueId: venue.id,
+      providerMessageId: 'wamid.TEST-1',
+    });
+    const missing = await violation(
+      db.insert(s.messageOutbox).values({
+        idempotencyKey: nextSlug('outbox-venue'),
+        channel: 'push',
+        costCategory: 'free',
+        venueId: '00000000-0000-4000-8000-000000000001',
+      }),
+    );
+    expect(missing).toEqual({
+      code: FOREIGN_KEY_VIOLATION,
+      constraint: 'message_outbox_venue_id_venues_id_fk',
+    });
+    await db.delete(s.venues).where(eq(s.venues.id, venue.id));
+    const [kept] = await db
+      .select()
+      .from(s.messageOutbox)
+      .where(eq(s.messageOutbox.idempotencyKey, key));
+    expect(kept).toMatchObject({ venueId: null, providerMessageId: 'wamid.TEST-1' });
+  });
+
+  it('finds an outbox row by provider message id through a partial index', async () => {
+    const { rows } = await test.pg.query<{ indexdef: string }>(
+      `SELECT indexdef FROM pg_indexes WHERE indexname = 'message_outbox_provider_message_id_idx'`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.indexdef).toMatch(/\(provider_message_id\)/);
+    expect(rows[0]!.indexdef).toMatch(/WHERE \(?provider_message_id IS NOT NULL\)?/);
+    expect(rows[0]!.indexdef).not.toMatch(/UNIQUE/);
+    // Not unique: the same provider id may legitimately appear on a retried row.
+    const row = (key: string) =>
+      db.insert(s.messageOutbox).values({
+        idempotencyKey: key,
+        channel: 'whatsapp',
+        costCategory: 'utility',
+        providerMessageId: 'wamid.SAME',
+      });
+    await row(nextSlug('pm'));
+    await row(nextSlug('pm'));
   });
 
   it('keeps feature flags unique globally and per city', async () => {
@@ -1153,12 +1325,54 @@ describe('posters and legacy data', () => {
   it('marks legacy subscribers as needing re-consent', async () => {
     const [subscriber] = await db
       .insert(s.legacyWhatsappSubscribers)
-      .values({ phoneRaw: '0300-0000002' })
+      .values({ phoneRaw: '+923000000902' })
       .returning();
     expect(subscriber).toMatchObject({
       needsReconsent: true,
       seasonTag: 'ramadan-2026',
       name: null,
+      cityId: null,
+    });
+  });
+
+  it('keeps one legacy subscriber per phone and season, and only E.164 phones', async () => {
+    const subscriber = (phoneRaw: string, seasonTag?: string) =>
+      db
+        .insert(s.legacyWhatsappSubscribers)
+        .values({ phoneRaw, ...(seasonTag ? { seasonTag } : {}) });
+    await subscriber('+923000000903');
+    expect((await violation(subscriber('+923000000903'))).constraint).toBe(
+      'legacy_whatsapp_subscribers_season_phone_unique',
+    );
+    // Another season may hold the same number; ON CONFLICT DO NOTHING now has something to hit.
+    await subscriber('+923000000903', 'ramadan-2027');
+    const { rowCount } = await test.pg.query(
+      `INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('+923000000903')
+       ON CONFLICT (season_tag, phone_raw) DO NOTHING`,
+    );
+    expect(rowCount).toBe(0);
+    for (const bad of ['0300-0000004', '03000000004', '+0923000000004', '+92 300 0000004', '']) {
+      expect((await violation(subscriber(bad))).constraint, bad).toBe(
+        'legacy_whatsapp_subscribers_phone_raw_chk',
+      );
+    }
+  });
+
+  it('records the city a legacy subscriber signed up for, optionally', async () => {
+    const city = await world.make.city();
+    const [withCity] = await db
+      .insert(s.legacyWhatsappSubscribers)
+      .values({ phoneRaw: '+923000000905', cityId: city.id })
+      .returning();
+    expect(withCity!.cityId).toBe(city.id);
+    const missing = await violation(
+      db
+        .insert(s.legacyWhatsappSubscribers)
+        .values({ phoneRaw: '+923000000906', cityId: '00000000-0000-4000-8000-000000000002' }),
+    );
+    expect(missing).toEqual({
+      code: FOREIGN_KEY_VIOLATION,
+      constraint: 'legacy_whatsapp_subscribers_city_id_cities_id_fk',
     });
   });
 });

@@ -20,3 +20,5 @@ Proposed change: as listed. All additions are optional fields or new reads; noth
 Affected lanes: contracts, api-core, console (if it shares the reads), admin-app.
 
 Workaround meanwhile: the app keeps a small session cache filled from `sessions.get`, finds a circle by paging `adminCircles.list` (up to ten pages of 100), shows who will be reached ("everyone who follows this venue") in the preview and the real count after sending, fills template blanks itself, copies Urdu-only text into `en`, and derives the `Attendance` type from the client.
+
+Partly applied 2026-10-17 in contract 1.0.0-rc.2 / migration 0008. Applied: items 1 (`adminSessions.get`, `adminCircles.get`), 2 (`adminUpdates.preview`) and 5 (`Attendance` type exported). Deferred by the owner: item 3 (server-side template values) and item 4 (optional English in `LocalizedInput`). Items 6 to 8 are confirmations: registrants keep `phone` and `allowsWhatsapp` in the contract, the owner wants the number hidden in the UI with the call and WhatsApp buttons kept, and recap and portion stay on `adminOccurrences.update`.

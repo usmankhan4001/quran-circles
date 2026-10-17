@@ -306,6 +306,105 @@ describe('migration safety', () => {
   });
 });
 
+describe('migration 0008: change requests of 2026-10-17', () => {
+  const NAME = '0008_auth_grace_outbox_legacy_keys';
+  const upTo = (count: number) => prefixDir(count);
+
+  it('is the eighth migration', () => {
+    expect(listMigrations()[7]?.name).toBe(NAME);
+  });
+
+  it('applies on top of 0007 with data in place and keeps that data', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(7) });
+    await test.exec.exec(
+      `INSERT INTO users (phone_e164, phone_verified_at, display_name) VALUES ('+923000000801', now(), 'Kept');
+       INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('+923000000802');`,
+    );
+    expect(await migrateUp(test.exec)).toEqual([NAME]);
+    const users = await test.exec.query<{ display_name: string }>(`SELECT display_name FROM users`);
+    expect(users.rows).toEqual([{ display_name: 'Kept' }]);
+    const subscribers = await test.exec.query(`SELECT city_id FROM legacy_whatsapp_subscribers`);
+    expect(subscribers.rows).toEqual([{ city_id: null }]);
+  });
+
+  it('refuses to apply while legacy subscribers hold duplicates or non-E.164 phones', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(7) });
+    await test.exec.exec(
+      `INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('+923000000803'), ('+923000000803');`,
+    );
+    await expect(migrateUp(test.exec)).rejects.toThrow(/duplicate \(season_tag, phone_raw\)/);
+    await test.exec.exec(`DELETE FROM legacy_whatsapp_subscribers WHERE true;
+      INSERT INTO legacy_whatsapp_subscribers (phone_raw) VALUES ('0300-0000001');`);
+    await expect(migrateUp(test.exec)).rejects.toThrow(/not E\.164/);
+    // Nothing half-applied: fix the data and it goes through.
+    await test.exec.exec(`DELETE FROM legacy_whatsapp_subscribers WHERE true;`);
+    expect(await migrateUp(test.exec)).toEqual([NAME]);
+  });
+
+  it('refuses to roll back while any account has no name, and rolls back once all have one', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec);
+    await test.exec.exec(
+      `INSERT INTO users (phone_e164, phone_verified_at) VALUES ('+923000000804', now());
+       INSERT INTO users (phone_e164, phone_verified_at, display_name) VALUES ('+923000000805', now(), 'Named');`,
+    );
+    await expect(migrateDown(test.exec)).rejects.toThrow(/1 account\(s\) have no display_name/);
+    // Still applied, nothing changed.
+    const status = await migrationStatus(test.exec);
+    expect(status.at(-1)).toMatchObject({ name: NAME, applied: true });
+    await test.exec.exec(`UPDATE users SET display_name = 'Now Named' WHERE display_name IS NULL`);
+    expect(await migrateDown(test.exec)).toEqual([NAME]);
+    // The old rules are back: the name is required and may not be blank.
+    await expect(
+      test.exec.exec(
+        `INSERT INTO users (phone_e164, phone_verified_at) VALUES ('+923000000806', now())`,
+      ),
+    ).rejects.toThrow(/display_name/);
+    await expect(
+      test.exec.exec(
+        `INSERT INTO users (phone_e164, phone_verified_at, display_name) VALUES ('+923000000807', now(), ' ')`,
+      ),
+    ).rejects.toThrow(/users_display_name_chk/);
+  });
+
+  it('adds and removes exactly the columns, constraints and index it promises', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(7) });
+    const columns = async () => {
+      const { rows } = await test.exec.query<{ c: string }>(
+        `SELECT table_name || '.' || column_name AS c FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name <> '${MIGRATIONS_TABLE}' ORDER BY 1`,
+      );
+      return rows.map((r) => r.c);
+    };
+    const before = await columns();
+    await migrateUp(test.exec);
+    const after = await columns();
+    expect(after.filter((c) => !before.includes(c))).toEqual([
+      'auth_sessions.previous_refresh_token_hash',
+      'auth_sessions.rotated_at',
+      'coordinator_invites.replaces_assignment_id',
+      'legacy_whatsapp_subscribers.city_id',
+      'message_outbox.provider_message_id',
+      'message_outbox.venue_id',
+      'otp_challenges.locale',
+    ]);
+    expect(before.filter((c) => !after.includes(c))).toEqual([]);
+    await migrateDown(test.exec);
+    expect(await columns()).toEqual(before);
+    const leftovers = await test.exec.query(
+      `SELECT conname FROM pg_constraint WHERE conname IN (
+         'otp_challenges_locale_chk', 'message_outbox_venue_id_venues_id_fk',
+         'legacy_whatsapp_subscribers_season_phone_unique', 'legacy_whatsapp_subscribers_phone_raw_chk',
+         'legacy_whatsapp_subscribers_city_id_cities_id_fk', 'coordinator_invites_replaces_assignment_fk')`,
+    );
+    expect(leftovers.rows).toEqual([]);
+    expect(await publicIndexes(test)).not.toContain('message_outbox_provider_message_id_idx');
+  });
+});
+
 describe('rollback arguments', () => {
   it('defaults to one migration', () => {
     expect(parseRollbackArgs([])).toEqual({ all: false });
