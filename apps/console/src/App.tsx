@@ -13,6 +13,7 @@ import CoordinatorsPage from './pages/CoordinatorsPage';
 import DailyAyahsPage from './pages/DailyAyahsPage';
 import ExportsPage from './pages/ExportsPage';
 import ImportPage from './pages/ImportPage';
+import PostersPage from './pages/PostersPage';
 import RegistrationsPage from './pages/RegistrationsPage';
 import SessionsPage from './pages/SessionsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -156,6 +157,14 @@ export function AppRoutes() {
           element={
             <Guard nav="sessions">
               <RegistrationsPage />
+            </Guard>
+          }
+        />
+        <Route
+          path="/sessions/:sessionId/posters"
+          element={
+            <Guard nav="sessions">
+              <PostersPage />
             </Guard>
           }
         />

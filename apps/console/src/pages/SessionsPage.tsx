@@ -148,15 +148,32 @@ export default function SessionsPage() {
     {
       id: 'actions',
       header: t('console.sessions.col.actions'),
-      cell: (s) =>
-        can(principal, 'registration.list', { cityId: s.cityId, venueId: s.venueId }) ? (
-          <Link
-            to={`/sessions/${s.id}/registrations`}
-            aria-label={`${t('console.sessions.registrations')} ${localized(s.title)}`}
-          >
-            {t('console.sessions.registrations')}
-          </Link>
-        ) : null,
+      cell: (s) => {
+        const place = { cityId: s.cityId, venueId: s.venueId };
+        const registrations = can(principal, 'registration.list', place);
+        const posters = can(principal, 'poster.read', place);
+        if (!registrations && !posters) return null;
+        return (
+          <span className="row-actions">
+            {registrations ? (
+              <Link
+                to={`/sessions/${s.id}/registrations`}
+                aria-label={`${t('console.sessions.registrations')} ${localized(s.title)}`}
+              >
+                {t('console.sessions.registrations')}
+              </Link>
+            ) : null}
+            {posters ? (
+              <Link
+                to={`/sessions/${s.id}/posters`}
+                aria-label={`${t('console.posters.tabs.posters')} ${localized(s.title)}`}
+              >
+                {t('console.posters.tabs.posters')}
+              </Link>
+            ) : null}
+          </span>
+        );
+      },
     },
   ];
 

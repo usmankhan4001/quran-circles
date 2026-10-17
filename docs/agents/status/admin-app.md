@@ -1,6 +1,6 @@
 # Status: admin-app
 
-Updated: 2026-10-17 (ayah of the day pick, contract 1.0.0-rc.4)
+Updated: 2026-10-17 (posters, contract 1.0.0-rc.5)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
@@ -78,6 +78,20 @@ WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on
 - i18n (en and ur together, Urdu draft under the file's `_meta.status` marker): 38 keys under the new namespace `admin.dailyAyah.*`, inserted after `admin.circleEditor.archivedNote`; nothing else touched. Re-checked at the end: all 38 present in both files.
 - Tests: 674 passing in 38 files (120 new: `pick.test.ts` 55, `DailyAyahScreen.test.tsx` 44, `AyahPickCard.test.tsx` 19, `dayParts` 2). LTR/RTL x light/dark x text sizes 0 and 3 for the screen and the card. Checks: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `pnpm exec eslint apps/admin-app`, `npx prettier --check apps/admin-app packages/i18n`, `pnpm --filter @qc/i18n test` pass; `expo export --platform web` bundles the new route (to a scratch folder, removed).
 
+## Posters (2026-10-17, contract 1.0.0-rc.5)
+
+- New screen `features/posters/PostersScreen.tsx`, route `/session/<id>/posters` (`routes.posters`, `app/session/[sessionId]/posters.tsx`). Way in: a "Posters" quick action on the coordinator's session screen, shown when `can(principal, 'poster.read', session venue)` (`posterAbilities` in `features/posters/posters.ts`, kept apart from `sessionAbilities` so its tests stay as they are). Built against the contract mock's five `adminPosters.*` endpoints.
+- **From the session.** A card shows the session's own days, time and venue with a note that posters always print them; the form has no date, time or venue field (the API builds the snapshot).
+- **List** (`adminPosters.list`), newest first: template name and format, status tag (Being made / Ready / Not made), title in its own language, language and date made. A failed poster says what to do per `failureCode` (`text_too_long`: "The text did not fit. Shorten the title, then make it again."; `busy`, `render_timeout`, `render_failed`, `invalid_request` each have their own line). Retryable failures (`POSTER_FAILURE_RETRYABLE`) offer Try again (regenerate); `text_too_long` and `invalid_request` offer "Change and make again", which puts that poster's template, language, format and fields back in the form. While anything is queued the list reloads every 5 s.
+- **Out of date.** A `change` banner on each out-of-date poster names what changed from `outOfDate.reasons`: the day or time, the venue, or both, with Regenerate (`adminPosters.regenerate`). A poster whose regeneration is already queued (`replacesPosterId`) says a new version is being made and offers no second one. A regenerated poster appears at once as "Being made again" (merged with the list until the server lists it).
+- **Templates and form** (`adminPosters.templates`, `adminPosters.create`, only with `poster.create`): template chips with a gilt "Demo" tag for `provisional` ones and a line saying demo templates stand in until the final designs; language (`en`, `ur`, `en_ur`, `ur_en`); formats the chosen template offers (story, A4, A3, link preview, each with a size hint); a title per language shown (right to left for Urdu), an optional extra line; accent chips; QR target (registration or session page). Defaults: first template, both languages, story and A4, the session title when it fits 80 characters. The body is checked with the contract's `PosterCreate` before sending (title in every language shown, 80 and 140 limits, control and bidi characters, at least one offered format). Server `validation_failed` issues land on the same fields.
+- **Refusals in plain words.** `forbidden` on the list, create, regenerate or download says the session is outside the person's places; `conflict` on regenerate says the poster is still being made, on download that it is not ready yet, on create that something changed a moment ago; `not_found` on create says the template is gone and reloads the templates; `not_found` on a poster says it no longer exists.
+- **Downloads** (`adminPosters.file`): on the web target the bytes are saved as `poster-<template>-<format>-<language>.png|pdf` (no session or person in the name). A phone build has no file module installed, so it opens `fileUrl` when it is a signed https link, and otherwise says to download from the console (`saveFile.ts`).
+- Test backend: the guard now checks `posterId` routes at the poster's session's venue (fixture posters).
+- i18n: 86 keys under `admin.posters.*` (98 lines with the console's), English and Urdu together, Urdu drafts under the file's `_meta.status` marker, inserted after `admin.schedule.posterNote`. Re-checked at the end: all present in both files, placeholders match.
+- Tests: 738 passing in 40 files (64 new): `features/posters/posters.test.ts` 28 (wording for every failure code, format and language; out-of-date kinds; actions per status, pending replacement and right; merge and polling rule; file names; form defaults, template switch, failed-poster round trip, the request body has no date, time or venue; required, too long, control characters, formats; server issue mapping; `posterAbilities` for national admin, city coordinator, venue coordinator and several venues), `PostersScreen.test.tsx` 36 (the four layout corners LTR/RTL x light/dark x text sizes 0 and 3; quick action for each role; each role in scope sees the list and form; a city coordinator on a Lahore session gets "not available" and no poster call; the gate refuses before any poster call; refused list; the server guard refuses another city's poster; create body, validation, server issues, forbidden, template gone, conflict; change and make again; regenerate, venue and both reasons, conflict, busy retry; download, conflict, nothing for queued or failed, phone routes; polling on and off; empty and failed list with retry).
+- Checks: `pnpm --filter @qc/admin-app typecheck`, `pnpm --filter @qc/admin-app test`, `npx eslint apps/console apps/admin-app`, `npx prettier --check apps/console apps/admin-app packages/i18n`, `pnpm --filter @qc/i18n test` all pass. Not checked in a real browser or on a device (jsdom only).
+
 ## In progress
 
 - Nothing.
@@ -103,6 +117,8 @@ Nothing else blocking. Items below work around gaps and wait on the change reque
 
 - Ayah pick: the screen offers today plus 29 days and no past days, and no national option (the console owns national picks). Is 30 days the right reach? The flag is read per screen with `config.get?cityId=`; there is no app-wide config cache yet.
 - New i18n namespace `admin.dailyAyah` (38 keys). Please confirm, as for the earlier namespaces.
+- Posters: phone builds cannot save a PNG or PDF without a file-system or sharing module (`expo-file-system`, `expo-sharing`), which changes `pnpm-lock.yaml` (platform lane). Until then a phone opens a signed https `fileUrl` or points to the console. Say if those modules should be added.
+- Posters: the list shows no preview image (it would need one file download per poster). Should the API offer a small thumbnail, or should the screen fetch the PNG of story and link-preview posters?
 
 ## Contract change requests
 

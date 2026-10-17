@@ -10,6 +10,8 @@ export const routes = {
       ? `/session/${sessionId}/registrants?occurrenceId=${occurrenceId}`
       : `/session/${sessionId}/registrants`,
   schedule: (sessionId: string) => `/session/${sessionId}/schedule`,
+  /** Make, regenerate and download the session's posters. */
+  posters: (sessionId: string) => `/session/${sessionId}/posters`,
   postUpdate: (sessionId?: string) =>
     sessionId ? `/post-update?sessionId=${sessionId}` : '/post-update',
   attendance: (sessionId: string, occurrenceId: string) =>

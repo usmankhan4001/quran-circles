@@ -1325,3 +1325,153 @@ html[lang='ur'] .ayah-preview-ref {
   gap: var(--space-md);
   border-block-start: 4px solid var(--c-decoration);
 }
+
+/* Session pages and posters (rc.5) ------------------------------------------------------------- */
+
+/* The pages of one session, as a row of tabs under the header; the current one is underlined and
+   marked with aria-current, not by colour alone. */
+.session-tabs ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-end: 1px solid var(--c-border);
+}
+.session-tab {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  padding-inline: var(--space-md);
+  color: var(--c-text-secondary);
+  font-weight: 600;
+  text-decoration: none;
+  border-block-end: 3px solid transparent;
+}
+.session-tab:hover {
+  color: var(--c-text);
+}
+.session-tab[aria-current='page'] {
+  color: var(--c-text-accent);
+  border-block-end-color: var(--c-accent);
+}
+.split-posters {
+  gap: var(--space-xl);
+}
+@media (min-width: 64rem) {
+  .split-posters {
+    grid-template-columns: minmax(0, 1fr) 24rem;
+  }
+}
+.poster-column,
+.poster-list-section {
+  display: grid;
+  gap: var(--space-lg);
+  align-content: start;
+}
+.poster-source {
+  display: grid;
+  gap: var(--space-sm);
+}
+.poster-source-list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+}
+.poster-source-list div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.poster-source-list dt {
+  min-inline-size: 5rem;
+  color: var(--c-text-secondary);
+}
+.poster-source-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+.poster-note,
+.poster-meta {
+  margin: 0;
+  color: var(--c-text-secondary);
+  font-size: var(--type-caption-size);
+}
+.poster-list {
+  display: grid;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.poster-card {
+  display: grid;
+  gap: var(--space-sm);
+}
+.poster-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.poster-card-head h3 {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+}
+.poster-tags,
+.poster-actions,
+.poster-option {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.poster-title {
+  margin: 0;
+  font-size: var(--type-title3-size);
+  font-weight: var(--type-title3-weight);
+  overflow-wrap: anywhere;
+}
+html[lang='ur'] .poster-card-head h3,
+.poster-title:lang(ur) {
+  font-weight: 400;
+}
+.poster-failure {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--c-text-danger);
+}
+.poster-failure .icon {
+  margin-block-start: 0.2rem;
+}
+.poster-form .field-legend {
+  margin-block-end: var(--space-xs);
+  font-weight: 700;
+}
+.poster-format {
+  display: grid;
+}
+.check-radio input {
+  border-radius: var(--radius-pill);
+}
+.check-radio input::after {
+  inline-size: 0.6rem;
+  block-size: 0.6rem;
+  margin: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--c-text-on-accent);
+  transform: scale(0);
+}
+.check-radio input:checked::after {
+  transform: scale(1);
+}
+.check-hint {
+  display: block;
+  color: var(--c-text-secondary);
+  font-size: 0.875rem;
+}

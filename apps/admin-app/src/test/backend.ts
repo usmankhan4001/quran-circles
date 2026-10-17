@@ -716,6 +716,11 @@ export function createBackend(options: BackendOptions = {}): Backend {
     } else if (params.circleId) {
       const c = state.circles.find((x) => x.id === params.circleId);
       if (c) resource = { cityId: c.cityId, venueId: c.venueId };
+    } else if (params.posterId) {
+      // A poster is checked at its session's venue (contract 1.0.0-rc.5).
+      const poster = fx.posters.find((x) => x.id === params.posterId);
+      const s = poster && sessionOf(poster.sessionId);
+      if (s) resource = { cityId: s.cityId, venueId: s.venueId };
     } else if (params.dailyAyahId) {
       const pick = state.dailyAyahs.find((x) => x.id === params.dailyAyahId);
       // A national pick has no place: only a national admin passes (`dailyAyahResource`).

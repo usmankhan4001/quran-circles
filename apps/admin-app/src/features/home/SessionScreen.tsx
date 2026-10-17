@@ -13,6 +13,7 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
+import { posterAbilities } from '../posters/posters';
 import { useSession } from './useSession';
 import { whenSummary } from './sessionText';
 
@@ -48,6 +49,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
       <QueryBoundary query={session} testID="session-data" notFoundIsNotAvailable>
         {(s) => {
           const can = sessionAbilities(principal, s);
+          const posters = posterAbilities(principal, s);
           const todayOccurrence = occurrences.data?.find((o) => isToday(o.startsAt, now));
           return (
             <View style={{ gap: spacing.lg }}>
@@ -102,6 +104,14 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                     icon="clock"
                     label={t('admin.home.changeTime')}
                     onPress={() => nav.push(routes.schedule(s.id))}
+                  />
+                ) : null}
+                {posters.read ? (
+                  <QuickAction
+                    testID="session-posters"
+                    icon="share"
+                    label={t('admin.posters.open')}
+                    onPress={() => nav.push(routes.posters(s.id))}
                   />
                 ) : null}
               </View>

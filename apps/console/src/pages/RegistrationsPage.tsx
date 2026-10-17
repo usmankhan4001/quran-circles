@@ -10,6 +10,7 @@ import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { usePaged, useAsync } from '../api/hooks';
 import { SessionExportButton } from '../components/ExportButton';
+import { SessionTabs } from '../components/SessionTabs';
 import {
   Badge,
   Banner,
@@ -148,6 +149,10 @@ export default function RegistrationsPage() {
       <p>
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>
       </p>
+      <SessionTabs
+        sessionId={sessionId}
+        place={sessionData ? { cityId: sessionData.cityId, venueId: sessionData.venueId } : null}
+      />
       {totals && list.status === 'ready' ? (
         <StatRow
           label={t('console.exports.totals.label')}
