@@ -14,6 +14,18 @@ describe('worker configuration', () => {
     });
   });
 
+  it('reads the occurrence horizon, defaulting to the API value of 90 days', () => {
+    expect(parseWorkerEnv(base).OCCURRENCE_HORIZON_DAYS).toBe(90);
+    expect(
+      parseWorkerEnv({ ...base, OCCURRENCE_HORIZON_DAYS: '120' }).OCCURRENCE_HORIZON_DAYS,
+    ).toBe(120);
+    for (const bad of ['0', '400', 'soon', '1.5']) {
+      expect(() => parseWorkerEnv({ ...base, OCCURRENCE_HORIZON_DAYS: bad })).toThrow(
+        /OCCURRENCE_HORIZON_DAYS/,
+      );
+    }
+  });
+
   it('requires a database', () => {
     expect(() => parseWorkerEnv({})).toThrow(WorkerConfigError);
   });

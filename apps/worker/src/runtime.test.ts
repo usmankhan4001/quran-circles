@@ -2,7 +2,15 @@ import { PgBoss, fromPglite } from 'pg-boss';
 import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { tables } from './db';
-import { RECONCILE_QUEUE, SEND_QUEUE, startRuntime, type Runtime } from './runtime';
+import {
+  RECONCILE_QUEUE,
+  SEND_QUEUE,
+  TOP_UP_CRON,
+  TOP_UP_QUEUE,
+  TOP_UP_TIMEZONE,
+  startRuntime,
+  type Runtime,
+} from './runtime';
 import { createTestDb, type TestDb } from './test/db';
 import { createHarness, pushDraft, type Harness } from './test/harness';
 import { seedDevice, seedOccurrence, seedRegistration, seedUser, seedWorld } from './test/seed';
@@ -168,6 +176,65 @@ describe('pg-boss runtime', () => {
 
     const schedules = await boss.getSchedules();
     expect(schedules.some((s) => s.name === RECONCILE_QUEUE && s.cron === '* * * * *')).toBe(true);
+  });
+
+  it('registers the daily occurrence top-up in Pakistan time, once however often it starts', async () => {
+    await start();
+    await runtime!.stop({ timeoutMs: 5_000 });
+    // A restart (or a second node) registers the same schedule again rather than adding one.
+    boss = new PgBoss({ db: fromPglite(test.pg), backend: 'pglite', schedule: true });
+    boss.on('error', () => {});
+    await boss.start();
+    await start();
+    const schedules = (await boss.getSchedules()).filter((s) => s.name === TOP_UP_QUEUE);
+    expect(schedules).toHaveLength(1);
+    expect(schedules[0]).toMatchObject({
+      cron: TOP_UP_CRON,
+      timezone: TOP_UP_TIMEZONE,
+      key: 'daily',
+    });
+    expect(TOP_UP_CRON).toBe('30 0 * * *');
+  });
+
+  it('does not register the top-up schedule when told not to', async () => {
+    // pg-boss keeps schedules in its own schema, which outlives the per-test table reset.
+    await boss.unschedule(TOP_UP_QUEUE, 'daily');
+    await start({ scheduleTopUp: false });
+    expect((await boss.getSchedules()).some((s) => s.name === TOP_UP_QUEUE)).toBe(false);
+  });
+
+  it('tops up occurrences on demand with the configured horizon, adding nothing on a second run', async () => {
+    const rt = await start({ occurrenceHorizonDays: 28 });
+    const world = await seedWorld(test.db);
+    expect(await rt.topUpNow()).toEqual({ sessions: 1, occurrencesAdded: 4 });
+    expect(await rt.topUpNow()).toEqual({ sessions: 1, occurrencesAdded: 0 });
+    const rows = await test.db
+      .select()
+      .from(tables.occurrences)
+      .where(eq(tables.occurrences.sessionId, world.session.id));
+    expect(rows).toHaveLength(4);
+  });
+
+  it('runs the top-up when a job reaches its queue, with the 90 day default, and twice is safe', async () => {
+    await start();
+    const world = await seedWorld(test.db);
+    const count = async () =>
+      (
+        await test.db
+          .select()
+          .from(tables.occurrences)
+          .where(eq(tables.occurrences.sessionId, world.session.id))
+      ).length;
+    await boss.send(TOP_UP_QUEUE, {});
+    expect(await until(count, (n) => n > 0)).toBe(13);
+    const done = () =>
+      Promise.resolve(h.logger.lines.filter((l) => l.event === 'occurrences.topped_up'));
+    await until(done, (lines) => lines.length === 1);
+
+    await boss.send(TOP_UP_QUEUE, {});
+    const lines = await until(done, (l) => l.length === 2);
+    expect(lines[1]!.fields).toEqual({ sessions: 1, occurrencesAdded: 0, horizonDays: 90 });
+    expect(await count()).toBe(13);
   });
 
   it('stops cleanly: no further polling after stop', async () => {

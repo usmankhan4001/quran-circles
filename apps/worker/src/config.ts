@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_OCCURRENCE_HORIZON_DAYS } from '@qc/db';
 import { MessagingEnv } from '@qc/messaging';
 
 const optional = z.string().trim().min(1).optional();
@@ -11,6 +12,13 @@ export const WorkerEnv = MessagingEnv.extend({
   /** How often the dispatcher looks for due outbox rows. */
   WORKER_POLL_MS: z.coerce.number().int().min(250).max(60_000).default(5_000),
   WORKER_SEND_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+  /** How many days ahead the daily top-up keeps session occurrences. Same default as the API. */
+  OCCURRENCE_HORIZON_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(366)
+    .default(DEFAULT_OCCURRENCE_HORIZON_DAYS),
   /** The public https origin of the web app, for links in messages. */
   PUBLIC_WEB_BASE: optional,
 });

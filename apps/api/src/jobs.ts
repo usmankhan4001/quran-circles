@@ -3,7 +3,8 @@
  * time and import nothing from the HTTP app, so a worker process can call them directly.
  *
  * - `topUpAllOccurrences(db, now, horizonDays)`: daily; keeps recurring sessions' occurrences
- *   filled `horizonDays` ahead (the API default is 90).
+ *   filled `horizonDays` ahead (the API default is 90). It lives in `@qc/db`, and the worker runs it
+ *   on its `occurrences-top-up` schedule; this is a re-export.
  * - `purgeStaleAuthRows(db, now)`: daily; removes spent sign-in codes and dead sessions.
  */
 export { topUpAllOccurrences, type TopUpSummary } from './modules/sessions/top-up';

@@ -1,13 +1,19 @@
 import type { PgBoss } from 'pg-boss';
+import { DEFAULT_OCCURRENCE_HORIZON_DAYS, type TopUpSummary } from '@qc/db';
 import type { Logger, RetryPolicy } from '@qc/messaging';
 import type { Clock, Db } from './db';
 import { createDispatcher, type SendJob, type SendQueue } from './outbox/dispatcher';
 import { processJob, type ProcessorDeps } from './outbox/processor';
+import { runOccurrenceTopUp } from './occurrences/top-up';
 import { reconcileReminders, type ReconcileSummary } from './reminders/reconcile';
 
 export const SEND_QUEUE = 'outbox-send';
 export const SEND_DEAD_QUEUE = 'outbox-send-dead';
 export const RECONCILE_QUEUE = 'reminders-reconcile';
+export const TOP_UP_QUEUE = 'occurrences-top-up';
+/** 00:30 every day in Pakistan time, after the date has turned over. */
+export const TOP_UP_CRON = '30 0 * * *';
+export const TOP_UP_TIMEZONE = 'Asia/Karachi';
 
 export interface RuntimeOptions {
   db: Db;
@@ -24,6 +30,10 @@ export interface RuntimeOptions {
   sendConcurrency?: number;
   /** Run the reminder reconciliation on a schedule (every minute). Default true. */
   scheduleReminders?: boolean;
+  /** Run the occurrence top-up on a schedule (daily). Default true. */
+  scheduleTopUp?: boolean;
+  /** How many days ahead the top-up keeps occurrences. Default 90, the API's value. */
+  occurrenceHorizonDays?: number;
   webBase?: string;
 }
 
@@ -32,6 +42,8 @@ export interface Runtime {
   dispatchNow(): Promise<{ claimed: number; reclaimed: number; dead: number }>;
   /** One reminder reconciliation now. */
   reconcileNow(): Promise<ReconcileSummary>;
+  /** One occurrence top-up now. */
+  topUpNow(): Promise<TopUpSummary>;
   /** Stops the loops and waits for in-flight work. Does not close the database. */
   stop(options?: { timeoutMs?: number; close?: boolean }): Promise<void>;
 }
@@ -46,7 +58,10 @@ export interface Runtime {
  *   provider failures are recorded on the row with their own backoff;
  * - jobs that run out of retries land in `outbox-send-dead`, where they are logged; the row's lease
  *   then expires and the dispatcher recovers it;
- * - a cron job reconciles reminder rows every minute.
+ * - a cron job reconciles reminder rows every minute;
+ * - a cron job tops up recurring sessions' occurrences once a day (00:30 Pakistan time). A missed
+ *   run (the worker was down) is made up once on start; the job is idempotent, so a duplicate run
+ *   adds nothing.
  */
 export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
   const { boss, logger } = options;
@@ -69,6 +84,16 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     expireInSeconds: 120,
     retentionSeconds: 600,
     deleteAfterSeconds: 3600,
+  });
+
+  await boss.createQueue(TOP_UP_QUEUE, {
+    policy: 'singleton',
+    retryLimit: 3,
+    retryDelay: 300,
+    retryBackoff: true,
+    expireInSeconds: 900,
+    retentionSeconds: 2 * 24 * 3600,
+    deleteAfterSeconds: 7 * 24 * 3600,
   });
 
   const queue: SendQueue = {
@@ -133,6 +158,29 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     await boss.schedule(RECONCILE_QUEUE, '* * * * *', {}, { key: 'every-minute' });
   }
 
+  const topUp = (): Promise<TopUpSummary> =>
+    runOccurrenceTopUp({
+      db: options.db,
+      logger,
+      now: options.now,
+      horizonDays: options.occurrenceHorizonDays ?? DEFAULT_OCCURRENCE_HORIZON_DAYS,
+    });
+  await boss.work(
+    TOP_UP_QUEUE,
+    { pollingIntervalSeconds: Math.max(pollingIntervalSeconds, 5) },
+    async () => {
+      await topUp();
+    },
+  );
+  if (options.scheduleTopUp ?? true) {
+    await boss.schedule(
+      TOP_UP_QUEUE,
+      TOP_UP_CRON,
+      {},
+      { key: 'daily', tz: TOP_UP_TIMEZONE, missed: 'once' },
+    );
+  }
+
   // The poll loop. One pass at a time; a slow pass delays the next instead of overlapping it.
   const intervalMs = options.dispatchIntervalMs ?? 5_000;
   let stopped = false;
@@ -157,6 +205,7 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
   return {
     dispatchNow: () => dispatcher.tick(),
     reconcileNow: reconcile,
+    topUpNow: topUp,
     async stop(stopOptions = {}) {
       stopped = true;
       if (timer) clearTimeout(timer);

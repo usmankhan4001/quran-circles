@@ -5,6 +5,7 @@ Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by 
 
 ## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
 
+- Worker runs the occurrence top-up (`topUpAllOccurrences` from `@qc/db`) on the `occurrences-top-up` queue, cron `30 0 * * *` Asia/Karachi (key `daily`, `missed: 'once'`, singleton queue), horizon `OCCURRENCE_HORIZON_DAYS` (default 90), logging counts only; `runtime.topUpNow()` for tests. `OCCURRENCE_HORIZON_DAYS` still needs adding to `.env.example` and the compose files (platform).
 - `draftPushRow` and `draftTemplateRow` accept `venueId` and write `message_outbox.venue_id`; the reminder reconciler sets it (also when reviving a withdrawn reminder).
 - The processor checks per-venue consent against `row.venueId`; rows queued before 0008 (no venue) still work it out from the push or update they point at.
 - The worker stores the provider's message id in `provider_message_id` instead of `payload.providerMessageId`, and delivery reports without our callback data look the row up by that column. The `biz_opaque_callback_data` path is unchanged.
@@ -37,7 +38,6 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 - Which SMS gateway? `HttpSmsProvider` is a generic JSON stand-in.
 - Who gets Meta template approval and a native Urdu review of the template and reminder text?
 - Legacy WhatsApp subscribers: they have no `consents` rows, so nothing is sent to them until the data-migration lane records an opt-in or they send START.
-- The daily occurrence top-up (`topUpAllOccurrences` in `apps/api/src/jobs.ts`) is not scheduled: the worker would need `@qc/api` as a workspace dependency (lockfile change). Reminders are built from occurrences, so a recurring session nobody opens can run out of them after 90 days until this is wired.
 
 ## Contract change requests
 
