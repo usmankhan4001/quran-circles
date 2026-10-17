@@ -8,21 +8,26 @@ import { AppRegistry } from 'react-native';
 import {
   Avatar,
   Badge,
+  Banner,
   Button,
   Card,
   Checkbox,
   Chip,
+  CodeField,
   EmptyState,
   ErrorState,
   Header,
+  HeroHeader,
   Icon,
   IconButton,
   ListItem,
+  SearchField,
   SegmentedControl,
   Select,
   Skeleton,
   Switch,
   TabBar,
+  Tag,
   Text,
   TextField,
   ThemeProvider,
@@ -422,7 +427,7 @@ const stories: Story[] = [
   {
     id: 'tab-bar',
     title: 'TabBar',
-    note: 'Icons here are stand-ins. The selected tab is shown by a bar, a fill and bold text, not by colour alone.',
+    note: 'Icons here are stand-ins. The bar floats; the selected tab is a green pill with its label, so it is shown by shape and text, not by colour alone.',
     cases: [
       {
         label: 'Four tabs, one with an unread badge',
@@ -761,6 +766,103 @@ const stories: Story[] = [
               />
             }
           />
+        ),
+      },
+    ],
+  },
+  {
+    id: 'hero-header',
+    title: 'HeroHeader',
+    note: 'The green header that tops main screens (D12). Content such as the next circle sits inside it.',
+    cases: [
+      {
+        label: 'With back, actions and content',
+        render: (l) => (
+          <HeroHeader
+            eyebrow={pick(l, 'Gulshan · 4 Rabi al-Thani', 'گلشن · 4 ربیع الثانی')}
+            title={pick(l, 'Your next circle', 'آپ کا اگلا حلقہ')}
+            onBack={noop}
+            actions={
+              <IconButton
+                icon="info"
+                variant="onHero"
+                accessibilityLabel={pick(l, 'About', 'تعارف')}
+                onPress={noop}
+              />
+            }
+          >
+            <Card>
+              <Text variant="title3">{pick(l, 'Dars-e-Quran', 'درسِ قرآن')}</Text>
+              <Text variant="caption" color="textSecondary">
+                {pick(l, 'Masjid Al-Noor · 1.2 km', 'مسجد النور · 1.2 کلومیٹر')}
+              </Text>
+            </Card>
+          </HeroHeader>
+        ),
+      },
+    ],
+  },
+  {
+    id: 'search-field',
+    title: 'SearchField and CodeField',
+    note: 'Search is a pill with a clear button (D9). The code is one box per digit, always left to right.',
+    cases: [
+      {
+        label: 'Search with text',
+        render: (l) => (
+          <SearchField
+            accessibilityLabel={pick(l, 'Search circles', 'حلقے تلاش کریں')}
+            value={pick(l, 'Kahf', 'کہف')}
+            onChangeText={noop}
+          />
+        ),
+      },
+      {
+        label: 'Code, two digits typed',
+        render: (l) => (
+          <CodeField
+            accessibilityLabel={pick(l, '6-digit code', '6 ہندسوں کا کوڈ')}
+            value="48"
+            onChangeText={noop}
+          />
+        ),
+      },
+    ],
+  },
+  {
+    id: 'tag-banner',
+    title: 'Tag and Banner',
+    cases: [
+      {
+        label: 'Tags',
+        render: (l) => (
+          <Row>
+            <Tag label={pick(l, 'Seats left', 'جگہ باقی')} />
+            <Tag kind="gilt" label={pick(l, 'Time changed', 'وقت بدل گیا')} />
+            <Tag kind="alert" label={pick(l, 'Full', 'مکمل')} />
+            <Tag kind="neutral" label={pick(l, 'Draft', 'مسودہ')} />
+            <Tag kind="strong" label={pick(l, 'Registered', 'رجسٹرڈ')} />
+          </Row>
+        ),
+      },
+      {
+        label: 'Banners',
+        render: (l) => (
+          <div style={{ display: 'grid', gap: 8 }}>
+            <Banner kind="offline" title={pick(l, 'You are offline', 'آپ آف لائن ہیں')} />
+            <Banner
+              kind="change"
+              title={pick(l, 'Friday’s circle starts at 8:00 pm', 'جمعہ کا حلقہ رات 8:00 بجے')}
+              actionLabel={pick(l, 'View', 'دیکھیں')}
+              onAction={noop}
+            />
+            <Banner
+              kind="error"
+              title={pick(l, 'Could not load', 'لوڈ نہیں ہو سکا')}
+              actionLabel={pick(l, 'Retry', 'دوبارہ')}
+              onAction={noop}
+            />
+          </div>
         ),
       },
     ],

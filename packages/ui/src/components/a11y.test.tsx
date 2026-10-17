@@ -4,20 +4,25 @@ import { describe, expect, it } from 'vitest';
 import {
   Avatar,
   Badge,
+  Banner,
   Button,
   Card,
   Checkbox,
   Chip,
+  CodeField,
   EmptyState,
   ErrorState,
   Header,
+  HeroHeader,
   IconButton,
   ListItem,
+  SearchField,
   SegmentedControl,
   Select,
   Skeleton,
   Switch,
   TabBar,
+  Tag,
   Text,
   TextField,
   Toast,
@@ -37,6 +42,12 @@ function Everything() {
         onBack={noop}
         actions={<IconButton icon="plus" accessibilityLabel="Add" />}
       />
+      <HeroHeader eyebrow="Gulshan" title="Your next circle" onBack={noop}>
+        <Tag label="Seats left" />
+      </HeroHeader>
+      <Banner kind="change" title="Time changed" actionLabel="View" onAction={noop} />
+      <SearchField accessibilityLabel="Search circles" value="kahf" onChangeText={noop} />
+      <CodeField accessibilityLabel="6-digit code" value="12" onChangeText={noop} />
       <Text heading={2} variant="title2">
         Section
       </Text>

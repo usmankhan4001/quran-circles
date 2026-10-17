@@ -18,7 +18,8 @@ export type IconName =
   | 'info'
   | 'success'
   | 'warning'
-  | 'error';
+  | 'error'
+  | 'search';
 
 export const iconNames: readonly IconName[] = [
   'chevron-forward',
@@ -32,6 +33,7 @@ export const iconNames: readonly IconName[] = [
   'success',
   'warning',
   'error',
+  'search',
 ];
 
 export interface IconProps {
@@ -195,6 +197,39 @@ export function Icon({ name, size = 24, color, accessibilityLabel }: IconProps) 
         </View>
       );
       break;
+    case 'search': {
+      const stroke = Math.max(2, Math.round(size / 10));
+      const ring = size * 0.58;
+      art = (
+        <>
+          <View
+            style={{
+              position: 'absolute',
+              top: size * 0.12,
+              left: size * 0.12,
+              width: ring,
+              height: ring,
+              borderRadius: ring / 2,
+              borderWidth: stroke,
+              borderColor: tint,
+            }}
+          />
+          <View
+            style={{
+              position: 'absolute',
+              width: size * 0.3,
+              height: stroke,
+              borderRadius: stroke,
+              backgroundColor: tint,
+              top: size * 0.74,
+              left: size * 0.6,
+              transform: [{ rotate: '45deg' }],
+            }}
+          />
+        </>
+      );
+      break;
+    }
   }
   return (
     <View

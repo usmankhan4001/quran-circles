@@ -50,4 +50,4 @@ Posters follow D3 and D4 (Tanzeem green, gilt for decoration, Figtree and Nastal
 
 ## Kit pieces still to build
 
-From D7, not yet in the kit: SearchField, CodeField, Stepper, Tag, SeatMeter, DateStrip, SessionCard, SkyHeader (green header), PrayerStrip, Banner, ConfirmSheet and the map pieces. The ui lane adds these next; apps can draw them locally until then.
+Now in the kit: `HeroHeader` (the green header, D12), `SearchField`, `CodeField`, `Tag` and `Banner`. Still to come from D7: Stepper, SeatMeter, DateStrip, SessionCard, PrayerStrip, ConfirmSheet and the map pieces. Apps can draw those locally until then.
