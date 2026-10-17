@@ -14,6 +14,8 @@ Branch: claude/peaceful-archimedes-ain95k (nothing committed by this lane; owner
 - `tests/e2e/FINDINGS.md`: 10 findings routed to api-core, messaging, admin-app, user-app, content, contracts/db, and a list of manual phone checks. Each owning lane's status file has a "Findings from integration" note.
 - Checks: `pnpm --filter @qc/e2e test`, typecheck, eslint and prettier on `tests/e2e` pass.
 
+- 2026-10-17 (fix pass by another agent for F-01, F-02, F-03, F-07; `tests/e2e/src` touched only for these): `support/people.ts` creates national admins by running `packages/db` `src/cli/bootstrap-admin.ts --phone <synthetic> --force-additional` on the run's database and checks it printed an invite id and not the number; `support/db.ts` is now read-only; `support/seed.ts` comment updated for the seed's current-week dates. FINDINGS.md marks F-01, F-02, F-03 and F-07 fixed.
+
 ## In progress
 
 - Nothing.
@@ -27,7 +29,7 @@ Branch: claude/peaceful-archimedes-ain95k (nothing committed by this lane; owner
 
 ## Questions for the orchestrator
 
-- F-01: how should the first national admin be created on a fresh database (a CLI in `packages/db` or `apps/api`)? The suite inserts a pending national invite with SQL until then.
+- F-01: answered (2026-10-17): a CLI in `packages/db`. The suite now creates national admins with `bootstrap-admin` (no SQL writes left in `tests/e2e`).
 - Decided by the orchestrator (2026-10-17): the root `pnpm test` and `pnpm check` skip the e2e suite so they stay fast; run it with `pnpm e2e` (same as `pnpm --filter @qc/e2e test`) before signing a gate.
 
 ## Contract change requests

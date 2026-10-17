@@ -20,6 +20,15 @@ import * as schema from './schema/index';
  * Idempotent: every insert is ON CONFLICT DO NOTHING (primary key or natural key), so a second
  * run adds nothing. Existing rows are never updated. It runs in one transaction.
  *
+ * Dates (integration finding F-07): the fixtures are dated around `FIXTURE_NOW`, Monday
+ * 15 February 2027. With an `anchor`, every date and instant is moved by a whole number of weeks
+ * so that the fixtures' first day lands on the Monday (Pakistan date) of the anchor's week: the
+ * seeded occurrences then cover this week and next week, the season runs around them, and the
+ * feed updates are a few days old. Whole weeks keep every weekday, and Pakistan has no daylight
+ * saving, so wall-clock times stay as they are. Without an anchor the fixture dates are kept
+ * unchanged (tests and the mock server). The CLI anchors on today unless told otherwise. A rerun
+ * with another anchor still adds nothing: the ids are the same.
+ *
  * Mapping notes, where a fixture field and a column do not line up:
  * - Localized `{ en, ur: null }`: NOT NULL Urdu columns (names, addresses, titles) fall back to
  *   the English text; nullable Urdu columns (descriptions, entrance notes, update and page
@@ -52,6 +61,12 @@ export type SeedDatabase = PgDatabase<PgQueryResultHKT, typeof schema>;
 export interface SeedOptions {
   /** Environment to check for production. Defaults to `process.env`. */
   env?: Readonly<Record<string, string | undefined>>;
+  /** Move the fixture dates to the week of this instant. Omitted: the fixture dates as they are. */
+  anchor?: Date;
+}
+
+export interface SeedRowOptions {
+  anchor?: Date | undefined;
 }
 
 export interface SeedTableResult {
@@ -87,8 +102,29 @@ export function assertSeedAllowed(
 
 const orEnglish = (l: { en: string; ur: string | null }): string => l.ur ?? l.en;
 
-/** Pakistan wall-clock times in the fixtures are already UTC instants; parse them as such. */
-const instant = (iso: string): Date => new Date(iso);
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+/** Pakistan is UTC+5 all year. */
+const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+/**
+ * Days to move the fixtures by for `anchor`: a whole number of weeks that puts the fixtures'
+ * first day (the Pakistan date of `FIXTURE_NOW`, a Monday) on the Monday of the anchor's week.
+ */
+export function seedShiftDays(anchor: Date): number {
+  if (Number.isNaN(anchor.getTime())) throw new Error('The seed anchor is not a valid date.');
+  const pktDay = (t: number) => Math.floor((t + PKT_OFFSET_MS) / MS_PER_DAY);
+  const days = pktDay(anchor.getTime()) - pktDay(Date.parse(fixtures.FIXTURE_NOW));
+  return Math.floor(days / 7) * 7;
+}
+
+/** Moves fixture dates and instants by `days`. Fixture times are UTC instants already. */
+function dateShifter(days: number) {
+  const ms = days * MS_PER_DAY;
+  const instant = (iso: string): Date => new Date(Date.parse(iso) + ms);
+  const date = (ymd: string): string => instant(`${ymd}T00:00:00Z`).toISOString().slice(0, 10);
+  const maybeDate = (ymd: string | null): string | null => (ymd === null ? null : date(ymd));
+  return { instant, date, maybeDate };
+}
 
 const programIdByKey = (key: string): string => {
   const found = fixtures.programs.find((p) => p.key === key);
@@ -96,8 +132,14 @@ const programIdByKey = (key: string): string => {
   return found.id;
 };
 
-/** The rows the seed inserts, in foreign key order. Pure data; exported for tests. */
-export function buildSeedRows() {
+/**
+ * The rows the seed inserts, in foreign key order. Pure data; exported for tests. With an
+ * `anchor` the dates are moved to that week (see the notes at the top).
+ */
+export function buildSeedRows(options: SeedRowOptions = {}) {
+  const { instant, date, maybeDate } = dateShifter(
+    options.anchor ? seedShiftDays(options.anchor) : 0,
+  );
   const provinces: (typeof schema.provinces.$inferInsert)[] = fixtures.provinces.map((p) => ({
     id: p.id,
     code: p.code,
@@ -157,8 +199,8 @@ export function buildSeedRows() {
     id: s.id,
     programId: s.programId,
     name: s.name,
-    startsOn: s.startsOn,
-    endsOn: s.endsOn,
+    startsOn: date(s.startsOn),
+    endsOn: date(s.endsOn),
     hijriYear: s.hijriYear,
     isActive: s.isActive,
   }));
@@ -195,8 +237,8 @@ export function buildSeedRows() {
     localStartTime: s.localStartTime,
     durationMinutes: s.durationMinutes,
     daysOfWeek: s.daysOfWeek,
-    startsOn: s.startsOn,
-    endsOn: s.endsOn,
+    startsOn: date(s.startsOn),
+    endsOn: maybeDate(s.endsOn),
     timezone: s.timezone,
     capacityEnabled: s.registration.capacity !== null,
     capacity: s.registration.capacity,
@@ -286,7 +328,7 @@ export async function seedDatabase(
   options: SeedOptions = {},
 ): Promise<SeedResult> {
   assertSeedAllowed(options.env ?? process.env);
-  const rows = buildSeedRows();
+  const rows = buildSeedRows({ anchor: options.anchor });
 
   const plan: [PgTable, readonly Record<string, unknown>[]][] = [
     [schema.provinces, rows.provinces],

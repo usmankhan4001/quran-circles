@@ -150,8 +150,9 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     RECONCILE_QUEUE,
     { pollingIntervalSeconds: Math.max(pollingIntervalSeconds, 5) },
     async () => {
-      const summary = await reconcile();
-      logger.info('reminders.reconciled', { ...summary });
+      // `reconcileReminders` logs `reminders.reconciled` itself when a run changed something;
+      // logging here too printed every run twice (F-03).
+      await reconcile();
     },
   );
   if (options.scheduleReminders ?? true) {

@@ -49,5 +49,5 @@ WP4 Wave 2 items 1 to 7. 281 tests (190 in `@qc/messaging`, 91 in `@qc/worker`),
 
 From the WP11 end-to-end run with the real worker and fake providers (details in `tests/e2e/FINDINGS.md`):
 
-- F-03 (low, open): `reminders.reconciled` is logged twice per run (`reminders/reconcile.ts:348` and `runtime.ts:154`), so the log reads as if every reconcile ran twice. Reminders themselves were inserted, re-timed after a schedule change and sent once.
+- F-03 (low, **fixed 2026-10-17**): the queue handler in `runtime.ts` no longer logs; `reconcileReminders` logs `reminders.reconciled` once, when a run changed something. Test: `runtime.test.ts` "logs a reconcile that reached the queue once, not twice". The worker test database now also refuses overlapping queries inside a transaction (F-02 guard); no worker code needed a change. `@qc/worker`: 103 tests. Original note: `reminders.reconciled` is logged twice per run (`reminders/reconcile.ts:348` and `runtime.ts:154`), so the log reads as if every reconcile ran twice. Reminders themselves were inserted, re-timed after a schedule change and sent once.
 - F-05 (medium, pending outside dependency): web push from the PWA cannot be exercised until the VAPID key pair exists; the flows use a fake `webpush` device.

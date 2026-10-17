@@ -4,6 +4,7 @@ import { drizzle, type PgliteDatabase } from 'drizzle-orm/pglite';
 import { PgTable } from 'drizzle-orm/pg-core';
 import { migrateUp, pgliteExecutor, type SqlExecutor } from '../migrate';
 import * as schema from '../schema/index';
+import { guardTransactions } from '../testing/tx-guard';
 
 export type TestDatabase = PgliteDatabase<typeof schema>;
 
@@ -16,9 +17,12 @@ export interface TestDb {
   db: TestDatabase;
 }
 
-/** A fresh in-process Postgres with no tables. */
+/**
+ * A fresh in-process Postgres with no tables. Transactions refuse overlapping queries, as
+ * node-postgres 9 will (see `testing/tx-guard.ts`).
+ */
 export function createEmptyDb(): TestDb {
-  const pg = new PGlite();
+  const pg = guardTransactions(new PGlite());
   return { pg, exec: pgliteExecutor(pg), db: drizzle(pg, { schema }) };
 }
 

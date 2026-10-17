@@ -59,30 +59,30 @@ export async function loadSessions(
   const records = await selectSessionRecords(db).where(inArray(sessions.id, unique));
   const circleIds = [...new Set(records.flatMap((r) => (r.s.circleId ? [r.s.circleId] : [])))];
 
-  const [circleRows, seatRows, nextRows] = await Promise.all([
-    circleIds.length
-      ? db.select().from(circles).where(inArray(circles.id, circleIds))
-      : Promise.resolve([]),
-    db
-      .select({
-        sessionId: registrations.sessionId,
-        seats: sql<number>`coalesce(sum(${registrations.partySize}), 0)`.mapWith(Number),
-      })
-      .from(registrations)
-      .where(and(inArray(registrations.sessionId, unique), eq(registrations.status, 'confirmed')))
-      .groupBy(registrations.sessionId),
-    db
-      .selectDistinctOn([occurrences.sessionId])
-      .from(occurrences)
-      .where(
-        and(
-          inArray(occurrences.sessionId, unique),
-          eq(occurrences.status, 'scheduled'),
-          gte(occurrences.endsAt, now),
-        ),
-      )
-      .orderBy(asc(occurrences.sessionId), asc(occurrences.startsAt)),
-  ]);
+  // One after another, never Promise.all: `db` may be a transaction (registration, schedule
+  // change), whose single client runs one query at a time (F-02).
+  const circleRows = circleIds.length
+    ? await db.select().from(circles).where(inArray(circles.id, circleIds))
+    : [];
+  const seatRows = await db
+    .select({
+      sessionId: registrations.sessionId,
+      seats: sql<number>`coalesce(sum(${registrations.partySize}), 0)`.mapWith(Number),
+    })
+    .from(registrations)
+    .where(and(inArray(registrations.sessionId, unique), eq(registrations.status, 'confirmed')))
+    .groupBy(registrations.sessionId);
+  const nextRows = await db
+    .selectDistinctOn([occurrences.sessionId])
+    .from(occurrences)
+    .where(
+      and(
+        inArray(occurrences.sessionId, unique),
+        eq(occurrences.status, 'scheduled'),
+        gte(occurrences.endsAt, now),
+      ),
+    )
+    .orderBy(asc(occurrences.sessionId), asc(occurrences.startsAt));
   const circleById = new Map(circleRows.map((c) => [c.id, c]));
   const seatsBySession = new Map(seatRows.map((r) => [r.sessionId, r.seats]));
   const nextBySession = new Map(nextRows.map((r) => [r.sessionId, r]));
