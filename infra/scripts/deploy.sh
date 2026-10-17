@@ -6,16 +6,20 @@
 #
 # Deploy:
 #   1. Tag = QC_DEPLOY_TAG, else the short git SHA of HEAD.
-#   2. Images <QC_IMAGE_REGISTRY>/api:<tag> and /worker:<tag>: reused if present, pulled when
-#      QC_DEPLOY_PULL=1, otherwise built here from the checkout.
+#   2. Images <QC_IMAGE_REGISTRY>/api:<tag>, /worker:<tag> and /poster-renderer:<tag>: reused if
+#      present, pulled when QC_DEPLOY_PULL=1, otherwise built here from the checkout.
 #   3. Encrypted pre-deploy backup (infra/backup/backup.sh pre-deploy).
-#   4. `compose up -d --wait`: the migrate service applies pending migrations, then the api and
-#      the worker restart on the new images and must report healthy.
+#   4. `compose up -d --wait`: the migrate service applies pending migrations, then the api, the
+#      worker and the poster renderer restart on the new images and must report healthy.
 #   5. The public health URL (https://<QC_DOMAIN>/api/health) must answer.
 #   On failure in 4 or 5 the previous images are started again and an alert is raised. Database
 #   migrations are NOT reverted automatically; see "Roll back" in infra/README.md.
 #
 # The current and previous tags are kept in QC_STATE_DIR (default /srv/qc/state).
+#
+# --rollback needs all three images of the previous tag. The first deploy that adds the poster
+# renderer has no renderer image for the tag before it: roll back from that one by checking out
+# the previous commit and running deploy.sh.
 set -euo pipefail
 
 # shellcheck source=infra/backup/lib.sh
@@ -34,6 +38,11 @@ current_file="$state_dir/$project.current-tag"
 previous_file="$state_dir/$project.previous-tag"
 current_tag="$(cat "$current_file" 2>/dev/null || true)"
 previous_tag="$(cat "$previous_file" 2>/dev/null || true)"
+
+# images_of TAG: the image names deploy.sh builds or pulls for TAG.
+images_of() {
+  printf '%s\n' "$registry/api:$1" "$registry/worker:$1" "$registry/poster-renderer:$1"
+}
 
 # up_with TAG: starts the stack on TAG and waits for every health check.
 up_with() {
@@ -54,7 +63,8 @@ public_health() {
 if [[ "${1-}" == "--rollback" ]]; then
   [[ -n "$previous_tag" ]] || die "no previous deploy recorded in $previous_file"
   # Without the images, `up` would build them from whatever is checked out now: refuse instead.
-  docker image inspect "$registry/api:$previous_tag" "$registry/worker:$previous_tag" >/dev/null 2>&1 ||
+  mapfile -t previous_images < <(images_of "$previous_tag")
+  docker image inspect "${previous_images[@]}" >/dev/null 2>&1 ||
     die "images for $previous_tag are gone; check out that commit and run deploy.sh instead"
   log "rollback: $project from ${current_tag:-unknown} to $previous_tag"
   up_with "$previous_tag"
@@ -79,13 +89,14 @@ fi
 
 log "deploy: $project tag $tag (current ${current_tag:-none})"
 
-if docker image inspect "$registry/api:$tag" "$registry/worker:$tag" >/dev/null 2>&1; then
+mapfile -t images < <(images_of "$tag")
+if docker image inspect "${images[@]}" >/dev/null 2>&1; then
   log "deploy: images for $tag already present"
 elif [[ "$(env_get QC_DEPLOY_PULL)" == "1" ]]; then
-  QC_IMAGE_TAG="$tag" compose pull api worker migrate
+  QC_IMAGE_TAG="$tag" compose pull api worker migrate poster-renderer
 else
   log "deploy: building images for $tag"
-  QC_IMAGE_TAG="$tag" compose build api worker
+  QC_IMAGE_TAG="$tag" compose build api worker poster-renderer
 fi
 
 if [[ "$(env_get QC_DEPLOY_SKIP_BACKUP)" == "1" ]]; then

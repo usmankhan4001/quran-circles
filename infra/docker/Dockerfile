@@ -53,6 +53,9 @@ FROM ${NODE_IMAGE} AS runtime
 ENV NODE_ENV=production \
     NODE_OPTIONS=--enable-source-maps
 WORKDIR /app
+# Mount point of the shared poster-files volume (POSTER_STORAGE_DIR in compose). It exists in the
+# image, owned by `node`, so Docker gives a new empty volume that owner and the process can write.
+RUN mkdir -p /var/lib/qc/posters && chown node:node /var/lib/qc/posters
 # Nothing in /app is writable by the process.
 USER node
 

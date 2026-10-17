@@ -21,5 +21,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint
+      # The poster renderer's tests render with real headless Chromium. Install the headless
+      # shell that its pinned playwright-core expects, plus the system libraries it needs.
+      - name: Install Chromium headless shell for the poster renderer tests
+        run: pnpm --filter @qc/poster-renderer exec playwright-core install --with-deps --only-shell chromium
       - run: pnpm test
       - run: pnpm format:check

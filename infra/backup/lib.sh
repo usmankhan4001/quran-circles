@@ -72,6 +72,32 @@ psql_in_db() {
     psql -X -v ON_ERROR_STOP=1 -U qc -d "$1" -At -c "$2" </dev/null
 }
 
+# poster_volume: the name of this stack's poster-files volume (empty when it does not exist yet).
+poster_volume() {
+  local project
+  project="$(env_get COMPOSE_PROJECT_NAME qc-prod)"
+  docker volume ls -q \
+    --filter "label=com.docker.compose.project=$project" \
+    --filter "label=com.docker.compose.volume=poster-files" | head -n 1
+}
+
+# in_poster_volume MODE ARGS...: runs ARGS in a throwaway container with the poster-files volume
+# at /data (MODE ro or rw). It uses the running postgres container's image (already on the host,
+# pinned, has tar), with no network, a read-only root, no capabilities and the files' owner
+# (uid 1000, the `node` user that writes them), so it reads 0600 files without root.
+in_poster_volume() {
+  local mode="$1" volume image cid
+  shift
+  volume="$(poster_volume)"
+  [[ -n "$volume" ]] || die "the poster-files volume does not exist"
+  cid="$(compose ps -q postgres)"
+  [[ -n "$cid" ]] || die "postgres is not running"
+  image="$(docker inspect --format '{{.Config.Image}}' "$cid")"
+  docker run --rm -i --pull never --network none --read-only --cap-drop ALL \
+    --security-opt no-new-privileges:true --user 1000:1000 \
+    -v "$volume:/data:$mode" --entrypoint "$1" "$image" "${@:2}"
+}
+
 # alert MESSAGE: logs it and, when QC_ALERT_WEBHOOK_URL is set, posts {"text": MESSAGE}.
 # The message must never contain personal data or secrets.
 alert() {

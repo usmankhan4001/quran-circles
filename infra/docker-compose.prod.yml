@@ -1,4 +1,5 @@
-# Production stack (WP10): reverse proxy, api, worker and Postgres on one host.
+# Production stack (WP10): reverse proxy, api, worker, Postgres and the poster renderer (WP16) on
+# one host.
 # Staging uses this same file with its own env file and project name; see infra/README.md.
 #
 #   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env config
@@ -9,7 +10,13 @@
 #
 # Networks: `edge` carries traffic from the proxy to the api and the worker and lets those two
 # reach Meta, Google and Apple. `backend` is internal (no route out). Postgres is only on
-# `backend` and publishes no port, so nothing outside this stack can reach it.
+# `backend` and publishes no port, so nothing outside this stack can reach it. `render` is internal
+# too and holds only the poster renderer and its two callers (api, worker): the renderer has no
+# route out and cannot reach Postgres, publishes no port and is never routed by Caddy.
+#
+# Poster files live in the `poster-files` volume, mounted at POSTER_STORAGE_DIR in the worker
+# (writes and deletes them) and read-only in the api (serves them). infra/backup/backup.sh
+# includes it in the encrypted backups.
 
 name: ${COMPOSE_PROJECT_NAME:-qc-prod}
 
@@ -37,6 +44,13 @@ x-messaging-shared: &messaging-shared
   APP_ENV: ${APP_ENV:?set APP_ENV in the env file}
   DATABASE_URL: postgres://qc:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}@postgres:5432/qc
   PUBLIC_WEB_BASE: ${PUBLIC_WEB_BASE:?set PUBLIC_WEB_BASE in the env file}
+
+# Poster renderer client settings, the same for the api and the worker. The renderer gets the same
+# token. POSTER_STORAGE_DIR is where the poster-files volume is mounted (it exists in the image).
+x-poster-client: &poster-client
+  RENDERER_URL: http://poster-renderer:8090
+  RENDERER_TOKEN: ${RENDERER_TOKEN:?set RENDERER_TOKEN in the env file}
+  POSTER_STORAGE_DIR: /var/lib/qc/posters
 
 services:
   proxy:
@@ -99,7 +113,7 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      <<: *messaging-shared
+      <<: [*messaging-shared, *poster-client]
       PORT: '3000'
       # Behind Caddy, which replaces X-Forwarded-For with the real client address.
       TRUST_PROXY: 'true'
@@ -118,9 +132,13 @@ services:
       SMS_GATEWAY_URL:
       SMS_GATEWAY_KEY:
       SMS_SENDER:
+    volumes:
+      # Read-only: the api only serves poster files; the worker writes and deletes them.
+      - poster-files:/var/lib/qc/posters:ro
     networks:
       - edge
       - backend
+      - render
     <<: *hardening
     stop_grace_period: 15s
     healthcheck:
@@ -155,7 +173,7 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      <<: *messaging-shared
+      <<: [*messaging-shared, *poster-client]
       # Serves /healthz (internal) and /webhooks/whatsapp (routed by Caddy).
       WORKER_HTTP_PORT: '8081'
       WORKER_POLL_MS:
@@ -183,9 +201,12 @@ services:
       SMS_GATEWAY_URL:
       SMS_GATEWAY_KEY:
       SMS_SENDER:
+    volumes:
+      - poster-files:/var/lib/qc/posters
     networks:
       - edge
       - backend
+      - render
     <<: *hardening
     # The runtime waits up to 20 s for in-flight sends before it closes.
     stop_grace_period: 30s
@@ -206,6 +227,62 @@ services:
         limits:
           cpus: '${QC_WORKER_CPUS:-1.0}'
           memory: ${QC_WORKER_MEMORY:-512m}
+    logging: *logging
+
+  # Poster renderer (WP16): headless Chromium behind a bearer token. Internal only: on `render`
+  # (internal, no route out, no Postgres), no published port, not routed by Caddy. It returns the
+  # files to the worker and writes nothing to disk except /tmp (Chromium's profile, HOME=/tmp).
+  # Chromium runs without its own sandbox (Playwright's default in containers); the hardening
+  # below, the internal-only network and the renderer's in-browser request blocking are the
+  # isolation (docs/agents/status/renderer.md).
+  poster-renderer:
+    image: ${QC_IMAGE_REGISTRY:-qc}/poster-renderer:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/poster-renderer.Dockerfile
+      target: poster-renderer
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:?set APP_ENV in the env file}
+      RENDERER_PORT: '8090'
+      RENDERER_TOKEN: ${RENDERER_TOKEN:?set RENDERER_TOKEN in the env file}
+      # QR codes point at the same public origin as the links in messages.
+      PUBLIC_WEB_BASE: ${PUBLIC_WEB_BASE:?set PUBLIC_WEB_BASE in the env file}
+      RENDER_CONCURRENCY: '2'
+      RENDER_QUEUE_MAX: '8'
+      RENDER_TIMEOUT_MS: '20000'
+      BROWSER_HEAP_MB: '128'
+      BROWSER_RECYCLE_AFTER: '100'
+      RENDER_CACHE_BYTES: '67108864'
+    networks:
+      - render
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8090/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_RENDERER_CPUS:-1.0}'
+          memory: ${QC_RENDERER_MEMORY:-768m}
+          pids: 256
     logging: *logging
 
   # One-shot: applies pending SQL migrations, then exits. `up` runs it before the api and the
@@ -263,8 +340,11 @@ networks:
   edge:
   backend:
     internal: true
+  render:
+    internal: true
 
 volumes:
   pgdata:
+  poster-files:
   caddy-data:
   caddy-config:

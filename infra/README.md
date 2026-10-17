@@ -1,21 +1,22 @@
 # Infrastructure
 
-The production stack (WP10): Caddy, the api, the worker and Postgres in Docker Compose on one VPS, with encrypted nightly backups, a scripted restore, health checks and alerts. Nothing has been deployed yet: the VPS and the domain are still to come. Everything below is ready for a human to run once they are.
+The production stack (WP10): Caddy, the api, the worker, Postgres and the poster renderer (WP16) in Docker Compose on one VPS, with encrypted nightly backups, a scripted restore, health checks and alerts. Nothing has been deployed yet: the VPS and the domain are still to come. Everything below is ready for a human to run once they are.
 
-| Path                      | What it is                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------ |
-| `docker-compose.prod.yml` | Production and staging stack: `proxy`, `api`, `worker`, `migrate`, `postgres`  |
-| `docker/Dockerfile`       | api and worker images (targets `api`, `worker`), bundled with esbuild          |
-| `docker/bundle.sh`        | The esbuild step, also runnable outside Docker                                 |
-| `caddy/Caddyfile`         | TLS, `/api` to the api, `/webhooks/whatsapp` to the worker, static PWA/console |
-| `.env.example`            | Template for the server's env file, fake values only                           |
-| `ENV.md`                  | Every variable name, who reads it, whether it is required                      |
-| `backup/`                 | `backup.sh`, `restore.sh`, `restore-test.sh`                                   |
-| `monitoring/`             | `check.sh` (health, disk, backup age, TLS), `logrotate.conf`                   |
-| `scripts/deploy.sh`       | Deploy with automatic rollback, and `--rollback`                               |
-| `scripts/compose.sh`      | `docker compose` on the current deploy's images; use it for manual commands    |
-| `cron/qc.crontab`         | Nightly backup, 5-minute checks, weekly restore test, image prune              |
-| `docker-compose.dev.yml`  | Local development database only                                                |
+| Path                                | What it is                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `docker-compose.prod.yml`           | Production and staging stack: `proxy`, `api`, `worker`, `migrate`, `postgres`, `poster-renderer` |
+| `docker/Dockerfile`                 | api and worker images (targets `api`, `worker`), bundled with esbuild                            |
+| `docker/poster-renderer.Dockerfile` | Poster renderer image (target `poster-renderer`): Debian slim, Chromium headless shell           |
+| `docker/bundle.sh`                  | The esbuild step, also runnable outside Docker                                                   |
+| `caddy/Caddyfile`                   | TLS, `/api` to the api, `/webhooks/whatsapp` to the worker, static PWA/console                   |
+| `.env.example`                      | Template for the server's env file, fake values only                                             |
+| `ENV.md`                            | Every variable name, who reads it, whether it is required                                        |
+| `backup/`                           | `backup.sh`, `restore.sh`, `restore-test.sh`                                                     |
+| `monitoring/`                       | `check.sh` (health, disk, backup age, TLS), `logrotate.conf`                                     |
+| `scripts/deploy.sh`                 | Deploy with automatic rollback, and `--rollback`                                                 |
+| `scripts/compose.sh`                | `docker compose` on the current deploy's images; use it for manual commands                      |
+| `cron/qc.crontab`                   | Nightly backup, 5-minute checks, weekly restore test, image prune                                |
+| `docker-compose.dev.yml`            | Local development database only                                                                  |
 
 ## Local development
 
@@ -38,7 +39,8 @@ Agents never receive production credentials. Nothing below goes into the reposit
 - [ ] **Backup key pair**: run `age-keygen -o backup-restore.agekey` on the owner's own machine. The public key (`age1...`) goes into `QC_BACKUP_AGE_RECIPIENT` on production. The private key stays offline with the owner and on the staging host only (`QC_BACKUP_AGE_IDENTITY`), never on production.
 - [ ] **Alert destination**: a webhook URL that accepts `{"text": "..."}` (for example an ntfy topic or a Slack incoming webhook) and the named human who receives it (`QC_ALERT_WEBHOOK_URL`).
 - [ ] **External uptime monitor** (any hosted checker) on `https://<QC_DOMAIN>/api/health`, alerting the same human. The on-server check cannot report the server itself going down.
-- [ ] **Secrets**, generated on the server: `POSTGRES_PASSWORD` (`openssl rand -hex 32`), `AUTH_SECRET` (`openssl rand -base64 48`), `WHATSAPP_VERIFY_TOKEN` (`openssl rand -hex 24`).
+- [ ] **Secrets**, generated on the server: `POSTGRES_PASSWORD` (`openssl rand -hex 32`), `AUTH_SECRET` (`openssl rand -base64 48`), `WHATSAPP_VERIFY_TOKEN` (`openssl rand -hex 24`), `RENDERER_TOKEN` (`openssl rand -hex 32`).
+- [ ] **Disk for poster files**: rendered posters are kept in the `poster-files` Docker volume on the VPS's own disk (decision for now; an object store can replace it later) and go into the encrypted backups. Allow for it when sizing the disk and the second backup location.
 - [ ] **Provider credentials** from the owner's accounts: WhatsApp Cloud API phone number ID, system-user access token and app secret (after Meta Business verification); FCM service account; APNs key, key ID, team ID, bundle ID; VAPID key pair (`npx web-push generate-vapid-keys`); later an SMS gateway.
 - [ ] **Staging placement**: a second small VPS (recommended; identical shape), or the same VPS with a shared proxy (needs a small change to this setup, because both stacks would want ports 80 and 443).
 
@@ -93,9 +95,31 @@ rclone ls "$(grep ^QC_BACKUP_RCLONE_REMOTE= /srv/qc/prod.env | cut -d= -f2)/dail
 
 Then create the first national admin. `pnpm --filter @qc/db bootstrap-admin --phone <E.164> --yes` creates a pending national-admin invite for that number and prints only the invite id; the person then signs in with a code and accepts it as usual (see `packages/db/README.md`). It needs `DATABASE_URL` pointing at the production database, which publishes no port, so for now run it from a Node 22 container attached to the stack's internal network with the checkout mounted. Open item for the platform lane: bundle a `bootstrap-admin` runner into the `migrate` image so this becomes one `infra/scripts/compose.sh run` command.
 
+Then insert the production poster templates (below, "Poster templates").
+
 Then, in Meta's WhatsApp dashboard, set the callback URL to `https://<QC_DOMAIN>/webhooks/whatsapp` and the verify token to the value of `WHATSAPP_VERIFY_TOKEN`, and subscribe to `messages`.
 
-What `up` does: `postgres` starts and becomes healthy, `migrate` applies pending SQL migrations and exits, then `api` and `worker` start and must pass their health checks, then `proxy` (Caddy) starts and obtains certificates. Postgres publishes no port and sits on an internal network; only Caddy listens on the host.
+What `up` does: `postgres` starts and becomes healthy, `migrate` applies pending SQL migrations and exits, then `api` and `worker` start and must pass their health checks, then `proxy` (Caddy) starts and obtains certificates. `poster-renderer` starts alongside and must pass its health check too. Postgres publishes no port and sits on an internal network; only Caddy listens on the host.
+
+The poster renderer sits on its own internal network (`render`) with only the api and the worker: no published port, no route to the internet, no route to Postgres, never routed by Caddy. It needs `RENDERER_TOKEN` (the same value the api and the worker send). Rendered files go to the `poster-files` volume, which the worker writes and the api mounts read-only.
+
+### Poster templates
+
+Production gets no seed data, so the `poster_templates` rows are inserted once by hand after the first deploy (migration 0010 or later applied). For now these are the renderer's two **demo** templates, `cloud` and `night` (`DEMO_POSTER_TEMPLATES` in `@qc/contracts`), marked `provisional`. The final designs arrive later as new keys: each one is a new row like these (same statement, new key and names), inserted after the renderer release that knows the key. Retire a template with `UPDATE poster_templates SET is_active = false WHERE key = '<key>'`; never delete a row that posters refer to.
+
+```sh
+cd /srv/qc/app
+QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh exec -T postgres psql -U qc -d qc -v ON_ERROR_STOP=1 <<'SQL'
+INSERT INTO poster_templates (key, name_en, name_ur, version, formats, provisional)
+VALUES
+  ('cloud', 'Cloud', 'ہلکا', 1, ARRAY['story', 'print_a4', 'print_a3', 'link_preview'], true),
+  ('night', 'Night', 'رات', 1, ARRAY['story', 'print_a4', 'print_a3', 'link_preview'], true)
+ON CONFLICT (key) DO NOTHING;
+SELECT key, version, provisional, is_active FROM poster_templates ORDER BY key;
+SQL
+```
+
+Running it again changes nothing. When the human design approval of a template is given, clear the flag: `UPDATE poster_templates SET provisional = false WHERE key = '<key>'`. Staging gets the same rows.
 
 ## Deploy
 
@@ -130,7 +154,8 @@ If the data is damaged, restore the `pre-deploy` backup instead (below).
 `backup.sh` runs nightly at 02:30 UTC from cron, and before every deploy.
 
 - `pg_dump` (custom format) runs inside the postgres container and streams straight into `age`, encrypted to `QC_BACKUP_AGE_RECIPIENT`. No unencrypted dump touches the disk, and the production server cannot decrypt its own backups.
-- Files: `/srv/qc/backups/daily/<project>-<UTC time>.dump.age` with a `.sha256`; Sunday copies in `weekly/`; labelled runs (`pre-deploy`, `pre-restore`) in `manual/`.
+- Poster files: the `poster-files` volume is archived with `tar` in a throwaway container (no network, read-only, the files' owner) and encrypted the same way, as a second file next to the dump.
+- Files: `/srv/qc/backups/daily/<project>-<UTC time>.dump.age` and `<same name>.posters.tar.age`, each with a `.sha256`; Sunday copies in `weekly/`; labelled runs (`pre-deploy`, `pre-restore`) in `manual/`.
 - Retention: daily and labelled 14 days, weekly 8 weeks (`QC_BACKUP_RETENTION_DAYS`, `QC_BACKUP_WEEKLY_RETENTION_WEEKS`). The same retention is applied to the second location.
 - Second location: each new file is copied with rclone to `QC_BACKUP_RCLONE_REMOTE`.
 - A failure exits non-zero and sends an alert. `monitoring/check.sh` also alerts when the last good backup is more than 26 hours old.
@@ -141,6 +166,8 @@ Manual backup: `QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh manual-note`
 
 You need the age private key file. On production it is not present: copy it in for the restore and delete it afterwards (`shred -u`).
 
+When a `.posters.tar.age` file sits next to the `.dump.age`, both commands below use it: `--check` decrypts it and counts the files, `--replace` empties the `poster-files` volume and unpacks it there. Copy both files (and their `.sha256`) when restoring from the second location.
+
 **Check a backup without touching anything** (restores into a scratch database `qc_restore_check`, verifies the schema, prints row counts, drops it):
 
 ```sh
@@ -148,7 +175,7 @@ QC_ENV_FILE=/srv/qc/prod.env infra/backup/restore.sh \
   --check /srv/qc/backups/daily/<file>.dump.age --identity /path/to/backup-restore.agekey
 ```
 
-**Replace the live database** (stops the api and worker, takes a `pre-restore` backup of the current database, recreates `qc`, restores, starts the stack, runs newer migrations, waits for health):
+**Replace the live database and poster files** (stops the api and worker, takes a `pre-restore` backup of the current database and poster files, recreates `qc`, restores, starts the stack, runs newer migrations, waits for health):
 
 ```sh
 QC_ENV_FILE=/srv/qc/prod.env infra/backup/restore.sh \
@@ -156,13 +183,13 @@ QC_ENV_FILE=/srv/qc/prod.env infra/backup/restore.sh \
 # asks you to type the project name (qc-prod) to confirm; --yes skips the question
 ```
 
-From the second location: `rclone copy "<remote>/daily/<file>.dump.age" /srv/qc/backups/daily/` (and the `.sha256`), then restore as above. Both commands print the time taken: record it in the drill log.
+From the second location: `rclone copy "<remote>/daily/<file>.dump.age" /srv/qc/backups/daily/` (and the `.posters.tar.age` and both `.sha256`), then restore as above. Both commands print the time taken: record it in the drill log.
 
 **Weekly restore test** (staging host, Mondays 04:00 UTC from cron): `restore-test.sh --remote` fetches the newest production backup from the second location, runs `restore.sh --check` against the staging Postgres, writes `last-restore-check` and sends a "passed" or "FAILED" message. Silence on a Monday means it did not run. Set `QC_EXPECT_RESTORE_CHECK=1` on that host so `check.sh` alerts on a missing or failed test.
 
 ## Monitoring
 
-- **Health endpoints**: the api serves `GET /health` (public as `https://<QC_DOMAIN>/api/health`); the worker serves `GET /healthz` inside the stack only. Docker health checks call both every 15 s; `restart: unless-stopped` restarts a crashed process.
+- **Health endpoints**: the api serves `GET /health` (public as `https://<QC_DOMAIN>/api/health`); the worker and the poster renderer serve `GET /healthz` inside the stack only. Docker health checks call both every 15 s; `restart: unless-stopped` restarts a crashed process.
 - **check.sh** (every 5 minutes): public health URL, every container running and healthy, disk below 85 %, last backup under 26 h, TLS certificate valid for 14 more days, and on the restore host the weekly test. It alerts on a change of state only ("problem: ..." and "recovered").
 - **Logs**: the api and worker write structured JSON with personal data redacted. Docker rotates container logs (5 files of 10 MB each). Cron job logs in `/var/log/qc` are rotated weekly by `logrotate.conf`. Caddy writes no access log, because request URIs can carry the webhook verify token. Read logs with `QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh logs -f api worker`.
 - **Not yet in place**: self-hosted error tracking (GlitchTip). It needs an error-reporting hook in the api and worker (their lanes) and its own Postgres and Redis; it will be added as a separate compose file once that hook exists.
@@ -172,6 +199,7 @@ From the second location: `rclone copy "<remote>/daily/<file>.dump.age" /srv/qc/
 Edit the value in `/srv/qc/prod.env`, then `QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh up -d` (only the containers whose environment changed are recreated).
 
 - `AUTH_SECRET`: everyone is signed out and signs in again.
+- `RENDERER_TOKEN`: one value for the api, the worker and the renderer; `up -d` recreates all three. Poster jobs that fail during the switch are retried by the worker.
 - `POSTGRES_PASSWORD`: change it in the database first: `infra/scripts/compose.sh exec postgres psql -U qc -d qc -c "ALTER ROLE qc PASSWORD '<new>'"`, then in the env file, then `up -d`.
 - WhatsApp, FCM, APNs, VAPID and SMS credentials: create the new credential in the provider's console, update the env file, `up -d`, then revoke the old one. A new VAPID key pair invalidates existing web push subscriptions.
 - Backup key: create a new age key pair, update `QC_BACKUP_AGE_RECIPIENT`. Keep the old private key until every backup made with it has aged out.

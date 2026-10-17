@@ -7,7 +7,8 @@
 # Checks:
 #   public     https://<QC_DOMAIN>/api/health answers 200 through Caddy (TLS, proxy, api)
 #   containers every long-running service is running and healthy (Docker health checks run the
-#              api's /health and the worker's /healthz inside the stack)
+#              api's /health, the worker's /healthz and the poster renderer's /healthz inside the
+#              stack)
 #   disk       / and QC_BACKUP_DIR below QC_DISK_ALERT_PERCENT (default 85)
 #   backup     QC_BACKUP_DIR/last-success is less than 26 hours old
 #   restore    (only with QC_EXPECT_RESTORE_CHECK=1, i.e. on the host that runs restore tests)
@@ -41,7 +42,7 @@ if ! curl "${curl_opts[@]}" "$health_url" 2>/dev/null; then
   problems+=("public health URL does not answer")
 fi
 
-for service in proxy api worker postgres; do
+for service in proxy api worker poster-renderer postgres; do
   cid="$(compose ps -q "$service" 2>/dev/null || true)"
   if [[ -z "$cid" ]]; then
     problems+=("$service is not running")

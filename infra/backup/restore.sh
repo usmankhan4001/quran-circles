@@ -12,8 +12,12 @@
 # checks the schema and prints row counts (counts only, never data), then drops it.
 #
 # --replace stops the api and the worker, takes a labelled safety backup of the current database
-# (when QC_BACKUP_AGE_RECIPIENT is set), drops and recreates `qc`, restores, then starts the stack
-# again (which runs any newer migrations) and waits until it is healthy.
+# and poster files (when QC_BACKUP_AGE_RECIPIENT is set), drops and recreates `qc`, restores,
+# then starts the stack again (which runs any newer migrations) and waits until it is healthy.
+#
+# Poster files: when <name>.posters.tar.age sits next to <name>.dump.age, --check decrypts it and
+# counts the files, and --replace empties the poster-files volume and unpacks it there. Without
+# it, the poster files are left as they are (a log line says so).
 #
 # The env file comes from QC_ENV_FILE (default /srv/qc/prod.env). Prints the time taken.
 set -euo pipefail
@@ -22,7 +26,7 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 usage() {
-  sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
   exit 2
 }
 
@@ -55,12 +59,24 @@ need docker age sha256sum
 identity="${identity:-$(env_get QC_BACKUP_AGE_IDENTITY)}"
 [[ -n "$identity" && -r "$identity" ]] || die "age identity not readable (use --identity or QC_BACKUP_AGE_IDENTITY)"
 
-if [[ -r "$file.sha256" ]]; then
-  (cd "$(dirname "$file")" && sha256sum --check --status "$(basename "$file").sha256") ||
-    die "checksum mismatch for $file"
-  log "restore: checksum ok"
+# check_sum FILE: verifies FILE against FILE.sha256 when that exists.
+check_sum() {
+  if [[ -r "$1.sha256" ]]; then
+    (cd "$(dirname "$1")" && sha256sum --check --status "$(basename "$1").sha256") ||
+      die "checksum mismatch for $1"
+    log "restore: checksum ok for $(basename "$1")"
+  else
+    log "restore: warning: no .sha256 next to $(basename "$1"), checksum not verified"
+  fi
+}
+
+check_sum "$file"
+posters_file=""
+if [[ "$file" == *.dump.age && -r "${file%.dump.age}.posters.tar.age" ]]; then
+  posters_file="${file%.dump.age}.posters.tar.age"
+  check_sum "$posters_file"
 else
-  log "restore: warning: no .sha256 next to the backup, checksum not verified"
+  log "restore: no poster files archive next to the backup; poster files are not touched"
 fi
 
 started=$SECONDS
@@ -69,6 +85,28 @@ started=$SECONDS
 restore_into() {
   age --decrypt --identity "$identity" "$file" |
     compose exec -T postgres pg_restore -U qc -d "$1" --no-owner --role=qc --exit-on-error
+}
+
+# check_posters: the poster archive must decrypt and be a readable tar; prints the file count.
+check_posters() {
+  local listing count
+  listing="$(age --decrypt --identity "$identity" "$posters_file" | tar -tf -)" ||
+    die "verify: poster files archive is not readable"
+  # Entries that are not directories (tar lists directories with a trailing /).
+  count="$(printf '%s\n' "$listing" | grep -c '[^/]$' || true)"
+  log "restore: poster files archive holds $count file(s)"
+}
+
+# restore_posters: empties the poster-files volume and unpacks the archive into it.
+restore_posters() {
+  if [[ -z "$(poster_volume)" ]]; then
+    log "restore: warning: no poster-files volume yet; run 'compose.sh up -d' once, then restore again"
+    return 0
+  fi
+  log "restore: replacing the poster files"
+  age --decrypt --identity "$identity" "$posters_file" |
+    in_poster_volume rw sh -c 'find /data -mindepth 1 -maxdepth 1 -exec rm -rf {} + && tar -C /data -xf -'
+  check_posters
 }
 
 # verify DB: the schema must have applied migrations and the core tables; prints counts.
@@ -98,6 +136,7 @@ case "$mode" in
     log "restore: restoring $(basename "$file") into scratch database $db"
     restore_into "$db"
     verify "$db"
+    if [[ -n "$posters_file" ]]; then check_posters; fi
     log "restore: CHECK PASSED in $((SECONDS - started))s"
     ;;
 
@@ -114,7 +153,7 @@ case "$mode" in
     compose stop api worker
 
     if [[ -n "$(env_get QC_BACKUP_AGE_RECIPIENT)" ]]; then
-      log "restore: safety backup of the current database first"
+      log "restore: safety backup of the current database and poster files first"
       "$(dirname "${BASH_SOURCE[0]}")/backup.sh" pre-restore
     else
       log "restore: warning: QC_BACKUP_AGE_RECIPIENT not set, no safety backup taken"
@@ -125,6 +164,7 @@ case "$mode" in
     psql_in_db postgres "CREATE DATABASE qc OWNER qc" >/dev/null
     restore_into qc
     verify qc
+    if [[ -n "$posters_file" ]]; then restore_posters; fi
 
     log "restore: starting the stack (runs newer migrations, waits for health)"
     compose up -d --wait

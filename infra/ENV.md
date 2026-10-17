@@ -2,7 +2,7 @@
 
 Names only. Values live in the env file on each server (`/srv/qc/prod.env`, `/srv/qc/staging.env`, mode 600), never in this repository. The template with fake placeholders is `infra/.env.example`.
 
-Who reads what: **C** Docker Compose (interpolation), **A** api container, **W** worker container, **S** host scripts (`infra/backup`, `infra/monitoring`, `infra/scripts`). Leave optional variables out of the env file (or commented out); an empty value fails validation.
+Who reads what: **C** Docker Compose (interpolation), **A** api container, **W** worker container, **R** poster-renderer container, **S** host scripts (`infra/backup`, `infra/monitoring`, `infra/scripts`). Leave optional variables out of the env file (or commented out); an empty value fails validation.
 
 ## Stack
 
@@ -16,9 +16,10 @@ Who reads what: **C** Docker Compose (interpolation), **A** api container, **W**
 | `QC_IMAGE_REGISTRY`                            | C, S    | no       | Image name prefix (`qc`)                                         |
 | `QC_IMAGE_TAG`                                 | C       | no       | Image tag; `deploy.sh` sets it per deploy                        |
 | `QC_{PROXY,API,WORKER,POSTGRES}_{CPUS,MEMORY}` | C       | no       | Resource limits                                                  |
+| `QC_RENDERER_{CPUS,MEMORY}`                    | C       | no       | Poster renderer limits (`1.0`, `768m`; 256 processes, fixed)     |
 | `POSTGRES_PASSWORD`                            | C       | yes      | Database password (hex); becomes `DATABASE_URL` for A and W      |
 
-`DATABASE_URL`, `PORT`, `TRUST_PROXY`, `AUTH_TRUST_PROXY` and `WORKER_HTTP_PORT` are set by the compose file, not the env file.
+`DATABASE_URL`, `PORT`, `TRUST_PROXY`, `AUTH_TRUST_PROXY`, `WORKER_HTTP_PORT`, `RENDERER_URL` and `POSTER_STORAGE_DIR` are set by the compose file, not the env file. So are the renderer's own settings (`RENDERER_PORT`, `RENDER_CONCURRENCY`, `RENDER_QUEUE_MAX`, `RENDER_TIMEOUT_MS`, `BROWSER_HEAP_MB`, `BROWSER_RECYCLE_AFTER`, `RENDER_CACHE_BYTES`; values in the compose file).
 
 ## API and worker
 
@@ -32,6 +33,15 @@ Who reads what: **C** Docker Compose (interpolation), **A** api container, **W**
 | `WORKER_POLL_MS`          | W       | no       | Outbox poll interval (default 5000)                                       |
 | `WORKER_SEND_CONCURRENCY` | W       | no       | Parallel sends (default 4)                                                |
 | `OCCURRENCE_HORIZON_DAYS` | W       | no       | Days ahead the daily top-up keeps session occurrences (1-366, default 90) |
+
+## Poster renderer
+
+| Name                 | Read by | Required  | Meaning                                                                                          |
+| -------------------- | ------- | --------- | ------------------------------------------------------------------------------------------------ |
+| `RENDERER_TOKEN`     | A, W, R | yes       | Shared bearer token for the renderer, 24+ characters (`openssl rand -hex 32`)                    |
+| `RENDERER_URL`       | A, W    | (compose) | `http://poster-renderer:8090`, on the internal `render` network                                  |
+| `POSTER_STORAGE_DIR` | A, W    | (compose) | `/var/lib/qc/posters`, the `poster-files` volume (read-only in the api); included in the backups |
+| `PUBLIC_WEB_BASE`    | R       | yes       | The same value as for the api and the worker; QR codes on posters link to it                     |
 
 ## Messaging (change request `messaging-env-vars`)
 

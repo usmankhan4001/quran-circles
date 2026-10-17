@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Weekly restore test: restores the newest backup into a scratch database and reports the result.
+# Weekly restore test: restores the newest backup into a scratch database (and checks the poster
+# files archive made with it, when present) and reports the result.
 # Run it on the staging host, which holds the age private key (QC_BACKUP_AGE_IDENTITY); the
 # production host cannot decrypt its own backups.
 #
@@ -31,6 +32,11 @@ if [[ "${1-}" == "--remote" ]]; then
   workdir="$(mktemp -d)"
   rclone copyto "$source_path/daily/$newest" "$workdir/$newest"
   rclone copyto "$source_path/daily/$newest.sha256" "$workdir/$newest.sha256" || true
+  # The poster files archive made with it, when there is one (restore.sh checks it too).
+  posters="${newest%.dump.age}.posters.tar.age"
+  if rclone copyto "$source_path/daily/$posters" "$workdir/$posters" 2>/dev/null; then
+    rclone copyto "$source_path/daily/$posters.sha256" "$workdir/$posters.sha256" || true
+  fi
   file="$workdir/$newest"
 else
   file="$(find "$backup_dir/daily" -maxdepth 1 -type f -name '*.dump.age' 2>/dev/null | sort | tail -n 1)"

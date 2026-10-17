@@ -8,7 +8,14 @@ const vendorBan = {
 };
 
 // Lane boundaries: packages never import apps, and apps never import other apps.
-const appPackages = ['@qc/api', '@qc/worker', '@qc/user-app', '@qc/admin-app', '@qc/console'];
+const appPackages = [
+  '@qc/api',
+  '@qc/worker',
+  '@qc/user-app',
+  '@qc/admin-app',
+  '@qc/console',
+  '@qc/poster-renderer',
+];
 
 export default tseslint.config(
   {

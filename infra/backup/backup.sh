@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Nightly Postgres backup: dump, encrypt, keep locally with retention, copy to a second location.
+# Nightly backup of Postgres and the poster files: dump, encrypt, keep locally with retention, copy
+# to a second location.
 #
 #   QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh            # nightly (cron)
 #   QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh pre-deploy # one-off, labelled
@@ -8,8 +9,13 @@
 # - The dump is streamed straight into `age` and encrypted to QC_BACKUP_AGE_RECIPIENT (a public
 #   key). Nothing unencrypted touches the disk, and this server cannot decrypt its own backups:
 #   the private key stays with the owner and on the staging host that runs restore checks.
+# - The poster-files volume (rendered posters, decision: local disk on the VPS for now) is archived
+#   with tar in a throwaway container (no network, read-only) and encrypted the same way, as a
+#   second file next to the dump: <same name>.posters.tar.age (+ .sha256). It is skipped, with a
+#   log line, while the volume does not exist yet.
 # - Layout under QC_BACKUP_DIR:
 #     daily/<project>-<UTC time>.dump.age (+ .sha256)   kept QC_BACKUP_RETENTION_DAYS days
+#     daily/<project>-<UTC time>.posters.tar.age (+ .sha256)   the poster files, same retention
 #     weekly/...                                           Sunday copies, kept ..._WEEKLY_RETENTION_WEEKS
 #     manual/...-<label>.dump.age                          labelled runs, kept like daily
 #     last-success                                         UTC time of the last good backup
@@ -77,17 +83,38 @@ mv "$partial" "$target"
 (cd "$(dirname "$target")" && sha256sum "$name" >"$name.sha256")
 log "backup: wrote $subdir/$name ($size bytes) in $((SECONDS - started))s"
 
-new_files=("$target" "$target.sha256")
+names=("$name")
+
+posters_name="${name%.dump.age}.posters.tar.age"
+if [[ -n "$(poster_volume)" ]]; then
+  posters_target="$backup_dir/$subdir/$posters_name"
+  log "backup: archiving the poster files"
+  in_poster_volume ro tar -C /data -cf - . |
+    age --encrypt --recipient "$recipient" >"$posters_target.partial"
+  mv "$posters_target.partial" "$posters_target"
+  (cd "$(dirname "$posters_target")" && sha256sum "$posters_name" >"$posters_name.sha256")
+  log "backup: wrote $subdir/$posters_name ($(stat -c %s "$posters_target") bytes)"
+  names+=("$posters_name")
+else
+  log "backup: no poster-files volume yet, poster files skipped"
+fi
+
+new_files=()
+for file_name in "${names[@]}"; do
+  new_files+=("$backup_dir/$subdir/$file_name" "$backup_dir/$subdir/$file_name.sha256")
+done
 if [[ -z "$label" && "$(date -u +%u)" == "7" ]]; then
-  cp "$target" "$target.sha256" "$backup_dir/weekly/"
-  new_files+=("$backup_dir/weekly/$name" "$backup_dir/weekly/$name.sha256")
+  for file_name in "${names[@]}"; do
+    cp "$backup_dir/$subdir/$file_name" "$backup_dir/$subdir/$file_name.sha256" "$backup_dir/weekly/"
+    new_files+=("$backup_dir/weekly/$file_name" "$backup_dir/weekly/$file_name.sha256")
+  done
   log "backup: kept a weekly copy"
 fi
 
-# Local retention. -mtime +N means "older than N whole days".
-find "$backup_dir/daily" "$backup_dir/manual" -type f \( -name '*.dump.age' -o -name '*.dump.age.sha256' \) \
+# Local retention (dumps and poster archives). -mtime +N means "older than N whole days".
+find "$backup_dir/daily" "$backup_dir/manual" -type f \( -name '*.age' -o -name '*.age.sha256' \) \
   -mtime +"$((retention_days - 1))" -print -delete | sed 's/^/backup: pruned /' >&2 || true
-find "$backup_dir/weekly" -type f \( -name '*.dump.age' -o -name '*.dump.age.sha256' \) \
+find "$backup_dir/weekly" -type f \( -name '*.age' -o -name '*.age.sha256' \) \
   -mtime +"$((weekly_weeks * 7 - 1))" -print -delete | sed 's/^/backup: pruned /' >&2 || true
 find "$backup_dir" -type f -name '*.partial' -mmin +60 -delete || true
 

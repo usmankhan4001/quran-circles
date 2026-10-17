@@ -1,6 +1,6 @@
 # Status: platform
 
-Updated: 2026-10-17
+Updated: 2026-10-17 (poster renderer infra)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
 
 ## Done (WP10, everything that needs no VPS)
@@ -31,9 +31,33 @@ Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (
 - `.github/` moved over and adapted: `workflows/ci.yml` (was `v2-ci.yml`, no path filter or working directory), `pull_request_template.md` (was `PULL_REQUEST_TEMPLATE/v2.md`), `CODEOWNERS` without the `/v2` prefix.
 - `nearby-dora-quran` is unchanged; its `v2/` folder is no longer where work happens.
 
+## Poster renderer in the stack (WP16 infra, 2026-10-17)
+
+From `docs/agents/status/renderer.md` and contract 1.0.0-rc.5. Not committed (the orchestrator commits).
+
+- **Image**: `infra/docker/poster-renderer.Dockerfile` (+ `.dockerignore`), target `poster-renderer`, copied from the renderer lane's `apps/poster-renderer/Dockerfile` with the base **pinned by digest**: `node:22.22.0-bookworm-slim@sha256:dd9d21971ec4395903fa6143c2b9267d048ae01ca6d3ea96f16cb30df6187d94` (multi-platform index digest). Docker Hub was rate-limited, so the digest came from two Docker Hub mirrors (mirror.gcr.io and public.ecr.aws), which agree; they also return the same digest Docker Hub gave for the pinned Alpine image. Not built here (no Docker daemon).
+- **Compose** (`infra/docker-compose.prod.yml`): service `poster-renderer` with the renderer's proposed settings and limits (`QC_RENDERER_CPUS` 1.0, `QC_RENDERER_MEMORY` 768m, 256 pids), read-only root, 256 MB `/tmp` tmpfs, `cap_drop: ALL`, `no-new-privileges`, init, healthcheck on `/healthz`, log rotation. One change from the proposal: a new internal network `render` (no route out) holds only the renderer, the api and the worker, so the renderer cannot reach Postgres either (the proposal put it on `backend`). No published port; Caddy does not route it. `PUBLIC_WEB_BASE` is the same env value the api and worker use (the proposal derived it from `QC_DOMAIN`).
+- **Config**: `RENDERER_URL` (`http://poster-renderer:8090`), `RENDERER_TOKEN` (required, `${RENDERER_TOKEN:?}`) and `POSTER_STORAGE_DIR` (`/var/lib/qc/posters`) for the api and the worker through one `x-poster-client` anchor; the renderer gets the same token. Named volume `poster-files` (decision: local disk on the VPS for now), read-write in the worker, **read-only in the api** (rc.5: the worker writes and deletes, the api only serves). The api/worker image creates `/var/lib/qc/posters` owned by `node`, so a new volume is writable by uid 1000. `infra/.env.example` has a fake `RENDERER_TOKEN` and the two limit names; root `.env.example` has the three names commented out with fake values; `infra/ENV.md` documents them.
+- **Backups**: `backup.sh` archives the volume with `tar` in a throwaway container (postgres image already on the host, `--network none`, read-only, no capabilities, uid 1000, `--pull never`) and encrypts it with `age` as `<same name>.posters.tar.age` (+ `.sha256`) next to each dump: retention, weekly copies and the rclone copy cover it. `restore.sh --check` decrypts it and counts files; `--replace` empties the volume and unpacks it (after the `pre-restore` backup, which includes the posters). `restore-test.sh --remote` fetches it too. Missing volume or archive: skipped with a log line. Helpers `poster_volume` and `in_poster_volume` in `infra/backup/lib.sh`.
+- **Deploy / monitoring**: `deploy.sh` builds, pulls and checks the `poster-renderer` image with api and worker; `check.sh` checks the container's health.
+- **Lint**: `@qc/poster-renderer` added to `appPackages` in `eslint.config.js` (checked: an import from an app or a package is refused).
+- **CI**: `.github/workflows/ci.yml` installs the headless shell before `pnpm test` (`pnpm --filter @qc/poster-renderer exec playwright-core install --with-deps --only-shell chromium`). Not run (no Actions in this phase).
+- **Docs**: `infra/README.md`: file table, owner checklist (`RENDERER_TOKEN`, disk for poster files), what `up` does, a new "Poster templates" deploy step with an idempotent insert of the demo templates `cloud` and `night` (provisional), backups, restore, monitoring, key rotation.
+- **Checks**: `docker compose ... --env-file infra/.env.example config -q` passes, and fails with a clear message without `RENDERER_TOKEN`; resolved config checked (networks, volumes, no ports, limits). shellcheck 0.11 clean. Backup and restore poster paths run against a stub `docker` with real `age`: archive written and encrypted, `--check` counts files, `--replace` removes a stray file and brings back a deleted one, checksum mismatch and an unreadable archive fail, missing volume and missing archive are skipped. `npx eslint .` clean; prettier clean on `infra`, `eslint.config.js`, the workflow. hadolint 2.15 reports only DL3066 (info, `USER node`), which it also reports on the existing api/worker Dockerfile; 2.12 did not have that rule.
+
+### Open points from this change
+
+- The renderer lane should delete `apps/poster-renderer/Dockerfile` and `Dockerfile.dockerignore` (now in `infra/docker/`), so two copies do not drift.
+- Neither image was built (no Docker daemon in this sandbox). The first local rehearsal should build `poster-renderer`, confirm `/healthz` comes up under `read_only` with the 256 MB `/tmp`, and confirm the api and worker can write and read `POSTER_STORAGE_DIR`.
+- `up --wait` waits for the renderer too, so a renderer that does not become healthy fails the deploy and triggers the rollback. That keeps one rule (everything healthy), but a poster problem then blocks a deploy. Say if posters should not block deploys.
+- First deploy with the renderer: the tag before it has no renderer image, so `deploy.sh --rollback` refuses (it says so). Roll back by checking out the previous commit and running `deploy.sh`. An automatic rollback in that same deploy would build the renderer from the checkout.
+- If the api lane's poster code needs to write to `POSTER_STORAGE_DIR` (for example deleting files when a session is deleted), remove `:ro` from the api's mount.
+- Poster backups are full copies every night. Fine while posters are few and small; revisit (object store, or incremental) if the volume grows.
+
 ## Blocked (needs the owner)
 
 - VPS, SSH access, domain and DNS, ACME e-mail, second backup location (rclone remote), the backup age key pair, alert webhook and the named on-call human, external uptime monitor, provider credentials. Full list in `infra/README.md`, "What the owner must provide".
+- Posters: generate `RENDERER_TOKEN` on the server; size the VPS disk and the second backup location for poster files (they are backed up too); after the first deploy, run the "Poster templates" insert in `infra/README.md`. The renderer's 768 MB limit fits the suggested 4 GB VPS next to Postgres (1 GB), api and worker (512 MB each) and Caddy (256 MB).
 - Gate 2 "restore works on staging" and the timed restore drill: blocked on the staging server. Only rehearsed locally.
 - TLS with a real certificate, Meta webhook registration, alert test to a real human: need the domain and server.
 
