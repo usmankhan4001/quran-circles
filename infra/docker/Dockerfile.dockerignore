@@ -1,0 +1,19 @@
+# Build context is v2/. Keep it small and free of local state and secrets.
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/.expo
+**/.turbo
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+.git
+docs
+showcase
+infra/backup
+infra/monitoring
+infra/cron
+infra/caddy
+infra/scripts

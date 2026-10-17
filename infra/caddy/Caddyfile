@@ -1,0 +1,76 @@
+# Production reverse proxy (WP10). Caddy obtains and renews TLS certificates automatically for
+# both site addresses. Values come from the proxy service's environment (infra/.env):
+#   QC_DOMAIN          public site: the PWA, /api and the WhatsApp webhook
+#   QC_CONSOLE_DOMAIN  admin console: its static build and /api
+#   ACME_EMAIL         contact address for the certificate authority
+#
+# Paths:
+#   /api/*               -> api:3000, with the /api prefix removed (/api/v1/config -> /v1/config,
+#                           /api/health -> /health). Clients use https://<domain>/api as baseUrl.
+#   /webhooks/whatsapp   -> worker:8081 (Meta's callback URL: https://<QC_DOMAIN>/webhooks/whatsapp)
+#   everything else      -> static files, falling back to index.html for client-side routes
+#
+# The worker's /healthz is deliberately not routed: it is checked inside the stack only.
+# No access log is written: request URIs can carry the webhook verify token in the query string.
+{
+	email {$ACME_EMAIL}
+	# The admin endpoint is used by `caddy reload` and the container health check only.
+	admin 127.0.0.1:2019
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		-Server
+	}
+}
+
+(api) {
+	handle_path /api/* {
+		request_body {
+			max_size 10MB
+		}
+		# No active health checks here: with one upstream they only turn a restart into extra
+		# seconds of 503s. Container health is Docker's job (see the compose file).
+		reverse_proxy api:3000
+	}
+}
+
+(spa) {
+	handle {
+		root * /srv/www/{args[0]}
+		# Hashed build assets can be cached for a long time; everything else (index.html and the
+		# client-side routes that fall back to it) is revalidated on every load.
+		@assets path /assets/* /_expo/static/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/* /_expo/static/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+{$QC_DOMAIN} {
+	import common
+	import api
+
+	handle /webhooks/whatsapp {
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy worker:8081
+	}
+
+	import spa app
+}
+
+{$QC_CONSOLE_DOMAIN} {
+	import common
+	header X-Frame-Options "DENY"
+	import api
+	import spa console
+}

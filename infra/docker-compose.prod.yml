@@ -1,0 +1,270 @@
+# Production stack (WP10): reverse proxy, api, worker and Postgres on one host.
+# Staging uses this same file with its own env file and project name; see infra/README.md.
+#
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env config
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env up -d
+#
+# Values come from the env file (template: infra/.env.example, names in infra/ENV.md). The env
+# file stays on the server, mode 600, and is never committed.
+#
+# Networks: `edge` carries traffic from the proxy to the api and the worker and lets those two
+# reach Meta, Google and Apple. `backend` is internal (no route out). Postgres is only on
+# `backend` and publishes no port, so nothing outside this stack can reach it.
+
+name: ${COMPOSE_PROJECT_NAME:-qc-prod}
+
+# Container logs are rotated by Docker: at most 5 files of 10 MB per container.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+    tag: '{{.Name}}'
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  init: true
+
+# Variables passed by name only: a variable that is not set (or commented out) in the env file
+# stays unset in the container, so a provider default is never overridden by an empty string.
+x-messaging-shared: &messaging-shared
+  APP_ENV: ${APP_ENV:?set APP_ENV in the env file}
+  DATABASE_URL: postgres://qc:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}@postgres:5432/qc
+  PUBLIC_WEB_BASE: ${PUBLIC_WEB_BASE:?set PUBLIC_WEB_BASE in the env file}
+
+services:
+  proxy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    restart: unless-stopped
+    # Waits for the api only: the site and sign-in stay up even if the worker cannot start.
+    depends_on:
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      QC_DOMAIN: ${QC_DOMAIN:?set QC_DOMAIN in the env file}
+      QC_CONSOLE_DOMAIN: ${QC_CONSOLE_DOMAIN:?set QC_CONSOLE_DOMAIN in the env file}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in the env file}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${QC_WWW_DIR:-/srv/qc/www}:/srv/www:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      # The admin endpoint listens on localhost inside the container only.
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:2019/config/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_PROXY_CPUS:-0.5}'
+          memory: ${QC_PROXY_MEMORY:-256m}
+    logging: *logging
+
+  api:
+    image: ${QC_IMAGE_REGISTRY:-qc}/api:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile
+      target: api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *messaging-shared
+      PORT: '3000'
+      # Behind Caddy, which replaces X-Forwarded-For with the real client address.
+      TRUST_PROXY: 'true'
+      AUTH_TRUST_PROXY: 'true'
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in the env file}
+      CORS_ORIGINS:
+      AUTH_FIXED_CODE:
+      MESSAGING_MODE:
+      CODE_DELIVERY_MODE:
+      CODE_SMS_FALLBACK:
+      CODE_VALIDITY_MINUTES:
+      WHATSAPP_PHONE_NUMBER_ID:
+      WHATSAPP_ACCESS_TOKEN:
+      WHATSAPP_GRAPH_BASE_URL:
+      WHATSAPP_API_VERSION:
+      SMS_GATEWAY_URL:
+      SMS_GATEWAY_KEY:
+      SMS_SENDER:
+    networks:
+      - edge
+      - backend
+    <<: *hardening
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_API_CPUS:-1.0}'
+          memory: ${QC_API_MEMORY:-512m}
+    logging: *logging
+
+  worker:
+    image: ${QC_IMAGE_REGISTRY:-qc}/worker:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile
+      target: worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      <<: *messaging-shared
+      # Serves /healthz (internal) and /webhooks/whatsapp (routed by Caddy).
+      WORKER_HTTP_PORT: '8081'
+      WORKER_POLL_MS:
+      WORKER_SEND_CONCURRENCY:
+      OCCURRENCE_HORIZON_DAYS:
+      MESSAGING_MODE:
+      CODE_DELIVERY_MODE:
+      CODE_SMS_FALLBACK:
+      CODE_VALIDITY_MINUTES:
+      WHATSAPP_PHONE_NUMBER_ID:
+      WHATSAPP_ACCESS_TOKEN:
+      WHATSAPP_APP_SECRET:
+      WHATSAPP_VERIFY_TOKEN:
+      WHATSAPP_GRAPH_BASE_URL:
+      WHATSAPP_API_VERSION:
+      FCM_SERVICE_ACCOUNT_JSON:
+      APNS_TEAM_ID:
+      APNS_KEY_ID:
+      APNS_PRIVATE_KEY:
+      APNS_BUNDLE_ID:
+      APNS_PRODUCTION:
+      VAPID_SUBJECT:
+      VAPID_PUBLIC_KEY:
+      VAPID_PRIVATE_KEY:
+      SMS_GATEWAY_URL:
+      SMS_GATEWAY_KEY:
+      SMS_SENDER:
+    networks:
+      - edge
+      - backend
+    <<: *hardening
+    # The runtime waits up to 20 s for in-flight sends before it closes.
+    stop_grace_period: 30s
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:8081/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_WORKER_CPUS:-1.0}'
+          memory: ${QC_WORKER_MEMORY:-512m}
+    logging: *logging
+
+  # One-shot: applies pending SQL migrations, then exits. `up` runs it before the api and the
+  # worker start, so a fresh server and every deploy get the current schema.
+  migrate:
+    image: ${QC_IMAGE_REGISTRY:-qc}/api:${QC_IMAGE_TAG:-local}
+    command: ['node', 'dist/migrate.mjs']
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://qc:${POSTGRES_PASSWORD}@postgres:5432/qc
+    networks:
+      - backend
+    <<: *hardening
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
+    logging: *logging
+
+  postgres:
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qc
+      POSTGRES_DB: qc
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: --data-checksums
+    # No `ports:` on purpose. Backups run pg_dump inside this container (infra/backup/).
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    shm_size: 256m
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U qc -d qc']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_POSTGRES_CPUS:-1.5}'
+          memory: ${QC_POSTGRES_MEMORY:-1g}
+    logging: *logging
+
+networks:
+  edge:
+  backend:
+    internal: true
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:

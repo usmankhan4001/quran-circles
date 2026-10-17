@@ -1,0 +1,20 @@
+# Cron jobs for one stack. Times are UTC (the server runs in UTC).
+# Install for production (edit the paths first if the checkout is not /srv/qc/app):
+#   sudo install -m 644 infra/cron/qc.crontab /etc/cron.d/qc
+#   sudo mkdir -p /var/log/qc
+# On the staging host, change prod.env to staging.env and uncomment the restore test.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+QC_ENV_FILE=/srv/qc/prod.env
+
+# Nightly encrypted backup at 02:30.
+30 2 * * * root /srv/qc/app/v2/infra/backup/backup.sh >>/var/log/qc/backup.log 2>&1
+
+# Health, disk, backup freshness and TLS every 5 minutes. Alerts only on a change of state.
+*/5 * * * * root /srv/qc/app/v2/infra/monitoring/check.sh >>/var/log/qc/check.log 2>&1
+
+# Staging host only: weekly restore test of the newest production backup, Mondays 04:00.
+# 0 4 * * 1 root /srv/qc/app/v2/infra/backup/restore-test.sh --remote >>/var/log/qc/restore-test.log 2>&1
+
+# Remove unused images built more than 30 days ago, Sundays 05:00. Recent tags stay for rollback.
+0 5 * * 0 root docker image prune -af --filter until=720h >>/var/log/qc/prune.log 2>&1
