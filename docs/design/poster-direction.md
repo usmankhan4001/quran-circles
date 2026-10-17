@@ -2,6 +2,8 @@
 
 Visual direction for the renderer lane's templates (WP16, Wave 4). It covers the three formats: story (9:16), print (A4 and A3 PDF) and the link preview image. Posters are bilingual and carry a QR code. Posters are made by the same renderer as invite share cards.
 
+> Superseded in part on 2026-10-17: colours and type now follow `redesign-decisions.md` D3 and D4 (Tanzeem green `#226836`, gilt `#b8913a` for decoration only, Figtree for English, Jameel Noori Nastaleeq for Urdu, KFGQPC for Quran text). The layout, safe areas, QR and fit rules below still apply.
+
 This is direction, not final art. A human approves the first templates after they render in Urdu Nastaliq (the renderer lane's test).
 
 ## Colour

@@ -10,7 +10,7 @@ export type TextLang = 'en' | 'ur' | 'ar';
 
 export interface TextProps {
   children: ReactNode;
-  /** The type role. `quran` is for Quran text only and uses the AlMushaf font. */
+  /** The type role. `quran` is for Quran text only and uses the Quran font (KFGQPC). */
   variant?: TypeRole;
   color?: TextColor;
   /**

@@ -12,7 +12,7 @@ import { radii, spacing } from '../tokens';
 import { Text } from './Text';
 
 export interface TextFieldProps {
-  /** Always visible above the field. A placeholder is never a label. */
+  /** Always visible, small at the top inside the field (D9). A placeholder is never a label. */
   label: string;
   value: string;
   onChangeText: (text: string) => void;
@@ -40,15 +40,24 @@ export interface TextFieldProps {
 }
 
 const styles = StyleSheet.create({
-  label: { marginBottom: spacing.xs },
-  labelRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap' },
+  // D9: an outlined field with the label small at the top, inside the border. The label sits
+  // over the input so the whole box stays one touch target.
+  field: { position: 'relative' },
+  labelRow: {
+    position: 'absolute',
+    top: spacing.sm,
+    start: spacing.lg - 2,
+    end: spacing.lg - 2,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    zIndex: 1,
+  },
   hint: { marginStart: spacing.sm },
   input: {
-    minHeight: 56,
-    borderWidth: 2,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    borderRadius: radii.field,
+    paddingHorizontal: spacing.lg - 2,
+    paddingBottom: spacing.sm,
   },
   multiline: { minHeight: 120, textAlignVertical: 'top' },
   message: { marginTop: spacing.xs },
@@ -82,6 +91,7 @@ export function TextField({
   const readOnly = Boolean(disabled || loading);
   const dir = contentDirection ?? theme.direction;
   const type = theme.type('body');
+  const labelSpace = Math.round(theme.type('caption').lineHeight + spacing.sm);
   const borderColor = error ? c.danger : focused ? c.focus : c.borderStrong;
   const message = error ?? helper;
   // `aria-*` props the native typings do not list are used by the web target only.
@@ -93,46 +103,57 @@ export function TextField({
   };
   return (
     <View testID={testID ? `${testID}-field` : undefined}>
-      <View style={[styles.labelRow, styles.label]}>
-        <Text variant="label">{label}</Text>
-        <Text variant="caption" color="textSecondary" style={styles.hint}>
-          {required ? theme.t('ui.required') : theme.t('ui.optional')}
-        </Text>
+      <View style={styles.field}>
+        <View style={styles.labelRow} pointerEvents="none">
+          <Text
+            variant="caption"
+            color={error ? 'textDanger' : focused ? 'textAccent' : 'textSecondary'}
+          >
+            {label}
+          </Text>
+          <Text variant="caption" color="textSecondary" style={styles.hint}>
+            {required ? theme.t('ui.required') : theme.t('ui.optional')}
+          </Text>
+        </View>
+        <TextInput
+          testID={testID}
+          {...web}
+          aria-label={label}
+          aria-disabled={disabled ? true : undefined}
+          aria-busy={loading ? true : undefined}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={c.textMuted}
+          editable={!readOnly}
+          multiline={multiline}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoComplete={autoComplete}
+          maxLength={maxLength}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            onBlur?.();
+          }}
+          onSubmitEditing={onSubmitEditing}
+          style={[
+            styles.input,
+            type,
+            {
+              // Room for the label above the text; Nastaliq needs more (D9: 66 tall in Urdu).
+              minHeight: theme.locale === 'ur' ? 66 : 60,
+              paddingTop: labelSpace,
+              borderWidth: error || focused ? 2 : 1,
+              borderColor,
+              color: readOnly ? c.disabledText : c.text,
+              backgroundColor: readOnly ? c.disabledBackground : c.surface,
+              textAlign: textAlignStart(dir),
+            },
+            multiline ? styles.multiline : undefined,
+          ]}
+        />
       </View>
-      <TextInput
-        testID={testID}
-        {...web}
-        aria-label={label}
-        aria-disabled={disabled ? true : undefined}
-        aria-busy={loading ? true : undefined}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={c.textMuted}
-        editable={!readOnly}
-        multiline={multiline}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoComplete={autoComplete}
-        maxLength={maxLength}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          onBlur?.();
-        }}
-        onSubmitEditing={onSubmitEditing}
-        style={[
-          styles.input,
-          multiline ? styles.multiline : undefined,
-          type,
-          {
-            color: readOnly ? c.disabledText : c.text,
-            backgroundColor: readOnly ? c.disabledBackground : c.surface,
-            borderColor,
-            textAlign: textAlignStart(dir),
-          },
-        ]}
-      />
       {message ? (
         <View
           id={messageId}

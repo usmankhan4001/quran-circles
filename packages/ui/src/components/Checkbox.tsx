@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
   box: {
     width: BOX,
     height: BOX,
-    borderRadius: radii.sm - 2,
+    borderRadius: radii.sm - 1,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',

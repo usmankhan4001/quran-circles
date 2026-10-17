@@ -17,7 +17,7 @@ All eleven brief deliverables, in order.
 
 ## In progress
 
-- Redesign from scratch with the product owner, run as a design conversation. Decisions are recorded in `docs/design/redesign-decisions.md`. On 2026-10-17 the owner called the UI final: D8–D16 cover buttons, fields, choices, cards, screen direction, overlays, Home, the picks for every other screen (D15, confirmed by the owner) and the feature, poster, admin and console screens (D16). Next: once the owner gives the go-ahead, apply the design to `packages/ui` (tokens, Figtree / Nastaliq / KFGQPC, green-topped Sheet, floating TabBar) and then the apps; update `poster-direction.md` to the new colours and type. The kit and the apps are unchanged until then.
+- Redesign approved by the owner on 2026-10-17 (`docs/design/redesign-decisions.md`, D1 to D16). The kit is rebuilt on it: tokens (Tanzeem green, night green, Figtree / Jameel Noori Nastaleeq / KFGQPC, corners, shadows, type scale), Button (new `outline`, `secondary` is the leaf tint), IconButton (`onHero`), TextField (label inside), Chip and SegmentedControl (solid green choice), Card (raised, radius 22), Sheet (green-topped), Toast (solid green), TabBar (floating). New semantic colours `hero`, `textOnHero`, `heroGlass`, `heroGlassPressed`. Kit tests 553 pass; user-app, admin-app and console tests and typechecks pass unchanged. Screen changes are for the app lanes: `docs/design/redesign-handoff.md`. Next for this lane: the D7 components not yet built (SearchField, CodeField, Stepper, Tag, SeatMeter, DateStrip, SessionCard, SkyHeader, PrayerStrip, Banner, ConfirmSheet, map pieces).
 
 ## Blocked
 
@@ -35,6 +35,7 @@ All eleven brief deliverables, in order.
 - Key namespaces `sections.*`, `days.*`, `facilities.*` were added to i18n by this lane; the contracts lane may also define these vocabularies. Confirm there is no collision and who owns them.
 - Kit gaps not built (the screens need them): map picker, search field with a clear button, `CodeField` (one-time code entry), `Stepper`, `DateTimeField`, `Table` for the console, `List` virtualisation. Proposed: user-app lane builds the map and code field on top of kit primitives; ui lane adds `Table` and `DateTimeField` in the next pass.
 - Checkbox was added beyond the brief; confirm it is wanted in the shared kit.
+- The owner approved the redesign for the apps. The app lanes need assigning to `docs/design/redesign-handoff.md` (user-app, admin-app, console, renderer); the ui lane does not edit `apps/`.
 - Contract questions raised by the screen specs: whether `registrations.forSession` returns phone numbers to coordinators, bulk import dry run and commit calls, attendance export, resend invite, whether cancelling an occurrence is `adminOccurrences.update`, the message length limit.
 - The catalog could be published as an Artifact for review if wanted; not done.
 

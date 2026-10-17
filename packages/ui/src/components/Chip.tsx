@@ -22,8 +22,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     minHeight: minTouchTarget,
-    borderRadius: radii.pill,
-    borderWidth: 2,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
     overflow: 'hidden',
   },
   main: {
@@ -40,14 +40,15 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
   const c = theme.colors;
   const isToggle = selected !== undefined;
   const on = selected === true;
-  const textColor = disabled ? 'disabledText' : on ? 'textOnAccentSubtle' : 'text';
+  // D10: a chosen chip fills solid green with white text and a tick.
+  const textColor = disabled ? 'disabledText' : on ? 'textOnAccent' : 'text';
   const fg = c[textColor];
   return (
     <View
       style={[
         styles.pill,
         {
-          backgroundColor: disabled ? c.disabledBackground : on ? c.accentSubtle : c.surface,
+          backgroundColor: disabled ? c.disabledBackground : on ? c.accent : c.surface,
           borderColor: disabled ? c.disabledBackground : on ? c.accent : c.borderStrong,
         },
       ]}
@@ -61,7 +62,7 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
         style={({ pressed }) => [
           styles.main,
           { paddingEnd: onRemove ? spacing.sm : spacing.lg },
-          pressed ? { backgroundColor: c.surfaceMuted } : undefined,
+          pressed ? { backgroundColor: on ? c.accentPressed : c.surfaceMuted } : undefined,
         ]}
       >
         {on ? (
@@ -81,7 +82,7 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
           disabled={disabled}
           style={{ alignItems: 'center', justifyContent: 'center' }}
         >
-          <Icon name="close" size={16} color={disabled ? c.disabledText : c.text} />
+          <Icon name="close" size={16} color={disabled ? c.disabledText : fg} />
         </Touchable>
       ) : null}
     </View>

@@ -21,7 +21,14 @@ export interface SegmentedControlProps<T extends string> {
 }
 
 const styles = StyleSheet.create({
-  group: { flexDirection: 'row', borderWidth: 2, borderRadius: radii.pill, overflow: 'hidden' },
+  // D10: segments sit in a grey track; the chosen one fills green.
+  group: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    padding: spacing.xs,
+  },
   segment: {
     flex: 1,
     minHeight: minTouchTarget,
@@ -29,6 +36,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
+    borderRadius: radii.md,
   },
 });
 
@@ -49,13 +57,16 @@ export function SegmentedControl<T extends string>({
       aria-label={accessibilityLabel}
       style={[
         styles.group,
-        { borderColor: disabled ? c.disabledText : c.accent, backgroundColor: c.surface },
+        {
+          borderColor: theme.mode === 'highContrast' || disabled ? c.borderStrong : c.surfaceMuted,
+          backgroundColor: c.surfaceMuted,
+        },
       ]}
     >
       {options.map((option) => {
         const selected = option.value === value;
         const off = Boolean(disabled || option.disabled);
-        const textColor = off ? 'disabledText' : selected ? 'textOnAccent' : 'textAccent';
+        const textColor = off ? 'disabledText' : selected ? 'textOnAccent' : 'textSecondary';
         return (
           <Touchable
             key={option.value}

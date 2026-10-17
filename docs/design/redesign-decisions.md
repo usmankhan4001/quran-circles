@@ -33,16 +33,16 @@ The current kit's look (emerald on parchment, stock card and pill shapes) is dro
 
 Taken from the owner's Quran Circle poster.
 
-| Role | Value | Use |
-| --- | --- | --- |
-| Tanzeem green | `#226836` | Every main action, selected states, brand |
-| Deep green | `#154a27` | Big numbers, pressed states |
-| Night green | `#0c2a17` | The night (after Isha) background |
-| Leaf tint | `#e5f0e8` | Selected pills, secondary buttons, chips |
-| Cloud | `#f7fbf9` | Light backgrounds |
-| Mist | `#dbe7e6` | Sky, quiet surfaces |
-| Mushaf gilt | `#b8913a` | Quran moments only (reading progress, para chips); decoration, not body text |
-| Alert | `#c4563f` | Unread counts and errors only |
+| Role          | Value     | Use                                                                          |
+| ------------- | --------- | ---------------------------------------------------------------------------- |
+| Tanzeem green | `#226836` | Every main action, selected states, brand                                    |
+| Deep green    | `#154a27` | Big numbers, pressed states                                                  |
+| Night green   | `#0c2a17` | The night (after Isha) background                                            |
+| Leaf tint     | `#e5f0e8` | Selected pills, secondary buttons, chips                                     |
+| Cloud         | `#f7fbf9` | Light backgrounds                                                            |
+| Mist          | `#dbe7e6` | Sky, quiet surfaces                                                          |
+| Mushaf gilt   | `#b8913a` | Quran moments only (reading progress, para chips); decoration, not body text |
+| Alert         | `#c4563f` | Unread counts and errors only                                                |
 
 Mist and gilt as the colours that go with the green: confirmed by the owner. Contrast for every text pair is checked when tokens are rebuilt.
 
@@ -56,16 +56,16 @@ Mist and gilt as the colours that go with the green: confirmed by the owner. Con
 
 ### D5. Type scale
 
-| Role | English (Figtree) | Urdu (Nastaliq) |
-| --- | --- | --- |
-| Countdown | 56, weight 600 | Figtree figures |
-| Time | 40, weight 600 | Figtree figures |
-| Screen title | 26, weight 700, line 1.2 | 26, line 2.0 |
-| Card title | 18, weight 700, line 1.25 | 20, line 2.0 |
-| Body | 16, weight 400, line 1.5 | 17, line 2.2 |
-| Label and button | 15, weight 600 | 17 |
-| Caption | 13, weight 500 | 14, line 2.0 |
-| Eyebrow | 12, weight 700, capitals | 13, no capitals |
+| Role             | English (Figtree)         | Urdu (Nastaliq) |
+| ---------------- | ------------------------- | --------------- |
+| Countdown        | 56, weight 600            | Figtree figures |
+| Time             | 40, weight 600            | Figtree figures |
+| Screen title     | 26, weight 700, line 1.2  | 26, line 2.0    |
+| Card title       | 18, weight 700, line 1.25 | 20, line 2.0    |
+| Body             | 16, weight 400, line 1.5  | 17, line 2.2    |
+| Label and button | 15, weight 600            | 17              |
+| Caption          | 13, weight 500            | 14, line 2.0    |
+| Eyebrow          | 12, weight 700, capitals  | 13, no capitals |
 
 Urdu has one weight; emphasis comes from size and colour.
 
@@ -113,17 +113,17 @@ Chosen by the owner on 2026-10-17 from [Home options](https://claude.ai/artifact
 
 The owner called the UI final on 2026-10-17. The owner confirmed the suggested pick from each set on 2026-10-17.
 
-| Screen | Pick | What it means | Options page |
-| --- | --- | --- | --- |
-| Navigation | N2 | Floating tab bar: Home, Nearby, Quran, Journey | navigation page |
-| Nearby | N2 | Green header as on Home with a Map / List switch; small cards for the nearest places on the map; the list ends with "Ask for a circle near you" | https://claude.ai/artifact/EYjcjnrHaSBfovNtJxtGHU |
-| Session and venue | S1 | Photo of the place on top, details scroll over it in raised cards, one Register bar at the bottom | https://claude.ai/artifact/RgfYMvwTtFh8GuPtDa2ex3 |
-| Register | R2 | Opens as a green-topped sheet (D13) over the session page | https://claude.ai/artifact/3aF22dRg3yjS8wbGxKr18k |
-| My Journey | J1 | Green header with three season numbers, then upcoming (with reminder switches), circle progress and followed masjids | https://claude.ai/artifact/E8bF29LSW1Pc2FSGKM3xa7 |
-| Quran and prayer times | Q1 | Clean lists: star-numbered surahs, verse cards with translation, prayer times as a list with a bell per prayer | https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx |
-| Updates, profile and sign-in | B | Green header on each page; updates as cards linking to the session; profile opens with quick tiles | https://claude.ai/artifact/4WQhXBEstymMgd8GgEADrU |
-| Admin app | A | Same look as the user app: green header, floating tabs, today's circles as big cards with quick actions | https://claude.ai/artifact/LgHSJiqzbsUtSWSKA4NDfc |
-| Console | C2 | Green sidebar with the eight-point pattern; light content area | https://claude.ai/artifact/HKniV9wA9yrnpqWgGwB22m |
+| Screen                       | Pick | What it means                                                                                                                                   | Options page                                      |
+| ---------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Navigation                   | N2   | Floating tab bar: Home, Nearby, Quran, Journey                                                                                                  | navigation page                                   |
+| Nearby                       | N2   | Green header as on Home with a Map / List switch; small cards for the nearest places on the map; the list ends with "Ask for a circle near you" | https://claude.ai/artifact/EYjcjnrHaSBfovNtJxtGHU |
+| Session and venue            | S1   | Photo of the place on top, details scroll over it in raised cards, one Register bar at the bottom                                               | https://claude.ai/artifact/RgfYMvwTtFh8GuPtDa2ex3 |
+| Register                     | R2   | Opens as a green-topped sheet (D13) over the session page                                                                                       | https://claude.ai/artifact/3aF22dRg3yjS8wbGxKr18k |
+| My Journey                   | J1   | Green header with three season numbers, then upcoming (with reminder switches), circle progress and followed masjids                            | https://claude.ai/artifact/E8bF29LSW1Pc2FSGKM3xa7 |
+| Quran and prayer times       | Q1   | Clean lists: star-numbered surahs, verse cards with translation, prayer times as a list with a bell per prayer                                  | https://claude.ai/artifact/MUf1ve9bvTGhCwsyahvgRx |
+| Updates, profile and sign-in | B    | Green header on each page; updates as cards linking to the session; profile opens with quick tiles                                              | https://claude.ai/artifact/4WQhXBEstymMgd8GgEADrU |
+| Admin app                    | A    | Same look as the user app: green header, floating tabs, today's circles as big cards with quick actions                                         | https://claude.ai/artifact/LgHSJiqzbsUtSWSKA4NDfc |
+| Console                      | C2   | Green sidebar with the eight-point pattern; light content area                                                                                  | https://claude.ai/artifact/HKniV9wA9yrnpqWgGwB22m |
 
 ### D16. Feature and staff screens follow the picks
 

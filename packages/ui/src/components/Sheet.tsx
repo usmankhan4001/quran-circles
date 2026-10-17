@@ -19,20 +19,22 @@ const styles = StyleSheet.create({
   fill: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '85%',
-    borderTopStartRadius: radii.xl,
-    borderTopEndRadius: radii.xl,
+    borderTopStartRadius: radii.sheet,
+    borderTopEndRadius: radii.sheet,
     paddingBottom: spacing.xl,
+    overflow: 'hidden',
   },
+  top: { paddingBottom: spacing.md },
   handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginTop: spacing.sm },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingStart: spacing.lg,
     paddingEnd: spacing.xs,
-    paddingTop: spacing.xs,
+    paddingTop: spacing.sm,
   },
   title: { flex: 1 },
-  body: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
+  body: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.lg },
 });
 
 /**
@@ -64,18 +66,22 @@ export function SheetPanel({
           : undefined,
       ]}
     >
-      <View style={[styles.handle, { backgroundColor: c.borderStrong }]} aria-hidden />
-      <View style={styles.header}>
-        <View style={styles.title}>
-          <Text variant="title3" heading={2}>
-            {title}
-          </Text>
+      {/* D13: the sheet opens with the app's green header. */}
+      <View style={[styles.top, { backgroundColor: c.hero }]}>
+        <View style={[styles.handle, { backgroundColor: c.heroGlassPressed }]} aria-hidden />
+        <View style={styles.header}>
+          <View style={styles.title}>
+            <Text variant="title3" color="textOnHero" heading={2}>
+              {title}
+            </Text>
+          </View>
+          <IconButton
+            icon="close"
+            variant="onHero"
+            accessibilityLabel={closeLabel ?? theme.t('ui.close')}
+            onPress={onClose}
+          />
         </View>
-        <IconButton
-          icon="close"
-          accessibilityLabel={closeLabel ?? theme.t('ui.close')}
-          onPress={onClose}
-        />
       </View>
       <ScrollView contentContainerStyle={styles.body}>{children}</ScrollView>
     </View>

@@ -3,6 +3,7 @@
 This brief lists **everything the design has to cover**: every mode, primitive, component (micro and macro), component group, screen and state, with the real content and data each one shows. It does **not** set the look. The visual style, colours, type, shapes and layout choices are the designer's (or Figma's) to decide. The only suggestions are in section 11, and they can be ignored.
 
 Use it in three ways:
+
 - **As a Figma / AI brief:** paste section 1 (product context) first, then the part you want designed.
 - **As a checklist:** sections 2 to 9 are the full inventory; section 12 is the list of frames to produce.
 - **As a content source:** section 3 has realistic sample data so no frame needs lorem ipsum.
@@ -16,6 +17,7 @@ Send the results back in this thread, named `<app>-<screen or component>-<varian
 > **Quran Circles** is a Pakistani app that helps people find, join and keep up with Quran study circles (halaqa, dars-e-Quran) and the Ramadan **Dora-e-Quran** (night programmes where the Quran is recited and explained with Urdu tafsir, usually after Taraweeh) at masjids, academies and homes near them. It is run by Tanzeem-e-Islami volunteers.
 >
 > **Three products share one design system:**
+>
 > 1. **User app** (iOS, Android, mobile web): for attendees. Browse without an account; sign in with a WhatsApp code to register, follow venues and keep a journey. Tabs: Home, Nearby, Quran & Prayer, My Journey; plus Updates and Profile.
 > 2. **Admin app** (iOS, Android): for venue and city coordinators on their phones at the masjid. Tabs: Today, Places, Updates, Account.
 > 3. **Console** (desktop web): for city coordinators and national admins. Pages: Sessions, Venues, Coordinators, Exports, Bulk import, Audit log, Settings.
@@ -32,21 +34,21 @@ Send the results back in this thread, named `<app>-<screen or component>-<varian
 
 Every screen and component must work in all of these. Not every combination needs its own frame (see section 12), but the system must support them.
 
-| Axis | Values | What changes |
-|---|---|---|
-| Colour mode | Light, Dark, Same as device | All colour roles. Dark is also used automatically at night if the user chooses. |
-| Contrast | Standard, High contrast | Stronger borders, no tinted text on tinted fills, no low-opacity decoration, focus rings thicker. |
-| Language and direction | English (LTR), Urdu (RTL) | Script, line height (Nastaliq needs about 1.9–2.2× line height), full layout mirroring, directional icons flip (back, chevron, arrows, progress), numbers stay Western digits and LTR. |
-| Text size | Standard, Large, Larger, Largest (4 steps) | All type roles scale; layouts must wrap, not truncate key info; buttons grow in height. |
-| Time of day | Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha/Night | The Home header (and optionally the whole app) reflects the current prayer period. |
-| Season | Dora (Ramadan) season, Circles (rest of year) | Home leads with Dora programmes or with weekly circles; copy and featured content change. |
-| Auth | Signed out (browsing), Signed in | Signed-out users see everything public; registering, following, journey and bookmarks sync ask them to sign in. |
-| Role (admin, console) | Venue coordinator, City coordinator, National admin | Scope of data, available pages and actions (approvals, settings, imports). |
-| Network | Online, Offline (with saved data), Offline (nothing saved), Reconnecting | Banners, disabled actions, "saved on this phone" states, queued writes. |
-| Data state | Loading (first), Refreshing, Loaded, Empty, Partial, Error, Not found, Forbidden | Each list, card and screen. |
-| Platform | iOS, Android, Mobile web, Desktop web | Status bar, safe areas, back gestures, system sheets, keyboard, date and time pickers. |
-| Device size | Small phone (360 × 640), Standard (390 × 844), Large (430 × 932), Tablet (optional), Desktop (1280, 1440, 1920) | Layout density and columns. |
-| Motion | Full, Reduced motion | Animations become fades or none. |
+| Axis                   | Values                                                                                                          | What changes                                                                                                                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Colour mode            | Light, Dark, Same as device                                                                                     | All colour roles. Dark is also used automatically at night if the user chooses.                                                                                                        |
+| Contrast               | Standard, High contrast                                                                                         | Stronger borders, no tinted text on tinted fills, no low-opacity decoration, focus rings thicker.                                                                                      |
+| Language and direction | English (LTR), Urdu (RTL)                                                                                       | Script, line height (Nastaliq needs about 1.9–2.2× line height), full layout mirroring, directional icons flip (back, chevron, arrows, progress), numbers stay Western digits and LTR. |
+| Text size              | Standard, Large, Larger, Largest (4 steps)                                                                      | All type roles scale; layouts must wrap, not truncate key info; buttons grow in height.                                                                                                |
+| Time of day            | Fajr, Sunrise, Dhuhr, Asr, Maghrib, Isha/Night                                                                  | The Home header (and optionally the whole app) reflects the current prayer period.                                                                                                     |
+| Season                 | Dora (Ramadan) season, Circles (rest of year)                                                                   | Home leads with Dora programmes or with weekly circles; copy and featured content change.                                                                                              |
+| Auth                   | Signed out (browsing), Signed in                                                                                | Signed-out users see everything public; registering, following, journey and bookmarks sync ask them to sign in.                                                                        |
+| Role (admin, console)  | Venue coordinator, City coordinator, National admin                                                             | Scope of data, available pages and actions (approvals, settings, imports).                                                                                                             |
+| Network                | Online, Offline (with saved data), Offline (nothing saved), Reconnecting                                        | Banners, disabled actions, "saved on this phone" states, queued writes.                                                                                                                |
+| Data state             | Loading (first), Refreshing, Loaded, Empty, Partial, Error, Not found, Forbidden                                | Each list, card and screen.                                                                                                                                                            |
+| Platform               | iOS, Android, Mobile web, Desktop web                                                                           | Status bar, safe areas, back gestures, system sheets, keyboard, date and time pickers.                                                                                                 |
+| Device size            | Small phone (360 × 640), Standard (390 × 844), Large (430 × 932), Tablet (optional), Desktop (1280, 1440, 1920) | Layout density and columns.                                                                                                                                                            |
+| Motion                 | Full, Reduced motion                                                                                            | Animations become fades or none.                                                                                                                                                       |
 
 ---
 
@@ -55,6 +57,7 @@ Every screen and component must work in all of these. Not every combination need
 Use this real-looking content in every frame. Pakistani names and places; times in Pakistan time.
 
 ### 3.1 Places
+
 - **City:** Karachi (also Lahore, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, Quetta, Hyderabad). Province, city and area names exist in English and Urdu.
 - **Area:** Saddar, Gulshan-e-Iqbal, North Nazimabad, DHA Phase 6, Clifton, Malir, Model Town (Lahore), F-8 (Islamabad).
 - **Venue** fields: name (EN, UR), address (EN, UR), area, city, map location, public contact phone (optional), status (Active, Archived), facilities:
@@ -68,6 +71,7 @@ Use this real-looking content in every frame. Pakistani names and places; times 
 - Sample entrance note: "Women's entrance is on the side lane next to the pharmacy."
 
 ### 3.2 Sessions and occurrences
+
 - **Session** fields: programme (Dora or Circles), kind (Recurring or One-off), title (EN, UR), description, section (Women, Men, Family), language (Urdu, English), start time, duration, days of week, start date, end date, venue, circle (name, teacher, online link), registration (on or off, capacity or no limit, seats taken, full), status (Draft, Published, Cancelled, Archived), next occurrence.
 - **Occurrence** (one meeting) fields: start, end, status (Scheduled, Cancelled, Done), portion (Para 1–30, Surah 1–114, Ayah range, or a named Lesson) and its label, recap note (EN or UR), headcount (admin only).
 - Sample sessions:
@@ -77,6 +81,7 @@ Use this real-looking content in every frame. Pakistani names and places; times 
   - "Special lecture: Surah Al-Kahf", One-off, Saturday 8:00 pm, Family, English, online link available.
 
 ### 3.3 People and registrations
+
 - **Me (user):** Ayesha Khan, +92 300 1234567, language Urdu, area Saddar. Profile (all optional): age band (Under 18, 18–24, 25–34, 35–44, 45–54, 55–64, 65+), profession, education, Quran reading so far (None, Basic, Regular, Advanced), preferred language.
 - **Registration** fields: session, occurrence (or whole series), area, section, party size (1–20), status (Registered, Waiting list with position, Cancelled), created, WhatsApp reminders on or off.
 - **Follows:** venues or circles followed, each with alerts on or off.
@@ -86,6 +91,7 @@ Use this real-looking content in every frame. Pakistani names and places; times 
 - **Consents:** channel (WhatsApp, SMS, Push, Email) × purpose (Registration updates, Session reminders, Venue alerts, Announcements).
 
 ### 3.4 Coordinators and admin
+
 - **Roles:** National admin (all of Pakistan), City coordinator (one city), Venue coordinator (one venue).
 - Sample coordinator: Ustadh Kamran Ahmed, Venue coordinator, Masjid Al-Noor. City coordinator: Bilal Siddiqui, Karachi.
 - **Staff registration row:** name (or "No name"), phone, area, section, party size, status, WhatsApp allowed, registered at.
@@ -97,11 +103,13 @@ Use this real-looking content in every frame. Pakistani names and places; times 
 - **Message templates:** key, channel, language, body with variables, cost category, status.
 
 ### 3.5 Updates and notifications
+
 - **Update** kinds: Announcement, Time change, Cancellation, Special lecture. Scope: National, City, Venue. Title, body, linked session, published at, read or unread. Admin view adds author and number of recipients.
 - Sample: "Time change: Taraweeh with Dora. Tonight starts at 9:15 because of rain." / "Cancelled: Dars-e-Quran this Friday." / "Special lecture on Surah Al-Kahf, Saturday 8 pm."
 - Push notifications: Session reminder ("Taraweeh with Dora at Masjid Al-Noor, tonight 9:00"), A seat opened up, Time change, Cancelled.
 
 ### 3.6 Prayer and Quran
+
 - Prayer times for the chosen city: Fajr 5:12, Sunrise 6:31, Dhuhr 12:18, Asr 3:52, Maghrib 6:04, Isha 7:25. Next prayer and countdown ("Maghrib in 1 h 20 min").
 - Hijri date ("16 Rabi al-Thani 1448") with the note "The Hijri date follows moon sighting in Pakistan."
 - Quran: 114 surahs (name EN, name AR, meaning, verses, Makki or Madani), 30 paras, Rub el Hizb markers, Urdu translation per ayah, bookmarks, offline download per para.
@@ -113,6 +121,7 @@ Use this real-looking content in every frame. Pakistani names and places; times 
 Define each set; values are the designer's choice (see section 11 for suggestions).
 
 ### 4.1 Colour roles
+
 - **Brand:** primary, primary pressed, on-primary, primary container (tonal), on-primary-container.
 - **Accent:** a second brand colour for sacred moments (Quran, prayer), its container and on-colour.
 - **Neutrals:** page background, surface (cards), raised surface (sheets, dialogs), sunken surface (inputs, wells), overlay scrim.
@@ -125,6 +134,7 @@ Define each set; values are the designer's choice (see section 11 for suggestion
 - **Every role** in Light, Dark and High contrast.
 
 ### 4.2 Typography
+
 - **Families:** a Latin UI face; an Urdu Nastaliq face (Jameel Noori Nastaleeq or Mehr Nastaliq preferred); an Arabic Quran face (KFGQPC Uthmanic Hafs, QCF or Al_Mushaf preferred); a numeric style (tabular figures for times and counts).
 - **Roles:**
   - Display / countdown
@@ -146,6 +156,7 @@ Define each set; values are the designer's choice (see section 11 for suggestion
 - **Rules:** maximum line length, truncation (and where it is never allowed: times, venue names, statuses), and how numbers sit inside Urdu text.
 
 ### 4.3 Spacing and layout
+
 - **Spacing scale:** base unit and steps.
 - **Phone layout:** screen margins, gaps between cards, padding inside cards, gaps between sections, list row heights.
 - **Grid:** phone 4-column, tablet 8-column, desktop 12-column with sidebar.
@@ -154,33 +165,40 @@ Define each set; values are the designer's choice (see section 11 for suggestion
 - **Minimum touch target:** 48 × 48, with the spacing between targets.
 
 ### 4.4 Shape
+
 - **Corner radius scale:** for chips, inputs, buttons, cards, sheets, dialogs, avatars and images.
 - **Border widths:** hairline, default, focus.
 
 ### 4.5 Elevation and depth
+
 - **Levels:** flat, card, raised (sticky bars), floating (FAB, map card), overlay (sheet, dialog), toast.
 - **Shadow per level:** in Light; in Dark, the equivalent through borders or surface tone.
 - **Scrim:** opacity for sheets and dialogs.
 
 ### 4.6 Iconography
+
 - **Grid and size:** grid size; sizes for inline, list, button, tab, feature and empty-state icons.
 - **Drawing rules:** stroke or fill style, corner style.
 - **RTL:** which icons mirror.
 
 ### 4.7 Imagery and illustration
+
 - **Venue images:** treatment, and the placeholder when there is no photo.
 - **Illustrations:** a style for empty states, errors, success and onboarding.
 - **Islamic elements:** add them.
 
 ### 4.8 Motion
+
 - **Timing:** duration scale (fast, standard, slow) and easing curves.
 - **Patterns:** page transitions, sheet in and out, list insert and remove, tab change, pressed feedback, loading skeleton shimmer, success celebration, countdown tick, time-of-day transition.
 - **Reduced motion:** the alternative for each.
 
 ### 4.9 Interaction states (apply to every interactive component)
+
 Default, Hover (web), Pressed, Focused (keyboard), Selected, Checked, Indeterminate, Disabled, Read-only, Loading, Error, Success, Dragged (if any).
 
 ### 4.10 Accessibility primitives
+
 - **Focus:** the focus-ring style.
 - **Contrast:** minimum ratios for text, icons and borders.
 - **Screen readers:** label patterns for icons, numbers and times. For example, "1 h 20 min" should read as "1 hour 20 minutes".
@@ -195,50 +213,50 @@ These are the icons the app needs. Add Islamic icons wherever they fit.
 
 **Islamic and domain icons:**
 
-| Icon | Used for |
-|---|---|
-| Man | Men's section |
-| Woman | Women's section |
-| Family | Family section |
-| Child | Child friendly |
-| Masjid | Venue, Home tab |
-| Dome | Venue mark, map pin |
-| Quran | Quran tab |
-| Mushaf | "Bring a mushaf" |
-| Tafsir | Translation, tafsir |
-| Kaaba | Qibla |
-| Qibla compass | Qibla |
-| Musalla | Prayer space |
-| Tasbih | Dhikr, journey |
-| Wudu | Wudu area |
-| Crescent and star | Ramadan, night |
-| Lantern | Dora, Taraweeh |
-| Mihrab | Prayer times |
-| Minbar | Lecture, bayan |
-| Dua hands | After-session recap, duas |
-| Adhan | Prayer alerts, Updates |
-| Hijri calendar | Hijri date |
-| Halaqa | Circles, My Journey |
-| Rub el Hizb star | Para and juz markers |
-| Para / juz marker | Reading portion |
-| Ayah end marker | Verse numbers |
-| Wheelchair | Access |
-| Parking | Parking |
-| Door / entrance | How to find the entrance |
+| Icon              | Used for                  |
+| ----------------- | ------------------------- |
+| Man               | Men's section             |
+| Woman             | Women's section           |
+| Family            | Family section            |
+| Child             | Child friendly            |
+| Masjid            | Venue, Home tab           |
+| Dome              | Venue mark, map pin       |
+| Quran             | Quran tab                 |
+| Mushaf            | "Bring a mushaf"          |
+| Tafsir            | Translation, tafsir       |
+| Kaaba             | Qibla                     |
+| Qibla compass     | Qibla                     |
+| Musalla           | Prayer space              |
+| Tasbih            | Dhikr, journey            |
+| Wudu              | Wudu area                 |
+| Crescent and star | Ramadan, night            |
+| Lantern           | Dora, Taraweeh            |
+| Mihrab            | Prayer times              |
+| Minbar            | Lecture, bayan            |
+| Dua hands         | After-session recap, duas |
+| Adhan             | Prayer alerts, Updates    |
+| Hijri calendar    | Hijri date                |
+| Halaqa            | Circles, My Journey       |
+| Rub el Hizb star  | Para and juz markers      |
+| Para / juz marker | Reading portion           |
+| Ayah end marker   | Verse numbers             |
+| Wheelchair        | Access                    |
+| Parking           | Parking                   |
+| Door / entrance   | How to find the entrance  |
 
 **General icons:**
 
-| Group | Icons |
-|---|---|
-| Navigation | Home, Nearby/map, List, Search, Filter, Sort, Back, Forward, Chevron in 4 directions, Close, More (horizontal and vertical), External link |
-| Actions | Share, Heart/follow, Bookmark (empty and filled), Bell (on and off), Edit, Delete, Add, Remove, Check, Copy, Download, Upload, Refresh, Undo |
-| Time and place | Clock, Calendar, Pin, Navigate/directions, My location |
-| Contact | Phone, WhatsApp, SMS, Email |
-| Settings | Language, Text size, Dark mode, Light mode, Contrast, Settings, User, Sign in, Sign out, Lock, Eye (show and hide) |
-| Status | Info, Warning, Error, Success, Offline, Online, Sync, Hourglass (waiting list) |
-| People | People/group, Person add, Seat, Ticket |
-| Media | Video/online, Audio |
-| Console | Table, Chart, Import (CSV), Export (file), Audit/history, Key/role, Handover, Approve, Reject |
+| Group          | Icons                                                                                                                                        |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Navigation     | Home, Nearby/map, List, Search, Filter, Sort, Back, Forward, Chevron in 4 directions, Close, More (horizontal and vertical), External link   |
+| Actions        | Share, Heart/follow, Bookmark (empty and filled), Bell (on and off), Edit, Delete, Add, Remove, Check, Copy, Download, Upload, Refresh, Undo |
+| Time and place | Clock, Calendar, Pin, Navigate/directions, My location                                                                                       |
+| Contact        | Phone, WhatsApp, SMS, Email                                                                                                                  |
+| Settings       | Language, Text size, Dark mode, Light mode, Contrast, Settings, User, Sign in, Sign out, Lock, Eye (show and hide)                           |
+| Status         | Info, Warning, Error, Success, Offline, Online, Sync, Hourglass (waiting list)                                                               |
+| People         | People/group, Person add, Seat, Ticket                                                                                                       |
+| Media          | Video/online, Audio                                                                                                                          |
+| Console        | Table, Chart, Import (CSV), Export (file), Audit/history, Key/role, Handover, Approve, Reject                                                |
 
 **Variants:** outline and filled, wherever a selected state exists (tabs, bookmark, heart, bell).
 
@@ -444,6 +462,7 @@ Surah header (Arabic title, Bismillah, surah info), verse block, ayah end marker
 For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every state listed. Regions are listed top to bottom.
 
 ### 8.1 Launch and onboarding
+
 1. **Splash**: app mark, name, optional tagline.
 2. **Welcome**: what the app does in one line; a language choice (English / اردو); Continue; "Already registered? Sign in".
 3. **Choose city / location**:
@@ -453,6 +472,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 4. **Notifications pre-prompt** (optional): why reminders help, with Allow and Not now.
 
 ### 8.2 Sign in
+
 1. **Phone**:
    - **Content:** title "Sign in", the WhatsApp explanation, the phone field and "Send code".
    - **Note:** "You can browse without an account."
@@ -463,6 +483,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 3. **Account suspended**: "This account is not active. Please contact support."
 
 ### 8.3 Home (tab)
+
 - **Regions:**
   - **Header:** app mark and name, notifications button with unread badge, profile entry.
   - **Prayer block:** greeting, next prayer and countdown, the strip of today's prayer times, Hijri date; reflects the time of day.
@@ -487,6 +508,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
   - each prayer period, especially Night
 
 ### 8.4 Nearby (tab)
+
 1. **Map view**: title, search, filter button with an active-filter count, map/list toggle, quick filter chips, the map with pins and clusters, "Use my location", the selected venue preview card.
 2. **List view**: result count ("12 places near you"), sort, venue cards, "Request a circle near me" at the end.
 3. **Filters sheet**:
@@ -507,6 +529,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
    - error
 
 ### 8.5 Venue detail
+
 - **Regions:**
   - **Hero:** image or placeholder, back, share, follow.
   - **Header:** name and area.
@@ -522,6 +545,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 - **States:** following, not following, signed out (following asks to sign in), not found ("We could not find this venue" / "It may have been removed. Go back to Nearby to find another."), archived, loading, offline.
 
 ### 8.6 Session detail
+
 - **Regions:**
   - **Hero and status tags:** programme, seats, portion.
   - **Header:** title, venue link.
@@ -547,6 +571,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
   - offline
 
 ### 8.7 Register (flow)
+
 1. **Step 1, who is coming**: session summary, section choice (only sections this session allows), party size stepper ("Count yourself too."), WhatsApp reminder consent ("You can change this any time in Profile.").
 2. **Step 2, your details**:
    - **Fields:** full name, WhatsApp number, your area.
@@ -558,6 +583,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 6. **Errors**: already registered, registration closed, session full, session cancelled, session already happened, validation errors per field.
 
 ### 8.8 Quran & Prayer (tab)
+
 1. **Quran home**:
    - **Content:** segmented Quran / Prayer times, "Continue reading" (or "Start reading"), search ("Find a surah"), surah / para / bookmarks switcher, surah list, offline status per item.
    - **States:** first use, offline, loading.
@@ -573,6 +599,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 6. **Qibla**: compass, direction in degrees, calibration and accuracy states, location off.
 
 ### 8.9 My Journey (tab)
+
 - **Regions:**
   - **Summary:** this season's stats and progress.
   - **"Your registrations":** upcoming and past, each with status (Registered, Waiting list, Cancelled), a reminder toggle ("Remind me before this session") and "Cancel registration".
@@ -583,11 +610,13 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 - **Cancel dialog:** "Cancel your registration?" / "You can register again later if there is room." / "Yes, cancel" / "Keep it".
 
 ### 8.10 Updates
+
 - **Regions:** title, unread count ("3 unread"), filter (All, Unread, by venue), "Mark all as read", the feed grouped by date, each update item linking to its session or venue.
 - **States:** empty ("No updates yet. Follow a venue to hear from it."), new updates arriving ("New updates" pill), loading, offline, error.
 - **Update detail:** full title and body, venue, time, linked session button.
 
 ### 8.11 Profile and settings
+
 - **Regions:**
   - **Header:** name, phone.
   - **Language:** English / Urdu.
@@ -601,6 +630,7 @@ For each screen, design: the default (Light, EN), Dark, Urdu RTL, and every stat
 - **Delete account dialog:** "Delete your account?" / "This removes your registrations and personal details. It cannot be undone." / "Delete my account" / "Keep my account".
 
 ### 8.12 Other user screens
+
 1. **Content page** (About, Help, Privacy, Terms): title, rich text (headings, paragraphs, lists, links, quote), contact options.
 2. **Request a circle**:
    - **Fields:** area, preferred days, section, language.
@@ -758,20 +788,20 @@ These come from our earlier design conversation. Use, adapt or ignore them.
 
 **Minimum set.** Every frame comes in Light EN; frames marked ★ also come in Dark EN and Light UR.
 
-| Group | Frames |
-|---|---|
-| Foundations | Colour roles (Light, Dark, High contrast) · Type scale (EN, UR, Quran) · Spacing and layout · Shape · Elevation · Motion notes · Icon set ★ |
-| Atoms | Buttons ★ · Icon buttons and badges · Tags and status chips ★ · Avatars · Dividers · Progress and skeletons · Number displays |
-| Inputs | Text fields and text areas ★ · Phone and OTP ★ · Search and select · Checkbox, radio, switch · Segmented and chips · Section cards and stepper ★ · Pickers (date with Hijri, time, day, map pin) · File drop zone |
-| Content | List rows · Prayer items, strip and countdown ★ · Venue, session, registration, update, surah and verse items · Admin rows · Console rows |
-| Cards | All cards in 6.4 ★ |
-| Navigation | Tab bars (user, admin) ★ · App bars · Flow stepper · Console sidebar and top bar ★ |
-| Overlays | Sheet · Dialogs · Toasts · Banners · Full-screen states ★ · Success screens |
-| Map | Map elements ★ |
-| Quran | Reader elements ★ |
-| User app | 8.1 to 8.12: every screen ★, plus each listed state at least once in Light EN |
-| Admin app | 9.1 to 9.14: every screen, Today and Attendance ★ |
-| Console | 10.1 to 10.10: every page, Sessions and Import ★ |
-| Extras | Home in each prayer period (6 frames) · Home in Dora and Circles season · each screen at the Largest text size (one example per screen type) · one small phone (360 wide) example per screen type · High contrast examples of Home, Session and a form |
+| Group       | Frames                                                                                                                                                                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Foundations | Colour roles (Light, Dark, High contrast) · Type scale (EN, UR, Quran) · Spacing and layout · Shape · Elevation · Motion notes · Icon set ★                                                                                                            |
+| Atoms       | Buttons ★ · Icon buttons and badges · Tags and status chips ★ · Avatars · Dividers · Progress and skeletons · Number displays                                                                                                                          |
+| Inputs      | Text fields and text areas ★ · Phone and OTP ★ · Search and select · Checkbox, radio, switch · Segmented and chips · Section cards and stepper ★ · Pickers (date with Hijri, time, day, map pin) · File drop zone                                      |
+| Content     | List rows · Prayer items, strip and countdown ★ · Venue, session, registration, update, surah and verse items · Admin rows · Console rows                                                                                                              |
+| Cards       | All cards in 6.4 ★                                                                                                                                                                                                                                     |
+| Navigation  | Tab bars (user, admin) ★ · App bars · Flow stepper · Console sidebar and top bar ★                                                                                                                                                                     |
+| Overlays    | Sheet · Dialogs · Toasts · Banners · Full-screen states ★ · Success screens                                                                                                                                                                            |
+| Map         | Map elements ★                                                                                                                                                                                                                                         |
+| Quran       | Reader elements ★                                                                                                                                                                                                                                      |
+| User app    | 8.1 to 8.12: every screen ★, plus each listed state at least once in Light EN                                                                                                                                                                          |
+| Admin app   | 9.1 to 9.14: every screen, Today and Attendance ★                                                                                                                                                                                                      |
+| Console     | 10.1 to 10.10: every page, Sessions and Import ★                                                                                                                                                                                                       |
+| Extras      | Home in each prayer period (6 frames) · Home in Dora and Circles season · each screen at the Largest text size (one example per screen type) · one small phone (360 wide) example per screen type · High contrast examples of Home, Session and a form |
 
 **Suggested order:** Foundations → Icons → Buttons and inputs → Cards → Home ★ → Session ★ → Register ★ → Nearby ★ → the rest.

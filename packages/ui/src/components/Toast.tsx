@@ -31,8 +31,8 @@ const icons: Record<ToastKind, IconName> = {
 };
 
 const textColors: Record<ToastKind, TextColor> = {
-  info: 'textOnAccentSubtle',
-  success: 'textOnSuccessSubtle',
+  info: 'textOnHero',
+  success: 'textOnHero',
   warning: 'textOnWarningSubtle',
   danger: 'textOnDangerSubtle',
 };
@@ -71,8 +71,9 @@ export function Toast({
     return () => clearTimeout(timer);
   }, [onDismiss, hasAction, durationMs, message]);
   const palette = {
-    info: { bg: c.accentSubtle, fg: c.textOnAccentSubtle, border: c.accent },
-    success: { bg: c.successSubtle, fg: c.textOnSuccessSubtle, border: c.success },
+    // D13: everyday toasts are solid green with white text.
+    info: { bg: c.hero, fg: c.textOnHero, border: c.hero },
+    success: { bg: c.hero, fg: c.textOnHero, border: c.hero },
     warning: { bg: c.warningSubtle, fg: c.textOnWarningSubtle, border: c.warning },
     danger: { bg: c.dangerSubtle, fg: c.textOnDangerSubtle, border: c.danger },
   }[kind];
@@ -96,11 +97,16 @@ export function Toast({
         </Text>
       </View>
       {hasAction ? (
-        <Button label={actionLabel as string} onPress={onAction} variant="tertiary" />
+        <Button
+          label={actionLabel as string}
+          onPress={onAction}
+          variant={kind === 'info' || kind === 'success' ? 'secondary' : 'tertiary'}
+        />
       ) : null}
       {onDismiss ? (
         <IconButton
           icon="close"
+          variant={kind === 'info' || kind === 'success' ? 'onHero' : 'plain'}
           accessibilityLabel={dismissLabel ?? theme.t('ui.dismiss')}
           onPress={onDismiss}
         />

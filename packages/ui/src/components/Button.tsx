@@ -1,11 +1,15 @@
 import { ActivityIndicator, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useTheme } from '../theme';
-import { radii, spacing } from '../tokens';
+import { elevation, radii, spacing } from '../tokens';
 import { Icon, type IconName } from './Icon';
 import { Text, type TextColor } from './Text';
 import { Touchable } from './Touchable';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger';
+/**
+ * D8: `primary` solid green with a soft shadow, `secondary` leaf tint, `outline` a green
+ * outline, `tertiary` text only, `danger` solid terracotta for destructive actions.
+ */
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'tertiary' | 'danger';
 export type ButtonSize = 'regular' | 'large';
 
 export interface ButtonProps {
@@ -27,7 +31,7 @@ export interface ButtonProps {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   base: {
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm,
   },
@@ -56,7 +60,13 @@ export function Button({
     { bg: string; pressed: string; fg: TextColor; border: string }
   > = {
     primary: { bg: c.accent, pressed: c.accentPressed, fg: 'textOnAccent', border: c.accent },
-    secondary: { bg: c.surface, pressed: c.accentSubtle, fg: 'textAccent', border: c.accent },
+    secondary: {
+      bg: c.accentSubtle,
+      pressed: c.border,
+      fg: 'textOnAccentSubtle',
+      border: c.accentSubtle,
+    },
+    outline: { bg: c.surface, pressed: c.accentSubtle, fg: 'textAccent', border: c.accent },
     tertiary: {
       bg: 'transparent',
       pressed: c.accentSubtle,
@@ -90,8 +100,11 @@ export function Button({
             : pressed
               ? p.pressed
               : p.bg,
-          borderWidth: 2,
-          borderColor: off ? (variant === 'secondary' ? c.disabledText : 'transparent') : p.border,
+          borderWidth: variant === 'outline' ? 1.5 : 2,
+          borderColor: off ? (variant === 'outline' ? c.disabledText : 'transparent') : p.border,
+          boxShadow:
+            variant === 'primary' && !off && theme.mode === 'light' ? elevation.medium : undefined,
+          transform: pressed && !off && !theme.reduceMotion ? [{ scale: 0.98 }] : undefined,
         },
       ]}
     >

@@ -58,6 +58,13 @@ export interface SemanticColors {
   disabledBackground: string;
   disabledText: string;
 
+  /** The green header that tops main screens and sheets (D12, D13). */
+  hero: string;
+  textOnHero: string;
+  /** Light glass on the green header: icon buttons and the sheet handle. Decoration. */
+  heroGlass: string;
+  heroGlassPressed: string;
+
   /** Mushaf gilt. Decoration and Quran moments only (rules, ornaments, progress). Never used for text. */
   decoration: string;
 }
@@ -106,6 +113,11 @@ const light: SemanticColors = {
   skeleton: colors.grey[200],
   disabledBackground: colors.grey[200],
   disabledText: colors.grey[600],
+
+  hero: colors.brand.tanzeem,
+  textOnHero: colors.white,
+  heroGlass: 'rgba(255, 255, 255, 0.16)',
+  heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
 
   decoration: colors.brand.gilt,
 };
@@ -156,6 +168,11 @@ const dark: SemanticColors = {
   disabledBackground: colors.night.border,
   disabledText: colors.night.textSecondary,
 
+  hero: colors.green[800],
+  textOnHero: colors.white,
+  heroGlass: 'rgba(255, 255, 255, 0.16)',
+  heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
+
   decoration: colors.brand.gilt,
 };
 
@@ -203,6 +220,11 @@ const highContrast: SemanticColors = {
   skeleton: colors.grey[300],
   disabledBackground: colors.grey[200],
   disabledText: colors.grey[700],
+
+  hero: colors.green[975],
+  textOnHero: colors.white,
+  heroGlass: 'rgba(255, 255, 255, 0.16)',
+  heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
 
   decoration: colors.brand.gilt,
 };
@@ -258,6 +280,7 @@ export function contrastPairs(mode: ColorMode): ContrastPair[] {
     ['textOnDangerSubtle', 'dangerSubtle'],
     ['textOnWarning', 'warning'],
     ['textOnWarningSubtle', 'warningSubtle'],
+    ['textOnHero', 'hero'],
   ];
   for (const [fg, bg] of filled) {
     pairs.push({ name: `${fg} on ${bg}`, foreground: c[fg], background: c[bg], min: textMin });

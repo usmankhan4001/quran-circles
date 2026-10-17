@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
-import { spacing } from '../tokens';
+import { elevation, radii, spacing } from '../tokens';
 import { Badge, badgeLabel, type BadgeProps } from './Badge';
 import { Text } from './Text';
 import { Touchable } from './Touchable';
@@ -25,17 +25,26 @@ export interface TabBarProps {
 }
 
 const styles = StyleSheet.create({
-  bar: { flexDirection: 'row', alignItems: 'stretch', borderTopWidth: 1 },
+  // D12: a floating bar. The chosen tab is a green pill with its label; the others show the
+  // icon, and every tab keeps its name for screen readers.
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: 6,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
   tab: {
-    flex: 1,
-    minHeight: 64,
+    flexDirection: 'row',
+    minHeight: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xs,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderTopWidth: 4,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
   },
+  label: { marginStart: spacing.xs + 2 },
   iconWrap: { minHeight: 28, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -4, start: '55%' },
 });
@@ -48,11 +57,18 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
       testID={testID}
       role="tablist"
       aria-label={accessibilityLabel}
-      style={[styles.bar, { backgroundColor: c.surface, borderTopColor: c.border }]}
+      style={[
+        styles.bar,
+        {
+          backgroundColor: c.surfaceRaised,
+          borderColor: theme.mode === 'light' ? c.surfaceRaised : c.border,
+          boxShadow: theme.mode === 'light' ? elevation.high : undefined,
+        },
+      ]}
     >
       {items.map((item) => {
         const selected = item.key === activeKey;
-        const color = selected ? c.textAccent : c.textSecondary;
+        const color = selected ? c.textOnAccent : c.textSecondary;
         const extra = item.badge ? badgeLabel(theme, item.badge) : undefined;
         return (
           <Touchable
@@ -65,12 +81,8 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
             style={({ pressed }) => [
               styles.tab,
               {
-                borderTopColor: selected ? c.accent : 'transparent',
-                backgroundColor: selected
-                  ? c.accentSubtle
-                  : pressed
-                    ? c.surfaceMuted
-                    : 'transparent',
+                flex: selected ? 1.6 : 1,
+                backgroundColor: selected ? c.accent : pressed ? c.surfaceMuted : 'transparent',
               },
             ]}
           >
@@ -82,16 +94,20 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
                 </View>
               ) : null}
             </View>
-            <Text
-              variant="caption"
-              color={selected ? 'textAccent' : 'textSecondary'}
-              align="center"
-              strong={selected}
-              numberOfLines={2}
-              decorative
-            >
-              {item.label}
-            </Text>
+            {/* Without an icon the label is the only thing to see, so it always shows. */}
+            {selected || !item.icon ? (
+              <Text
+                variant="caption"
+                color={selected ? 'textOnAccent' : 'textSecondary'}
+                align="center"
+                strong={selected}
+                numberOfLines={1}
+                decorative
+                style={styles.label}
+              >
+                {item.label}
+              </Text>
+            ) : null}
           </Touchable>
         );
       })}

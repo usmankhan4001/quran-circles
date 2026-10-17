@@ -99,7 +99,7 @@ describe.each(matrix)('first release in $name', (combo) => {
 });
 
 describe('Text', () => {
-  it('sets Quran text in AlMushaf, right-to-left, with the tallest line height', () => {
+  it('sets Quran text in the Quran font, right-to-left, with the tallest line height', () => {
     renderThemed(<Text variant="quran">بسم</Text>, { locale: 'en' });
     const el = screen.getByText('بسم');
     expect(el.style.fontFamily).toContain(fonts.quran);
@@ -109,7 +109,7 @@ describe('Text', () => {
     expect(t.lineHeight / t.fontSize).toBeCloseTo(2.2, 1);
   });
 
-  it('keeps English runs in DM Sans and left-to-right on an Urdu screen', () => {
+  it('keeps English runs in Figtree and left-to-right on an Urdu screen', () => {
     renderThemed(<Text lang="en">Dora venue</Text>, { locale: 'ur' });
     const el = screen.getByText('Dora venue');
     expect(el.style.fontFamily).toContain(fonts.sans);

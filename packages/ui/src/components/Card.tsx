@@ -19,7 +19,7 @@ export interface CardProps {
 }
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radii.lg, borderWidth: 1, overflow: 'hidden' },
+  base: { borderRadius: radii.card, borderWidth: 1, overflow: 'hidden' },
 });
 
 export function Card({
@@ -38,8 +38,15 @@ export function Card({
   const base = {
     padding: spacing[padding],
     backgroundColor: variant === 'flat' ? c.surfaceMuted : c.surface,
-    borderColor: variant === 'outlined' || isHighContrast ? c.borderStrong : c.border,
-    boxShadow: variant === 'raised' && !isHighContrast ? elevation.low : undefined,
+    // D11: raised cards have no border by day, only the soft shadow; at night a hairline
+    // replaces the shadow.
+    borderColor:
+      variant === 'outlined' || isHighContrast
+        ? c.borderStrong
+        : variant === 'raised' && theme.mode === 'light'
+          ? c.surface
+          : c.border,
+    boxShadow: variant === 'raised' && theme.mode === 'light' ? elevation.low : undefined,
   };
   if (!onPress) {
     return (

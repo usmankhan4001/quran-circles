@@ -9,7 +9,8 @@ export interface IconButtonProps {
   /** Required: an icon alone has no name for a screen reader. */
   accessibilityLabel: string;
   onPress?: (event: GestureResponderEvent) => void;
-  variant?: 'plain' | 'tonal' | 'filled';
+  /** `onHero` is the light glass button on the green header of screens and sheets. */
+  variant?: 'plain' | 'tonal' | 'filled' | 'onHero';
   disabled?: boolean;
   loading?: boolean;
   testID?: string;
@@ -19,7 +20,7 @@ const styles = StyleSheet.create({
   base: {
     width: minTouchTarget,
     height: minTouchTarget,
-    borderRadius: radii.pill,
+    borderRadius: radii.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -36,7 +37,13 @@ export function IconButton({
 }: IconButtonProps) {
   const theme = useTheme();
   const c = theme.colors;
-  const fg = disabled ? c.disabledText : variant === 'filled' ? c.textOnAccent : c.text;
+  const fg = disabled
+    ? c.disabledText
+    : variant === 'filled'
+      ? c.textOnAccent
+      : variant === 'onHero'
+        ? c.textOnHero
+        : c.text;
   return (
     <Touchable
       testID={testID}
@@ -50,15 +57,19 @@ export function IconButton({
         {
           backgroundColor: disabled
             ? 'transparent'
-            : variant === 'filled'
+            : variant === 'onHero'
               ? pressed
-                ? c.accentPressed
-                : c.accent
-              : pressed
-                ? c.accentSubtle
-                : variant === 'tonal'
-                  ? c.surfaceMuted
-                  : 'transparent',
+                ? c.heroGlassPressed
+                : c.heroGlass
+              : variant === 'filled'
+                ? pressed
+                  ? c.accentPressed
+                  : c.accent
+                : pressed
+                  ? c.accentSubtle
+                  : variant === 'tonal'
+                    ? c.surfaceMuted
+                    : 'transparent',
         },
       ]}
     >
