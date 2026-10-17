@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
-import { semanticColors, textScale } from '@qc/ui';
+import { scriptSizeFactor, semanticColors, textScale, typeRoles } from '@qc/ui';
 import { hijriDate } from '../prayer/hijri';
 import { DEFAULT_PLACE, PAKISTAN_CITIES } from '../prayer/places';
 import { createTestServices, matrix, renderContent } from '../test/render';
@@ -58,10 +58,10 @@ describe.each(matrix)('NextPrayerCard in $name', (combo) => {
     expect(getComputedStyle(card).backgroundColor).toBe(rgbOf(semanticColors[combo.mode].surface));
     const line = screen.getByTestId('next-prayer-countdown');
     expect(getComputedStyle(line).color).toBe(rgbOf(semanticColors[combo.mode].text));
-    // title3 is 20 dp at step 0, set larger for Urdu script, and scaled by the text size.
-    const script = combo.locale === 'ur' ? 1.1 : 1;
+    // title3 at step 0, set larger for Urdu script, and scaled by the text size.
+    const script = combo.locale === 'ur' ? scriptSizeFactor.urdu : scriptSizeFactor.latin;
     expect(parseFloat(line.style.fontSize)).toBe(
-      Math.round(20 * script * textScale[combo.textSize]),
+      Math.round(typeRoles.title3.size * script * textScale[combo.textSize]),
     );
   });
 

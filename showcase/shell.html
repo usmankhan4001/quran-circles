@@ -1,7 +1,10 @@
 <title>Quran Circles UI Kit</title>
-<meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Gulzar&display=swap">
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Gulzar&display=swap"
+/>
 <!--RN_STYLES-->
 <style>
   /* Layout: a sticky filter bar over the kit's own catalog; tiles keep the kit's colours, the page chrome follows the viewer's theme. */
@@ -20,69 +23,297 @@
     --font-urdu: 'Gulzar', 'Noto Nastaliq Urdu', serif;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #0f172a; --surface: #1e293b; --fg: #f8fafc; --fg-2: #cbd5e1; --line: #334155;
-      --accent: #6ee7b7; --accent-soft: #064e3b; --on-accent: #022c22; --fail: #450a0a; --gold: #d4a94f;
+    :root:not([data-theme='light']) {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --fg: #f8fafc;
+      --fg-2: #cbd5e1;
+      --line: #334155;
+      --accent: #6ee7b7;
+      --accent-soft: #064e3b;
+      --on-accent: #022c22;
+      --fail: #450a0a;
+      --gold: #d4a94f;
       color-scheme: dark;
     }
   }
-  :root[data-theme="dark"] {
-    --bg: #0f172a; --surface: #1e293b; --fg: #f8fafc; --fg-2: #cbd5e1; --line: #334155;
-    --accent: #6ee7b7; --accent-soft: #064e3b; --on-accent: #022c22; --fail: #450a0a; --gold: #d4a94f;
+  :root[data-theme='dark'] {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --fg: #f8fafc;
+    --fg-2: #cbd5e1;
+    --line: #334155;
+    --accent: #6ee7b7;
+    --accent-soft: #064e3b;
+    --on-accent: #022c22;
+    --fail: #450a0a;
+    --gold: #d4a94f;
     color-scheme: dark;
   }
-  * { box-sizing: border-box; }
-  body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); }
-  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
-  .wrap { max-width: 1280px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-ui);
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto;
+    height: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    background: var(--bg);
+  }
+  .wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
 
-  header.top { padding-block: 32px 8px; display: grid; gap: 8px; }
-  .eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-2); display: flex; gap: 10px; align-items: center; }
-  .eyebrow::before { content: ""; width: 18px; height: 2px; background: var(--gold); }
-  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; margin: 0; font-weight: 700; text-wrap: balance; }
-  h1 .ur { font-family: var(--font-urdu); font-weight: 400; font-size: 0.8em; color: var(--accent); margin-inline-start: 12px; }
-  .lede { color: var(--fg-2); max-width: 68ch; margin: 0; line-height: 1.55; font-size: 15px; }
+  header.top {
+    padding-block: 32px 8px;
+    display: grid;
+    gap: 8px;
+  }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 18px;
+    height: 2px;
+    background: var(--gold);
+  }
+  h1 {
+    font-size: clamp(28px, 4vw, 40px);
+    line-height: 1.1;
+    margin: 0;
+    font-weight: 700;
+    text-wrap: balance;
+  }
+  h1 .ur {
+    font-family: var(--font-urdu);
+    font-weight: 400;
+    font-size: 0.8em;
+    color: var(--accent);
+    margin-inline-start: 12px;
+  }
+  .lede {
+    color: var(--fg-2);
+    max-width: 68ch;
+    margin: 0;
+    line-height: 1.55;
+    font-size: 15px;
+  }
 
-  .filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 12px; }
-  .filters .wrap { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
-  .group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .group > span { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-2); }
-  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--surface); flex-wrap: wrap; }
-  .seg button { font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--fg); padding: 6px 12px; border-radius: 999px; cursor: pointer; min-height: 32px; }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); font-weight: 500; }
-  .seg button:focus-visible, nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .seg button { display: inline-flex; align-items: center; gap: 6px; line-height: 1; }
-  .seg button .ur { font-family: var(--font-urdu); line-height: 1; font-size: 14px; }
+  .filters {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding-block: 12px;
+  }
+  .filters .wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    align-items: center;
+  }
+  .group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .group > span {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+  .seg {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px;
+    background: var(--surface);
+    flex-wrap: wrap;
+  }
+  .seg button {
+    font: inherit;
+    font-size: 13px;
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    min-height: 32px;
+  }
+  .seg button[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 500;
+  }
+  .seg button:focus-visible,
+  nav a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .seg button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1;
+  }
+  .seg button .ur {
+    font-family: var(--font-urdu);
+    line-height: 1;
+    font-size: 14px;
+  }
 
   /* The kit's catalog, restyled */
-  .page { max-width: none; margin: 0; padding: 0 0 96px; }
-  nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0 8px; }
-  nav a { font-size: 13px; color: var(--fg); text-decoration: none; border: 1px solid var(--line); background: var(--surface); padding: 4px 10px; border-radius: 999px; }
-  nav a:hover { border-color: var(--accent); color: var(--accent); }
-  section { scroll-margin-top: 140px; }
-  .page h2 { font-size: 22px; margin: 48px 0 6px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--fg); display: flex; align-items: baseline; gap: 10px; }
-  .page section > h2::before { content: ""; width: 8px; height: 8px; transform: rotate(45deg); background: var(--gold); flex: none; position: relative; top: -2px; }
-  .page h3 { font-size: 14px; margin: 24px 0 8px; color: var(--fg-2); font-weight: 500; }
-  .note { color: var(--fg-2); max-width: 70ch; line-height: 1.5; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 16px; }
-  .cell { min-width: 0; overflow-x: auto; }
-  .tag { font-size: 12px; color: var(--fg-2); margin-bottom: 4px; }
-  .swatches { display: grid; gap: 2px; font-size: 12px; margin-bottom: 12px; }
-  .swatch { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .swatches .chip { width: 18px; height: 18px; border: 1px solid; border-radius: 4px; display: inline-block; }
-  .muted { color: var(--fg-2); }
-  .page table { border-collapse: collapse; font-size: 12px; width: 100%; font-variant-numeric: tabular-nums; }
-  .page td, .page th { border-bottom: 1px solid var(--line); padding: 3px 6px; text-align: start; }
-  .page tr.fail { background: var(--fail); }
-  .page code { font-size: 12px; }
-  .case[hidden], .cell[hidden] { display: none !important; }
-  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+  .page {
+    max-width: none;
+    margin: 0;
+    padding: 0 0 96px;
+  }
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 20px 0 8px;
+  }
+  nav a {
+    font-size: 13px;
+    color: var(--fg);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  nav a:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  section {
+    scroll-margin-top: 140px;
+  }
+  .page h2 {
+    font-size: 22px;
+    margin: 48px 0 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    color: var(--fg);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .page section > h2::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    transform: rotate(45deg);
+    background: var(--gold);
+    flex: none;
+    position: relative;
+    top: -2px;
+  }
+  .page h3 {
+    font-size: 14px;
+    margin: 24px 0 8px;
+    color: var(--fg-2);
+    font-weight: 500;
+  }
+  .note {
+    color: var(--fg-2);
+    max-width: 70ch;
+    line-height: 1.5;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+    gap: 16px;
+  }
+  .cell {
+    min-width: 0;
+    overflow-x: auto;
+  }
+  .tag {
+    font-size: 12px;
+    color: var(--fg-2);
+    margin-bottom: 4px;
+  }
+  .swatches {
+    display: grid;
+    gap: 2px;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .swatches .chip {
+    width: 18px;
+    height: 18px;
+    border: 1px solid;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .muted {
+    color: var(--fg-2);
+  }
+  .page table {
+    border-collapse: collapse;
+    font-size: 12px;
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+  }
+  .page td,
+  .page th {
+    border-bottom: 1px solid var(--line);
+    padding: 3px 6px;
+    text-align: start;
+  }
+  .page tr.fail {
+    background: var(--fail);
+  }
+  .page code {
+    font-size: 12px;
+  }
+  .case[hidden],
+  .cell[hidden] {
+    display: none !important;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
 </style>
 
 <header class="top wrap">
   <div class="eyebrow">WP21 · @qc/ui component kit</div>
   <h1>Quran Circles UI Kit <span class="ur" lang="ur" dir="rtl">اجزاء</span></h1>
-  <p class="lede"><!--COUNT--> components rendered from the real kit code, in light, dark and high contrast, in English left to right and Urdu right to left. Urdu wording is still a draft. Use the filters to narrow the view.</p>
+  <p class="lede">
+    <!--COUNT-->
+    components rendered from the real kit code, in light, dark and high contrast, in English left to
+    right and Urdu right to left. Urdu wording is still a draft. Use the filters to narrow the view.
+  </p>
 </header>
 
 <div class="filters">
@@ -93,22 +324,28 @@
         <button type="button" id="mode-all" data-value="all" aria-pressed="true">All</button>
         <button type="button" id="mode-light" data-value="Light" aria-pressed="false">Light</button>
         <button type="button" id="mode-dark" data-value="Dark" aria-pressed="false">Dark</button>
-        <button type="button" id="mode-hc" data-value="High contrast" aria-pressed="false">High contrast</button>
+        <button type="button" id="mode-hc" data-value="High contrast" aria-pressed="false">
+          High contrast
+        </button>
       </div>
     </div>
     <div class="group" role="group" aria-labelledby="lang-label">
       <span id="lang-label">Language</span>
       <div class="seg" data-filter="lang">
         <button type="button" id="lang-all" data-value="all" aria-pressed="true">Both</button>
-        <button type="button" id="lang-en" data-value="English" aria-pressed="false">English</button>
-        <button type="button" id="lang-ur" data-value="Urdu" aria-pressed="false"><span class="ur" lang="ur">اردو</span> Urdu</button>
+        <button type="button" id="lang-en" data-value="English" aria-pressed="false">
+          English
+        </button>
+        <button type="button" id="lang-ur" data-value="Urdu" aria-pressed="false">
+          <span class="ur" lang="ur">اردو</span> Urdu
+        </button>
       </div>
     </div>
   </div>
 </div>
 
 <main class="wrap">
-<!--CATALOG-->
+  <!--CATALOG-->
 </main>
 
 <script>
@@ -136,9 +373,13 @@
         cell.hidden = !(modeOk && langOk);
       });
       document.querySelectorAll('.case').forEach(function (c) {
-        c.hidden = c.querySelectorAll('.cell:not([hidden])').length === 0 && c.querySelectorAll('.cell').length > 0;
+        c.hidden =
+          c.querySelectorAll('.cell:not([hidden])').length === 0 &&
+          c.querySelectorAll('.cell').length > 0;
       });
-      try { localStorage.setItem('qc-ui-showcase', JSON.stringify(state)); } catch (e) {}
+      try {
+        localStorage.setItem('qc-ui-showcase', JSON.stringify(state));
+      } catch (e) {}
     }
 
     document.querySelectorAll('.seg button').forEach(function (b) {

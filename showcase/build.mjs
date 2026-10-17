@@ -7,7 +7,10 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const catalog = readFileSync(join(here, '..', 'packages', 'ui', 'build', 'catalog', 'index.html'), 'utf8');
+const catalog = readFileSync(
+  join(here, '..', 'packages', 'ui', 'build', 'catalog', 'index.html'),
+  'utf8',
+);
 
 const rnStyles = catalog.match(/<style id="react-native-stylesheet">[\s\S]*?<\/style>/)?.[0] ?? '';
 let body = catalog.slice(catalog.indexOf('<body>') + 6, catalog.lastIndexOf('</body>'));
@@ -22,4 +25,6 @@ const shell = readFileSync(join(here, 'shell.html'), 'utf8')
 
 mkdirSync(join(here, 'build'), { recursive: true });
 writeFileSync(join(here, 'build', 'index.html'), shell);
-process.stdout.write(`Showcase written (${Math.round(shell.length / 1024)} KB, ${count} components)\n`);
+process.stdout.write(
+  `Showcase written (${Math.round(shell.length / 1024)} KB, ${count} components)\n`,
+);

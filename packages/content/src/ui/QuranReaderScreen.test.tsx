@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
-import { semanticColors, textScale } from '@qc/ui';
+import { fonts, semanticColors, textScale } from '@qc/ui';
 import { ARABIC_ZOOM_STEPS } from '../quran/prefs';
 import { FAKE_OPENING, fakeArabic, fakeUrdu } from '../test/fakes';
 import { createTestServices, matrix, renderContent, type TestServices } from '../test/render';
@@ -47,12 +47,12 @@ describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
     expect(ar.textContent).toBe(fakeArabic(1, 1));
     expect(ar.getAttribute('lang')).toBe('ar');
     expect(ar.getAttribute('dir')).toBe('rtl');
-    expect(getComputedStyle(ar).fontFamily).toContain('AlMushaf');
+    expect(getComputedStyle(ar).fontFamily).toContain(fonts.quran);
 
     const ur = screen.getByTestId('urdu-1-1');
     expect(ur.textContent).toBe(fakeUrdu(1, 1));
     expect(ur.getAttribute('lang')).toBe('ur');
-    expect(getComputedStyle(ur).fontFamily).not.toContain('AlMushaf');
+    expect(getComputedStyle(ur).fontFamily).not.toContain(fonts.quran);
 
     // The Arabic follows the app's text size (four steps) at the reader's default zoom, and the
     // colour mode: the text colour is the theme's.
@@ -71,7 +71,7 @@ describe('QuranReaderScreen', () => {
     const { container } = open(t, { kind: 'surah', id: 1 });
     await screen.findByTestId('arabic-1-1');
     const inQuranFont = [...container.querySelectorAll<HTMLElement>('*')].filter((el) =>
-      el.style.fontFamily.includes('AlMushaf'),
+      el.style.fontFamily.includes(fonts.quran),
     );
     expect(inQuranFont.length).toBeGreaterThan(0);
     for (const el of inQuranFont) expect(el.getAttribute('lang')).toBe('ar');
