@@ -77,6 +77,13 @@ export const Invite = z.object({
   status: InviteStatus,
   createdAt: InstantUtc,
   expiresAt: InstantUtc,
+  /**
+   * Handover: the assignment this invite replaces when it is accepted, or null for a plain invite.
+   * Servers from 1.0.0-rc.3 always send it. To resend a handover invite, copy it into the new
+   * `InviteBody`; a resend of a still-pending handover invite keeps it even when it is left out.
+   * Optional in the type only so that payloads and test data written for rc.2 still parse.
+   */
+  replacesAssignmentId: Uuid.nullable().optional(),
 });
 export type Invite = z.infer<typeof Invite>;
 
@@ -378,12 +385,19 @@ export const IMPORT_ROW_SCHEMAS = {
  *   or the assignment to replace).
  * - `area_not_in_city`: the area belongs to another city.
  * - `forbidden`: the caller may not do this for that city, venue or role.
+ * - `invalid_range`: a date range that ends before it starts (a recurring session's `endsOn`
+ *   earlier than its `startsOn`). The same code `adminRegistrations.export` uses for `from`/`to`.
+ *
+ * These are per-row codes. A file that clashes with something written by someone else between
+ * the check and the write is refused as a whole with `conflict` (409), not as a row issue.
  */
 export const IMPORT_SERVER_ISSUE_CODES = [
   'invalid_reference',
   'area_not_in_city',
   'forbidden',
+  'invalid_range',
 ] as const;
+export type ImportServerIssueCode = (typeof IMPORT_SERVER_ISSUE_CODES)[number];
 
 /**
  * A row is checked one by one on the server, so one bad row never rejects the whole request.

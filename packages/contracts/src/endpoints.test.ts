@@ -207,6 +207,32 @@ describe('endpoints added in 1.0.0-rc.2', () => {
     }
   });
 
+  it('allows not_found on the scoped export for an unknown city or venue (rc.3)', () => {
+    const d = endpoints['adminRegistrations.export'] as EndpointDef;
+    expect(d.params).toBeUndefined();
+    expect(errorsFor(d)).toContain('not_found');
+    expect(errorsFor(d)).toContain('forbidden');
+    expect(d.description).toMatch(/does not exist is `not_found`/);
+  });
+
+  it('refuses an import that races another write with conflict (rc.3)', () => {
+    for (const id of [
+      'adminImport.venues',
+      'adminImport.coordinators',
+      'adminImport.sessions',
+    ] as const) {
+      const d = endpoints[id] as EndpointDef;
+      expect(errorsFor(d), id).toContain('conflict');
+      expect(d.description, id).toMatch(/refused as a whole with `conflict`/);
+    }
+    expect(endpoints['adminImport.sessions'].description).toMatch(/invalid_range/);
+  });
+
+  it('documents that the invite response carries the handover for a resend (rc.3)', () => {
+    const description = (endpoints['adminRoles.invite'] as EndpointDef).description ?? '';
+    expect(description).toMatch(/returned `Invite`.*carries `replacesAssignmentId`/);
+  });
+
   it('reads single records for sessions and circles with not_found', () => {
     expect(errorsFor(endpoints['adminSessions.get'] as EndpointDef)).toContain('not_found');
     expect(errorsFor(endpoints['adminCircles.get'] as EndpointDef)).toContain('not_found');

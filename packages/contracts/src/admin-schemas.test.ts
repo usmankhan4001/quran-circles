@@ -7,8 +7,10 @@ import {
   CircleUpdate,
   CoordinatorImportBody,
   IMPORT_MAX_ROWS,
+  IMPORT_SERVER_ISSUE_CODES,
   IMPORT_ROW_SCHEMAS,
   ImportResult,
+  Invite,
   InviteBody,
   REGISTRATION_EXPORT_COLUMNS,
   ReminderLeadMinutes,
@@ -29,8 +31,8 @@ const UUID = '00000000-0000-4000-8000-000000000001';
 const UUID_2 = '00000000-0000-4000-8000-000000000002';
 
 describe('contract version', () => {
-  it('is the second release candidate', () => {
-    expect(CONTRACT_VERSION).toBe('1.0.0-rc.2');
+  it('is the third release candidate', () => {
+    expect(CONTRACT_VERSION).toBe('1.0.0-rc.3');
   });
 });
 
@@ -79,6 +81,48 @@ describe('invite with a handover', () => {
       replacesAssignmentId: UUID,
     });
     expect(parsed).not.toHaveProperty('replacesAssignmentId');
+  });
+});
+
+describe('invite response with the handover (rc.3)', () => {
+  const invite = {
+    id: UUID,
+    phone: '+923000000099',
+    displayName: null,
+    role: 'venue_coordinator',
+    scopeType: 'venue',
+    cityId: null,
+    venueId: UUID,
+    status: 'pending',
+    createdAt: '2026-10-17T05:00:00Z',
+    expiresAt: '2026-10-24T05:00:00Z',
+  };
+
+  it('carries the replaced assignment, or null for a plain invite', () => {
+    expect(Invite.parse({ ...invite, replacesAssignmentId: UUID_2 })).toMatchObject({
+      replacesAssignmentId: UUID_2,
+    });
+    expect(Invite.parse({ ...invite, replacesAssignmentId: null }).replacesAssignmentId).toBeNull();
+  });
+
+  it('still reads an rc.2 invite without the field', () => {
+    const parsed = Invite.parse(invite);
+    expect(parsed.replacesAssignmentId).toBeUndefined();
+  });
+
+  it('rejects a replaced assignment that is not an id', () => {
+    expect(Invite.safeParse({ ...invite, replacesAssignmentId: 'abc' }).success).toBe(false);
+  });
+
+  it('lets a resend copy it straight into a new invite body', () => {
+    const sent = Invite.parse({ ...invite, replacesAssignmentId: UUID_2 });
+    const body = InviteBody.parse({
+      role: sent.role,
+      phone: sent.phone,
+      venueId: sent.venueId,
+      replacesAssignmentId: sent.replacesAssignmentId,
+    });
+    expect(body).toMatchObject({ replacesAssignmentId: UUID_2 });
   });
 });
 
@@ -205,6 +249,19 @@ describe('bulk import', () => {
     expect(checkImportRows('sessions', importExamples.sessions).every((c) => c.ok)).toBe(true);
     const [wrong] = checkImportRows('sessions', [importExamples.venues[0]]);
     expect(wrong!.ok).toBe(false);
+  });
+
+  it('lists every server-only row issue code, including invalid_range (rc.3)', () => {
+    expect([...IMPORT_SERVER_ISSUE_CODES]).toEqual([
+      'invalid_reference',
+      'area_not_in_city',
+      'forbidden',
+      'invalid_range',
+    ]);
+    // A race between the check and the write is a whole-request conflict, not a row code.
+    expect(IMPORT_SERVER_ISSUE_CODES).not.toContain('changed_during_import');
+    // Server codes never clash with an error code's meaning by accident: only forbidden is shared.
+    expect(IMPORT_SERVER_ISSUE_CODES.filter((c) => c in ERROR_CODES)).toEqual(['forbidden']);
   });
 
   it('describes the result per row index with counts', () => {

@@ -83,10 +83,37 @@ describe('the scoped registrations export', () => {
     expect((await exportAs(city, { cityId: h.world.cityB.id })).status).toBe(403);
     expect((await exportAs(city, { venueId: h.world.venueB1 })).status).toBe(403);
     expect((await exportAs(city, { venueId: h.world.venueA2 })).status).toBe(200);
-    // The contract has no not_found here: an unknown venue reads like one out of scope.
-    expect((await exportAs(city, { venueId: nil })).status).toBe(403);
     expect((await exportAs(await h.person())).status).toBe(403);
     expect((await exportAs(null)).status).toBe(401);
+  });
+
+  it('answers an unknown venue or city with not_found for every staff role, and forbidden for everyone else', async () => {
+    const roles: [string, Actor | null, number][] = [
+      ['national admin', admin, 404],
+      ['city coordinator', await h.cityCoordinator(h.world.cityA.id), 404],
+      ['venue coordinator', await h.venueCoordinator(h.world.venueA1), 404],
+      ['person with no role', await h.person(), 403],
+      ['nobody', null, 401],
+    ];
+    for (const [name, who, status] of roles) {
+      for (const query of [{ venueId: nil }, { cityId: nil }, { cityId: nil, venueId: nil }]) {
+        const res = await exportAs(who, query);
+        expect(res.status, `${name} ${JSON.stringify(query)}`).toBe(status);
+        if (status === 404) expect(code(res)).toBe('not_found');
+      }
+    }
+    // Known places keep the scope rule: out of scope is forbidden, not not_found.
+    const venue = await h.venueCoordinator(h.world.venueA1);
+    expect((await exportAs(venue, { venueId: h.world.venueB1 })).status).toBe(403);
+    expect((await exportAs(venue, { cityId: h.world.cityB.id })).status).toBe(403);
+    // An unknown venue inside a known city is still not_found.
+    expect((await exportAs(admin, { cityId: h.world.cityA.id, venueId: nil })).status).toBe(404);
+    // A backwards range is reported before the lookup, as for any request.
+    expect(
+      (await exportAs(admin, { venueId: nil, from: '2026-10-17', to: '2026-10-16' })).status,
+    ).toBe(400);
+    // Refused requests leave no audit row.
+    expect((await auditRows(h)).filter((r) => r.action === 'registration.export')).toHaveLength(0);
   });
 
   it('counts from and to as whole days in Pakistan time, both included', async () => {

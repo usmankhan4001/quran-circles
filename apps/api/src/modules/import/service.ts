@@ -105,14 +105,17 @@ async function auditImport(
   });
 }
 
-/** Rows that changed between the check and the write make the whole import fail cleanly. */
+/**
+ * Rows written by someone else between the check and the write (a unique index trips) make the
+ * whole import fail cleanly with `conflict`: nothing is written, and sending the file again is
+ * safe because the rows already there come back as `duplicate`. This is not a row issue, and not
+ * a validation failure: the file itself was fine.
+ */
 async function inTransaction<T>(db: Db, work: (tx: Db) => Promise<T>): Promise<T> {
   try {
     return await db.transaction(work);
   } catch (error) {
-    if (isUniqueViolation(error)) {
-      return fail('validation_failed', { issues: [issue('rows', 'changed_during_import')] });
-    }
+    if (isUniqueViolation(error)) return fail('conflict');
     throw error;
   }
 }

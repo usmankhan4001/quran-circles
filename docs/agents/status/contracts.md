@@ -5,6 +5,7 @@ Branch: claude/peaceful-archimedes-ain95k
 
 ## Done
 
+- 2026-10-17: `@qc/db` exports shared scheduled jobs from `src/jobs/`: `topUpAllOccurrences` (moved from the API, behaviour unchanged) with its planner (`planOccurrences`, `topUpOccurrences`, `scheduleSpecOf`, `DEFAULT_OCCURRENCE_HORIZON_DAYS` = 90), tested on PGlite in `src/jobs/top-up.test.ts`.
 - API contract: 80 operations (73 in rc.1, 7 added in rc.2) in `packages/contracts/src/endpoints.ts`, with Zod request and response schemas, error lists, rate-limit buckets and idempotency flags.
 - OpenAPI 3.1 generated into `packages/contracts/openapi.json` (`pnpm --filter @qc/contracts gen`), kept in sync by a test.
 - Scope matrix in `packages/contracts/src/scopes.ts` (`can`, `scopeFilter`), generated table in `packages/contracts/SCOPES.md`, tested for every role against every action.
@@ -20,6 +21,8 @@ Branch: claude/peaceful-archimedes-ain95k
 
 - 2026-10-17: mock server usable for staff screens (mock and fixtures only; registry, schemas, scope matrix and `openapi.json` unchanged, contract stays rc.2). Staff sign-in from synthetic numbers with code `123456`: `+923000000201` → `mock-venue` (venue coordinator, Sample Masjid Al-Noor), `+923000000202` → `mock-city` (city coordinator, Rawalpindi), `+923000000203` → `mock-staff` (national admin); `me.get` and `auth.refresh` keep the role (`staffAccounts` in fixtures). Staff requests are checked with `can`/`scopeFilter` (forbidden by role or out-of-scope record; not_found on scoped reads). Fixture-backed, scoped `adminVenues.list`, `adminSessions.list`, `adminCircles.list`, plus `adminSessions.occurrences`, `adminAttendance.get`, `registrations.forSession` (`staffRegistrants`), scoped `adminRegistrations.export`. Attendee behaviour unchanged. `@qc/contracts`: 1487 tests; `@qc/admin-app` 534 and `@qc/console` 263 still pass.
 
+- 2026-10-17: contract 1.0.0-rc.3 (additive, no database change, `SCOPES.md` unchanged). `Invite.replacesAssignmentId` (uuid or null; optional in the TS type so rc.2 data still typechecks) so a console Resend keeps a handover; `invalid_range` added to `IMPORT_SERVER_ISSUE_CODES` (session `endsOn` before `startsOn`) with `ImportServerIssueCode`; `conflict` listed on the three `adminImport.*` endpoints (an import that races another write; replaces the API's unlisted `changed_during_import` 400); `not_found` listed on `adminRegistrations.export` for an unknown `cityId`/`venueId` (staff only; no export right is still `forbidden`). Mock: `adminRoles.invite` echoes the body including the handover; the scoped export answers `not_found` for unknown ids and `forbidden` for a known place out of scope. `openapi.json` regenerated. See `packages/contracts/CHANGELOG.md`. `@qc/contracts`: 1501 tests; `@qc/console` 273 and `@qc/admin-app` 553 still pass, both typecheck.
+
 ## In progress
 
 - Seed from fixtures in `packages/db` after the schema lands.
@@ -32,7 +35,7 @@ Branch: claude/peaceful-archimedes-ain95k
 
 - Posters, message-template editing, content-page editing, reports, bulk import and the demand map are not in the P0 contract. The lanes that need them (console WP7/WP15/WP19, renderer WP16) file change requests.
 - Confirm the Hijri offset range (-2 to +2 days) and the OTP rules: 6 digits, channel WhatsApp with SMS fallback.
-- Contract version is `1.0.0-rc.2` until Gate 1 is signed.
+- Contract version is `1.0.0-rc.3` until Gate 1 is signed.
 - The only pending-approval fixture circle is in Lahore, so the mock's Rawalpindi city coordinator (`mock-city`) has no circle to approve. Adding a pending Rawalpindi circle would change the `@qc/db` seed too; say if the drawings need it.
 
 ## Contract change requests

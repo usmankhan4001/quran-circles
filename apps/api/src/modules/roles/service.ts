@@ -125,6 +125,7 @@ const toInvite = (r: InviteRow, now: Date): Invite => ({
   status: r.status === 'pending' && r.expiresAt <= now ? 'expired' : r.status,
   createdAt: r.createdAt.toISOString(),
   expiresAt: r.expiresAt.toISOString(),
+  replacesAssignmentId: r.replacesAssignmentId,
 });
 
 export interface InviteDeps {
@@ -308,8 +309,16 @@ export async function createInvite(
         return fail('not_found');
       }
 
-      // Resend: the pending invite gives way to this one.
+      // Resend: the pending invite gives way to this one. Its handover is carried over when the
+      // body names none, as long as the replaced assignment is still live (a stale link would
+      // only be shown to the console and then ignored at acceptance).
       const previous = await pendingInvite(tx, body.phone, target, deps.now);
+      const carried =
+        !replacesId &&
+        previous?.replacesAssignmentId &&
+        (await handoverAssignmentExists(tx, previous.replacesAssignmentId, target))
+          ? previous.replacesAssignmentId
+          : null;
       if (previous) {
         await tx
           .update(coordinatorInvites)
@@ -321,15 +330,7 @@ export async function createInvite(
 
       const [row] = await tx
         .insert(coordinatorInvites)
-        .values(
-          inviteValues(
-            deps,
-            actorId,
-            target,
-            body,
-            replacesId ?? previous?.replacesAssignmentId ?? null,
-          ),
-        )
+        .values(inviteValues(deps, actorId, target, body, replacesId ?? carried))
         .returning();
       if (!row) throw new Error('invite insert returned no row');
 

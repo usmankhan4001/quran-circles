@@ -785,6 +785,57 @@ describe('mock server, staff sign-in and roles', () => {
     expect((await invite('mock-venue', alNoor.id)).status).toBe(403);
   });
 
+  it('answers the export by the rule for unknown ids: not_found for staff, forbidden out of scope (rc.3)', async () => {
+    const unknown = '00000000-0000-4000-8000-00000000abcd';
+    const status = async (token: string, query: string) =>
+      (await call('adminRegistrations.export', token, `/v1/admin/registrations/export?${query}`))
+        .status;
+    for (const token of ['mock-staff', 'mock-city', 'mock-venue']) {
+      expect(await status(token, `venueId=${unknown}`), token).toBe(404);
+      expect(await status(token, `cityId=${unknown}`), token).toBe(404);
+    }
+    const lahoreVenue = fx.venues.find((v) => v.cityId !== rawalpindi.id)!;
+    expect(await status('mock-city', `venueId=${lahoreVenue.id}`)).toBe(403);
+    expect(await status('mock-venue', `venueId=${lahoreVenue.id}`)).toBe(403);
+    expect(await status('mock-venue', `cityId=${rawalpindi.id}`)).toBe(403);
+    expect(await status('mock-city', `cityId=${rawalpindi.id}`)).toBe(200);
+    expect(await status('mock-venue', `venueId=${alNoor.id}`)).toBe(200);
+    expect(await status('mock-staff', `venueId=${lahoreVenue.id}`)).toBe(200);
+    // Someone with no staff role is refused before any lookup.
+    expect(await status('mock-user', `venueId=${unknown}`)).toBe(403);
+  });
+
+  it('echoes the handover on the invite it creates, and null without one (rc.3)', async () => {
+    const assignment = '00000000-0000-4000-8000-00000000beef';
+    const sent = await call('adminRoles.invite', 'mock-city', '/v1/admin/invites', {
+      body: {
+        role: 'venue_coordinator',
+        venueId: alNoor.id,
+        phone: '+923000000302',
+        replacesAssignmentId: assignment,
+      },
+    });
+    expect(sent.status).toBe(201);
+    expect(sent.data).toMatchObject({
+      phone: '+923000000302',
+      role: 'venue_coordinator',
+      scopeType: 'venue',
+      venueId: alNoor.id,
+      cityId: null,
+      status: 'pending',
+      replacesAssignmentId: assignment,
+    });
+    const plain = await call('adminRoles.invite', 'mock-staff', '/v1/admin/invites', {
+      body: { role: 'city_coordinator', cityId: rawalpindi.id, phone: '+923000000303' },
+    });
+    expect(plain.data).toMatchObject({
+      scopeType: 'city',
+      cityId: rawalpindi.id,
+      venueId: null,
+      replacesAssignmentId: null,
+    });
+  });
+
   it('exports only the registrations in the caller scope', async () => {
     const rows = async (token: string) =>
       (

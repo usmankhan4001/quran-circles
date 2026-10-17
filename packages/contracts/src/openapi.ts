@@ -4,7 +4,7 @@ import { endpoints, type EndpointId } from './endpoints';
 import { errorsFor, type EndpointDef } from './define';
 
 /** Bumped on a breaking change, with the lanes it affects. Frozen at Gate 1. */
-export const CONTRACT_VERSION = '1.0.0-rc.2';
+export const CONTRACT_VERSION = '1.0.0-rc.3';
 
 type Json = Record<string, unknown>;
 

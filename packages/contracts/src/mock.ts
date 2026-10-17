@@ -13,6 +13,7 @@ import {
   type SessionCreate,
   type VenueCreate,
   type InviteBody,
+  type Invite,
 } from './schemas/admin';
 import { csvCell, csvFile } from './csv';
 import { ValidationIssue } from './errors';
@@ -464,6 +465,14 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
       return errorResponse('validation_failed', id, {
         issues: [{ path: 'from', code: 'invalid_range' }],
       });
+    // An id the fixtures do not have is not_found (the guard already refused non-staff); a known
+    // venue or city outside the caller's scope is forbidden, as on the server.
+    const venue = q.venueId ? venueScope(q.venueId) : null;
+    if (q.venueId && !venue) return notFound(id);
+    if (q.cityId && !fx.cities.some((x) => x.id === q.cityId)) return notFound(id);
+    const target = venue ?? (q.cityId ? { cityId: q.cityId } : null);
+    if (target && !can(c.principal ?? null, 'registration.export', target))
+      return errorResponse('forbidden', id);
     const day = pakistanDate(fx.FIXTURE_REGISTERED_AT);
     const inRange = (!q.from || day >= q.from) && (!q.to || day <= q.to);
     const scope = filterFor(c, 'registration.export');
@@ -489,6 +498,23 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
         ].join(','),
       );
     return csvFile(REGISTRATION_EXPORT_COLUMNS, lines);
+  },
+  // The invite echoes the body, including a handover, so a resend can copy it.
+  'adminRoles.invite': (c) => {
+    const b = c.body as InviteBody;
+    const invite: Invite = {
+      ...(generated('adminRoles.invite') as Invite),
+      phone: b.phone,
+      displayName: b.displayName ?? null,
+      role: b.role,
+      scopeType:
+        b.role === 'national_admin' ? 'national' : b.role === 'city_coordinator' ? 'city' : 'venue',
+      cityId: 'cityId' in b ? b.cityId : null,
+      venueId: 'venueId' in b ? b.venueId : null,
+      status: 'pending',
+      replacesAssignmentId: ('replacesAssignmentId' in b ? b.replacesAssignmentId : null) ?? null,
+    };
+    return invite;
   },
   'adminSessions.get': (c, id) =>
     fx.adminSessions.find((s) => s.id === c.params.sessionId) ?? notFound(id),

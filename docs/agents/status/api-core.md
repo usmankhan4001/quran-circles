@@ -3,8 +3,17 @@
 Updated: 2026-10-17
 Branch: claude/peaceful-archimedes-ain95k
 
+## Done (2026-10-17: contract 1.0.0-rc.3)
+
+- Invites return `replacesAssignmentId` (null for a plain invite) on `adminRoles.invite` and `adminRoles.invites`. A resend that names the link carries it, including for a lapsed invite; a resend of a pending handover invite without it keeps the link only while the replaced assignment is still live (a stale one is dropped). An ended or unknown link sent explicitly is still `not_found`, and the pending invite is left as it was.
+- Import: a unique-index race between the check and the write answers 409 `conflict` (was 400 `validation_failed` with the unlisted issue `changed_during_import`). `invalid_range` on session rows is now a contract code.
+- Scoped export: an unknown `venueId` or `cityId` answers `not_found` (`ctx.unknownRef`) to anyone holding `registration.export` (was 403 for an unknown venue and an empty file for an unknown city); outsiders still get 403 first, a known place out of scope is still 403.
+- ADR 0011 updated: unknown ids in the path, body or query answer `not_found` to role holders and `forbidden` to outsiders; the old `validation_failed` wording is gone.
+- Tests: `@qc/api` 553 passing in 27 files (11 new: 6 roles for the handover on the invite response, resend carry-over and every caller role; 4 import for `invalid_range` and the `conflict` race on each kind; 1 export for unknown ids by every role). Typecheck, eslint and prettier clean on the changed files.
+
 ## Done (2026-10-17: contract 1.0.0-rc.2, migration 0008)
 
+- Daily occurrence top-up moved to `@qc/db` (`packages/db/src/jobs/`); `modules/sessions/top-up.ts` and `jobs.ts` re-export `topUpAllOccurrences`, and the worker now runs it daily. The lazy per-session path still uses `modules/sessions/occurrences.ts`, a copy of the package's planner (switching it to `@qc/db` is a follow-up).
 - Settings: `reminderLeadMinutes {dora, circles}` (default 60 each) stored under `reminder_lead_minutes`, the key the worker reads. A PATCH with one program merges with the stored value.
 - `users.display_name` is nullable: nothing writes the `-` placeholder any more; readers treat null, blank and a legacy `-` as no name (`modules/shared/names.ts`).
 - Circles: `adminCircles.decide` takes no note and audits `{}`; `adminCircles.update` accepts `status` `published` <-> `archived` only (anything else is `validation_failed` `{path: 'status', code: 'invalid_transition'}`); `adminCircles.get` returns the list entry, `not_found` outside the caller's list scope.
@@ -35,7 +44,7 @@ Branch: claude/peaceful-archimedes-ain95k
 
 ## Design notes
 
-- Error policy. `missing(action)` answers `forbidden` for people with no qualifying role and `not_found` for staff (only on endpoints with params). `unknownRef(action)` is for body fields that point at nothing: `forbidden` for outsiders, `not_found` for anyone holding a qualifying role. The export has no `not_found` in the contract, so an unknown `venueId` there is refused like one out of scope (403). `conflict` is returned only where the contract declares it.
+- Error policy. `missing(action)` answers `forbidden` for people with no qualifying role and `not_found` for staff (only on endpoints with params). `unknownRef(action)` is for body fields that point at nothing: `forbidden` for outsiders, `not_found` for anyone holding a qualifying role. Since rc.3 the scoped export follows the same rule for its `cityId` and `venueId` filters. `conflict` is returned only where the contract declares it.
 - A handover whose `replacesAssignmentId` names an assignment at another place, or a revoked one, answers `not_found` (the same as unknown), so a coordinator learns nothing about other places. Replacing yourself is `validation_failed` on `replacesAssignmentId`.
 - `adminUpdates.list` reports `recipients` as the current reach (the number is not stored per post).
 - Attendance `markedAt` is derived (no column).
@@ -52,12 +61,12 @@ Branch: claude/peaceful-archimedes-ain95k
 
 ## Questions for the orchestrator
 
-- Worker wiring of the daily jobs: `apps/api/src/jobs.ts` is ready, but `@qc/worker` cannot import it without adding `@qc/api` as a workspace dependency (a `pnpm-lock.yaml` change, outside my paths). Either add the dependency and a daily schedule in the worker, or move the job into a shared package.
+- `adminSessions.create` reports an `endsOn` before `startsOn` as `validation_failed` `{path: 'endsOn', code: 'invalid_reference'}`, while the import uses `invalid_range` for the same check. Changing the single create to `invalid_range` would be cleaner but changes an issue code clients may read; left as it is, say if it should change.
+
+- `purgeStaleAuthRows` (`apps/api/src/jobs.ts`) is still not scheduled by the worker; it would need the same move into a shared package.
 - The lazy per-session `topUpOccurrences` on the public occurrences view and `insertSession` still ignore a season's last day (pre-existing); only the daily job caps at it.
 - Import duplicate keys follow the contract text and the mock (venue: city + English name, case-insensitive; session: venue + English title + kind + start time + days or date; coordinator: number + role + place, or a person who already holds it), not the brief's wording (venue by city + area + name, session by venue + weekday + time). Say if the brief's keys are wanted.
-- Import issue codes beyond the contract's list: `invalid_range` (session `endsOn` before `startsOn`) and, on the request, `changed_during_import` when a unique index trips between check and write.
 - `message_templates` rows are not seeded by the API. `adminTemplates.list` returns what is in the table.
-- ADR 0011 still describes the old `unknownRef` (validation_failed for staff); it should say `not_found`. I did not edit it.
 - `index.ts` environment variables: `DATABASE_URL` (required), `PORT` (default 3000), `CORS_ORIGINS` (comma list), `TRUST_PROXY=true`, `PUBLIC_WEB_BASE`, plus the auth lane's `APP_ENV`, `AUTH_SECRET`, `AUTH_FIXED_CODE`, `AUTH_TRUST_PROXY` and the `@qc/messaging` provider variables.
 
 ## Contract change requests

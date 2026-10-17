@@ -63,7 +63,7 @@ export interface HandlerCtx<K extends EndpointId> {
   /** The target was not found: `forbidden` for outsiders, `not_found` for people in scope. */
   missing(action: ScopeAction): never;
   /**
-   * A body field points at nothing (an unknown city, venue, session...). Outsiders get
+   * A body or query field points at nothing (an unknown city, venue, session...). Outsiders get
    * `forbidden`, so an id's existence is never revealed to them; anyone holding a role that
    * qualifies for the action gets `not_found`. The contract lists `not_found` on every endpoint
    * that uses this.

@@ -632,6 +632,7 @@ export const endpoints = {
     description:
       'One audited export for what the person asked for, instead of one per session. Filters: `cityId`, `venueId`, and `from` / `to` (inclusive local dates, Pakistan time, of the registration). ' +
       'The caller must hold `registration.export` for every venue the file covers; a filter outside their scope is `forbidden`. With no filter a coordinator gets their whole scope. ' +
+      'A `cityId` or `venueId` that does not exist is `not_found` for a caller who holds `registration.export` anywhere (the rule for unknown ids in a request); someone with no export right at all gets `forbidden` and learns nothing. ' +
       `More than ${REGISTRATION_EXPORT_MAX_ROWS} rows is refused with validation_failed and the issue code \`too_many_rows\`: narrow the filters. ` +
       `The file is UTF-8 without a byte order mark (the console adds one when it saves) and its header row is exactly: ${REGISTRATION_EXPORT_COLUMNS.join(',')}. ` +
       "Cells that start with '=', '+', '-', '@' or a tab in names are prefixed with an apostrophe so spreadsheets do not run them as formulas. " +
@@ -641,6 +642,7 @@ export const endpoints = {
     actions: ['registration.export'],
     query: AdminRegistrationsExportQuery,
     success: { status: 200, schema: z.string(), contentType: 'text/csv' },
+    errors: ['not_found'],
   }),
 
   // Updates feed
@@ -738,7 +740,8 @@ export const endpoints = {
     summary: 'Invite a coordinator by phone number. Checked by the role in the body',
     description:
       'Sends the invitation message and keeps a pending invite. To resend, send a new invite for the same number, role and place: it replaces the pending one with a fresh expiry and sends the message again (there is no separate resend call). ' +
-      'To hand a city or venue to someone with no account yet, add `replacesAssignmentId`: the invite stays pending and, when it is accepted, the new assignment is created and the replaced one is revoked in one transaction.',
+      'To hand a city or venue to someone with no account yet, add `replacesAssignmentId`: the invite stays pending and, when it is accepted, the new assignment is created and the replaced one is revoked in one transaction. ' +
+      'The returned `Invite` (and each item of `adminRoles.invites`) carries `replacesAssignmentId`, so a resend can copy it. A resend of a pending handover invite keeps the handover even without it, while the replaced assignment is still live; a `replacesAssignmentId` that is unknown, ended or at another place is `not_found`.',
     tag: 'Admin',
     auth: 'staff',
     actions: [
@@ -1061,12 +1064,14 @@ export const endpoints = {
       "Rows are `VenueCreate`. Needs `venue.create` for each row's city; a row outside the caller's scope is invalid with the issue code `forbidden`. " +
       'A venue with the same city and English name that already exists, or an earlier row with the same city and name in the same request, is `duplicate` (skipped, not an error). ' +
       'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all rows are written in one transaction, or none if any row is invalid (`applied` says which). ' +
+      'A file that clashes with a write made by someone else between the check and the write is refused as a whole with `conflict` and nothing is written; send it again (rows already there come back as `duplicate`). ' +
       'One audit row records the row counts, never cell contents. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
     tag: 'Admin',
     auth: 'staff',
     actions: ['venue.create'],
     body: VenueImportBody,
     success: json(200, ImportResult),
+    errors: ['conflict'],
     idempotent: true,
   }),
   'adminImport.coordinators': endpoint({
@@ -1078,6 +1083,7 @@ export const endpoints = {
       'Rows are `InviteBody`. Each row is checked with the action for its role (`role.assign_*`), exactly as `adminRoles.invite`; a row the caller may not invite is invalid with the issue code `forbidden`. ' +
       'A pending invite for the same number, role and place, or a person who already holds that role there, is `duplicate` (skipped, not an error). ' +
       'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all invites are created in one transaction, or none if any row is invalid, and the invitation messages are queued only after it commits. ' +
+      'A file that clashes with a write made by someone else between the check and the write is refused as a whole with `conflict` and nothing is written; send it again (rows already there come back as `duplicate`). ' +
       'One audit row records the row counts, never phone numbers. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
     tag: 'Admin',
     auth: 'staff',
@@ -1088,6 +1094,7 @@ export const endpoints = {
     ],
     body: CoordinatorImportBody,
     success: json(200, ImportResult),
+    errors: ['conflict'],
     rateLimit: 'messaging',
     idempotent: true,
   }),
@@ -1099,13 +1106,16 @@ export const endpoints = {
     description:
       "Rows are `SessionCreate`. Needs `session.create` for each row's venue; a row outside the caller's scope is invalid with the issue code `forbidden`. " +
       'A session at the same venue with the same English title, kind, start time and days (or date), or an earlier identical row in the same request, is `duplicate` (skipped, not an error). ' +
+      'A recurring row whose `endsOn` is before its `startsOn` is invalid with the issue code `invalid_range`. ' +
       'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all sessions and their occurrences are written in one transaction, or none if any row is invalid. ' +
+      'A file that clashes with a write made by someone else between the check and the write is refused as a whole with `conflict` and nothing is written; send it again (rows already there come back as `duplicate`). ' +
       'One audit row records the row counts, never cell contents. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
     tag: 'Admin',
     auth: 'staff',
     actions: ['session.create'],
     body: SessionImportBody,
     success: json(200, ImportResult),
+    errors: ['conflict'],
     idempotent: true,
   }),
 

@@ -253,11 +253,133 @@ describe('inviting someone by phone', () => {
       .from(schema.coordinatorInvites)
       .where(eq(schema.coordinatorInvites.id, resent.id));
     expect(row?.replacesAssignmentId).toBe(old!.id);
+    expect(resent.replacesAssignmentId).toBe(old!.id);
   });
 
   it('refuses a number that is not E.164', async () => {
     expect((await venueInvite(admin, h.world.venueA1, '0300 1234567')).status).toBe(400);
     expect((await venueInvite(admin, h.world.venueA1, 'abc')).status).toBe(400);
+  });
+});
+
+describe('the handover on the invite response (contract rc.3)', () => {
+  const listed = async (who: Actor) =>
+    (await h.api('adminRoles.invites', { as: who })).json<{ items: Invite[] }>().items;
+
+  it('returns null for a plain invite, at every kind of place', async () => {
+    const venue = (await venueInvite(admin, h.world.venueA1)).json<Invite>();
+    const city = (
+      await invite(admin, { role: 'city_coordinator', cityId: h.world.cityB.id, phone: newPhone() })
+    ).json<Invite>();
+    const national = (
+      await invite(admin, { role: 'national_admin', phone: newPhone() })
+    ).json<Invite>();
+    for (const made of [venue, city, national]) expect(made.replacesAssignmentId).toBeNull();
+    expect((await listed(admin)).map((i) => i.replacesAssignmentId)).toEqual([null, null, null]);
+  });
+
+  it('returns the replaced assignment on create and in the list, to everyone who may see the invite', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const cityA = await h.cityCoordinator(h.world.cityA.id);
+    const made = (
+      await venueInvite(cityA, h.world.venueA1, newPhone(), { replacesAssignmentId: old!.id })
+    ).json<Invite>();
+    expect(made.replacesAssignmentId).toBe(old!.id);
+    for (const who of [admin, cityA]) {
+      expect((await listed(who)).find((i) => i.id === made.id)?.replacesAssignmentId).toBe(old!.id);
+    }
+    // Outside the city the invite (and so the link) is not listed at all.
+    expect(await listed(await h.cityCoordinator(h.world.cityB.id))).toEqual([]);
+
+    const cityHolder = await h.cityCoordinator(h.world.cityB.id);
+    const [oldCity] = await liveAssignments(cityHolder.userId);
+    const cityInvite = (
+      await invite(admin, {
+        role: 'city_coordinator',
+        cityId: h.world.cityB.id,
+        phone: newPhone(),
+        replacesAssignmentId: oldCity!.id,
+      })
+    ).json<Invite>();
+    expect(cityInvite.replacesAssignmentId).toBe(oldCity!.id);
+  });
+
+  it('lets a resend of a lapsed handover invite carry the link the list returned', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const phone = newPhone();
+    const first = (
+      await venueInvite(admin, h.world.venueA1, phone, { replacesAssignmentId: old!.id })
+    ).json<Invite>();
+    h.clock.advanceDays(8);
+    const lapsed = (await listed(admin)).find((i) => i.id === first.id)!;
+    expect(lapsed).toMatchObject({ status: 'expired', replacesAssignmentId: old!.id });
+
+    // What the console's Resend sends: the same number, role and place, plus the link.
+    const resent = await venueInvite(admin, h.world.venueA1, phone, {
+      replacesAssignmentId: lapsed.replacesAssignmentId,
+    });
+    expect(resent.status).toBe(201);
+    expect(resent.json<Invite>()).toMatchObject({
+      status: 'pending',
+      replacesAssignmentId: old!.id,
+    });
+  });
+
+  it('does not invent a handover for a lapsed invite resent without the link', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const phone = newPhone();
+    await venueInvite(admin, h.world.venueA1, phone, { replacesAssignmentId: old!.id });
+    h.clock.advanceDays(8);
+    const resent = (await venueInvite(admin, h.world.venueA1, phone)).json<Invite>();
+    expect(resent.replacesAssignmentId).toBeNull();
+  });
+
+  it('drops a carried link whose assignment has ended, and refuses one sent explicitly', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const phone = newPhone();
+    const first = (
+      await venueInvite(admin, h.world.venueA1, phone, { replacesAssignmentId: old!.id })
+    ).json<Invite>();
+    await revoke(admin, old!.id);
+
+    const explicit = await venueInvite(admin, h.world.venueA1, phone, {
+      replacesAssignmentId: old!.id,
+    });
+    expect(explicit.status).toBe(404);
+    // Nothing changed: the pending invite is still there.
+    expect((await listed(admin)).find((i) => i.id === first.id)?.status).toBe('pending');
+
+    const carried = (await venueInvite(admin, h.world.venueA1, phone)).json<Invite>();
+    expect(carried.replacesAssignmentId).toBeNull();
+  });
+
+  it('follows the scope rules for a handover resend, for every kind of caller', async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const phone = newPhone();
+    await venueInvite(admin, h.world.venueA1, phone, { replacesAssignmentId: old!.id });
+    const cases: [string, Actor | null, number][] = [
+      ['person', await h.person(), 403],
+      ['nobody', null, 401],
+      ['venue coordinator at the venue', await h.venueCoordinator(h.world.venueA1), 403],
+      ['city coordinator elsewhere', await h.cityCoordinator(h.world.cityB.id), 403],
+      ['city coordinator of the city', await h.cityCoordinator(h.world.cityA.id), 201],
+      ['national admin', admin, 201],
+    ];
+    for (const [name, who, status] of cases) {
+      const res = await invite(who, {
+        role: 'venue_coordinator',
+        venueId: h.world.venueA1,
+        phone,
+        replacesAssignmentId: old!.id,
+      });
+      expect(res.status, name).toBe(status);
+      if (status === 201) expect(res.json<Invite>().replacesAssignmentId, name).toBe(old!.id);
+    }
   });
 });
 

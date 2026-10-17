@@ -5,7 +5,7 @@ import { invalid } from '../shared/errors';
 import { compareDates } from '../shared/time';
 import { findSessionScope } from '../sessions/admin';
 import { findVenue } from '../venues/service';
-import { exportAuditScope, exportScopedRegistrations } from './export';
+import { cityExists, exportAuditScope, exportScopedRegistrations } from './export';
 import {
   cancelRegistration,
   createRegistration,
@@ -59,13 +59,15 @@ export const registrationHandlers = (): Handlers => ({
       invalid('from', 'invalid_range');
     }
     // The file must stay inside the caller's scope: a filter outside it is refused, and with no
-    // filter the scope itself limits the rows. An unknown venue is refused like one out of scope.
+    // filter the scope itself limits the rows. An unknown venue or city is not_found: `scope`
+    // above has already refused anyone with no export right, so only staff learn it.
     const venue = query.venueId ? await findVenue(ctx.db, query.venueId) : null;
-    if (query.venueId) {
-      ctx.authorize(
-        'registration.export',
-        venue ? { cityId: venue.cityId, venueId: venue.id } : { venueId: query.venueId },
-      );
+    if (query.venueId && !venue) return ctx.unknownRef('registration.export');
+    if (query.cityId && !(await cityExists(ctx.db, query.cityId))) {
+      return ctx.unknownRef('registration.export');
+    }
+    if (venue) {
+      ctx.authorize('registration.export', { cityId: venue.cityId, venueId: venue.id });
     } else if (query.cityId) {
       ctx.authorize('registration.export', { cityId: query.cityId });
     }

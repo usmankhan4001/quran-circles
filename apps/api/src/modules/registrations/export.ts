@@ -14,7 +14,7 @@ import { fail } from '../shared/errors';
 import { visibleName } from '../shared/names';
 import { DEFAULT_TIMEZONE, addDays, localToUtc } from '../shared/time';
 
-const { registrations, sessions, venues, users } = schema;
+const { registrations, sessions, venues, users, cities } = schema;
 
 /**
  * The registrants of a city, a venue or a coordinator's whole scope, in one CSV. `from` and `to`
@@ -96,6 +96,12 @@ export async function exportScopedRegistrations(
     ]),
   );
   return { csv: csvFile(REGISTRATION_EXPORT_COLUMNS, lines), rows: rows.length };
+}
+
+/** Whether a city id names a city, for the export's unknown-reference rule. */
+export async function cityExists(db: Db, cityId: string): Promise<boolean> {
+  const [row] = await db.select({ id: cities.id }).from(cities).where(eq(cities.id, cityId));
+  return row !== undefined;
 }
 
 /**

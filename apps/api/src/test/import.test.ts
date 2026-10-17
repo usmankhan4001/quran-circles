@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { IMPORT_MAX_ROWS, type ImportResult } from '@qc/contracts';
+import { IMPORT_MAX_ROWS, IMPORT_SERVER_ISSUE_CODES, type ImportResult } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { createHarness, type Actor, type Harness } from './harness';
 import { auditRows, createSession, outboxRows } from './fixtures';
@@ -340,5 +340,95 @@ describe('importing coordinators', () => {
     ).toBe(403);
     expect((await run('coordinators', await h.person(), rows, true)).status).toBe(403);
     expect((await run('coordinators', null, rows, true)).status).toBe(401);
+  });
+});
+
+describe('issue codes and races (contract rc.3)', () => {
+  const zodCodes = new Set([
+    'invalid_type',
+    'invalid_format',
+    'too_small',
+    'too_big',
+    'invalid_value',
+    'invalid_union',
+    'unrecognized_keys',
+    'custom',
+  ]);
+
+  it('reports only codes the contract lists, with invalid_range for a backwards session range', async () => {
+    const r = result(
+      await run(
+        'sessions',
+        admin,
+        [
+          sessionRow({ endsOn: '2026-10-18' }), // the day before startsOn
+          sessionRow({ endsOn: '2026-10-19', title: { en: 'One day only' } }), // same day: fine
+          sessionRow({ venueId: nil }),
+          sessionRow({ localStartTime: 'soon' }),
+        ],
+        true,
+      ),
+    );
+    expect(statuses(r)).toEqual(['invalid', 'created', 'invalid', 'invalid']);
+    expect(r.rows[0]?.issues).toEqual([{ path: 'endsOn', code: 'invalid_range' }]);
+    const server = new Set<string>(IMPORT_SERVER_ISSUE_CODES);
+    for (const row of r.rows) {
+      for (const i of row.issues) {
+        expect(server.has(i.code) || zodCodes.has(i.code), i.code).toBe(true);
+      }
+    }
+  });
+
+  /** Makes every insert into `table` fail as a unique index would, as if someone else won a race. */
+  async function withRace(table: string, work: () => Promise<void>) {
+    await h.pg.exec(`
+      CREATE OR REPLACE FUNCTION qc_test_race() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'raced' USING ERRCODE = 'unique_violation'; END $$;
+      CREATE TRIGGER qc_test_race BEFORE INSERT ON ${table}
+        FOR EACH ROW EXECUTE FUNCTION qc_test_race();
+    `);
+    try {
+      await work();
+    } finally {
+      await h.pg.exec(`DROP TRIGGER qc_test_race ON ${table}; DROP FUNCTION qc_test_race();`);
+    }
+  }
+
+  const expectConflict = (res: { status: number; json<T>(): T }) => {
+    expect(res.status).toBe(409);
+    const body = res.json<{ error: { code: string; issues?: unknown } }>();
+    expect(body.error.code).toBe('conflict');
+    expect(body.error.issues).toBeUndefined();
+  };
+
+  it('refuses a venue import that races another write with conflict, and writes nothing', async () => {
+    await withRace('venues', async () => {
+      // The dry run writes nothing, so it cannot race.
+      expect(result(await run('venues', admin, [venueRow()], true)).counts.created).toBe(1);
+      expectConflict(await run('venues', admin, [venueRow(), venueRow({ name: { en: 'Other' } })]));
+    });
+    expect(
+      await h.db.select().from(schema.venues).where(eq(schema.venues.nameEn, 'Imported Masjid')),
+    ).toHaveLength(0);
+    expect(await importAudits()).toHaveLength(0);
+    // Sending the file again once the race is over works.
+    expect(result(await run('venues', admin, [venueRow()])).applied).toBe(true);
+  });
+
+  it('refuses a session import that races another write with conflict, and writes nothing', async () => {
+    await withRace('sessions', async () => {
+      expectConflict(await run('sessions', admin, [sessionRow()]));
+    });
+    expect(await h.db.select().from(schema.sessions)).toHaveLength(0);
+    expect(await importAudits()).toHaveLength(0);
+  });
+
+  it('refuses a coordinator import that races another write with conflict, and queues no message', async () => {
+    await withRace('coordinator_invites', async () => {
+      expectConflict(await run('coordinators', admin, [coordinatorRow()]));
+    });
+    expect(await h.db.select().from(schema.coordinatorInvites)).toHaveLength(0);
+    expect(await outboxRows(h)).toHaveLength(0);
+    expect(await importAudits()).toHaveLength(0);
   });
 });
