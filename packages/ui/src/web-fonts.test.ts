@@ -22,11 +22,11 @@ const sha256 = (file: string) =>
 
 /** Written by scripts/web-fonts.py and recorded in assets/fonts/LICENSES.md. */
 const recorded: Record<string, string> = {
-  'Figtree-400.woff2': 'bb8b3abe532b3b24ac2d941d24d7c548acb56ee0a8aab72b78ff087ef43ca6f9',
-  'Figtree-500.woff2': '0efcefaf4f4321013eaeb310d1da826c73a7b2c2ced1008d835af56a44c584d0',
-  'Figtree-600.woff2': '270d6cdbb444741e2a6db23798ea9d3c587777589f736e684447225fd3243311',
-  'Figtree-700.woff2': '90b491ee1cc7b1b848fae9b16166cf5a076e17bfea9de2bf5c2b01b7c5539d08',
-  'Figtree-800.woff2': '51a9fd1f243215dfdeb6bddef65aa12edb87b39624500dec40b8c19001a0aaf4',
+  'PlusJakartaSans-400.woff2': '2840bc540a9d19fd03d707003c00922d4f25fd7cd733e59ed66983c38c40ebb6',
+  'PlusJakartaSans-500.woff2': '32137504084aeb3f2824d152d5d13d452725af51928c02c2ef9897f309d6d2d0',
+  'PlusJakartaSans-600.woff2': '1f5332f0cfb1eb025feca2d03e0d61fc31f6dc4fddbd5025a9cb0e5312d0af6d',
+  'PlusJakartaSans-700.woff2': '44c2af85d93393c5a2d20f653ca503dfcf770b874901506ec91fdd9895b7f39d',
+  'PlusJakartaSans-800.woff2': 'e518a764e20deb7a27a086413fbea6f7c121197cf3e55d88560ca8165376fb6b',
   'MehrNastaliqWeb-Regular.woff2':
     '94bc07b5c7408accf76def79d6d4736bbd4b8d0c5034c6239e25c8b7f15aef62',
 };
@@ -42,14 +42,14 @@ describe('web font faces', () => {
     vi.useRealTimers();
   });
 
-  it('declares every Figtree weight the type roles use, Mehr and KFGQPC, under the token names', () => {
+  it('declares every Plus Jakarta Sans weight the type roles use, Mehr and KFGQPC, under the token names', () => {
     const sans = webFontFaces.filter((f) => f.family === fonts.sans);
     expect(sans.map((f) => String(f.weight))).toEqual([...sansWeights]);
     expect(webFontFaces.filter((f) => f.family === fonts.urdu)).toHaveLength(1);
     expect(webFontFaces.filter((f) => f.family === fonts.quran)).toHaveLength(1);
   });
 
-  it('serves Figtree and Mehr as WOFF2 and the KFGQPC font as its original OTF', () => {
+  it('serves Plus Jakarta Sans and Mehr as WOFF2 and the KFGQPC font as its original OTF', () => {
     for (const f of webFontFaces) {
       if (f.family === fonts.quran) {
         expect(f.format).toBe('opentype');

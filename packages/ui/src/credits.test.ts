@@ -9,14 +9,14 @@ const entries = creditGroups.flatMap((g) => g.entries);
 describe('credits', () => {
   it('credits each bundled font, the Quran text and both translations', () => {
     expect(entries.map((e) => e.id)).toEqual([
-      'figtree',
+      'jakarta',
       'mehr',
       'kfgqpc',
       'tanzil',
       'translationUr',
       'translationEn',
     ]);
-    expect(en['credits.figtree.name']).toBe(fonts.sans);
+    expect(en['credits.jakarta.name']).toBe(fonts.sans);
     expect(en['credits.mehr.name']).toBe(fonts.urdu);
     expect(en['credits.kfgqpc.name']).toBe(fonts.quran);
   });
@@ -34,7 +34,7 @@ describe('credits', () => {
   });
 
   it('names the licences and the people the owner asked for', () => {
-    expect(en['credits.figtree.body']).toContain('SIL Open Font License 1.1');
+    expect(en['credits.jakarta.body']).toContain('SIL Open Font License 1.1');
     expect(en['credits.mehr.body']).toMatch(
       /Mehr Type.*CSaLT.*Information Technology University of the Punjab.*CC BY-SA 4\.0/,
     );

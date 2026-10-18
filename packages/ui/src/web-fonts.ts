@@ -8,22 +8,22 @@
  *
  * On the web every face is declared with `@font-face` and `font-display: swap`, and the browser
  * downloads a face only when text on screen uses it. A page waits only for the face its
- * language's text is set in (`firstPaintFace`): Figtree 400 in English, Mehr Nastaliq Web in
- * Urdu. The other Figtree weights follow as the screen uses them, and the Quran font only when
+ * language's text is set in (`firstPaintFace`): Plus Jakarta Sans 400 in English, Mehr Nastaliq Web in
+ * Urdu. The other Latin weights follow as the screen uses them, and the Quran font only when
  * Quran text is shown.
  *
- * - Figtree and Mehr Nastaliq Web: WOFF2 copies in `assets/fonts/web`, written by
+ * - Plus Jakarta Sans and Mehr Nastaliq Web: WOFF2 copies in `assets/fonts/web`, written by
  *   `scripts/web-fonts.py` (the same fonts in a compressed container, nothing subset).
  * - KFGQPC Uthmanic Script HAFS: the original OTF. Its licence forbids converting it.
  *
  * Licences and checksums: `assets/fonts/LICENSES.md`.
  */
 import kfgqpcHafs from '../assets/fonts/KFGQPCUthmanicScriptHAFS-Regular.otf';
-import figtree400 from '../assets/fonts/web/Figtree-400.woff2';
-import figtree500 from '../assets/fonts/web/Figtree-500.woff2';
-import figtree600 from '../assets/fonts/web/Figtree-600.woff2';
-import figtree700 from '../assets/fonts/web/Figtree-700.woff2';
-import figtree800 from '../assets/fonts/web/Figtree-800.woff2';
+import jakarta400 from '../assets/fonts/web/PlusJakartaSans-400.woff2';
+import jakarta500 from '../assets/fonts/web/PlusJakartaSans-500.woff2';
+import jakarta600 from '../assets/fonts/web/PlusJakartaSans-600.woff2';
+import jakarta700 from '../assets/fonts/web/PlusJakartaSans-700.woff2';
+import jakarta800 from '../assets/fonts/web/PlusJakartaSans-800.woff2';
 import mehrNastaliq from '../assets/fonts/web/MehrNastaliqWeb-Regular.woff2';
 import type { Locale } from './direction';
 import { fontLoadTimeoutMs, loadFontsWithFallback, type FontLoadResult } from './font-loading';
@@ -42,19 +42,19 @@ export interface WebFontFace {
   format: 'woff2' | 'opentype';
 }
 
-const figtreeFiles: Record<SansWeight, string | number> = {
-  '400': figtree400,
-  '500': figtree500,
-  '600': figtree600,
-  '700': figtree700,
-  '800': figtree800,
+const sansFiles: Record<SansWeight, string | number> = {
+  '400': jakarta400,
+  '500': jakarta500,
+  '600': jakarta600,
+  '700': jakarta700,
+  '800': jakarta800,
 };
 
 export const webFontFaces: readonly WebFontFace[] = [
-  ...(Object.keys(figtreeFiles) as SansWeight[]).map((weight) => ({
+  ...(Object.keys(sansFiles) as SansWeight[]).map((weight) => ({
     family: fonts.sans,
     weight: Number(weight),
-    src: String(figtreeFiles[weight]),
+    src: String(sansFiles[weight]),
     format: 'woff2' as const,
   })),
   { family: fonts.urdu, weight: 400, src: String(mehrNastaliq), format: 'woff2' },

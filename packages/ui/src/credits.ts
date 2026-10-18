@@ -14,7 +14,7 @@ export interface CreditLink {
 }
 
 export interface CreditEntry {
-  id: 'figtree' | 'mehr' | 'kfgqpc' | 'tanzil' | 'translationUr' | 'translationEn';
+  id: 'jakarta' | 'mehr' | 'kfgqpc' | 'tanzil' | 'translationUr' | 'translationEn';
   name: CreditKey;
   body: CreditKey;
   link?: CreditLink;
@@ -39,10 +39,10 @@ export const creditGroups: readonly CreditGroup[] = [
     heading: 'credits.fonts.heading',
     entries: [
       {
-        id: 'figtree',
-        name: 'credits.figtree.name',
-        body: 'credits.figtree.body',
-        link: { label: 'credits.figtree.link', url: creditLinks.ofl },
+        id: 'jakarta',
+        name: 'credits.jakarta.name',
+        body: 'credits.jakarta.body',
+        link: { label: 'credits.jakarta.link', url: creditLinks.ofl },
       },
       {
         id: 'mehr',

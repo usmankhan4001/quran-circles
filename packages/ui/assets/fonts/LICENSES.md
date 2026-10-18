@@ -5,21 +5,23 @@ pages). Each one keeps its own licence. None of them is covered by the Quran Cir
 The apps show the same credits on screen (user app: Profile, About and credits; console: the
 sidebar footer). The redesign's type decision is D4 in `docs/design/redesign-decisions.md`.
 
-| Role  | Family (as used in `fonts` tokens) | File                                                                                 | Licence                        |
-| ----- | ---------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------ |
-| Latin | Figtree                            | npm `@expo-google-fonts/figtree@0.4.1` (apps), `@fontsource/figtree@5.3.0` (console) | SIL Open Font License 1.1      |
-| Urdu  | Mehr Nastaliq Web                  | `MehrNastaliqWeb-Regular.ttf` (this folder)                                          | CC BY-SA 4.0                   |
-| Quran | KFGQPC Uthmanic Script HAFS        | `KFGQPCUthmanicScriptHAFS-Regular.otf` (this folder)                                 | KFGQPC free-use licence (EULA) |
+| Role  | Family (as used in `fonts` tokens) | File                                                                            | Licence                        |
+| ----- | ---------------------------------- | ------------------------------------------------------------------------------- | ------------------------------ |
+| Latin | Plus Jakarta Sans                  | npm `@expo-google-fonts/plus-jakarta-sans@0.4.2` (apps), WOFF2 copies in `web/` | SIL Open Font License 1.1      |
+| Urdu  | Mehr Nastaliq Web                  | `MehrNastaliqWeb-Regular.ttf` (this folder)                                     | CC BY-SA 4.0                   |
+| Quran | KFGQPC Uthmanic Script HAFS        | `KFGQPCUthmanicScriptHAFS-Regular.otf` (this folder)                            | KFGQPC free-use licence (EULA) |
 
-## Figtree
+## Plus Jakarta Sans
 
-- Copyright 2022 The Figtree Project Authors (https://github.com/erikdkennedy/figtree).
+- Copyright 2020 The Plus Jakarta Sans Project Authors (https://github.com/tokotype/PlusJakartaSans).
 - Licensed under the SIL Open Font License, Version 1.1. The full licence text is in
-  [`Figtree-OFL.txt`](./Figtree-OFL.txt) (copied from the package's `LICENSE_FONT`) and at
-  https://openfontlicense.org.
+  [`PlusJakartaSans-OFL.txt`](./PlusJakartaSans-OFL.txt) (copied from the package's
+  `LICENSE_FONT`) and at https://openfontlicense.org.
 - Weights shipped: 400, 500, 600, 700 and 800 (the weights the kit's type roles use), upright only.
-  The Expo apps load the unmodified TTFs from the npm package; the console loads the Fontsource
-  WOFF2/WOFF files for the same weights.
+  The Expo apps load the unmodified TTFs from the npm package; the web pages load the WOFF2 copies
+  below.
+- Replaced Figtree as the Latin face on 2026-10-18 (D17, the owner's Iqraa showcase). The Figtree
+  licence text stays in [`Figtree-OFL.txt`](./Figtree-OFL.txt) for the record.
 
 ## Mehr Nastaliq Web
 
@@ -66,15 +68,16 @@ the tarball contents.
 ## Web copies (WOFF2)
 
 The web pages (the PWA and the admin app's web target, through `@qc/ui/web-fonts`) load WOFF2
-copies of Figtree and Mehr Nastaliq Web from [`web/`](./web), because WOFF2 is about 40 to 60%
+copies of Plus Jakarta Sans and Mehr Nastaliq Web from [`web/`](./web), because WOFF2 is about 40 to 60%
 smaller over the network. iOS and Android keep the TTF and OTF files above.
 
 - Written by `scripts/web-fonts.py` (fontTools 4.67.0, brotli 1.2.0) on 2026-10-18. WOFF2 is a
   compressed container for the same font: every table and glyph is kept, nothing is subset,
   renamed or redrawn.
-- **Figtree** (`Figtree-400.woff2` to `Figtree-800.woff2`): converted from the
-  `@expo-google-fonts/figtree@0.4.1` TTFs. The SIL OFL 1.1 allows this; Figtree declares no
-  Reserved Font Name. The copies stay under the SIL OFL 1.1 ([`Figtree-OFL.txt`](./Figtree-OFL.txt)).
+- **Plus Jakarta Sans** (`PlusJakartaSans-400.woff2` to `PlusJakartaSans-800.woff2`): converted
+  from the `@expo-google-fonts/plus-jakarta-sans@0.4.2` TTFs. The SIL OFL 1.1 allows this; the
+  font declares no Reserved Font Name. The copies stay under the SIL OFL 1.1
+  ([`PlusJakartaSans-OFL.txt`](./PlusJakartaSans-OFL.txt)).
 - **Mehr Nastaliq Web** (`MehrNastaliqWeb-Regular.woff2`): converted from
   `MehrNastaliqWeb-Regular.ttf` above. A format conversion is an adaptation under CC BY-SA 4.0,
   so the copy is shared under the same licence, CC BY-SA 4.0
@@ -86,9 +89,9 @@ smaller over the network. iOS and Android keep the TTF and OTF files above.
 
 | File                                | Bytes  | SHA-256                                                            |
 | ----------------------------------- | ------ | ------------------------------------------------------------------ |
-| `web/Figtree-400.woff2`             | 16,740 | `bb8b3abe532b3b24ac2d941d24d7c548acb56ee0a8aab72b78ff087ef43ca6f9` |
-| `web/Figtree-500.woff2`             | 16,812 | `0efcefaf4f4321013eaeb310d1da826c73a7b2c2ced1008d835af56a44c584d0` |
-| `web/Figtree-600.woff2`             | 16,764 | `270d6cdbb444741e2a6db23798ea9d3c587777589f736e684447225fd3243311` |
-| `web/Figtree-700.woff2`             | 16,704 | `90b491ee1cc7b1b848fae9b16166cf5a076e17bfea9de2bf5c2b01b7c5539d08` |
-| `web/Figtree-800.woff2`             | 16,620 | `51a9fd1f243215dfdeb6bddef65aa12edb87b39624500dec40b8c19001a0aaf4` |
+| `web/PlusJakartaSans-400.woff2`     | 29,916 | `2840bc540a9d19fd03d707003c00922d4f25fd7cd733e59ed66983c38c40ebb6` |
+| `web/PlusJakartaSans-500.woff2`     | 30,936 | `32137504084aeb3f2824d152d5d13d452725af51928c02c2ef9897f309d6d2d0` |
+| `web/PlusJakartaSans-600.woff2`     | 30,744 | `1f5332f0cfb1eb025feca2d03e0d61fc31f6dc4fddbd5025a9cb0e5312d0af6d` |
+| `web/PlusJakartaSans-700.woff2`     | 30,924 | `44c2af85d93393c5a2d20f653ca503dfcf770b874901506ec91fdd9895b7f39d` |
+| `web/PlusJakartaSans-800.woff2`     | 30,144 | `e518a764e20deb7a27a086413fbea6f7c121197cf3e55d88560ca8165376fb6b` |
 | `web/MehrNastaliqWeb-Regular.woff2` | 55,996 | `94bc07b5c7408accf76def79d6d4736bbd4b8d0c5034c6239e25c8b7f15aef62` |

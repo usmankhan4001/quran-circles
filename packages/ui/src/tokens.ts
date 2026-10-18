@@ -92,7 +92,8 @@ export const colors = {
 } as const;
 
 /**
- * Font families (D4). Figtree for Latin text and for every number, a true Nastaliq for Urdu,
+ * Font families (D4; Latin changed by D17). Plus Jakarta Sans (SIL OFL 1.1, the Iqraa showcase's
+ * Latin face) for Latin text and for every number, a true Nastaliq for Urdu,
  * and a Quranic face for Quran text only. The values are the family names the apps register
  * the bundled files under (`@qc/ui/font-sources`), so they match the fonts' own names.
  *
@@ -100,7 +101,7 @@ export const colors = {
  * redistribution licence. Licences and checksums: `assets/fonts/LICENSES.md`.
  */
 export const fonts = {
-  sans: 'Figtree',
+  sans: 'Plus Jakarta Sans',
   urdu: 'Mehr Nastaliq Web',
   quran: 'KFGQPC Uthmanic Script HAFS',
 } as const;
@@ -111,7 +112,7 @@ export type FontToken = keyof typeof fonts;
  * On iOS and Android a family that has not loaded falls back to the system font by itself.
  */
 export const fontFallbacks = {
-  sans: ['Figtree', 'system-ui', 'sans-serif'],
+  sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
   urdu: ['Mehr Nastaliq Web', 'Noto Nastaliq Urdu', 'serif'],
   quran: ['KFGQPC Uthmanic Script HAFS', 'serif'],
 } as const satisfies Record<FontToken, readonly string[]>;
@@ -127,7 +128,7 @@ export function fontStack(token: FontToken): string {
   return fontFallbacks[token].map((name) => (generic.has(name) ? name : `"${name}"`)).join(', ');
 }
 
-/** Figtree weights the type roles use (and `Text strong`, 700). Only these files ship. */
+/** Plus Jakarta Sans weights the type roles use (and `Text strong`, 700). Only these files ship. */
 export const sansWeights = ['400', '500', '600', '700', '800'] as const;
 export type SansWeight = (typeof sansWeights)[number];
 
@@ -227,7 +228,7 @@ interface TypeRoleSpec {
   letterSpacing: number;
 }
 
-/** Type scale (D5). Big times and countdowns are Figtree figures in both languages. */
+/** Type scale (D5). Big times and countdowns are Plus Jakarta Sans figures in both languages. */
 export const typeRoles: Record<TypeRole, TypeRoleSpec> = {
   countdown: { size: 56, weight: '600', letterSpacing: -1 },
   time: { size: 40, weight: '600', letterSpacing: -0.5 },
@@ -255,7 +256,7 @@ export const lineHeightRatio: Record<Script, number> = {
   quran: 2.2,
 };
 
-/** Nastaliq looks smaller than Figtree at the same size, so Urdu text is set a little larger (D5). */
+/** Nastaliq looks smaller than the Latin face at the same size, so Urdu text is set a little larger (D5). */
 export const scriptSizeFactor: Record<Script, number> = {
   latin: 1,
   urdu: 1.1,

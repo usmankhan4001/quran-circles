@@ -51,8 +51,8 @@ const mehrPreloads = (doc: Document) =>
   );
 
 describe('the start page', () => {
-  it('preloads Figtree 400 under the name the bundler gives it', () => {
-    expect(html).toContain(`href="${bundlerUrl('Figtree-400.woff2')}"`);
+  it('preloads Plus Jakarta Sans 400 under the name the bundler gives it', () => {
+    expect(html).toContain(`href="${bundlerUrl('PlusJakartaSans-400.woff2')}"`);
   });
 
   it('knows the bundler name of the Urdu font', () => {

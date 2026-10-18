@@ -34,7 +34,7 @@ const recorded = {
 describe('font tokens (D4)', () => {
   it('names the bundled families', () => {
     expect(fonts).toEqual({
-      sans: 'Figtree',
+      sans: 'Plus Jakarta Sans',
       urdu: 'Mehr Nastaliq Web',
       quran: 'KFGQPC Uthmanic Script HAFS',
     });
@@ -55,7 +55,7 @@ describe('font tokens (D4)', () => {
   });
 
   it('writes a CSS stack with family names quoted and generic names bare', () => {
-    expect(fontStack('sans')).toBe('"Figtree", system-ui, sans-serif');
+    expect(fontStack('sans')).toBe('"Plus Jakarta Sans", system-ui, sans-serif');
     expect(fontStack('urdu')).toBe('"Mehr Nastaliq Web", "Noto Nastaliq Urdu", serif');
     expect(fontStack('quran')).toBe('"KFGQPC Uthmanic Script HAFS", serif');
   });
@@ -66,7 +66,7 @@ describe('font tokens (D4)', () => {
     expect(fontTokenFor('quran')).toBe('quran');
   });
 
-  it('ships every Figtree weight the type roles use, and no others', () => {
+  it('ships every Plus Jakarta Sans weight the type roles use, and no others', () => {
     const used = new Set<string>(Object.values(typeRoles).map((r) => r.weight));
     used.add('700'); // Text strong
     expect([...used].sort()).toEqual([...sansWeights].sort());
@@ -86,12 +86,12 @@ describe('bundled font map', () => {
     );
   });
 
-  it('loads each Figtree weight once, from its own file', () => {
+  it('loads each Plus Jakarta Sans weight once, from its own file', () => {
     const sans = family(fonts.sans);
     expect(sans.fontDefinitions.map((d) => String(d.weight))).toEqual([...sansWeights]);
     expect(new Set(sans.fontDefinitions.map((d) => d.path)).size).toBe(sansWeights.length);
     for (const face of sans.fontDefinitions)
-      expect(String(face.path)).toMatch(/Figtree_\d+\w+\.ttf/);
+      expect(String(face.path)).toMatch(/PlusJakartaSans_\d+\w+\.ttf/);
   });
 
   it('loads the Urdu and Quran families from the files in assets/fonts', () => {
@@ -125,8 +125,8 @@ describe('bundled font files', () => {
     const eula = readFileSync(inFonts('KFGQPC-EULA.txt'), 'utf8');
     expect(eula).toContain('the rights to Use, Copy, Distribute');
     expect(eula).toContain('cannot be Sold, Modified, Altered');
-    const ofl = readFileSync(inFonts('Figtree-OFL.txt'), 'utf8');
-    expect(ofl).toContain('Copyright 2022 The Figtree Project Authors');
+    const ofl = readFileSync(inFonts('PlusJakartaSans-OFL.txt'), 'utf8');
+    expect(ofl).toContain('Copyright 2020 The Plus Jakarta Sans Project Authors');
   });
 });
 

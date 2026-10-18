@@ -109,7 +109,7 @@ describe('Text', () => {
     expect(t.lineHeight / t.fontSize).toBeCloseTo(2.2, 1);
   });
 
-  it('keeps English runs in Figtree and left-to-right on an Urdu screen', () => {
+  it('keeps English runs in the Latin face and left-to-right on an Urdu screen', () => {
     renderThemed(<Text lang="en">Dora venue</Text>, { locale: 'ur' });
     const el = screen.getByText('Dora venue');
     expect(el.style.fontFamily).toContain(fonts.sans);

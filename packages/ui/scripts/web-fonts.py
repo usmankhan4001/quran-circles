@@ -6,8 +6,8 @@ Run from packages/ui with fontTools 4.67.0 and brotli 1.2.0:
     /tmp/fonts/bin/python scripts/web-fonts.py
 
 WOFF2 is the same font in a compressed container: every table and glyph is kept, nothing is
-subset. Only Figtree (SIL OFL 1.1, no reserved font name) and Mehr Nastaliq Web (CC BY-SA 4.0)
-are converted. The KFGQPC licence forbids converting its file, so it is never touched here.
+subset. Only Plus Jakarta Sans (SIL OFL 1.1, no reserved font name) and Mehr Nastaliq Web
+(CC BY-SA 4.0) are converted. The KFGQPC licence forbids converting its file, so it is never touched here.
 Licences and checksums: assets/fonts/LICENSES.md.
 """
 
@@ -18,15 +18,19 @@ from fontTools.ttLib import woff2
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 UI = os.path.dirname(HERE)
-FIGTREE = os.path.join(
-    UI, "node_modules", "@expo-google-fonts", "figtree"
-)
+JAKARTA = os.path.join(UI, "node_modules", "@expo-google-fonts", "plus-jakarta-sans")
 SOURCES = {
-    "Figtree-400.woff2": os.path.join(FIGTREE, "400Regular", "Figtree_400Regular.ttf"),
-    "Figtree-500.woff2": os.path.join(FIGTREE, "500Medium", "Figtree_500Medium.ttf"),
-    "Figtree-600.woff2": os.path.join(FIGTREE, "600SemiBold", "Figtree_600SemiBold.ttf"),
-    "Figtree-700.woff2": os.path.join(FIGTREE, "700Bold", "Figtree_700Bold.ttf"),
-    "Figtree-800.woff2": os.path.join(FIGTREE, "800ExtraBold", "Figtree_800ExtraBold.ttf"),
+    "PlusJakartaSans-400.woff2": os.path.join(
+        JAKARTA, "400Regular", "PlusJakartaSans_400Regular.ttf"
+    ),
+    "PlusJakartaSans-500.woff2": os.path.join(JAKARTA, "500Medium", "PlusJakartaSans_500Medium.ttf"),
+    "PlusJakartaSans-600.woff2": os.path.join(
+        JAKARTA, "600SemiBold", "PlusJakartaSans_600SemiBold.ttf"
+    ),
+    "PlusJakartaSans-700.woff2": os.path.join(JAKARTA, "700Bold", "PlusJakartaSans_700Bold.ttf"),
+    "PlusJakartaSans-800.woff2": os.path.join(
+        JAKARTA, "800ExtraBold", "PlusJakartaSans_800ExtraBold.ttf"
+    ),
     "MehrNastaliqWeb-Regular.woff2": os.path.join(
         UI, "assets", "fonts", "MehrNastaliqWeb-Regular.ttf"
     ),

@@ -21,16 +21,19 @@ describe('web fonts at start-up', () => {
       );
       expect(preloads).toHaveLength(firstScreenWeights[locale].length);
       firstScreenWeights[locale].forEach((weight, i) =>
-        expect(preloads[i]).toMatch(new RegExp(`Figtree-${weight}\\b`)),
+        expect(preloads[i]).toMatch(new RegExp(`PlusJakartaSans-${weight}\\b`)),
       );
     },
   );
 
-  it('waits for Figtree 400 in English and Mehr in Urdu', async () => {
+  it('waits for Plus Jakarta Sans 400 in English and Mehr in Urdu', async () => {
     const load = vi.fn(() => Promise.resolve([{}]));
     await expect(loadFirstFonts('en', pageWithFonts(load))).resolves.toBe('loaded');
     await expect(loadFirstFonts('ur', pageWithFonts(load))).resolves.toBe('loaded');
-    expect(load.mock.calls).toEqual([['400 1em "Figtree"'], ['400 1em "Mehr Nastaliq Web"']]);
+    expect(load.mock.calls).toEqual([
+      ['400 1em "Plus Jakarta Sans"'],
+      ['400 1em "Mehr Nastaliq Web"'],
+    ]);
   });
 
   it('carries on with the fallback font when the face fails or is slow', async () => {
