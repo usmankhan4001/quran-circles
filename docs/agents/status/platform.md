@@ -1,6 +1,6 @@
 # Status: platform
 
-Updated: 2026-10-18 (restore drill findings fixed)
+Updated: 2026-10-18 (staging deployed on Dokploy)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
 
 ## Done (WP10, everything that needs no VPS)
@@ -84,6 +84,26 @@ Throwaway Postgres 16.15 cluster from `/usr/lib/postgresql/16/bin` on a free por
 - No real Docker: the image's busybox `tar`, `sh`, `mv` and `find` (the swap script is POSIX sh and ran under dash here), `compose stop`/`up`, migrations on `up`, the health wait and the container's read-only root were not exercised. `pg_restore --list` in a throwaway container from the postgres image as the invoking user's uid is untested with real Docker. The production image is Postgres 17; the test used 16.
 - The databases swap retries the rename three times after terminating connections to `qc`; a client that reconnects continuously could still block it (then the posters are swapped back and the stack restarts on the old data). Not provoked here.
 - The poster files' earlier copy (`.restore-old`) is deleted once the databases are swapped; only `qc_before_restore` is kept. The `pre-restore` backup holds the earlier poster files.
+
+## Staging on Dokploy (2026-10-18)
+
+Deployed and healthy. Staging only; no production project touched.
+
+- **URLs**: app and api `https://staging.doraquran.pk` (`/api/health` returns `{"ok":true,"service":"api"}`), console `https://staging-console.doraquran.pk`. The suggested `console.staging.doraquran.pk` fails TLS at Cloudflare (Universal SSL covers one subdomain level only), so the console uses `staging-console`.
+- **Where**: Dokploy at `paas.usmankhan.xyz`, project `quran-circles-staging`, compose service `quran-circles` (Docker project `qc-staging-uapmh9`). Its default environment is labelled "production" because Dokploy cannot rename a default environment. Source: this repository, branch `main`, git over HTTPS. Command: `compose -p qc-staging-uapmh9 --env-file infra/.env -f ./infra/docker-compose.prod.yml -f ./infra/docker-compose.staging.yml up -d --build --remove-orphans`.
+- **Files**: `infra/docker-compose.staging.yml` parks the production `proxy` behind the `prod-proxy` profile and adds `web`: Caddy on plain HTTP :80, no host ports, on `edge` and `dokploy-network`, routed by Traefik labels (`web` entrypoint; Cloudflare tunnel into Traefik, the same pattern as the other apps on that server). `infra/caddy/Caddyfile.staging` has the production routes over HTTP and reaches the api and worker by the aliases `qc-staging-api` and `qc-staging-worker`, because a bare `api` could resolve to another stack on Dokploy's shared network. `infra/docker/proxy-staging.Dockerfile` bakes the PWA (`EXPO_PUBLIC_API_URL=https://<QC_DOMAIN>/api`) and console (`VITE_API_BASE_URL=/api`) builds into the image. Postgres, the renderer, the api and the worker are on the same internal networks as in production.
+- **Why no YAML merge tags or Dokploy domains**: Dokploy re-serialises the compose file before deploying and drops `!reset`/`!override`; the first deploy failed with `Bind for 0.0.0.0:80 failed: port is already allocated`. The override now uses plain Compose merging only, and routing lives in the labels.
+- **Env**: set only in Dokploy (names: `COMPOSE_PROJECT_NAME`, `QC_DOMAIN`, `QC_CONSOLE_DOMAIN`, `ACME_EMAIL` (unused placeholder), `QC_IMAGE_REGISTRY=qc-staging`, `QC_IMAGE_TAG=staging`, `POSTGRES_PASSWORD`, `APP_ENV=staging`, `PUBLIC_WEB_BASE`, `RENDERER_TOKEN`, `AUTH_SECRET`, `AUTH_FIXED_CODE`, `MESSAGING_MODE=fake`, `WHATSAPP_VERIFY_TOKEN`). Secrets generated with openssl straight into Dokploy. No provider credentials.
+- **Checked**: all services healthy (postgres, migrate exited 0, api, worker, poster-renderer, web); `/api/health` and `/api/v1/config` on both domains; PWA and console load, SPA fallback works; `/webhooks/whatsapp` without the token is 403; the worker's `/healthz` is not reachable from outside.
+- **Poster templates**: demo rows `cloud` and `night` (provisional) inserted with the README statement through a one-off Dokploy schedule in the postgres container (since deleted); Urdu names checked byte for byte.
+
+### Open points
+
+- Deploys are manual (Dokploy "Deploy", or `compose.deploy`). Pushes to `main` did not trigger a deploy: a plain git source has no webhook. Add the Dokploy webhook to the repository if staging should follow `main`.
+- Plain `http://` is served without a redirect to HTTPS. Turn on Cloudflare "Always Use HTTPS" for `doraquran.pk`, or add a Traefik redirect.
+- Client IPs: requests reach Caddy through Cloudflare, cloudflared and Traefik; Caddy trusts private ranges, so the api sees the forwarded chain, but the real client is only in `CF-Connecting-IP`. Check rate limiting and audit IPs before relying on them.
+- The image builds on the Dokploy host on every deploy (Expo export and Vite included); fine for staging, slow for frequent deploys.
+- Not set up on staging: backups and the weekly restore test, `check.sh`, cron, the bootstrap admin. The host scripts assume `/srv/qc` on a plain VPS, not Dokploy.
 
 ## Blocked (needs the owner)
 
