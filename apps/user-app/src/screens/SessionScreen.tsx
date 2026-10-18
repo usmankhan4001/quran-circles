@@ -195,6 +195,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
           const description = s.description ? l(s.description) : null;
           const circle = s.circle;
           const onlineUrl = circle?.onlineLink ? safeWebUrl(circle.onlineLink) : null;
+          const hostName = circle?.teacherName ?? (circle ? l(circle.name).text : null);
           const limited =
             s.registration.enabled &&
             s.registration.capacity !== null &&
@@ -214,37 +215,37 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                   onPress={() => nav.go({ name: 'venue', venueId: s.venueId })}
                   testID="session-venue"
                 />
-                {circle ? (
-                  <>
-                    <View style={[styles.rule, { backgroundColor: c.hairline }]} />
-                    <InfoRow
-                      leading={
-                        <Initials text={initialsOf(circle.teacherName ?? l(circle.name).text)} />
-                      }
-                      title={circle.teacherName ?? l(circle.name).text}
-                      {...(circle.teacherName
-                        ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
-                        : {})}
-                      trailing={
-                        onlineUrl ? (
-                          <Pressable
-                            role="link"
-                            onPress={() => void openUrl(onlineUrl)}
-                            hitSlop={spacing.sm}
-                            style={styles.online}
-                            testID="session-online"
-                          >
-                            <Text variant="caption" color="textAccent" strong>
-                              {t('session.online')}
-                            </Text>
-                            <Icon name="arrow-forward" size={14} color={c.textAccent} />
-                          </Pressable>
-                        ) : undefined
-                      }
-                      testID="session-circle"
-                    />
-                  </>
-                ) : null}
+                <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                {/* The host row is drawn on every session (D17); with no circle or teacher
+                    on record it says so, and the online link is shown greyed out. */}
+                <InfoRow
+                  leading={<Initials text={hostName ? initialsOf(hostName) : '—'} />}
+                  title={hostName ?? t('session.host.unknown')}
+                  {...(circle?.teacherName
+                    ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
+                    : { subtitle: t('session.host.inPerson') })}
+                  trailing={
+                    <Pressable
+                      role="link"
+                      aria-disabled={!onlineUrl}
+                      disabled={!onlineUrl}
+                      onPress={() => (onlineUrl ? void openUrl(onlineUrl) : undefined)}
+                      hitSlop={spacing.sm}
+                      style={styles.online}
+                      testID="session-online"
+                    >
+                      <Text variant="caption" color={onlineUrl ? 'textAccent' : 'textMuted'} strong>
+                        {t('session.online')}
+                      </Text>
+                      <Icon
+                        name="arrow-forward"
+                        size={14}
+                        color={onlineUrl ? c.textAccent : c.textMuted}
+                      />
+                    </Pressable>
+                  }
+                  testID="session-circle"
+                />
               </Card>
 
               <Card padding="md">

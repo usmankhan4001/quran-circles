@@ -13,6 +13,7 @@ import {
   radii,
   spacing,
   useTheme,
+  type IconName,
 } from '@qc/ui';
 import { SECTIONS, type Registration, type Section, type Session } from '@qc/contracts';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
@@ -20,6 +21,7 @@ import { QueryBoundary } from '../components/QueryBoundary';
 import { ReminderToggle } from '../components/ReminderToggle';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { errorMessageKey } from '../core/errors';
+import { formatPhoneForDisplay } from '../core/phone';
 import { allowedSections, MAX_PARTY_SIZE, isWaitlisted } from '../features/registration/form';
 import { useRegistration } from '../features/registration/useRegistration';
 import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
@@ -48,6 +50,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   grow: { flex: 1 },
+  codeHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  codeRow: { flexDirection: 'row', gap: spacing.sm },
+  codeBox: {
+    flex: 1,
+    height: 46,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   alert: {
     gap: spacing.sm,
     padding: spacing.md,
@@ -74,7 +86,7 @@ function FormHeading({ session, waitlist }: { session: Session; waitlist: boolea
     : describeSchedule(session, t, locale);
   return (
     <View style={styles.summary}>
-      <Text variant="title1" heading={2}>
+      <Text variant="title2" heading={2}>
         {waitlist ? t('registration.waitlistHeading') : t('registration.heading')}
       </Text>
       <Text variant="body" color="textSecondary" testID="registration-summary">
@@ -88,6 +100,87 @@ function FormHeading({ session, waitlist }: { session: Session; waitlist: boolea
         {' · '}
         {when}
       </Text>
+    </View>
+  );
+}
+
+/**
+ * A field the person filled before (D17's pill with a leading icon), shown read-only: the name
+ * on the account and the number they signed in with.
+ */
+function ReadOnlyPill({
+  label,
+  icon,
+  value,
+  active,
+  ltr,
+  testID,
+}: {
+  label: string;
+  icon: IconName;
+  value: string;
+  active?: boolean;
+  ltr?: boolean;
+  testID?: string;
+}) {
+  const theme = useTheme();
+  const c = theme.colors;
+  const hc = theme.mode === 'highContrast';
+  return (
+    <View style={styles.group} testID={testID}>
+      <Text variant="label">{label}</Text>
+      <View
+        style={[
+          styles.pillRow,
+          active
+            ? { backgroundColor: c.accentSubtle, borderColor: hc ? c.borderStrong : c.progress }
+            : { backgroundColor: c.surfaceMuted, borderColor: hc ? c.borderStrong : c.border },
+          active ? { borderWidth: 1.5 } : null,
+        ]}
+      >
+        <Icon name={icon} size={18} color={active ? c.textOnAccentSubtle : c.textSecondary} />
+        <View style={styles.grow}>
+          <Text variant="body" {...(ltr ? { lang: 'en' as const, direction: 'ltr' as const } : {})}>
+            {value}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * The artboard's six code boxes. Registering needs no second code: the number was checked
+ * with a code at sign-in, so the boxes are drawn greyed with a line saying so.
+ */
+function VerifiedCodeRow() {
+  const { t } = useI18n();
+  const theme = useTheme();
+  const c = theme.colors;
+  return (
+    <View style={styles.group} testID="registration-code" aria-disabled>
+      <View style={styles.codeHead}>
+        <Text variant="label">{t('registration.code.label')}</Text>
+        <Text variant="caption" color="textSuccess" strong>
+          {t('registration.code.verified')}
+        </Text>
+      </View>
+      <View style={styles.codeRow} aria-hidden>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <View
+            key={i}
+            style={[
+              styles.codeBox,
+              {
+                backgroundColor: c.surfaceMuted,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+              },
+            ]}
+          >
+            <Icon name="check" size={16} color={c.textMuted} />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -196,7 +289,27 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
           {...(flow.problems.name ? { error: t(flow.problems.name) } : {})}
           testID="registration-name"
         />
+      ) : (
+        <ReadOnlyPill
+          label={t('registration.name.label')}
+          icon="user"
+          value={me?.displayName ?? ''}
+          active
+          testID="registration-name-known"
+        />
+      )}
+
+      {me ? (
+        <ReadOnlyPill
+          label={t('registration.phone.passLabel')}
+          icon="phone"
+          value={formatPhoneForDisplay(me.phone)}
+          ltr
+          testID="registration-phone"
+        />
       ) : null}
+
+      <VerifiedCodeRow />
 
       <Select
         label={t('registration.city.label')}

@@ -39,6 +39,12 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   list: { gap: spacing.md },
   pass: { gap: spacing.md + spacing.xxs },
+  passTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  qr: {
+    padding: spacing.xs + spacing.xxs,
+    borderRadius: radii.md - 2,
+    borderWidth: 1,
+  },
   passHead: { gap: spacing.xxs },
   strip: {
     flexDirection: 'row',
@@ -120,33 +126,55 @@ function PassCard({
   return (
     <Card padding="lg">
       <View style={styles.pass}>
-        <Pressable
-          role="button"
-          aria-label={`${title.text}, ${venue.text}, ${when}`}
-          onPress={() => nav.go({ name: 'session', sessionId: registration.sessionId })}
-          testID={`registration-${registration.id}`}
-          style={({ pressed }) => [styles.passHead, pressed ? { opacity: 0.7 } : null]}
-        >
-          <Text variant="title3" lang={title.lang}>
-            {title.text}
-          </Text>
-          <Text variant="caption" color="textSecondary">
-            <Text variant="caption" color="textSecondary" lang={venue.lang}>
-              {venue.text}
+        <View style={styles.passTop}>
+          <Pressable
+            role="button"
+            aria-label={`${title.text}, ${venue.text}, ${when}`}
+            onPress={() => nav.go({ name: 'session', sessionId: registration.sessionId })}
+            testID={`registration-${registration.id}`}
+            style={({ pressed }) => [
+              styles.grow,
+              styles.passHead,
+              pressed ? { opacity: 0.7 } : null,
+            ]}
+          >
+            <Text variant="title3" lang={title.lang}>
+              {title.text}
             </Text>
-            {' · '}
-            {when}
-          </Text>
-        </Pressable>
+            <Text variant="caption" color="textSecondary">
+              <Text variant="caption" color="textSecondary" lang={venue.lang}>
+                {venue.text}
+              </Text>
+              {' · '}
+              {when}
+            </Text>
+            <Text
+              variant="caption"
+              color={waitlisted ? 'textWarning' : 'textSuccess'}
+              strong
+              testID={`registration-status-${registration.id}`}
+            >
+              {waitlisted ? t('journey.status.waitlisted') : t('journey.status.confirmed')}
+            </Text>
+          </Pressable>
+          {/* The artboard's QR tile. There is no scannable pass yet, so it is drawn greyed. */}
+          <View
+            aria-hidden
+            style={[
+              styles.qr,
+              {
+                backgroundColor: c.surfaceMuted,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+              },
+            ]}
+          >
+            <Icon name="qr" size={28} color={c.textMuted} />
+          </View>
+        </View>
 
         <View style={[styles.strip, { backgroundColor: c.surfaceMuted }]}>
-          <Text
-            variant="caption"
-            color={waitlisted ? 'textWarning' : 'textSuccess'}
-            strong
-            testID={`registration-status-${registration.id}`}
-          >
-            {waitlisted ? t('journey.status.waitlisted') : t('journey.status.confirmed')}
+          <Text variant="caption" color="textSecondary">
+            {t('journey.pass.ref', { ref: registration.id.slice(-4).toUpperCase() })}
           </Text>
           <Text variant="caption" strong>
             {t('journey.pass.party', {
