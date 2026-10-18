@@ -55,3 +55,30 @@ Updated: 2026-10-18. Brief items 4 and 5 (WP12). **Provisional**: emulated low-e
   - contracts (i18n): split string tables per language.
   - platform: confirm Chrome on Android gets zstd from Caddy on staging.
 - Questions for the orchestrator: accept or change the proposed budgets (`tests/e2e/src/quality/budgets.ts`)? Who runs the real-device checks listed in both docs, and on which phone?
+
+## Scope verification and load test
+
+Updated: 2026-10-18. Brief items 2 and 3 (WP12), against `main` at `72d6126`. **Provisional**: one 4-CPU container shared by the API, worker, Postgres 16 and the load generator; worker polling at 500 ms (production default 5 s); Postgres with durability off; no staging. Code and staging steps: `tests/load/README.md` (package `@qc/load`, its own `pnpm install` once).
+
+- Done: `pnpm --filter @qc/load scope|load|local` and `k6/ramadan-evening.js` (k6 checked locally with a downloaded k6 v0.55.0; k6 is not a repo dependency). The scope matrix is generated from `@qc/contracts` (95 endpoints × 9 caller kinds). Thresholds are proposed in the README and `scenario.json`. Fake push devices are FCM-shaped (SEC-01 allowlist); phones are +92 3xx. Runs stay inside the API's limits instead of raising them, since the sign-in caps are not configurable (`tests/load/src/limits.ts`): at most 900 sign-ins per run against the 1,000 codes an hour cap, one sign-in and one address per person.
+- Scope: 1,042 calls, **0 mismatches**, 0 tampered records, 95/95 endpoints. Refusals are 403/404 exactly as the matrix says; a revoked venue coordinator is refused everywhere; another person's records answer 404 to every role and stay unchanged; after sign-out or deletion the old token gets 401.
+- Load (Node runner, 800 users, 600 sessions, 5,839 push recipients; p95/p99 ms, 0.00 % failed and 0 % 429 at every step):
+
+  | VUs | req/s | all       | Nearby    | session view | register    | push post |
+  | --- | ----- | --------- | --------- | ------------ | ----------- | --------- |
+  | 10  | 31    | 57/82     | 38/49     | 22/35        | 65/76       | 780       |
+  | 25  | 76    | 36/61     | 40/68     | 35/61        | 60/153      | 1,002     |
+  | 50  | 151   | 38/79     | 43/81     | 38/72        | 88/153      | 942       |
+  | 100 | 263   | 221/447   | 195/327   | 234/478      | 639/935     | 1,669     |
+  | 200 | 255   | 798/1,310 | 846/1,291 | 770/1,252    | 1,119/1,690 | 2,080     |
+
+  Up to 100 VUs every latency threshold passes except Updates badge p95 (301 vs 300 ms). At 200 VUs throughput stays flat at about 255 req/s and every latency threshold fails: the API process is CPU-bound on this box, not the database (at most 3 active connections, 0 lock waits, cache hit 1.0, Postgres at most 70 % of one core). Top statements are the Nearby join (mean 3 to 4 ms) and the occurrences read (1 to 1.5 ms warm, 42 ms cold). Token refresh under load: 800 refreshes, 0 errors.
+
+- Push: every burst of 5,810 rows drained at **20 a second (about 292 s)**, against the proposed 100 a second. The k6 run measured 7 to 13 a second over overlapping bursts.
+- Findings for owner lanes:
+  - messaging, **high**: a push burst bigger than about 6,000 rows livelocks the worker. In a 15,050-row experiment, 7,799 were sent in the first 388 s. Then the 5-minute leases ran out, and `reclaimStale` requeued the other 7,251 (14,506 requeues, `worker_lost`). After that, **nothing more was sent** for the remaining 6.5 minutes. The pg-boss queue spends its 20 jobs a second skipping stale jobs and never reaches the new ones before the next lease expires. With `maxAttempts` 5, those rows go `dead` after about 25 minutes, so about half the audience gets nothing. No duplicate sends were seen: the stale-job check in `processor.ts:283` holds. Send throughput is fixed at batch 10 × concurrency 4 per 2 s poll (`runtime.ts:206`), and at production `WORKER_POLL_MS=5000` the claim side is limited to 10 a second. Suggested fixes: do not claim more than the queue can send within a lease (or size the lease from queue depth), lower the send poll interval or raise the batch, skip stale jobs without spending a send slot, and alert on `worker_lost`. Re-run `local --only load --steps 5 --duration 10 --users 50 --venues 20 --bulk-push-users 15000` after a fix.
+  - api-core: the national post with `notify: true` writes one outbox row per recipient synchronously in the request. It took 0.8 to 2.1 s for 5,839 recipients and 1.8 s for 15,051. At 50,000 that projects to about 8 to 15 s for the admin. Consider batching the fan-out in the worker.
+  - api-core / platform: one API process tops out at about 255 req/s here. Staging should run at least two API processes, or check CPU headroom before Ramadan.
+  - auth-scopes: no change needed for the load test. On staging, the run needs `TRUST_PROXY` and `AUTH_TRUST_PROXY`, with Caddy passing the client address (SEC-20). It also needs no other large sign-in run in the same hour, because of the global code cap.
+- Blocked: staging (Gate 5). Re-run there: the scope matrix (expect 0 mismatches), k6 with the production `WORKER_POLL_MS` and about 50,000 synthetic push devices, and `pg_stat_statements` during the run. Steps are in the README.
+- Questions for the orchestrator: confirm the proposed thresholds, especially push drain of at least 100 a second and the Updates badge at p95 300 ms. Should the push livelock be treated as a release blocker?

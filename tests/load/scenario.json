@@ -1,0 +1,44 @@
+{
+  "$comment": "The Ramadan-evening model, shared by the Node runner (src/load) and the k6 script (k6/ramadan-evening.js). Thresholds are the proposal in README.md. Latencies in milliseconds.",
+  "seed": {
+    "citySlug": "lahore",
+    "center": { "lat": 31.5204, "lng": 74.3587 },
+    "spreadDeg": 0.12,
+    "venues": 200,
+    "sessionsPerVenue": 3,
+    "users": 800,
+    "bulkPushUsers": 5000
+  },
+  "journey": {
+    "thinkMs": [300, 1500],
+    "filteredNearbyProbability": 0.4,
+    "viewsPerJourney": [1, 3],
+    "registerProbability": 0.25
+  },
+  "steps": [
+    { "vus": 10, "durationS": 40 },
+    { "vus": 25, "durationS": 40 },
+    { "vus": 50, "durationS": 40 },
+    { "vus": 100, "durationS": 40 }
+  ],
+  "rampS": 5,
+  "pushBurst": { "atS": 10 },
+  "thresholds": {
+    "failedRate": 0.005,
+    "rateLimitedRate": 0.001,
+    "ops": {
+      "config": { "p95": 300, "p99": 800 },
+      "nearby": { "p95": 500, "p99": 1200 },
+      "nearby_filtered": { "p95": 500, "p99": 1200 },
+      "home_next": { "p95": 500, "p99": 1200 },
+      "session_view": { "p95": 300, "p99": 800 },
+      "session_occurrences": { "p95": 300, "p99": 800 },
+      "register": { "p95": 800, "p99": 2000 },
+      "my_registrations": { "p95": 500, "p99": 1200 },
+      "unread_count": { "p95": 300, "p99": 800 },
+      "ayah": { "p95": 300, "p99": 800 },
+      "token_refresh": { "p95": 500, "p99": 1200 }
+    },
+    "push": { "postMs": 5000, "drainPerSecond": 100 }
+  }
+}

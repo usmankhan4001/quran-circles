@@ -1,0 +1,23 @@
+{
+  "name": "@qc/load",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "scope": "tsx src/scope/cli.ts",
+    "load": "tsx src/load/cli.ts",
+    "local": "tsx src/local/cli.ts"
+  },
+  "dependencies": {
+    "@qc/contracts": "workspace:*",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@qc/e2e": "workspace:*",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15"
+  }
+}
