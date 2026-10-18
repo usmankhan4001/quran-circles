@@ -370,10 +370,13 @@ export function PageHeader({
   title,
   intro,
   actions,
+  hidden = false,
 }: {
   title: string;
   intro?: string;
   actions?: ReactNode;
+  /** Kept for screen readers and the tab title only, where the artboard draws no page title. */
+  hidden?: boolean;
 }) {
   const { t } = useI18n();
   const ref = useRef<HTMLHeadingElement>(null);
@@ -384,7 +387,7 @@ export function PageHeader({
     document.title = `${title} · ${t('console.shell.appTitle')}`;
   }, [title, t]);
   return (
-    <header className="page-header">
+    <header className={hidden ? 'page-header sr-only' : 'page-header'}>
       <div>
         <h1 ref={ref} tabIndex={-1}>
           {title}
@@ -501,6 +504,8 @@ export interface Stat {
   iconTone?: 'emerald' | 'sky' | 'amber' | 'mint';
   /** A short line under the number, only when the data gives one. */
   sub?: string;
+  /** Words to show in place of the bare number, as the artboard's "48 Active Masjids". */
+  display?: string;
 }
 
 /**
@@ -529,7 +534,7 @@ export function StatRow({
           >
             <dt className="stat-label">{s.label}</dt>
             <dd className="stat-value">
-              {number(s.value)}
+              {s.display ?? number(s.value)}
               {s.icon ? (
                 <span className={`stat-icon stat-icon-${s.iconTone ?? 'emerald'}`}>
                   <Icon name={s.icon} size={18} weight="duotone" />

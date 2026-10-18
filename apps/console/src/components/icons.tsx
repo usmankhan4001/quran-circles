@@ -23,6 +23,14 @@ import {
   UploadSimpleIcon,
   UsersThreeIcon,
   WarningCircleIcon,
+  ArrowRightIcon,
+  LockSimpleIcon,
+  FilePdfIcon,
+  PencilSimpleIcon,
+  UserPlusIcon,
+  XCircleIcon,
+  ClockCountdownIcon,
+  ListChecksIcon,
   type Icon as PhosphorIcon,
 } from '@phosphor-icons/react';
 
@@ -56,6 +64,14 @@ const ICONS = {
   'upload-simple': UploadSimpleIcon,
   'users-three': UsersThreeIcon,
   'warning-circle': WarningCircleIcon,
+  'arrow-right': ArrowRightIcon,
+  'lock-simple': LockSimpleIcon,
+  'file-pdf': FilePdfIcon,
+  'pencil-simple': PencilSimpleIcon,
+  'user-plus': UserPlusIcon,
+  'x-circle': XCircleIcon,
+  'clock-countdown': ClockCountdownIcon,
+  'list-checks': ListChecksIcon,
 } as const satisfies Record<string, PhosphorIcon>;
 
 export type IconName = keyof typeof ICONS;

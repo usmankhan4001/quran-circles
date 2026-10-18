@@ -30,7 +30,7 @@ import {
   type Column,
 } from '../components/ui';
 import { useI18n } from '../i18n';
-import { sessionStats } from '../lib/kpis';
+import { sessionStats, venueStats } from '../lib/kpis';
 import { canSomewhere, isNavAllowed } from '../lib/permissions';
 import { filterBySearch } from '../lib/search';
 
@@ -202,7 +202,15 @@ export default function SessionsPage() {
     {
       id: 'teacher',
       header: t('console.sessions.col.teacher'),
-      cell: (s) => <span className="cell-strong">{s.circle?.teacherName ?? '—'}</span>,
+      cell: (s) => (
+        <div className="cell-stack">
+          <span className="cell-strong">{s.circle?.teacherName ?? '—'}</span>
+          <span className="cell-checkin">
+            <Icon name="clock" size={11} weight="fill" />
+            <span>{t('console.sessions.checkIn.none')}</span>
+          </span>
+        </div>
+      ),
     },
     {
       id: 'actions',
@@ -239,40 +247,63 @@ export default function SessionsPage() {
   ];
 
   const waiting = stats.waitingApproval;
+  const venuesHere = dir.venues.filter((v) => !cityId || v.cityId === cityId);
+  const places = venueStats(venuesHere);
+  const cityCount = new Set(venuesHere.filter((v) => v.status === 'active').map((v) => v.cityId))
+    .size;
+  const weekly = loaded.filter((s) => s.program === 'circles').length;
+  const dora = loaded.length - weekly;
+  const reserved = loaded.reduce((sum, s) => sum + (s.registration.seatsTaken ?? 0), 0);
 
   return (
     <div className="page">
-      <PageHeader title={t('console.sessions.title')} intro={t('console.sessions.intro')} />
+      <PageHeader title={t('console.sessions.title')} intro={t('console.sessions.intro')} hidden />
       {list.status === 'ready' ? (
         <StatRow
           label={t('console.kpi.label')}
           partial={list.hasMore}
           stats={[
             {
-              id: 'total',
+              id: 'masjids',
+              label: t('console.sessions.kpi.masjids'),
+              value: places.active,
+              display: t('console.sessions.kpi.masjidsValue', { count: number(places.active) }),
+              sub: t('console.sessions.kpi.masjidsSub', {
+                women: number(places.womenSection),
+                cities: number(cityCount),
+              }),
+              icon: 'mosque',
+            },
+            {
+              id: 'circles',
               label: t('console.sessions.kpi.total'),
               value: stats.total,
+              display: t('console.sessions.kpi.totalValue', { count: number(stats.total) }),
+              sub: t('console.sessions.kpi.totalSub', {
+                weekly: number(weekly),
+                dora: number(dora),
+              }),
               icon: 'calendar-blank',
               iconTone: 'sky',
             },
             {
-              id: 'week',
-              label: t('console.sessions.kpi.thisWeek'),
-              value: stats.thisWeek,
-              icon: 'clock',
-            },
-            {
-              id: 'full',
-              label: t('console.sessions.kpi.full'),
-              value: stats.full,
+              id: 'demand',
+              label: t('console.sessions.kpi.demand'),
+              value: reserved,
+              display: t('console.sessions.kpi.demandValue', { count: number(reserved) }),
+              sub: t('console.sessions.kpi.demandSub', {
+                full: number(stats.full),
+                week: number(stats.thisWeek),
+              }),
               icon: 'ticket',
               iconTone: 'amber',
             },
             {
-              id: 'waiting',
-              label: t('console.sessions.kpi.waiting'),
-              value: waiting,
-              tone: 'notice',
+              id: 'reliability',
+              label: t('console.sessions.kpi.reliability'),
+              value: 0,
+              display: t('console.sessions.kpi.reliabilityValue'),
+              sub: t('console.sessions.kpi.reliabilitySub'),
               icon: 'check-circle',
               iconTone: 'mint',
             },
@@ -291,10 +322,14 @@ export default function SessionsPage() {
                   {t('console.sessions.tab.venues', { count: number(dir.venues.length) })}
                 </Link>
               ) : null}
-              {waiting > 0 ? (
-                <span className="tag tag-amber">
-                  {t('console.sessions.awaiting', { count: number(waiting) })}
-                </span>
+              <span className="tag tag-amber tag-awaiting">
+                {t('console.sessions.awaiting', { count: number(waiting) })}
+              </span>
+              {canAdd ? (
+                <Link className="btn btn-outline btn-small btn-tool" to="/import?kind=sessions">
+                  <Icon name="file-csv" size={14} weight="duotone" />
+                  <span>{t('console.sessions.add')}</span>
+                </Link>
               ) : null}
             </>
           }
@@ -305,7 +340,7 @@ export default function SessionsPage() {
                 id="filter-venue"
                 label={t('console.shell.filter.venue')}
                 value={venueId}
-                placeholder={t('console.shell.filter.all')}
+                placeholder={t('console.sessions.filter.allVenues')}
                 onChange={(e) => setVenueId(e.target.value)}
                 options={venueOptions}
               />
@@ -313,7 +348,7 @@ export default function SessionsPage() {
                 id="filter-status"
                 label={t('console.shell.filter.status')}
                 value={status}
-                placeholder={t('console.shell.filter.all')}
+                placeholder={t('console.sessions.filter.allStatuses')}
                 onChange={(e) => setStatus(e.target.value as SessionStatus | '')}
                 options={SESSION_STATUSES.map((s) => ({
                   value: s,
@@ -321,14 +356,6 @@ export default function SessionsPage() {
                 }))}
               />
             </>
-          }
-          action={
-            canAdd ? (
-              <Link className="btn btn-outline btn-small btn-tool" to="/import?kind=sessions">
-                <Icon name="file-csv" size={14} weight="duotone" />
-                <span>{t('console.sessions.add')}</span>
-              </Link>
-            ) : null
           }
           footer={
             list.status === 'ready' && rows.length > 0 ? (
@@ -463,7 +490,10 @@ function SessionInspector({ session }: { session: AdminSession }) {
         <div className="inspector-box">
           <div>
             <div className="mini-label">{t('console.sessions.inspector.portion')}</div>
-            <div className="mini-field">{portion}</div>
+            <div className="mini-field mini-field-edit">
+              <span>{portion}</span>
+              <Icon name="pencil-simple" size={13} />
+            </div>
           </div>
           <div className="mini-grid">
             <div>
@@ -500,6 +530,16 @@ function SessionInspector({ session }: { session: AdminSession }) {
         </div>
       </div>
       <div className="inspector-actions">
+        {/* Drawn on the artboard; the console has no session editor yet, so it stays off. */}
+        <button
+          type="button"
+          className="btn btn-primary btn-small inspector-save"
+          disabled
+          title={t('console.sessions.inspector.saveSoon')}
+        >
+          <Icon name="check-circle" size={14} weight="fill" />
+          <span>{t('console.sessions.inspector.save')}</span>
+        </button>
         {can(principal, 'registration.list', place) ? (
           <Link
             className="btn btn-outline btn-small"

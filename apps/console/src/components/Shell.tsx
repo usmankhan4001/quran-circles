@@ -1,10 +1,10 @@
-import { NavLink, Outlet } from 'react-router';
+import { Link, Outlet, useLocation } from 'react-router';
 import type { Role, SeasonMode } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useFeatures } from '../api/features';
 import { useI18n, type Locale } from '../i18n';
-import { visibleNav, type NavId } from '../lib/permissions';
+import { canSomewhere, visibleNav, type NavId } from '../lib/permissions';
 import { useTheme, type ThemeChoice } from '../theme';
 import type { TextSizeStep } from '../lib/ui-tokens';
 import { useDirectory } from '../api/directory';
@@ -75,17 +75,39 @@ const NAV_ICONS = {
   settings: 'sliders-horizontal',
 } as const satisfies Record<NavId, IconName>;
 
-/** The menu order of the console artboard; the routes keep their own order. */
-const NAV_ORDER: readonly NavId[] = [
+/**
+ * The menu of the console artboard. Registrations and QR posters belong to one session each, so
+ * their entries open the sessions list, where the inspector of the chosen session links to them;
+ * they show as current while a session's registrations or posters are open.
+ */
+type MenuId = NavId | 'registrations' | 'posters';
+const MENU_ORDER: readonly MenuId[] = [
   'venues',
   'sessions',
   'coordinators',
+  'registrations',
   'dailyAyahs',
+  'posters',
   'import',
   'exports',
   'audit',
   'settings',
 ];
+
+interface MenuEntry {
+  id: MenuId;
+  path: string;
+  label: string;
+  icon: IconName;
+  /** The small pill at the end of the row: a count where the console has one, else a dash. */
+  badge?: string;
+  /** A hint for entries that open the sessions list first. */
+  hint?: string;
+  active(pathname: string): boolean;
+}
+
+const sessionPage = (pathname: string, page: string) =>
+  new RegExp(`^/sessions/[^/]+/${page}$`).test(pathname);
 
 const SCOPE_KEYS = {
   national_admin: 'console.shell.scope.national',
@@ -185,8 +207,49 @@ function ShellFrame() {
   const { t, tx, number } = useI18n();
   const { me, principal, signOut } = useSignedIn();
   const features = useFeatures();
+  const { pathname } = useLocation();
+  const dir = useDirectory();
   const visible = visibleNav(principal, features.flags);
-  const items = NAV_ORDER.flatMap((id) => visible.filter((i) => i.id === id));
+  const entries: MenuEntry[] = MENU_ORDER.flatMap((id): MenuEntry[] => {
+    if (id === 'registrations' || id === 'posters') {
+      const action = id === 'registrations' ? 'registration.list' : 'poster.read';
+      if (!canSomewhere(principal, action)) return [];
+      return [
+        {
+          id,
+          path: '/sessions',
+          label: t(id === 'registrations' ? 'console.nav.registrations' : 'console.nav.posters'),
+          icon: id === 'registrations' ? 'ticket' : 'qr-code',
+          badge: id === 'registrations' ? '—' : t('console.nav.posters.badge'),
+          hint: t('console.nav.pickSession'),
+          active: (path) => sessionPage(path, id),
+        },
+      ];
+    }
+    const item = visible.find((i) => i.id === id);
+    if (!item) return [];
+    const badge =
+      id === 'venues'
+        ? number(dir.venues.length)
+        : id === 'sessions' || id === 'coordinators'
+          ? '—'
+          : undefined;
+    return [
+      {
+        id,
+        path: item.path,
+        label: t(item.labelKey),
+        icon: NAV_ICONS[item.id],
+        badge,
+        active: (path) =>
+          id === 'sessions'
+            ? path.startsWith('/sessions') &&
+              !sessionPage(path, 'registrations') &&
+              !sessionPage(path, 'posters')
+            : path === item.path || path.startsWith(`${item.path}/`),
+      },
+    ];
+  });
   const roles = [...new Set(me.roles.map((r) => r.role))];
   const roleText = roles.map((r) => tx(ROLE_KEYS[r])).join(', ');
   const widest = widestRole(roles);
@@ -228,22 +291,27 @@ function ShellFrame() {
           ) : null}
           <nav className="shell-nav" aria-label={t('console.shell.navLabel')}>
             <ul>
-              {items.map((item) => (
-                <li key={item.id}>
-                  <NavLink className="nav-link" to={item.path}>
-                    {({ isActive }) => (
-                      <>
-                        <Icon
-                          name={NAV_ICONS[item.id]}
-                          size={16}
-                          weight={isActive ? 'fill' : 'duotone'}
-                        />
-                        <span>{t(item.labelKey)}</span>
-                      </>
-                    )}
-                  </NavLink>
-                </li>
-              ))}
+              {entries.map((entry) => {
+                const isActive = entry.active(pathname);
+                return (
+                  <li key={entry.id}>
+                    <Link
+                      className={isActive ? 'nav-link active' : 'nav-link'}
+                      to={entry.path}
+                      aria-current={isActive ? 'page' : undefined}
+                      title={entry.hint}
+                    >
+                      <Icon name={entry.icon} size={16} weight={isActive ? 'fill' : 'duotone'} />
+                      <span className="nav-label">{entry.label}</span>
+                      {entry.badge ? (
+                        <span className="nav-badge" aria-hidden="true">
+                          {entry.badge}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </nav>
         </div>
@@ -254,14 +322,23 @@ function ShellFrame() {
               <span className="scope-name">{widest ? t(SCOPE_KEYS[widest]) : roleText}</span>
               <span className="scope-sub">{t('console.shell.scope.locales')}</span>
             </span>
-            <Icon name="translate" size={14} weight="bold" />
           </div>
-          <section className="shell-bar" aria-label={t('console.shell.toolsLabel')}>
-            <DisplayControls />
-          </section>
-          <Button variant="outline" className="btn-small" onClick={() => void signOut()}>
-            {t('console.shell.signOut')}
-          </Button>
+          <details className="shell-tools">
+            <summary
+              aria-label={t('console.shell.toolsLabel')}
+              title={t('console.shell.toolsLabel')}
+            >
+              <Icon name="translate" size={14} weight="bold" />
+            </summary>
+            <div className="shell-tools-panel">
+              <section className="shell-bar" aria-label={t('console.shell.toolsLabel')}>
+                <DisplayControls />
+              </section>
+              <Button variant="outline" className="btn-small" onClick={() => void signOut()}>
+                {t('console.shell.signOut')}
+              </Button>
+            </div>
+          </details>
         </div>
       </header>
       <div className="shell-body">

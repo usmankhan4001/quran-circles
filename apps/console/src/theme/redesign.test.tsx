@@ -222,7 +222,9 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
     const current = within(nav)
       .getAllByRole('link')
       .filter((a) => a.getAttribute('aria-current') === 'page');
-    expect(current.map((a) => a.textContent)).toEqual([text('console.nav.sessions', locale)]);
+    expect(current.map((a) => a.querySelector('.nav-label')?.textContent)).toEqual([
+      text('console.nav.sessions', locale),
+    ]);
   });
 
   it('keeps the focus order: skip link, menu, display settings, sign out, the top bar, the page, then the credits', async () => {
@@ -238,7 +240,8 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
       if (el === document.body) break;
       if (el.classList.contains('skip-link')) order.push('skip');
       else if (el.closest('.shell-nav')) order.push('nav');
-      else if (el.closest('.shell-bar')) order.push('tools');
+      // The translate button that opens the display settings counts with them.
+      else if (el.closest('.shell-bar, .shell-tools > summary')) order.push('tools');
       else if (el.closest('.shell-user')) order.push('user');
       else if (el.closest('.shell-top')) order.push('bar');
       else if (el.closest('main')) order.push('main');

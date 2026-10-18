@@ -13,14 +13,27 @@ import type { Locale } from '../i18n';
 
 // The mock config has the rc.4 flags on, so the ayah of the day page is in every staff menu.
 // The menu follows the console artboard's order.
+// Registrations and QR posters open the sessions list first; they belong to one session each.
 const NAV: Record<Exclude<TestRole, 'none'>, string[]> = {
-  venue: ['venues', 'sessions', 'dailyAyahs', 'exports'],
-  city: ['venues', 'sessions', 'coordinators', 'dailyAyahs', 'import', 'exports', 'audit'],
+  venue: ['venues', 'sessions', 'registrations', 'dailyAyahs', 'posters', 'exports'],
+  city: [
+    'venues',
+    'sessions',
+    'coordinators',
+    'registrations',
+    'dailyAyahs',
+    'posters',
+    'import',
+    'exports',
+    'audit',
+  ],
   national: [
     'venues',
     'sessions',
     'coordinators',
+    'registrations',
     'dailyAyahs',
+    'posters',
     'import',
     'exports',
     'audit',
@@ -41,7 +54,7 @@ describe.each<Locale>(['en', 'ur'])('console shell (%s)', (locale) => {
       expect(
         within(nav)
           .getAllByRole('link')
-          .map((a) => a.textContent),
+          .map((a) => a.querySelector('.nav-label')?.textContent),
       ).toEqual(expected),
     );
   });

@@ -22,6 +22,10 @@ const adminSessions: AdminSession[] = sessions.map((s, i) => ({
 const fullCount = adminSessions.filter((s) => s.registration.full).length;
 
 /** The number shown on a card, by its label. */
+/** A message with its {placeholders} filled, as the page writes it. */
+const fill = (message: string, params: Record<string, number>) =>
+  message.replace(/\{(\w+)\}/g, (_, k: string) => String(params[k]));
+
 function statValue(label: string): string {
   const term = screen.getByText(label, { selector: 'dt' });
   return term.parentElement?.querySelector('dd')?.textContent ?? '';
@@ -41,18 +45,21 @@ describe.each<Locale>(['en', 'ur'])('sessions page as drawn (%s)', (locale) => {
     await screen.findByRole('table', { name: text('console.sessions.title', locale) });
     const stats = screen.getByRole('region', { name: text('console.kpi.label', locale) });
     expect(within(stats).getAllByRole('term')).toHaveLength(4);
-    expect(statValue(text('console.sessions.kpi.total', locale))).toBe(
-      String(adminSessions.length),
+    expect(statValue(text('console.sessions.kpi.total', locale))).toContain(
+      fill(text('console.sessions.kpi.totalValue', locale), { count: adminSessions.length }),
     );
-    expect(statValue(text('console.sessions.kpi.full', locale))).toBe(String(fullCount));
-    expect(statValue(text('console.sessions.kpi.waiting', locale))).toBe('1');
-    // Waiting approvals are drawn on the gold card.
+    // Full sessions are counted on the demand card's line; approvals waiting sit in the gold tag.
+    const demand = screen.getByText(text('console.sessions.kpi.demand', locale), {
+      selector: 'dt',
+    }).parentElement;
+    expect(demand?.querySelector('.stat-sub')?.textContent).toContain(
+      fill(text('console.sessions.kpi.demandSub', locale), { full: fullCount, week: 0 }).split(
+        ' · ',
+      )[0],
+    );
     expect(
-      screen
-        .getByText(text('console.sessions.kpi.waiting', locale), { selector: 'dt' })
-        .closest('.stat')
-        ?.classList.contains('stat-warn'),
-    ).toBe(true);
+      screen.getByText(fill(text('console.sessions.awaiting', locale), { count: 1 })).classList,
+    ).toContain('tag-amber');
     expect(screen.getByRole('searchbox', { name: text('console.sessions.search', locale) }));
     const add = screen.getByRole('link', { name: text('console.sessions.add', locale) });
     expect(add.getAttribute('href')).toBe('/import?kind=sessions');
@@ -235,7 +242,7 @@ describe.each<Locale>(['en', 'ur'])('admin pages for a national admin (%s)', (lo
     }
   });
 
-  it('draws the invites page: numbers, a filtered table card and the invite form beside it', async () => {
+  it('draws the coordinators page: the scoped table with the invite form beside it, then the invites', async () => {
     const { user } = renderConsole({
       role: 'national',
       locale,
@@ -253,15 +260,25 @@ describe.each<Locale>(['en', 'ur'])('admin pages for a national admin (%s)', (lo
     const table = await screen.findByRole('table', {
       name: text('console.invites.list.title', locale),
     });
-    expect(statValue(text('console.invites.kpi.waiting', locale))).toBe('1');
-    expect(statValue(text('console.invites.kpi.accepted', locale))).toBe('1');
-    expect(statValue(text('console.invites.kpi.expired', locale))).toBe('1');
-    expect(statValue(text('console.invites.kpi.active', locale))).toBe('0');
+    // The counts sit in the scoped table's grey line, as drawn; there are no number cards.
+    expect(screen.queryByRole('region', { name: text('console.kpi.label', locale) })).toBeNull();
+    const card = (
+      await screen.findByRole('heading', {
+        level: 2,
+        name: text('console.invites.active.title', locale),
+      })
+    ).closest('.table-card') as HTMLElement;
+    expect(card.querySelector('.table-card-sub')?.textContent).toBe(
+      fill(text('console.invites.active.sub', locale), { active: 0, waiting: 1 }),
+    );
+    expect(within(card).getByText(text('console.invites.rbacTag', locale))).toBeTruthy();
     expect(
       screen.getByRole('group', { name: text('console.invites.filter.label', locale) }),
     ).toBeTruthy();
+    // The invite form stands beside the scoped table; the invites table follows below.
     const form = screen.getByRole('form', { name: text('console.invites.new', locale) });
-    expect(form.closest('.split')).toBe(table.closest('.split'));
+    expect(form.closest('.split')).toBe(card.closest('.split'));
+    expect(table.closest('.split')).toBeNull();
     await user.type(
       screen.getByRole('searchbox', { name: text('console.invites.search', locale) }),
       'Test Expired',

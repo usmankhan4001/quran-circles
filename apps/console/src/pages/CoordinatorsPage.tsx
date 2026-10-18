@@ -17,6 +17,8 @@ import { useDirectory } from '../api/directory';
 import { fetchAllPages, usePaged, useAsync } from '../api/hooks';
 import { roleLabelKey } from '../components/Shell';
 import { useScopeLabel } from '../components/scope';
+import { Icon } from '../components/icons';
+import { useShellSearch } from '../components/ShellFilters';
 import {
   AddButton,
   Badge,
@@ -35,7 +37,6 @@ import {
   SearchField,
   SegmentedControl,
   SelectField,
-  StatRow,
   TableCard,
   TextField,
   type BadgeTone,
@@ -140,9 +141,10 @@ export function resendBody(
 
 /** Coordinator invites, the people who hold roles now, and handing a venue or city over. */
 export default function CoordinatorsPage() {
-  const { t, tx, dateTime } = useI18n();
+  const { t, tx, dateTime, number } = useI18n();
   const { api, principal } = useSignedIn();
   const scopeLabel = useScopeLabel();
+  const [peopleQuery] = useShellSearch(t('console.invites.active.search'));
   const [notice, setNotice] = useState<Notice>(null);
   const [failure, setFailure] = useState<unknown>(null);
   const [inviteFilter, setInviteFilter] = useState<InviteFilter>('all');
@@ -154,7 +156,6 @@ export default function CoordinatorsPage() {
   const [handingOver, setHandingOver] = useState<StaffRoleAssignment | null>(null);
   const [removing, setRemoving] = useState<StaffRoleAssignment | null>(null);
   const [inviteQuery, setInviteQuery] = useState('');
-  const [peopleQuery, setPeopleQuery] = useState('');
   const dir = useDirectory();
 
   const invites = useAsync(() => api.adminRoles.invites(), [api]);
@@ -281,26 +282,32 @@ export default function CoordinatorsPage() {
     },
   ];
 
+  // The artboard's "Field coordinators & working scopes" table: who, their verified number, the
+  // place, a coloured role badge and the two actions as quiet links.
   const personColumns: Column<StaffRoleAssignment>[] = [
     {
       id: 'person',
-      header: t('console.invites.col.person'),
+      header: t('console.invites.col.coordinator'),
       rowHeader: true,
       cell: (a) => a.userName ?? t('console.invites.unnamed'),
     },
-    { id: 'phone', header: t('console.invites.col.phone'), cell: (a) => <Phone value={a.phone} /> },
-    { id: 'role', header: t('console.invites.col.role'), cell: (a) => t(roleLabelKey(a.role)) },
-    { id: 'scope', header: t('console.invites.col.scope'), cell: (a) => scopeLabel(a) },
-    { id: 'since', header: t('console.invites.col.since'), cell: (a) => dateTime(a.createdAt) },
     {
-      id: 'status',
-      header: t('console.invites.col.status'),
-      cell: (a) =>
-        a.revokedAt ? (
-          <Badge>{t('console.invites.status.ended', { date: dateTime(a.revokedAt) })}</Badge>
-        ) : (
-          <Badge tone="success">{t('console.invites.status.active')}</Badge>
-        ),
+      id: 'phone',
+      header: t('console.invites.col.phoneVerified'),
+      cell: (a) => <Phone value={a.phone} />,
+    },
+    { id: 'scope', header: t('console.invites.col.assigned'), cell: (a) => scopeLabel(a) },
+    {
+      id: 'role',
+      header: t('console.invites.col.roleBadge'),
+      cell: (a) => (
+        <div className="cell-stack">
+          <span className={`role-tag role-tag-${a.role}`}>{t(roleLabelKey(a.role))}</span>
+          {a.revokedAt ? (
+            <Badge>{t('console.invites.status.ended', { date: dateTime(a.revokedAt) })}</Badge>
+          ) : null}
+        </div>
+      ),
     },
     {
       id: 'actions',
@@ -310,15 +317,19 @@ export default function CoordinatorsPage() {
         const scope = { cityId: a.cityId, venueId: a.venueId };
         if (!canAssignRole(principal, a.role, scope)) return null;
         return (
-          <div className="row-actions">
+          <div className="link-actions">
             {a.role !== 'national_admin' ? (
-              <Button className="btn-small" onClick={() => setHandingOver(a)}>
+              <button type="button" className="link-action" onClick={() => setHandingOver(a)}>
                 {t('console.invites.handover')}
-              </Button>
+              </button>
             ) : null}
-            <Button variant="danger" className="btn-small" onClick={() => setRemoving(a)}>
+            <button
+              type="button"
+              className="link-action link-action-danger"
+              onClick={() => setRemoving(a)}
+            >
               {t('console.invites.remove')}
-            </Button>
+            </button>
           </div>
         );
       },
@@ -357,7 +368,7 @@ export default function CoordinatorsPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.nav.coordinators')} intro={t('console.invites.intro')} />
+      <PageHeader title={t('console.nav.coordinators')} intro={t('console.invites.intro')} hidden />
       {notice ? (
         <Banner tone="success" onDismiss={() => setNotice(null)}>
           {t(notice.key)}
@@ -385,87 +396,53 @@ export default function CoordinatorsPage() {
           </Button>
         </Banner>
       ) : null}
-      {invites.status === 'ready' ? (
-        <StatRow
-          label={t('console.kpi.label')}
-          partial={people.status === 'ready' && people.hasMore}
-          stats={[
-            {
-              id: 'waiting',
-              label: t('console.invites.kpi.waiting'),
-              value: stats.waiting,
-              icon: 'clock',
-            },
-            {
-              id: 'accepted',
-              label: t('console.invites.kpi.accepted'),
-              value: stats.accepted,
-              icon: 'check',
-            },
-            {
-              id: 'expired',
-              label: t('console.invites.kpi.expired'),
-              value: stats.expired,
-              tone: 'notice',
-              icon: 'warning-circle',
-            },
-            {
-              id: 'active',
-              label: t('console.invites.kpi.active'),
-              value: stats.activeRoles,
-              icon: 'shield-check',
-            },
-          ]}
-        />
-      ) : null}
-
       <div className={canInviteAny ? 'split' : undefined}>
         <TableCard
-          title={t('console.invites.list.title')}
-          search={
-            <SearchField
-              id="invites-search"
-              label={t('console.invites.search')}
-              value={inviteQuery}
-              onChange={setInviteQuery}
-            />
+          title={t('console.invites.active.title')}
+          subtitle={
+            invites.status === 'ready' && people.status === 'ready'
+              ? t('console.invites.active.sub', {
+                  active: number(stats.activeRoles),
+                  waiting: number(stats.waiting),
+                })
+              : undefined
           }
+          tag={<span className="tag tag-emerald">{t('console.invites.rbacTag')}</span>}
           filters={
-            <SegmentedControl
-              label={t('console.invites.filter.label')}
-              value={inviteFilter}
-              options={INVITE_FILTERS.map((f) => ({ value: f, label: filterLabel(f) }))}
-              onChange={setInviteFilter}
+            <CheckboxField
+              label={t('console.invites.showPast')}
+              checked={showPast}
+              onChange={(e) => setShowPast(e.target.checked)}
             />
-          }
-          action={
-            canInviteAny ? (
-              <AddButton onClick={openInviteForm}>{t('console.invites.new')}</AddButton>
-            ) : null
           }
         >
-          {invites.status === 'loading' ? <Loading /> : null}
-          {invites.status === 'error' ? (
-            <ErrorState error={invites.error} onRetry={invites.reload} />
+          {people.status === 'loading' ? <Loading /> : null}
+          {people.status === 'error' ? (
+            <ErrorState error={people.error} onRetry={people.reload} />
           ) : null}
-          {invites.status === 'ready' && statusInvites.length === 0 ? (
+          {people.status === 'ready' && people.items.length === 0 ? (
             <EmptyState
-              title={
-                inviteFilter === 'all'
-                  ? t('console.invites.empty')
-                  : t('console.invites.filter.empty')
-              }
+              title={t('console.invites.active.empty.title')}
+              body={t('console.invites.active.empty.body')}
             />
           ) : null}
-          {invites.status === 'ready' && statusInvites.length > 0 && visibleInvites.length === 0 ? (
-            <NoMatch query={inviteQuery} />
+          {people.status === 'ready' && people.items.length > 0 && visiblePeople.length === 0 ? (
+            <NoMatch query={peopleQuery} partial={people.hasMore} />
           ) : null}
-          {invites.status === 'ready' && visibleInvites.length > 0 ? (
+          {people.status === 'ready' && visiblePeople.length > 0 ? (
             <DataTable
-              caption={t('console.invites.list.title')}
-              columns={inviteColumns}
-              rows={visibleInvites}
-              rowKey={(i) => i.id}
+              caption={t('console.invites.active.title')}
+              columns={personColumns}
+              rows={visiblePeople}
+              rowKey={(a) => a.id}
+            />
+          ) : null}
+          {people.status === 'ready' ? (
+            <LoadMore
+              hasMore={people.hasMore}
+              loading={people.loadingMore}
+              onLoadMore={people.loadMore}
+              error={people.moreError}
             />
           ) : null}
         </TableCard>
@@ -473,50 +450,51 @@ export default function CoordinatorsPage() {
       </div>
 
       <TableCard
-        title={t('console.invites.active.title')}
+        title={t('console.invites.list.title')}
         search={
           <SearchField
-            id="people-search"
-            label={t('console.invites.active.search')}
-            value={peopleQuery}
-            onChange={setPeopleQuery}
+            id="invites-search"
+            label={t('console.invites.search')}
+            value={inviteQuery}
+            onChange={setInviteQuery}
           />
         }
         filters={
-          <CheckboxField
-            label={t('console.invites.showPast')}
-            checked={showPast}
-            onChange={(e) => setShowPast(e.target.checked)}
+          <SegmentedControl
+            label={t('console.invites.filter.label')}
+            value={inviteFilter}
+            options={INVITE_FILTERS.map((f) => ({ value: f, label: filterLabel(f) }))}
+            onChange={setInviteFilter}
           />
         }
+        action={
+          canInviteAny ? (
+            <AddButton onClick={openInviteForm}>{t('console.invites.new')}</AddButton>
+          ) : null
+        }
       >
-        {people.status === 'loading' ? <Loading /> : null}
-        {people.status === 'error' ? (
-          <ErrorState error={people.error} onRetry={people.reload} />
+        {invites.status === 'loading' ? <Loading /> : null}
+        {invites.status === 'error' ? (
+          <ErrorState error={invites.error} onRetry={invites.reload} />
         ) : null}
-        {people.status === 'ready' && people.items.length === 0 ? (
+        {invites.status === 'ready' && statusInvites.length === 0 ? (
           <EmptyState
-            title={t('console.invites.active.empty.title')}
-            body={t('console.invites.active.empty.body')}
+            title={
+              inviteFilter === 'all'
+                ? t('console.invites.empty')
+                : t('console.invites.filter.empty')
+            }
           />
         ) : null}
-        {people.status === 'ready' && people.items.length > 0 && visiblePeople.length === 0 ? (
-          <NoMatch query={peopleQuery} partial={people.hasMore} />
+        {invites.status === 'ready' && statusInvites.length > 0 && visibleInvites.length === 0 ? (
+          <NoMatch query={inviteQuery} />
         ) : null}
-        {people.status === 'ready' && visiblePeople.length > 0 ? (
+        {invites.status === 'ready' && visibleInvites.length > 0 ? (
           <DataTable
-            caption={t('console.invites.active.title')}
-            columns={personColumns}
-            rows={visiblePeople}
-            rowKey={(a) => a.id}
-          />
-        ) : null}
-        {people.status === 'ready' ? (
-          <LoadMore
-            hasMore={people.hasMore}
-            loading={people.loadingMore}
-            onLoadMore={people.loadMore}
-            error={people.moreError}
+            caption={t('console.invites.list.title')}
+            columns={inviteColumns}
+            rows={visibleInvites}
+            rowKey={(i) => i.id}
           />
         ) : null}
       </TableCard>
@@ -716,8 +694,17 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <section className="card side-card" aria-labelledby={headingId}>
-      <h2 id={headingId}>{t('console.invites.new')}</h2>
+    <section className="card side-card assign-card" aria-labelledby={headingId}>
+      <div className="assign-head">
+        <div>
+          <h2 id={headingId}>
+            <span aria-hidden="true">+ </span>
+            {t('console.invites.new')}
+          </h2>
+          <p className="table-card-sub">{t('console.invites.form.sub')}</p>
+        </div>
+        <Icon name="shield-check" size={18} weight="duotone" />
+      </div>
       <form
         id="invite-form"
         className="form"
@@ -765,36 +752,39 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
             options={venueOptions}
           />
         ) : null}
-        <TextField
-          id="invite-phone"
-          type="tel"
-          inputMode="tel"
-          autoComplete="off"
-          dir="ltr"
-          label={t('console.invites.phone.label')}
-          hint={
-            preview?.ok
-              ? t('console.invites.form.phone.preview', { phone: formatPhone(preview.e164) })
-              : t('console.invites.form.phone.hint')
-          }
-          error={errors.phone}
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          required
-        />
-        <TextField
-          id="invite-name"
-          autoComplete="off"
-          label={t('console.invites.form.name.label')}
-          error={errors.name}
-          optional
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          maxLength={80}
-        />
-        <div className="form-actions">
+        <div className="assign-pair">
+          <TextField
+            id="invite-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="off"
+            dir="ltr"
+            label={t('console.invites.phone.label')}
+            hint={
+              preview?.ok
+                ? t('console.invites.form.phone.preview', { phone: formatPhone(preview.e164) })
+                : t('console.invites.form.phone.hint')
+            }
+            error={errors.phone}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+          <TextField
+            id="invite-name"
+            autoComplete="off"
+            label={t('console.invites.form.name.label')}
+            error={errors.name}
+            optional
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={80}
+          />
+        </div>
+        <div className="form-actions assign-actions">
           <Button variant="primary" type="submit" busy={busy}>
-            {t('console.invites.send')}
+            <Icon name="paper-plane-tilt" size={14} weight="fill" />
+            <span>{t('console.invites.send')}</span>
           </Button>
         </div>
       </form>
