@@ -4,34 +4,50 @@
 #   docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.staging.yml \
 #     --env-file <staging env> up -d --build
 #
-# Differences from production, all in the proxy:
-# - No host ports and no TLS: Caddy serves plain HTTP on :80 and Traefik labels (below) route
-#   QC_DOMAIN and QC_CONSOLE_DOMAIN to it. Cloudflare and Traefik terminate TLS.
-# - The PWA and console builds are baked into the proxy image instead of a host directory.
-# - The proxy also joins Dokploy's shared network, so it reaches the api and the worker by
-#   unique aliases (see infra/caddy/Caddyfile.staging).
+# Differences from production, all at the edge:
+# - The production `proxy` (host ports 80/443, automatic TLS) is parked behind the
+#   `prod-proxy` profile, so it never starts here. Staging uses `web` instead: Caddy on plain
+#   HTTP :80, no host ports, routed by the Traefik labels below for QC_DOMAIN and
+#   QC_CONSOLE_DOMAIN. Cloudflare and Traefik terminate TLS.
+# - The PWA and console builds are baked into the `web` image instead of a host directory.
+# - `web` also joins Dokploy's shared network, so it reaches the api and the worker by unique
+#   aliases (see infra/caddy/Caddyfile.staging).
 # Postgres, the poster renderer, the api and the worker stay on the internal networks exactly as
 # in production. ACME_EMAIL is still required by the production file; any value works here.
+#
+# No YAML merge tags (!reset, !override): Dokploy re-serialises this file before deploying and
+# drops them, so everything here must work with plain Compose merging.
 
 services:
   proxy:
+    profiles:
+      - prod-proxy
+
+  web:
     image: ${QC_IMAGE_REGISTRY:-qc-staging}/proxy:${QC_IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: infra/docker/proxy-staging.Dockerfile
       target: proxy-staging
       args:
-        PUBLIC_API_URL: https://${QC_DOMAIN}/api
-    ports: !reset []
-    volumes: !override
+        PUBLIC_API_URL: https://${QC_DOMAIN:?set QC_DOMAIN in the env file}/api
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    environment:
+      QC_DOMAIN: ${QC_DOMAIN:?set QC_DOMAIN in the env file}
+      QC_CONSOLE_DOMAIN: ${QC_CONSOLE_DOMAIN:?set QC_CONSOLE_DOMAIN in the env file}
+    volumes:
       - caddy-data:/data
       - caddy-config:/config
     networks:
       - edge
       - dokploy-network
-    # Routing for Dokploy's Traefik, set here rather than as Dokploy domains: Dokploy rewrites the
-    # compose file to add domain labels, which would drop the !reset/!override tags above.
-    # Cloudflare's tunnel reaches Traefik on its `web` (HTTP) entrypoint.
+    # Routing for Dokploy's Traefik, set here rather than as Dokploy domains, so the routing lives
+    # in the repository. Cloudflare's tunnel reaches Traefik on its `web` (HTTP) entrypoint.
     # List form, because Compose interpolates values but not mapping keys.
     labels:
       - traefik.enable=true
@@ -40,22 +56,45 @@ services:
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-staging}-web.entrypoints=web
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-staging}-web.service=${COMPOSE_PROJECT_NAME:-qc-staging}-web
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-qc-staging}-web.loadbalancer.server.port=80
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:2019/config/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_PROXY_CPUS:-0.5}'
+          memory: ${QC_PROXY_MEMORY:-256m}
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+        tag: '{{.Name}}'
 
+  # Unique aliases on `edge`, merged into the production network list.
   api:
-    networks: !override
+    networks:
       edge:
         aliases:
           - qc-staging-api
-      backend: {}
-      render: {}
 
   worker:
-    networks: !override
+    networks:
       edge:
         aliases:
           - qc-staging-worker
-      backend: {}
-      render: {}
 
 networks:
   dokploy-network:
