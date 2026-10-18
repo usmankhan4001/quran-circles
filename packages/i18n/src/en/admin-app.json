@@ -489,7 +489,7 @@
   "admin.circleEditor.archive.confirmTitle": "Archive this circle?",
   "admin.circleEditor.archive.confirmBody": "It stops showing in the app for everyone.",
   "admin.circleEditor.archivedNote": "This circle is archived. People no longer see it in the app.",
-  "admin.dailyAyah.title": "Ayah of the day",
+  "admin.dailyAyah.title": "Daily ayah picker",
   "admin.dailyAyah.day": "Day",
   "admin.dailyAyah.today": "Today",
   "admin.dailyAyah.yourPick": "Your pick",
@@ -505,8 +505,8 @@
   "admin.dailyAyah.form.titleNew": "Choose the ayah",
   "admin.dailyAyah.form.titleChange": "Change the ayah",
   "admin.dailyAyah.form.help": "Only the surah and ayah numbers are saved. The app shows the Arabic and the translation.",
-  "admin.dailyAyah.surah.label": "Surah number (1 to 114)",
-  "admin.dailyAyah.ayah.label": "Ayah number",
+  "admin.dailyAyah.surah.label": "Surah (1–114)",
+  "admin.dailyAyah.ayah.label": "Ayah",
   "admin.dailyAyah.ayahCount.one": "Surah {surah} has {count} ayah.",
   "admin.dailyAyah.ayahCount.other": "Surah {surah} has {count} ayahs.",
   "admin.dailyAyah.error.surah": "Enter a surah number from 1 to 114.",
@@ -573,5 +573,8 @@
   "admin.postUpdate.bothLanguages": "English & اردو",
   "admin.postUpdate.reviewPost": "Review and post",
   "admin.posters.readyMark": "Ready ✓",
-  "admin.posters.preview.scan": "Scan to register and read the portion"
+  "admin.posters.preview.scan": "Scan to register and read the portion",
+  "admin.dailyAyah.themes": "Curated masjid themes",
+  "admin.dailyAyah.themesSoon": "Themes to pick from are not ready yet. Choose the surah and ayah yourself.",
+  "admin.dailyAyah.textInApp": "People see the Arabic, Urdu and English in the app."
 }

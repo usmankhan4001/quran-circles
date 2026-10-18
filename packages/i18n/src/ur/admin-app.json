@@ -490,7 +490,7 @@
   "admin.circleEditor.archive.confirmTitle": "کیا یہ حلقہ محفوظ شدہ میں ڈالیں؟",
   "admin.circleEditor.archive.confirmBody": "یہ سب کے لیے ایپ میں دکھنا بند ہو جائے گا۔",
   "admin.circleEditor.archivedNote": "یہ حلقہ محفوظ شدہ ہے۔ لوگ اسے ایپ میں نہیں دیکھتے۔",
-  "admin.dailyAyah.title": "آج کی آیت",
+  "admin.dailyAyah.title": "روزانہ آیت کا انتخاب",
   "admin.dailyAyah.day": "دن",
   "admin.dailyAyah.today": "آج",
   "admin.dailyAyah.yourPick": "آپ کا انتخاب",
@@ -506,8 +506,8 @@
   "admin.dailyAyah.form.titleNew": "آیت منتخب کریں",
   "admin.dailyAyah.form.titleChange": "آیت بدلیں",
   "admin.dailyAyah.form.help": "صرف سورہ اور آیت کے نمبر محفوظ ہوتے ہیں۔ عربی متن اور ترجمہ ایپ خود دکھاتی ہے۔",
-  "admin.dailyAyah.surah.label": "سورہ نمبر (1 سے 114)",
-  "admin.dailyAyah.ayah.label": "آیت نمبر",
+  "admin.dailyAyah.surah.label": "سورہ (1–114)",
+  "admin.dailyAyah.ayah.label": "آیت",
   "admin.dailyAyah.ayahCount.one": "سورہ {surah} میں {count} آیت ہے۔",
   "admin.dailyAyah.ayahCount.other": "سورہ {surah} میں {count} آیات ہیں۔",
   "admin.dailyAyah.error.surah": "1 سے 114 تک سورہ نمبر لکھیں۔",
@@ -574,5 +574,8 @@
   "admin.postUpdate.bothLanguages": "English اور اردو",
   "admin.postUpdate.reviewPost": "دیکھیں اور بھیجیں",
   "admin.posters.readyMark": "تیار ✓",
-  "admin.posters.preview.scan": "رجسٹر ہونے اور حصہ پڑھنے کے لیے اسکین کریں"
+  "admin.posters.preview.scan": "رجسٹر ہونے اور حصہ پڑھنے کے لیے اسکین کریں",
+  "admin.dailyAyah.themes": "مسجد کے منتخب موضوعات",
+  "admin.dailyAyah.themesSoon": "منتخب موضوعات ابھی تیار نہیں۔ سورت اور آیت خود چنیں۔",
+  "admin.dailyAyah.textInApp": "لوگ ایپ میں عربی، اردو اور انگریزی دیکھتے ہیں۔"
 }

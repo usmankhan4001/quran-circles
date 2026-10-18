@@ -101,8 +101,14 @@ export function DailyAyahScreen({ venueId, circleId, now = new Date() }: DailyAy
   return (
     <Screen
       title={t('admin.dailyAyah.title')}
-      subtitle={placeName}
       onBack={nav.back}
+      actions={
+        placeName ? (
+          <Text variant="caption" color="textAccent" strong numberOfLines={1}>
+            {placeName}
+          </Text>
+        ) : undefined
+      }
       testID="daily-ayah"
     >
       <QueryBoundary query={query} testID="daily-ayah-data" notFoundIsNotAvailable>
@@ -161,23 +167,25 @@ function AyahPicker({ place, now }: { place: AyahPlace; now: Date }) {
     <QueryBoundary query={picks} testID="daily-ayah-picks">
       {(data) => (
         <View style={{ gap: spacing.lg }}>
-          <Card>
-            <View style={{ gap: spacing.sm }}>
-              <Text variant="title3" heading={2}>
-                {t('admin.dailyAyah.day')}
-              </Text>
-              <DateStrip
-                testID="daily-ayah-day"
-                days={days}
-                value={date}
-                onChange={(d) => {
-                  setDate(d);
-                  setNotice(null);
-                }}
-                accessibilityLabel={t('admin.dailyAyah.day')}
-              />
-            </View>
-          </Card>
+          <DateStrip
+            testID="daily-ayah-day"
+            days={days}
+            value={date}
+            onChange={(d) => {
+              setDate(d);
+              setNotice(null);
+            }}
+            accessibilityLabel={t('admin.dailyAyah.day')}
+          />
+          {/* D17 "Curated themes": drawn, but there is no curated list to offer yet. */}
+          <View style={{ gap: spacing.xs }} testID="daily-ayah-themes">
+            <Text variant="label" color="textSecondary" heading={2}>
+              {t('admin.dailyAyah.themes')}
+            </Text>
+            <Text variant="caption" color="textMuted">
+              {t('admin.dailyAyah.themesSoon')}
+            </Text>
+          </View>
           {notice ? (
             <Toast
               testID="daily-ayah-notice"
@@ -302,6 +310,52 @@ function DayPanel({
 
   return (
     <View style={{ gap: spacing.lg }} testID="daily-ayah-panel">
+      <View style={{ gap: spacing.xs }}>
+        <Text variant="label" color="textSecondary" heading={2}>
+          {pick ? t('admin.dailyAyah.form.titleChange') : t('admin.dailyAyah.form.titleNew')}
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          <View style={{ flexGrow: 1.4, flexBasis: 150 }}>
+            <TextField
+              testID="daily-ayah-surah"
+              label={t('admin.dailyAyah.surah.label')}
+              value={form.surah}
+              onChangeText={(value) => patch({ surah: value })}
+              error={surahError}
+              keyboardType="number-pad"
+              contentDirection="ltr"
+              maxLength={3}
+              required
+              loading={busy}
+            />
+          </View>
+          <View style={{ flexGrow: 1, flexBasis: 120 }}>
+            <TextField
+              testID="daily-ayah-ayah"
+              label={t('admin.dailyAyah.ayah.label')}
+              helper={
+                surah !== null && count !== null
+                  ? t.plural('admin.dailyAyah.ayahCount', count, {
+                      surah: formatNumber(surah, locale),
+                    })
+                  : undefined
+              }
+              value={form.ayah}
+              onChangeText={(value) => patch({ ayah: value })}
+              error={ayahError}
+              keyboardType="number-pad"
+              contentDirection="ltr"
+              maxLength={3}
+              required
+              loading={busy}
+            />
+          </View>
+        </View>
+        <Text variant="caption" color="textSecondary">
+          {t('admin.dailyAyah.form.help')}
+        </Text>
+      </View>
+
       <Card testID="daily-ayah-current">
         <View style={{ gap: spacing.md }}>
           <View
@@ -313,7 +367,7 @@ function DayPanel({
               gap: spacing.sm,
             }}
           >
-            <Text variant="title3" heading={2}>
+            <Text variant="caption" color="textAccent" strong heading={2}>
               {dateLabel}
             </Text>
             <Tag
@@ -337,8 +391,11 @@ function DayPanel({
             >
               <StarNumber value={pick.surah} />
               <View style={{ flex: 1, gap: spacing.xxs }}>
-                <Text variant="title2" testID="daily-ayah-current-ref">
+                <Text variant="title3" strong testID="daily-ayah-current-ref">
                   {reference(pick)}
+                </Text>
+                <Text variant="caption" color="textSecondary">
+                  {t('admin.dailyAyah.textInApp')}
                 </Text>
                 <Text variant="caption" color="textSecondary">
                   {place.type === 'venue'
@@ -372,50 +429,6 @@ function DayPanel({
         error={removing ? null : remove.error}
         onDismiss={remove.reset}
       />
-
-      <Card>
-        <View style={{ gap: spacing.md }}>
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="title3" heading={2}>
-              {pick ? t('admin.dailyAyah.form.titleChange') : t('admin.dailyAyah.form.titleNew')}
-            </Text>
-            <Text variant="caption" color="textSecondary">
-              {t('admin.dailyAyah.form.help')}
-            </Text>
-          </View>
-          <TextField
-            testID="daily-ayah-surah"
-            label={t('admin.dailyAyah.surah.label')}
-            value={form.surah}
-            onChangeText={(value) => patch({ surah: value })}
-            error={surahError}
-            keyboardType="number-pad"
-            contentDirection="ltr"
-            maxLength={3}
-            required
-            loading={busy}
-          />
-          <TextField
-            testID="daily-ayah-ayah"
-            label={t('admin.dailyAyah.ayah.label')}
-            helper={
-              surah !== null && count !== null
-                ? t.plural('admin.dailyAyah.ayahCount', count, {
-                    surah: formatNumber(surah, locale),
-                  })
-                : undefined
-            }
-            value={form.ayah}
-            onChangeText={(value) => patch({ ayah: value })}
-            error={ayahError}
-            keyboardType="number-pad"
-            contentDirection="ltr"
-            maxLength={3}
-            required
-            loading={busy}
-          />
-        </View>
-      </Card>
 
       <Card variant="flat" testID="daily-ayah-fallback">
         <View style={{ gap: spacing.xs }}>
@@ -492,7 +505,7 @@ function Upcoming({
   return (
     <Card testID="daily-ayah-upcoming">
       <View style={{ gap: spacing.sm }}>
-        <Text variant="title3" heading={2}>
+        <Text variant="label" strong heading={2}>
           {t('admin.dailyAyah.upcoming.title')}
         </Text>
         {sorted.length === 0 ? (

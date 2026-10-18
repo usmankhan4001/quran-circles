@@ -91,7 +91,9 @@ describe.each(combos)('AyahPickCard in $name', (combo) => {
       combo,
     });
     const card = await screen.findByTestId('ayah-pick-card');
-    expect(card.textContent).toContain(combo.locale === 'en' ? 'Ayah of the day' : 'آج کی آیت');
+    expect(card.textContent).toContain(
+      combo.locale === 'en' ? 'Daily ayah picker' : 'روزانہ آیت کا انتخاب',
+    );
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 });

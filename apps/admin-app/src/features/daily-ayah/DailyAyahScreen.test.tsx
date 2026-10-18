@@ -42,7 +42,7 @@ describe.each(combos)('DailyAyahScreen in $name', (combo) => {
       combo.locale === 'en' ? 'Replace pick' : 'انتخاب بدلیں',
     );
     expect(screen.getByTestId('daily-ayah-hero').textContent).toContain(
-      combo.locale === 'en' ? 'Sample Masjid Al-Noor' : 'آج کی آیت',
+      combo.locale === 'en' ? 'Sample Masjid Al-Noor' : 'روزانہ آیت کا انتخاب',
     );
   });
 
