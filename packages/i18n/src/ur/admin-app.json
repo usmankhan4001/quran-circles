@@ -554,5 +554,9 @@
   "admin.attendance.hallCapacity": "ہال کی گنجائش",
   "admin.attendance.checkIn": "حاضر کریں",
   "admin.attendance.checkedIn": "حاضر",
-  "admin.attendance.saveCount": "حاضری محفوظ کریں ({count} حاضر)"
+  "admin.attendance.saveCount": "حاضری محفوظ کریں ({count} حاضر)",
+  "admin.home.trendNone": "ابھی کوئی گنتی محفوظ نہیں",
+  "admin.home.noLimit": "نشستوں کی کوئی حد نہیں",
+  "admin.attendance.walkIn": "+5 بغیر اندراج",
+  "admin.attendance.noLimit": "نشستوں کی حد مقرر نہیں"
 }

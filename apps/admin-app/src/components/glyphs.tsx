@@ -1,5 +1,12 @@
 import { View } from 'react-native';
-import { Icon, keepColorsInForcedMode, systemColors, useForcedColors, type IconName } from '@qc/ui';
+import {
+  Icon,
+  keepColorsInForcedMode,
+  systemColors,
+  useForcedColors,
+  type IconName,
+  type IconWeight,
+} from '@qc/ui';
 
 /**
  * The line icon the kit does not have yet (chat), drawn with views so the
@@ -87,13 +94,15 @@ export interface AppIconProps {
   color: string;
   /** Size in dp. Default 24. */
   size?: number;
+  /** The kit icon's Phosphor weight. */
+  weight?: IconWeight;
 }
 
 /** The kit's `Icon` when it has the name, else the local drawing. */
-export function AppIcon({ name, color, size = 24 }: AppIconProps) {
+export function AppIcon({ name, color, size = 24, weight }: AppIconProps) {
   return isGlyphName(name) ? (
     <Glyph name={name} color={color} size={size} />
   ) : (
-    <Icon name={name} color={color} size={size} />
+    <Icon name={name} color={color} size={size} weight={weight} />
   );
 }

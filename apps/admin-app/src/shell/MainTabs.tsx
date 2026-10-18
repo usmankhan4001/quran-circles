@@ -8,10 +8,10 @@ export const mainTabOrder: readonly MainTabKey[] = ['index', 'registrants', 'upd
 
 /** The drawings' line icons from the kit (Today is the calendar, the masjid its dome). */
 const iconOf: Record<MainTabKey, IconName> = {
-  index: 'calendar',
-  registrants: 'people',
-  updates: 'bell',
-  places: 'masjid',
+  index: 'calendar-check',
+  registrants: 'users-three',
+  updates: 'megaphone',
+  places: 'mosque',
 };
 
 const labelKey = {
@@ -33,7 +33,9 @@ export function MainTabs({
   const items: TabItem[] = mainTabOrder.map((key) => ({
     key,
     label: t(labelKey[key]),
-    icon: ({ color }) => <Icon name={iconOf[key]} color={color} size={24} />,
+    icon: ({ color, selected }) => (
+      <Icon name={iconOf[key]} color={color} size={22} weight={selected ? 'fill' : 'regular'} />
+    ),
   }));
   return (
     <TabBar

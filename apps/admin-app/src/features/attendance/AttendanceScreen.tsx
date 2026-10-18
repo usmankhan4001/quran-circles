@@ -253,7 +253,7 @@ function AttendanceForm({
               />
               <CountButton
                 testID="attendance-headcount-plus-five"
-                label="+5"
+                label={t('admin.attendance.walkIn')}
                 tone="tint"
                 wide
                 accessibilityLabel={t('admin.attendance.plusFive')}
@@ -268,7 +268,8 @@ function AttendanceForm({
               />
             </View>
           </View>
-          {capacity !== null && capacity !== undefined ? (
+          {/* As drawn, always: with no seat limit it says so. */}
+          {
             <View style={{ gap: spacing.xs }}>
               <View
                 style={{
@@ -282,30 +283,14 @@ function AttendanceForm({
                   {t('admin.attendance.hallCapacity')}
                 </Text>
                 <Text variant="caption" strong>
-                  {t('admin.home.seats', { taken: n(state.headcount), capacity: n(capacity) })}
+                  {capacity
+                    ? t('admin.home.seats', { taken: n(state.headcount), capacity: n(capacity) })
+                    : t('admin.attendance.noLimit')}
                 </Text>
               </View>
-              <SeatMeter taken={state.headcount} capacity={capacity} />
+              {capacity ? <SeatMeter taken={state.headcount} capacity={capacity} /> : null}
             </View>
-          ) : null}
-          <TextField
-            testID="attendance-headcount-input"
-            label={t('admin.attendance.typeNumber')}
-            value={typed ?? String(state.headcount)}
-            onChangeText={(text) => {
-              const digits = text.replace(/[^0-9]/g, '').slice(0, 4);
-              setTyped(digits);
-              dispatch({ type: 'setHeadcount', value: digits === '' ? 0 : Number(digits) });
-            }}
-            onBlur={() => setTyped(null)}
-            keyboardType="number-pad"
-            contentDirection="ltr"
-          />
-          {total > 0 ? (
-            <Text variant="caption" color="textSecondary">
-              {t('admin.attendance.tickedTotal', { count: n(total) })}
-            </Text>
-          ) : null}
+          }
         </View>
       </Card>
 
@@ -331,33 +316,6 @@ function AttendanceForm({
             </Text>
           ) : null}
         </View>
-        {registrants.items.length > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            <Button
-              testID="attendance-tick-all"
-              label={t('admin.attendance.markAll')}
-              variant="secondary"
-              icon="check"
-              onPress={() =>
-                dispatch({
-                  type: 'tickAll',
-                  people: registrants.items.map((r) => ({
-                    registrationId: r.id,
-                    count: r.partySize,
-                  })),
-                })
-              }
-            />
-            {tickedPeople > 0 ? (
-              <Button
-                testID="attendance-clear"
-                label={t('admin.attendance.clear')}
-                variant="tertiary"
-                onPress={() => dispatch({ type: 'clearTicks' })}
-              />
-            ) : null}
-          </View>
-        ) : null}
         <QueryBoundary query={registrants.query} testID="attendance-registrants">
           {() =>
             registrants.items.length === 0 ? (
@@ -397,7 +355,57 @@ function AttendanceForm({
             )
           }
         </QueryBoundary>
+        {registrants.items.length > 0 ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <Button
+              testID="attendance-tick-all"
+              label={t('admin.attendance.markAll')}
+              variant="secondary"
+              icon="check"
+              onPress={() =>
+                dispatch({
+                  type: 'tickAll',
+                  people: registrants.items.map((r) => ({
+                    registrationId: r.id,
+                    count: r.partySize,
+                  })),
+                })
+              }
+            />
+            {tickedPeople > 0 ? (
+              <Button
+                testID="attendance-clear"
+                label={t('admin.attendance.clear')}
+                variant="tertiary"
+                onPress={() => dispatch({ type: 'clearTicks' })}
+              />
+            ) : null}
+          </View>
+        ) : null}
       </View>
+
+      <Card testID="attendance-type-card">
+        <View style={{ gap: spacing.sm }}>
+          <TextField
+            testID="attendance-headcount-input"
+            label={t('admin.attendance.typeNumber')}
+            value={typed ?? String(state.headcount)}
+            onChangeText={(text) => {
+              const digits = text.replace(/[^0-9]/g, '').slice(0, 4);
+              setTyped(digits);
+              dispatch({ type: 'setHeadcount', value: digits === '' ? 0 : Number(digits) });
+            }}
+            onBlur={() => setTyped(null)}
+            keyboardType="number-pad"
+            contentDirection="ltr"
+          />
+          {total > 0 ? (
+            <Text variant="caption" color="textSecondary">
+              {t('admin.attendance.tickedTotal', { count: n(total) })}
+            </Text>
+          ) : null}
+        </View>
+      </Card>
 
       <Card>
         <View style={{ gap: spacing.md }}>
@@ -486,7 +494,7 @@ function AttendanceForm({
         <Button
           testID="attendance-save"
           label={t('admin.attendance.saveCount', { count: n(state.headcount) })}
-          icon="check"
+          icon="check-circle"
           size="large"
           fullWidth
           loading={save.status === 'running'}
@@ -611,6 +619,7 @@ function CheckInRow({
       >
         <Icon
           name={checked ? 'check-circle' : 'ticket'}
+          weight={checked ? 'fill' : 'duotone'}
           size={20}
           color={checked ? colors.textOnAccentSubtle : colors.textSecondary}
         />

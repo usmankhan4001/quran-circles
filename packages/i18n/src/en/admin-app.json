@@ -553,5 +553,9 @@
   "admin.attendance.hallCapacity": "Hall capacity",
   "admin.attendance.checkIn": "Check in",
   "admin.attendance.checkedIn": "Checked in",
-  "admin.attendance.saveCount": "Save attendance ({count} present)"
+  "admin.attendance.saveCount": "Save attendance ({count} present)",
+  "admin.home.trendNone": "No counts saved yet",
+  "admin.home.noLimit": "No seat limit",
+  "admin.attendance.walkIn": "+5 walk-in",
+  "admin.attendance.noLimit": "No seat limit set"
 }

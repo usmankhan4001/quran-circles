@@ -29,11 +29,11 @@ export function ActionTile({ icon, label, sub, onPress, wide, testID }: ActionTi
       style={({ pressed }) => ({
         flexGrow: 1,
         flexBasis: wide ? '100%' : '40%',
-        minHeight: minTouchTarget + spacing.lg,
+        minHeight: minTouchTarget + spacing.md,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.md,
         paddingHorizontal: spacing.md,
         borderRadius: radii.lg,
         borderWidth: 1,
@@ -52,10 +52,10 @@ export function ActionTile({ icon, label, sub, onPress, wide, testID }: ActionTi
           justifyContent: 'center',
         }}
       >
-        <AppIcon name={icon} color={colors.textOnAccentSubtle} size={20} />
+        <AppIcon name={icon} color={colors.textOnAccentSubtle} size={19} weight="duotone" />
       </View>
-      <View style={{ flex: 1, gap: spacing.xxs }}>
-        <Text variant="label" decorative strong>
+      <View style={{ flex: 1, gap: 0 }}>
+        <Text variant="caption" decorative strong>
           {label}
         </Text>
         {sub ? (

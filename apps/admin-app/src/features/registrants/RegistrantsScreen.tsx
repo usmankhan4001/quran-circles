@@ -9,6 +9,7 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { FilterPills } from '../../components/FilterPills';
+import { PillButton } from '../../components/PillButton';
 import { Screen } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { type ContactKind } from '../../lib/phone';
@@ -181,11 +182,16 @@ export function RegistrantsScreen({
                     },
                   ] as const)
                 : []),
-              {
-                value: 'waitlisted',
-                label: t('admin.registrants.filter.waitlist'),
-                count: list.totals ? n(list.totals.waitlisted) : undefined,
-              },
+              // Not drawn: the waiting list shows only when someone is on it.
+              ...((list.totals?.waitlisted ?? 0) > 0 || filter === 'waitlisted'
+                ? ([
+                    {
+                      value: 'waitlisted',
+                      label: t('admin.registrants.filter.waitlist'),
+                      count: list.totals ? n(list.totals.waitlisted) : undefined,
+                    },
+                  ] as const)
+                : []),
             ]}
           />
           {/* Tonight's list needs no date picker (as drawn); another date can be chosen. */}
@@ -273,23 +279,22 @@ function RegistrantCard({
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             {r.allowsWhatsapp ? (
               <View style={{ flex: 1 }}>
-                <Button
+                <PillButton
                   testID={`registrant-${r.id}-whatsapp`}
                   label={t('admin.registrants.whatsappShort')}
-                  variant="secondary"
-                  fullWidth
+                  tone="tint"
+                  icon="whatsapp-logo"
+                  iconWeight="fill"
                   accessibilityLabel={t('admin.registrants.whatsappName', { name })}
                   onPress={() => contact('whatsapp')}
                 />
               </View>
             ) : null}
             <View style={{ flex: 1 }}>
-              <Button
+              <PillButton
                 testID={`registrant-${r.id}-call`}
                 label={t('admin.registrants.call')}
-                variant="outline"
-                icon="phone"
-                fullWidth
+                icon="phone-call"
                 accessibilityLabel={t('admin.registrants.callName', { name })}
                 onPress={() => contact('call')}
               />

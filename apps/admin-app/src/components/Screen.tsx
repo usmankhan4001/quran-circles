@@ -67,7 +67,7 @@ function PlainHeader({
       </View>
       <View style={styles.titles}>
         {title ? (
-          <Text variant="title3" heading={1} align="center" numberOfLines={2}>
+          <Text variant="body" strong heading={1} align="center" numberOfLines={2}>
             {title}
           </Text>
         ) : null}

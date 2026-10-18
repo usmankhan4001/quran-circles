@@ -26,7 +26,8 @@ export function ScopePill() {
   const body = (
     <>
       <Icon
-        name={active.role === 'venue_coordinator' ? 'masjid' : 'pin'}
+        name={active.role === 'venue_coordinator' ? 'mosque' : 'map-pin'}
+        weight="fill"
         size={16}
         color={colors.textOnHero}
       />
@@ -35,7 +36,9 @@ export function ScopePill() {
           {short(active)}
         </Text>
       </View>
-      {several ? <Icon name="chevron-down" size={14} color={colors.textOnHero} /> : null}
+      {several ? (
+        <Icon name="caret-down" weight="bold" size={11} color={colors.textOnHero} />
+      ) : null}
     </>
   );
   const look = {

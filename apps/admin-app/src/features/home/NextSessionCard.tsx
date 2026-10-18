@@ -1,18 +1,9 @@
 import { Pressable, View } from 'react-native';
 import type { Session } from '@qc/contracts';
-import {
-  Card,
-  Icon,
-  Tag,
-  Text,
-  minTouchTarget,
-  radii,
-  spacing,
-  useTheme,
-  type IconName,
-} from '@qc/ui';
+import { Card, Icon, Tag, Text, radii, spacing, useTheme } from '@qc/ui';
 import { useAppearance, useT } from '../../appearance/AppearanceProvider';
 import { ActionTile } from '../../components/ActionTile';
+import { PillButton } from '../../components/PillButton';
 import { pickLocalized } from '../../lib/localized';
 import { formatInstantDate, formatInstantTime, formatLocalTime, isToday } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -54,7 +45,7 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
   const capacity = s.registration.capacity;
 
   return (
-    <Card testID="today-next">
+    <Card testID="today-next" padding="md">
       <View style={{ gap: spacing.md }}>
         <Pressable
           testID={`session-${s.id}`}
@@ -75,7 +66,7 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
             <View
               style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 }}
             >
-              <Icon name="check-circle" size={14} color={colors.textSuccess} />
+              <Icon name="check-circle" weight="fill" size={14} color={colors.textSuccess} />
               <Text variant="caption" color="textSuccess" strong>
                 {status}
               </Text>
@@ -86,11 +77,13 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
                 {t(`admin.home.section.${s.section}`)}
               </Text>
             </View>
-            {next?.portionLabel ? (
-              <View style={{ flexShrink: 1 }}>
+            <View style={{ flexShrink: 1 }}>
+              {next?.portionLabel ? (
                 <Tag testID="today-next-portion" label={next.portionLabel} kind="gilt" />
-              </View>
-            ) : null}
+              ) : (
+                <Tag label={t('admin.home.portionNotSet')} kind="gilt" />
+              )}
+            </View>
           </View>
           <Text variant="title3">{title}</Text>
           <View
@@ -101,7 +94,7 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
               columnGap: spacing.xs,
             }}
           >
-            <Icon name="clock" size={14} color={colors.textSecondary} />
+            <Icon name="clock" size={13} color={colors.textSecondary} />
             {day ? (
               <Text variant="caption" color="textSecondary">
                 {`${day} ·`}
@@ -123,60 +116,64 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
           ) : null}
         </Pressable>
 
-        {coming !== null || capacity !== null ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: spacing.sm,
-              paddingVertical: spacing.sm,
-              paddingHorizontal: spacing.md,
-              borderRadius: radii.md,
-              borderWidth: 1,
-              borderColor: colors.hairline,
-              backgroundColor: colors.surfaceMuted,
-            }}
-          >
+        {/* Always drawn, as in the artboard; a value the server does not give is left out. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.sm,
+            paddingVertical: spacing.sm,
+            paddingHorizontal: spacing.md,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: colors.hairline,
+            backgroundColor: colors.surfaceMuted,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+            <Icon name="users-three" weight="duotone" size={15} color={colors.textAccent} />
             {coming !== null ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-                <Icon name="people" size={16} color={colors.textAccent} />
-                <Text testID="today-next-coming" variant="label" color="textAccent" lang="en">
-                  {n(coming)}
-                </Text>
-                <Text variant="label" color="textAccent">
-                  {t('admin.home.coming')}
-                </Text>
-              </View>
-            ) : (
-              <View />
-            )}
-            {capacity !== null ? (
-              <Text variant="caption" color="textSecondary">
-                {t('admin.home.capacity', { count: n(capacity) })}
+              <Text
+                testID="today-next-coming"
+                variant="caption"
+                color="textAccent"
+                strong
+                lang="en"
+              >
+                {n(coming)}
               </Text>
             ) : null}
+            <Text variant="caption" color="textAccent" strong>
+              {coming !== null ? t('admin.home.coming') : t('admin.home.registrants')}
+            </Text>
           </View>
-        ) : null}
+          <Text variant="caption" color="textSecondary">
+            {capacity !== null
+              ? t('admin.home.capacity', { count: n(capacity) })
+              : t('admin.home.noLimit')}
+          </Text>
+        </View>
 
         {(can.markAttendance && next) || can.seeRegistrants ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
             {can.markAttendance && next ? (
               <View style={{ flexGrow: 1.15, flexBasis: 120 }}>
-                <CardPill
+                <PillButton
                   testID="today-action-attendance"
-                  icon="check"
+                  icon="clipboard-text"
+                  iconWeight="fill"
                   label={t('admin.home.logAttendance')}
-                  primary
+                  tone="charcoal"
                   onPress={() => nav.push(routes.attendance(s.id, next.id))}
                 />
               </View>
             ) : null}
             {can.seeRegistrants ? (
               <View style={{ flexGrow: 1, flexBasis: 110 }}>
-                <CardPill
+                <PillButton
                   testID="today-action-registrants"
-                  icon="people"
+                  icon="users-three"
                   label={
                     coming !== null
                       ? t('admin.home.registrantsCount', { count: n(coming) })
@@ -213,7 +210,7 @@ export function QuickActions({ session: s }: { session: Session }) {
       <ActionTile
         key="attendance"
         testID="today-tile-attendance"
-        icon="check-circle"
+        icon="clipboard-text"
         label={t('admin.home.attendance')}
         sub={`${formatInstantDate(next.startsAt, locale)} · ${formatInstantTime(next.startsAt, locale)}`}
         wide={wide}
@@ -224,7 +221,7 @@ export function QuickActions({ session: s }: { session: Session }) {
       <ActionTile
         key="portion"
         testID="today-action-portion"
-        icon="book"
+        icon="book-open-text"
         label={t('admin.home.setPortion')}
         sub={next.portionLabel ?? t('admin.home.portionNotSet')}
         wide={wide}
@@ -235,7 +232,7 @@ export function QuickActions({ session: s }: { session: Session }) {
       <ActionTile
         key="post"
         testID="today-action-post"
-        icon="bell"
+        icon="megaphone"
         label={t('admin.home.postShort')}
         sub={t('admin.home.postSub')}
         wide={wide}
@@ -246,7 +243,7 @@ export function QuickActions({ session: s }: { session: Session }) {
       <ActionTile
         key="posters"
         testID="today-action-posters"
-        icon="qr"
+        icon="qr-code"
         label={t('admin.home.qrPoster')}
         sub={t('admin.home.postersSub')}
         wide={wide}
@@ -265,7 +262,7 @@ export function QuickActions({ session: s }: { session: Session }) {
           gap: spacing.sm,
         }}
       >
-        <Text variant="title3" heading={2}>
+        <Text variant="body" strong heading={2}>
           {t('admin.home.quickActions')}
         </Text>
         <Text variant="caption" color="textSecondary">
@@ -281,62 +278,5 @@ export function QuickActions({ session: s }: { session: Session }) {
         {tiles}
       </View>
     </View>
-  );
-}
-
-/**
- * The two pills on the card, as drawn: tighter than the kit's Button so both fit side by side on
- * a phone. Charcoal for the main one, white with a hairline for the other.
- * TODO(kit): a compact size for Button.
- */
-function CardPill({
-  icon,
-  label,
-  primary,
-  onPress,
-  testID,
-}: {
-  icon: IconName;
-  label: string;
-  primary?: boolean;
-  onPress: () => void;
-  testID?: string;
-}) {
-  const { colors, mode } = useTheme();
-  const fg = primary ? colors.textOnCta : colors.text;
-  return (
-    <Pressable
-      testID={testID}
-      role="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => ({
-        minHeight: minTouchTarget,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: spacing.xs,
-        paddingHorizontal: spacing.sm,
-        borderRadius: radii.pill,
-        borderWidth: 1,
-        borderColor: primary
-          ? colors.cta
-          : mode === 'highContrast'
-            ? colors.borderStrong
-            : colors.border,
-        backgroundColor: primary
-          ? pressed
-            ? colors.ctaPressed
-            : colors.cta
-          : pressed
-            ? colors.surfaceMuted
-            : colors.surface,
-      })}
-    >
-      <Icon name={icon} size={16} color={fg} />
-      <Text variant="label" color={primary ? 'textOnCta' : 'text'} decorative numberOfLines={1}>
-        {label}
-      </Text>
-    </Pressable>
   );
 }

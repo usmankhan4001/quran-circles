@@ -34,8 +34,17 @@ export function AttendanceTrend({ session, now }: { session: Session; now: Date 
     });
     return recentDates(res.items, now);
   }, [session.id]);
-  const dates = query.data ?? [];
-  if (dates.length === 0) return null;
+  // As drawn, the card is always there. Before any date has passed, the last seven days are
+  // shown as empty bars with no numbers.
+  const found = query.data ?? [];
+  const dates: Pick<AdminOccurrence, 'id' | 'startsAt' | 'headcount'>[] =
+    found.length > 0
+      ? found
+      : Array.from({ length: BARS }, (_, i) => ({
+          id: `empty-${i}`,
+          startsAt: new Date(now.getTime() - (BARS - 1 - i) * DAY_MS).toISOString(),
+          headcount: null,
+        }));
   const counts = dates.map((o) => o.headcount);
   const known = counts.filter((c): c is number => c !== null);
   const total = known.reduce((a, b) => a + b, 0);
@@ -51,14 +60,18 @@ export function AttendanceTrend({ session, now }: { session: Session; now: Date 
           gap: spacing.sm,
         }}
       >
-        <Text variant="title3" heading={2}>
+        <Text variant="body" strong heading={2}>
           {t('admin.home.trendTitle')}
         </Text>
         {known.length > 0 ? (
           <Text testID="today-trend-total" variant="caption" color="textAccent" strong>
             {t('admin.home.trendTotal', { count: n(total) })}
           </Text>
-        ) : null}
+        ) : (
+          <Text variant="caption" color="textSecondary">
+            {t('admin.home.trendNone')}
+          </Text>
+        )}
       </View>
       <Card padding="md">
         <View
@@ -71,7 +84,7 @@ export function AttendanceTrend({ session, now }: { session: Session; now: Date 
           }}
         >
           {dates.map((o, i) => {
-            const last = i === dates.length - 1;
+            const last = i === dates.length - 1 && found.length > 0;
             const parts = dayParts(pkDateOf(o.startsAt), locale);
             const value = o.headcount;
             const height = value === null ? 20 : Math.max(20, Math.round((value / top) * BAR_MAX));

@@ -143,7 +143,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
               {next ? <AttendanceTrend session={next} now={now} /> : null}
               {todays.length > 0 ? (
                 <View style={{ gap: spacing.md }}>
-                  <Text variant="title3" heading={2}>
+                  <Text variant="body" strong heading={2}>
                     {t('admin.home.todaySection')}
                   </Text>
                   {todays.map((s) => row(s, false))}
@@ -151,7 +151,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
               ) : null}
               {others.length > 0 ? (
                 <View style={{ gap: spacing.md }}>
-                  <Text variant="title3" heading={2}>
+                  <Text variant="body" strong heading={2}>
                     {todays.length > 0 || next
                       ? t('admin.home.otherSection')
                       : t('admin.home.allSection')}

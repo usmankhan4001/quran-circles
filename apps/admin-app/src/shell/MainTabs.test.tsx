@@ -35,7 +35,7 @@ describe('MainTabs', () => {
     }
     expect(screen.queryByText('Places')).toBeNull();
     expect(screen.getByTestId('tab-dot-places')).toBeTruthy();
-    for (const g of ['calendar', 'people', 'bell', 'masjid']) {
+    for (const g of ['calendar-check', 'users-three', 'megaphone', 'mosque']) {
       expect(screen.getAllByTestId(`icon-${g}`).length).toBeGreaterThan(0);
     }
     expect(screen.getByTestId('tab-places').getAttribute('aria-selected')).toBe('true');
