@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm';
 import {
   POSTER_FORMATS,
   PosterAltText,
@@ -42,6 +42,13 @@ export interface PosterDeps {
   now: Date;
   guard: PosterGuard;
 }
+
+/**
+ * How long a queued poster blocks a new one for the same session and template (SEC-13). The worker
+ * finishes or fails a job well within this (pg-boss expiry and dead letter); the bound only keeps a
+ * row that was somehow left `queued` from blocking that template for the session for ever.
+ */
+export const POSTER_QUEUED_BLOCK_MS = 60 * 60 * 1000;
 
 const FORMAT_ORDER = new Map<PosterFormat, number>(POSTER_FORMATS.map((f, i) => [f, i]));
 const isFormat = (value: string): value is PosterFormat => FORMAT_ORDER.has(value as PosterFormat);
@@ -222,7 +229,9 @@ async function enqueueOrFail(deps: PosterDeps, rows: PosterRow[]): Promise<Poste
 // Endpoints --------------------------------------------------------------------------------------
 
 /**
- * `adminPosters.create`: one queued row per format, one job, one audit row. The stored snapshot is
+ * `adminPosters.create`: one queued row per format, one job, one audit row. While a poster for the
+ * same session and template is still queued (made within `POSTER_QUEUED_BLOCK_MS`), a new one is
+ * `conflict` (SEC-13): the person waits for it, or regenerates it once it is done. The stored snapshot is
  * the session as it is now; the worker renders the session as it is when the job runs and replaces
  * `source_snapshot` with what it printed, so `outOfDate` always compares against the printed one.
  * The job is sent after the commit with no options: the worker's queue sets retry and expiry.
@@ -248,6 +257,23 @@ export async function createPosters(
   }
 
   const inserted = await db.transaction(async (tx) => {
+    // One maker at a time per session and template, so two parallel requests cannot both pass the
+    // check below (transaction-scoped lock, released at commit or rollback).
+    const lockKey = `poster_create:${sessionId}:${template.id}`;
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`);
+    const [waiting] = await tx
+      .select({ id: posters.id })
+      .from(posters)
+      .where(
+        and(
+          eq(posters.sessionId, sessionId),
+          eq(posters.templateId, template.id),
+          eq(posters.status, 'queued'),
+          gt(posters.createdAt, new Date(now.getTime() - POSTER_QUEUED_BLOCK_MS)),
+        ),
+      )
+      .limit(1);
+    if (waiting) return fail('conflict');
     const snapshot = await currentSnapshot(tx, sessionId, now);
     if (!snapshot) return guard.missing('poster.create');
     const rows = await tx

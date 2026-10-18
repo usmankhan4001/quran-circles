@@ -660,6 +660,65 @@ describe('deleting the account', () => {
     expect(JSON.stringify(await outboxRows(h))).not.toContain('Leaving Person');
   });
 
+  it('removes the V1 legacy rows that hold the name and number, and only those (SEC-05)', async () => {
+    const person = await h.person({ displayName: 'Legacy Leaver' });
+    const bystander = await h.person();
+    const legacyRegistration = (
+      sourceId: string,
+      name: string,
+      phoneRaw: string,
+      season?: string,
+    ) => ({
+      ...(season ? { seasonTag: season } : {}),
+      sourceId,
+      name,
+      phoneRaw,
+      cityName: 'Sample City',
+      venueName: 'Sample Venue',
+      partySize: 1,
+      registeredAt: h.clock.now(),
+      raw: { mobile_note: 'synthetic' },
+    });
+    await h.db
+      .insert(schema.legacyRegistrations)
+      .values([
+        legacyRegistration('v1-1', 'Legacy Leaver', person.phone),
+        legacyRegistration('v1-2', 'Legacy Leaver Again', person.phone),
+        legacyRegistration('v1-3', 'Earlier Season Name', person.phone, 'ramadan-2025'),
+        legacyRegistration('v1-4', 'Someone Else', bystander.phone),
+      ]);
+    await h.db.insert(schema.legacyWhatsappSubscribers).values([
+      { phoneRaw: person.phone, name: 'Legacy Leaver', cityId: h.world.cityA.id },
+      { seasonTag: 'ramadan-2025', phoneRaw: person.phone, name: null },
+      { phoneRaw: bystander.phone, name: 'Someone Else' },
+    ]);
+
+    expect((await h.api('me.delete', { as: person, body: { confirm: true } })).status).toBe(204);
+
+    const registrationsLeft = await h.db.select().from(schema.legacyRegistrations);
+    const subscribersLeft = await h.db.select().from(schema.legacyWhatsappSubscribers);
+    const everything = JSON.stringify([registrationsLeft, subscribersLeft]);
+    expect(everything).not.toContain(person.phone);
+    expect(everything).not.toContain('Legacy Leaver');
+    expect(everything).not.toContain('Earlier Season Name');
+    // Other people's legacy rows stay as they were.
+    expect(registrationsLeft.map((r) => [r.sourceId, r.name, r.phoneRaw])).toEqual([
+      ['v1-4', 'Someone Else', bystander.phone],
+    ]);
+    expect(subscribersLeft.map((r) => [r.name, r.phoneRaw])).toEqual([
+      ['Someone Else', bystander.phone],
+    ]);
+  });
+
+  it('removes nothing from the legacy tables when the deletion is refused', async () => {
+    await h.db.insert(schema.legacyWhatsappSubscribers).values({
+      phoneRaw: admin.phone,
+      name: 'Only Admin',
+    });
+    expect((await h.api('me.delete', { as: admin, body: { confirm: true } })).status).toBe(409);
+    expect(await h.db.select().from(schema.legacyWhatsappSubscribers)).toHaveLength(1);
+  });
+
   it('leaves other people untouched', async () => {
     const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
     const leaving = await h.person();

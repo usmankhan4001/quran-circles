@@ -3,6 +3,11 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by the lane)
 
+## Done (2026-10-18: safe logger and UUIDs)
+
+- `sanitizeFields` (`src/logger.ts`) no longer blanks canonical UUIDs (8-4-4-4-12 hex, either case, not touching other hex digits) whose groups happen to be all digits, such as a city id in a budget alert: UUIDs are taken out of the string before the phone-shape check, and the rest is still checked. Phone numbers are still blanked anywhere in a string, including next to or glued to a UUID; a near-UUID with a long group still counts as a digit run. Tests in `logger.test.ts` +2. `@qc/messaging` 231 tests in 12 files; typecheck clean.
+- Not changed: the API's own logger (`apps/api/src/middleware/logger.ts`) already skips a value that is a UUID as a whole; a UUID inside a longer string there is still treated as phone-shaped (api-core, if it matters).
+
 ## Done (2026-10-18: security review fixes SEC-01, SEC-02, SEC-06, SEC-21)
 
 - **SEC-01 (web push SSRF).** Contract (`packages/contracts/src/schemas/people.ts`, cleared by the orchestrator): `DeviceRegister` refuses a `webpush` token unless it is a `PushSubscription` JSON whose endpoint passes `isAllowedWebPushEndpoint` (issue `{ path: 'token', code: 'custom' }`, so the API answers `validation_failed`). Allowed: `https:` only, default port, no user info, no IP literal, host `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `web.push.apple.com`, or a name ending in `.push.services.mozilla.com`, `.notify.windows.com`, `.push.apple.com`. New exports `WEB_PUSH_HOSTS`, `WEB_PUSH_HOST_SUFFIXES`, `isAllowedWebPushEndpoint`, `WebPushSubscriptionToken`, `parseWebPushToken`; tests in `packages/contracts/src/webpush-endpoint.test.ts`; CHANGELOG line under Unreleased. Sender (`packages/messaging/src/providers/webpush.ts`): the same check before every request (on the token and on the URL the library will call), refusal is `invalid_token` / `webpush_endpoint_refused` with no request, so the worker revokes the device; `redirect: 'manual'` and any 3xx (or opaque 0) is `invalid_token` / `webpush_redirect_refused`, never followed; default timeout 5 s (`WEB_PUSH_TIMEOUT_MS`). `HttpRequestInit` gained `redirect`.

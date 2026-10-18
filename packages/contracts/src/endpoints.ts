@@ -101,6 +101,7 @@ import {
 } from './schemas/updates';
 import {
   AdminCircle,
+  COORDINATOR_IMPORT_MAX_ROWS,
   AdminCirclesQuery,
   AdminCirclesResponse,
   AdminRegistrationsExportQuery,
@@ -142,6 +143,18 @@ const id = <K extends string>(name: K) => z.object({ [name]: Uuid } as { [P in K
 const json = <T extends z.ZodType>(status: 200 | 201 | 202, schema: T) =>
   ({ status, schema }) as const;
 const noContent = { status: 204 } as const;
+
+/**
+ * The sign-in limits (change request `auth-limits-doc`). The `auth_code` bucket in
+ * `x-rate-limit` is not applied as such: the auth lane's own limits below replace it.
+ */
+const AUTH_LIMITS_NOTE =
+  'Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. ' +
+  'Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.';
+
+/** SEC-13: poster make and remake share a per-staff allowance on top of the default bucket. */
+const POSTER_ALLOWANCE_NOTE =
+  '`adminPosters.create` and `adminPosters.regenerate` share a per-staff allowance (10 a minute by default, an API setting) on top of the default bucket; over it, `rate_limited` with `retryAfterSeconds`. ';
 
 /**
  * Every endpoint of the P0 API. The key is the endpoint id, `group.operation`.
@@ -190,6 +203,9 @@ export const endpoints = {
     tag: 'Sign-in',
     auth: 'public',
     actions: ['auth.request_code'],
+    description:
+      'Only a Pakistani mobile number (`+923` and nine digits) gets a code: any other number is validation_failed with `{ path: "phone", code: "phone_not_pakistan_mobile" }`, before anything is counted or sent. ' +
+      AUTH_LIMITS_NOTE,
     body: RequestCodeBody,
     success: json(202, RequestCodeResponse),
     rateLimit: 'auth_code',
@@ -203,6 +219,7 @@ export const endpoints = {
     tag: 'Sign-in',
     auth: 'public',
     actions: ['auth.verify_code'],
+    description: AUTH_LIMITS_NOTE,
     body: VerifyCodeBody,
     success: json(200, SignInResponse),
     errors: ['otp_invalid', 'otp_expired', 'otp_too_many_attempts'],
@@ -216,6 +233,9 @@ export const endpoints = {
     summary: 'Exchange a refresh token for new tokens',
     tag: 'Sign-in',
     auth: 'public',
+    description:
+      'Limited per client address (generous, because many people share one carrier address); over the limit it is `rate_limited` with `retryAfterSeconds` and the refresh token is not used up. ' +
+      AUTH_LIMITS_NOTE,
     actions: ['auth.refresh'],
     body: RefreshBody,
     success: json(200, Tokens),
@@ -924,6 +944,8 @@ export const endpoints = {
       'Editors type the title and details only: the date, time and venue come from the session, so a poster cannot disagree with it. ' +
       'A title is required in every language the poster shows (`{ path: "fields.title.ur", code: "custom" }`). ' +
       'An unknown or inactive `templateKey` is `not_found`, by the rule for unknown references; a format the template does not offer is validation_failed with `{ path: "formats", code: "invalid_value" }`. ' +
+      'While a poster for the same session and template is still `queued` (any format or language, a remake included), a new one is `conflict`: wait for it, then regenerate if needed. A queued poster older than an hour no longer blocks. ' +
+      POSTER_ALLOWANCE_NOTE +
       'Answers 202 with the queued rows; poll `adminPosters.list` until they are `ready` or `failed`.',
     tag: 'Admin',
     auth: 'staff',
@@ -931,7 +953,7 @@ export const endpoints = {
     params: id('sessionId'),
     body: PosterCreate,
     success: json(202, PostersResponse),
-    errors: ['not_found'],
+    errors: ['not_found', 'conflict'],
     idempotent: false,
   }),
   'adminPosters.list': endpoint({
@@ -955,7 +977,9 @@ export const endpoints = {
     summary: 'Make a poster again from the session as it is now',
     description:
       "Checked with `poster.create` at the poster's session's venue. Same template, language, format and fields; a fresh snapshot; a new queued row with `replacesPosterId` set, and a `poster-render` job for it. " +
-      'The old poster stays until the new one is ready, then it is deleted with its file (by the worker). A poster that is still `queued` cannot be regenerated yet: `conflict`. Answers 202 with the new row.',
+      'The old poster stays until the new one is ready, then it is deleted with its file (by the worker). A poster that is still `queued` cannot be regenerated yet: `conflict`. ' +
+      POSTER_ALLOWANCE_NOTE +
+      'Answers 202 with the new row.',
     tag: 'Admin',
     auth: 'staff',
     actions: ['poster.create'],
@@ -989,7 +1013,8 @@ export const endpoints = {
     description:
       'Sends the invitation message and keeps a pending invite. To resend, send a new invite for the same number, role and place: it replaces the pending one with a fresh expiry and sends the message again (there is no separate resend call). ' +
       'To hand a city or venue to someone with no account yet, add `replacesAssignmentId`: the invite stays pending and, when it is accepted, the new assignment is created and the replaced one is revoked in one transaction. ' +
-      'The returned `Invite` (and each item of `adminRoles.invites`) carries `replacesAssignmentId`, so a resend can copy it. A resend of a pending handover invite keeps the handover even without it, while the replaced assignment is still live; a `replacesAssignmentId` that is unknown, ended or at another place is `not_found`.',
+      'The returned `Invite` (and each item of `adminRoles.invites`) carries `replacesAssignmentId`, so a resend can copy it. A resend of a pending handover invite keeps the handover even without it, while the replaced assignment is still live; a `replacesAssignmentId` that is unknown, ended or at another place is `not_found`. ' +
+      'Each person may create a limited number of invites in any 24 hours, counting single invites, resends and imports together (an API setting, 200 by default): over it, validation_failed with `{ path: "phone", code: "invite_daily_limit" }` and nothing is sent.',
     tag: 'Admin',
     auth: 'staff',
     actions: [
@@ -1332,7 +1357,8 @@ export const endpoints = {
       'A pending invite for the same number, role and place, or a person who already holds that role there, is `duplicate` (skipped, not an error). ' +
       'With `dryRun: true` every row is checked and nothing changes. With `dryRun: false` all invites are created in one transaction, or none if any row is invalid, and the invitation messages are queued only after it commits. ' +
       'A file that clashes with a write made by someone else between the check and the write is refused as a whole with `conflict` and nothing is written; send it again (rows already there come back as `duplicate`). ' +
-      'One audit row records the row counts, never phone numbers. Retrying a file is safe: rows that were already imported come back as `duplicate`.',
+      'One audit row records the row counts, never phone numbers. Retrying a file is safe: rows that were already imported come back as `duplicate`. ' +
+      `Two ceilings refuse the whole file, dry run included, with validation_failed and no result (\`IMPORT_REQUEST_ISSUE_CODES\`): more than ${COORDINATOR_IMPORT_MAX_ROWS} rows is \`{ path: "rows", code: "too_big" }\`; rows that would take the caller past their invitations for the last 24 hours (as for \`adminRoles.invite\`; duplicate and invalid rows do not count) is \`{ path: "rows", code: "invite_daily_limit" }\`.`,
     tag: 'Admin',
     auth: 'staff',
     actions: [

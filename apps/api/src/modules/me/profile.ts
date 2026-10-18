@@ -17,6 +17,8 @@ const {
   messageOutbox,
   coordinatorInvites,
   otpChallenges,
+  legacyRegistrations,
+  legacyWhatsappSubscribers,
 } = schema;
 
 export async function getMe(db: Db, userId: string): Promise<Me> {
@@ -115,7 +117,8 @@ export async function updateMe(db: Db, userId: string, patch: ProfileUpdate): Pr
 /**
  * Deletes the account and its personal data. What stays is anonymous: registrations lose their
  * person (user_id NULL, anonymised_at set) so attendance counts survive; sent-message rows lose
- * the recipient number and content and keep their status and cost for reporting.
+ * the recipient number and content and keep their status and cost for reporting. The person's
+ * V1 (Ramadan 2026) legacy rows, which hold their name and number, are deleted (SEC-05).
  */
 export async function deleteAccount(db: Db, userId: string, now: Date): Promise<void> {
   await db.transaction(async (tx) => {
@@ -176,6 +179,13 @@ export async function deleteAccount(db: Db, userId: string, now: Date): Promise<
 
     await tx.delete(coordinatorInvites).where(eq(coordinatorInvites.phoneE164, user.phoneE164));
     await tx.delete(otpChallenges).where(eq(otpChallenges.phoneE164, user.phoneE164));
+    // V1 legacy rows (SEC-05): both tables keep the E.164 number in `phone_raw` (ADR 0004), so
+    // the match is exact. Deleted rather than anonymised: they hold nothing but the person's
+    // name, number and V1 answers, and no V2 row refers to them.
+    await tx.delete(legacyRegistrations).where(eq(legacyRegistrations.phoneRaw, user.phoneE164));
+    await tx
+      .delete(legacyWhatsappSubscribers)
+      .where(eq(legacyWhatsappSubscribers.phoneRaw, user.phoneE164));
     // Profile, devices, follows, consents, bookmarks, reading position, reading days,
     // memorisation, circle requests, feed read marks, role assignments and sign-in sessions go
     // with the user row (cascade). The national `community_days` totals hold no user id and stay.

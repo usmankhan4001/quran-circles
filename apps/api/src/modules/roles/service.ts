@@ -15,6 +15,7 @@ import {
 } from 'drizzle-orm';
 import {
   buildDeepLink,
+  INVITE_DAILY_LIMIT,
   type AssignRoleBody,
   type Invite,
   type InviteBody,
@@ -170,7 +171,7 @@ export async function assertInviteAllowance(
       ),
     );
   if ((row?.n ?? 0) + adding > deps.limits.perActorPerDay) {
-    fail('validation_failed', { issues: [{ path, code: 'invite_daily_limit' }] });
+    fail('validation_failed', { issues: [{ path, code: INVITE_DAILY_LIMIT }] });
   }
 }
 

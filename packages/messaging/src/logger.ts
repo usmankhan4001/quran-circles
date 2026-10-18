@@ -41,6 +41,18 @@ const FORBIDDEN_EXACT_KEYS = new Set([
 ]);
 
 const PHONE_SHAPE = /\+?\d[\d\s-]{7,}\d/;
+/**
+ * A canonical UUID (8-4-4-4-12 hex), not touching other hex digits. One whose groups happen to be
+ * all digits looks phone-shaped (for example a city id in a budget alert), so UUIDs are taken out
+ * before the phone check; anything else in the string is still checked.
+ */
+const UUID_SHAPE =
+  /(?<![0-9a-f])[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?![0-9a-f])/gi;
+
+/** True when the string holds something shaped like a phone number outside any UUID. */
+function looksLikePhone(value: string): boolean {
+  return PHONE_SHAPE.test(value.replace(UUID_SHAPE, '_'));
+}
 
 export function sanitizeFields(fields: LogFields | undefined): LogFields {
   const out: LogFields = {};
@@ -50,7 +62,7 @@ export function sanitizeFields(fields: LogFields | undefined): LogFields {
     if (FORBIDDEN_EXACT_KEYS.has(lower) || FORBIDDEN_KEY_PARTS.some((p) => lower.includes(p))) {
       continue;
     }
-    if (typeof value === 'string' && PHONE_SHAPE.test(value)) {
+    if (typeof value === 'string' && looksLikePhone(value)) {
       out[key] = '[redacted]';
       continue;
     }

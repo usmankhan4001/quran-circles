@@ -4,7 +4,22 @@ import { resolve } from 'node:path';
 import { messages } from '@qc/i18n';
 import { errorsFor, type EndpointDef } from './define';
 import { ENDPOINT_IDS, endpoints } from './endpoints';
-import { ERROR_CODE_LIST, ERROR_CODES, errorMessageKey, makeApiError, ApiError } from './errors';
+import {
+  ERROR_CODE_LIST,
+  ERROR_CODES,
+  WORDED_ISSUE_CODES,
+  errorMessageKey,
+  issueMessageKey,
+  makeApiError,
+  ApiError,
+} from './errors';
+import { PHONE_NOT_PAKISTAN_MOBILE } from './common';
+import {
+  COORDINATOR_IMPORT_MAX_ROWS,
+  IMPORT_MAX_ROWS,
+  IMPORT_REQUEST_ISSUE_CODES,
+  INVITE_DAILY_LIMIT,
+} from './schemas/admin';
 import { buildOpenApi, openApiJson } from './openapi';
 import { ACTIONS, SCOPE_ACTIONS } from './scopes';
 
@@ -260,6 +275,48 @@ describe('error codes', () => {
       expect((messages.en as Record<string, string>)[key]?.trim(), `en ${key}`).toBeTruthy();
       expect((messages.ur as Record<string, string>)[key]?.trim(), `ur ${key}`).toBeTruthy();
     }
+  });
+
+  it('has an English and an Urdu message for every worded issue code', () => {
+    expect(WORDED_ISSUE_CODES).toEqual(['phone_not_pakistan_mobile', 'invite_daily_limit']);
+    expect(WORDED_ISSUE_CODES).toContain(PHONE_NOT_PAKISTAN_MOBILE);
+    expect(WORDED_ISSUE_CODES).toContain(INVITE_DAILY_LIMIT);
+    for (const code of WORDED_ISSUE_CODES) {
+      const key = issueMessageKey(code);
+      expect(key).toBe(`issues.${code}`);
+      expect((messages.en as Record<string, string>)[key]?.trim(), `en ${key}`).toBeTruthy();
+      expect((messages.ur as Record<string, string>)[key]?.trim(), `ur ${key}`).toBeTruthy();
+    }
+  });
+
+  it('lists the request-level import codes, with a console message for the row ceiling', () => {
+    expect(IMPORT_REQUEST_ISSUE_CODES).toEqual(['too_big', 'invite_daily_limit']);
+    expect(COORDINATOR_IMPORT_MAX_ROWS).toBe(100);
+    expect(COORDINATOR_IMPORT_MAX_ROWS).toBeLessThan(IMPORT_MAX_ROWS);
+    for (const locale of ['en', 'ur'] as const) {
+      const text = (messages[locale] as Record<string, string>)[
+        'console.import.issue.tooManyInviteRows'
+      ];
+      expect(text, locale).toContain('{max}');
+    }
+    const coordinators = endpoints['adminImport.coordinators'].description ?? '';
+    expect(coordinators).toContain(`more than ${COORDINATOR_IMPORT_MAX_ROWS} rows`);
+    expect(coordinators).toContain('invite_daily_limit');
+    expect(endpoints['adminRoles.invite'].description).toContain('invite_daily_limit');
+  });
+
+  it('lets poster create answer conflict while one is queued, and documents the allowance', () => {
+    expect(endpoints['adminPosters.create'].errors).toContain('conflict');
+    for (const id of ['adminPosters.create', 'adminPosters.regenerate'] as const)
+      expect(endpoints[id].description).toContain('per-staff allowance');
+  });
+
+  it('documents that the sign-in limits replace the auth_code bucket', () => {
+    for (const id of ['auth.requestCode', 'auth.verifyCode', 'auth.refresh'] as const) {
+      expect(endpoints[id].description, id).toContain('replace the `auth_code` bucket');
+      expect(endpoints[id].description, id).toContain('retryAfterSeconds');
+    }
+    expect(endpoints['auth.requestCode'].description).toContain('phone_not_pakistan_mobile');
   });
 
   it('builds a valid error body', () => {

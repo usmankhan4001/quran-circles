@@ -17,6 +17,7 @@ import { schema } from '@qc/db';
 import { TEST_PRINCIPAL_HEADER } from '../middleware/test-auth';
 import { pgBossPosterQueue, unwiredPosterQueue } from '../modules/posters/queue';
 import { posterRuntimeFor } from '../modules/posters/runtime';
+import { POSTER_QUEUED_BLOCK_MS } from '../modules/posters/service';
 import {
   DEFAULT_POSTER_STORAGE_DIR,
   localDiskPosterStorage,
@@ -81,6 +82,12 @@ const list = (as: Actor | null, sid = sessionId) =>
   h.api('adminPosters.list', { as, params: { sessionId: sid } });
 
 const posterRows = () => h.db.select().from(schema.posters);
+/** The worker gets to every queued poster (here: they fail), so a new one may be made (SEC-13). */
+const settleQueued = () =>
+  h.db
+    .update(schema.posters)
+    .set({ status: 'failed', failureCode: 'render_failed' })
+    .where(eq(schema.posters.status, 'queued'));
 const auditRows = (action: string) =>
   h.db.select().from(schema.auditLog).where(eq(schema.auditLog.action, action));
 
@@ -277,6 +284,7 @@ describe('adminPosters.create', () => {
       await h.cityCoordinator(h.world.cityA.id),
     ]) {
       expect((await make(actor, { formats: ['story'] })).status).toBe(202);
+      await settleQueued();
     }
     expect(h.posterQueue.jobs).toHaveLength(2);
   });
@@ -313,13 +321,105 @@ describe('adminPosters.create', () => {
   });
 });
 
+describe('adminPosters.create while a poster is still queued (SEC-13)', () => {
+  it('answers conflict for the same session and template, for every staff role, and writes nothing', async () => {
+    await madePosters({ formats: ['story'] });
+    const jobs = h.posterQueue.jobs.length;
+    for (const who of [
+      admin,
+      await h.cityCoordinator(h.world.cityA.id),
+      await h.venueCoordinator(h.world.venueA1),
+    ]) {
+      // Another format or language does not matter: the template is still being made.
+      const res = await make(who, {
+        formats: ['print_a4'],
+        language: 'ur',
+        fields: { title: { ur: 'حلقہ' } },
+      });
+      expect(res.status).toBe(409);
+      expect(code(res)).toBe('conflict');
+    }
+    expect(await posterRows()).toHaveLength(1);
+    expect(await auditRows('poster.create')).toHaveLength(1);
+    expect(h.posterQueue.jobs).toHaveLength(jobs);
+  });
+
+  it('allows another template, another session, and the same one once the first is done', async () => {
+    await madePosters({ formats: ['story'] });
+    expect((await make(admin, { templateKey: 'night', formats: ['story'] })).status).toBe(202);
+    const other = await createSession(h, { venueId: h.world.venueA1, as: admin, title: 'Other' });
+    expect((await make(admin, { formats: ['story'] }, other.id)).status).toBe(202);
+
+    const [queued] = await h.db
+      .select()
+      .from(schema.posters)
+      .where(and(eq(schema.posters.sessionId, sessionId), eq(schema.posters.status, 'queued')))
+      .limit(1);
+    const sameTemplate = await h.db
+      .select()
+      .from(schema.posters)
+      .where(
+        and(
+          eq(schema.posters.sessionId, sessionId),
+          eq(schema.posters.templateId, queued!.templateId),
+        ),
+      );
+    // Ready: free again.
+    for (const row of sameTemplate) await finishPoster(h, row.id);
+    const next = await make(admin, { templateKey: 'cloud', formats: ['story'] });
+    expect(next.status).toBe(202);
+    // Failed: free again.
+    await failPoster(h, next.json<{ items: Poster[] }>().items[0]!.id, 'render_failed');
+    expect((await make(admin, { templateKey: 'cloud', formats: ['story'] })).status).toBe(202);
+  });
+
+  it('counts a queued remake as still being made', async () => {
+    const [p] = await madePosters({ formats: ['story'] });
+    await finishPoster(h, p!.id);
+    const remake = await h.api('adminPosters.regenerate', {
+      as: admin,
+      params: { posterId: p!.id },
+    });
+    expect(remake.status).toBe(202);
+    const res = await make(admin, { formats: ['story'] });
+    expect(res.status).toBe(409);
+    expect(code(res)).toBe('conflict');
+  });
+
+  it('stops blocking once a queued poster is older than the bound', async () => {
+    await madePosters({ formats: ['story'] });
+    h.clock.advanceMinutes(POSTER_QUEUED_BLOCK_MS / 60_000 - 1);
+    expect((await make(admin, { formats: ['story'] })).status).toBe(409);
+    h.clock.advanceMinutes(2);
+    expect((await make(admin, { formats: ['story'] })).status).toBe(202);
+  });
+
+  it('decides scope and the template first: outsiders get forbidden, an unknown template not_found', async () => {
+    await madePosters({ formats: ['story'] });
+    const outsider = await h.venueCoordinator(h.world.venueB1);
+    expect((await make(outsider, { formats: ['story'] })).status).toBe(403);
+    expect((await make(await h.person(), { formats: ['story'] })).status).toBe(403);
+    expect((await make(null, { formats: ['story'] })).status).toBe(401);
+    expect((await make(admin, { templateKey: 'nosuch', formats: ['story'] })).status).toBe(404);
+  });
+
+  it('lets only one of two parallel requests through', async () => {
+    const results = await Promise.all([
+      make(admin, { formats: ['story'] }),
+      make(admin, { formats: ['print_a4'] }),
+    ]);
+    expect(results.map((r) => r.status).sort()).toEqual([202, 409]);
+    expect(await posterRows()).toHaveLength(1);
+  });
+});
+
 describe('adminPosters.list', () => {
   it('lists newest first, with the file link only when ready and the failure code only when failed', async () => {
     const first = await madePosters({ formats: ['story', 'print_a4'] });
-    h.clock.advanceMinutes(5);
-    const second = await madePosters({ formats: ['link_preview'] });
     await finishPoster(h, first[0]!.id);
     await failPoster(h, first[1]!.id, 'text_too_long');
+    h.clock.advanceMinutes(5);
+    const second = await madePosters({ formats: ['link_preview'] });
 
     const res = await list(admin);
     expect(res.status).toBe(200);
@@ -737,6 +837,7 @@ describe('poster throttle (SEC-13)', () => {
     for (const who of staff) {
       for (let n = 0; n < 10; n++) {
         expect((await make(who, { formats: ['story'] })).status).toBe(202);
+        await settleQueued();
       }
       const over = await make(who, { formats: ['story'] });
       expect(over.status).toBe(429);
@@ -754,8 +855,10 @@ describe('poster throttle (SEC-13)', () => {
   it('counts regenerate against the same allowance', async () => {
     const [p] = await madePosters({ formats: ['story'] });
     await finishPoster(h, p!.id);
-    for (let n = 0; n < 9; n++)
+    for (let n = 0; n < 9; n++) {
       expect((await make(admin, { formats: ['story'] })).status).toBe(202);
+      await settleQueued();
+    }
     const remake = await h.api('adminPosters.regenerate', {
       as: admin,
       params: { posterId: p!.id },

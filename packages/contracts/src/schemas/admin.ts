@@ -370,6 +370,22 @@ export type SettingsUpdate = z.infer<typeof SettingsUpdate>;
 /** Rows allowed in one import call. */
 export const IMPORT_MAX_ROWS = 2000;
 
+/**
+ * Rows the API accepts in one `adminImport.coordinators` call (each row can send a paid WhatsApp
+ * invitation; security review SEC-03). The body schema still allows `IMPORT_MAX_ROWS`; a longer
+ * coordinator file is refused whole with `{ path: 'rows', code: 'too_big' }`, dry run included.
+ * The console can check it before sending.
+ */
+export const COORDINATOR_IMPORT_MAX_ROWS = 100;
+
+/**
+ * The issue code for "this person has sent as many coordinator invitations as allowed in 24
+ * hours" (single invites, resends and imports together; SEC-03). `adminRoles.invite` reports it
+ * on `phone`, `adminImport.coordinators` on `rows`. The limit is the API's setting, not part of
+ * the contract.
+ */
+export const INVITE_DAILY_LIMIT = 'invite_daily_limit';
+
 export const IMPORT_KINDS = ['venues', 'coordinators', 'sessions'] as const;
 export const ImportKind = z.enum(IMPORT_KINDS);
 export type ImportKind = z.infer<typeof ImportKind>;
@@ -401,6 +417,16 @@ export const IMPORT_SERVER_ISSUE_CODES = [
   'invalid_range',
 ] as const;
 export type ImportServerIssueCode = (typeof IMPORT_SERVER_ISSUE_CODES)[number];
+
+/**
+ * Request-level issue codes: they refuse the whole import (`validation_failed`, path `rows`, no
+ * `ImportResult`), unlike the per-row codes above. Only `adminImport.coordinators` uses them.
+ * - `too_big`: more than `COORDINATOR_IMPORT_MAX_ROWS` rows.
+ * - `invite_daily_limit` (`INVITE_DAILY_LIMIT`): the rows that would be created take the caller
+ *   past their invitations for the last 24 hours. Duplicate and invalid rows do not count.
+ */
+export const IMPORT_REQUEST_ISSUE_CODES = ['too_big', INVITE_DAILY_LIMIT] as const;
+export type ImportRequestIssueCode = (typeof IMPORT_REQUEST_ISSUE_CODES)[number];
 
 /**
  * A row is checked one by one on the server, so one bad row never rejects the whole request.

@@ -83,6 +83,23 @@ export const issueCodeOf = (issue: z.core.$ZodIssue): string => {
   return issue.code;
 };
 
+/**
+ * The server's own issue codes (not Zod's) that the apps explain in words, wherever they appear:
+ * each has the message `issues.<code>` in @qc/i18n, English and Urdu (a contract test checks).
+ * - `phone_not_pakistan_mobile`: sign-in takes only a Pakistani mobile number (`auth.requestCode`,
+ *   path `phone`).
+ * - `invite_daily_limit`: the caller has sent as many coordinator invitations as allowed in 24
+ *   hours (`adminRoles.invite` on `phone`, `adminImport.coordinators` on `rows`).
+ * Per-row import codes have their own console messages; a coordinator file over
+ * `COORDINATOR_IMPORT_MAX_ROWS` (`too_big` on `rows`) has `console.import.issue.tooManyInviteRows`.
+ */
+export const WORDED_ISSUE_CODES = ['phone_not_pakistan_mobile', 'invite_daily_limit'] as const;
+export type WordedIssueCode = (typeof WORDED_ISSUE_CODES)[number];
+
+/** The i18n key for a worded issue code's message. */
+export const issueMessageKey = (code: WordedIssueCode): `issues.${WordedIssueCode}` =>
+  `issues.${code}`;
+
 /** Turns a Zod error into issues, at most 20, for `validation_failed` and per-row import results. */
 export const issuesFromZod = (error: z.ZodError): ValidationIssue[] =>
   error.issues.map((i) => ({ path: i.path.join('.'), code: issueCodeOf(i) })).slice(0, 20);

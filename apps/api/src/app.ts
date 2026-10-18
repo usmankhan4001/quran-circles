@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { COORDINATOR_IMPORT_MAX_ROWS } from '@qc/contracts';
 import { DEFAULT_RATE_LIMITS, MemoryRateLimiter } from './middleware/rate-limit';
 import { corsMiddleware } from './middleware/cors';
 import { apiErrorHandler, apiNotFound, errorResponse } from './middleware/error-handler';
@@ -16,7 +17,7 @@ export const defaultConfig: ApiConfig = {
   trustProxy: false,
   rateLimits: DEFAULT_RATE_LIMITS,
   inviteTtlDays: 7,
-  inviteLimits: { perImport: 100, perActorPerDay: 200 },
+  inviteLimits: { perImport: COORDINATOR_IMPORT_MAX_ROWS, perActorPerDay: 200 },
   posterRateLimit: { limit: 10, windowSeconds: 60 },
   circleRequestTtlDays: 90,
   occurrenceHorizonDays: 90,
