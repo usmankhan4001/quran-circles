@@ -94,7 +94,12 @@ export default function VenuesPage() {
     {
       id: 'women',
       header: t('console.venues.col.womenSection'),
-      cell: (v) => (v.facilities.womenSection ? t('ui.on') : t('ui.off')),
+      cell: (v) =>
+        v.facilities.womenSection ? (
+          <Badge tone="accent">{t('ui.on')}</Badge>
+        ) : (
+          <Badge>{t('ui.off')}</Badge>
+        ),
     },
     {
       id: 'status',

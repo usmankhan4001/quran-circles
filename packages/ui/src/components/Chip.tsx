@@ -22,7 +22,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     minHeight: minTouchTarget,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     borderWidth: 1.5,
     overflow: 'hidden',
   },
@@ -32,7 +32,13 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     paddingStart: spacing.lg,
   },
-  iconGap: { marginEnd: spacing.sm },
+  iconGap: { marginEnd: spacing.xs + spacing.xxs },
+  removeBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
+    paddingHorizontal: spacing.sm,
+  },
 });
 
 export function Chip({ label, selected, onPress, onRemove, disabled, testID }: ChipProps) {
@@ -61,7 +67,7 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
         disabled={disabled}
         style={({ pressed }) => [
           styles.main,
-          { paddingEnd: onRemove ? spacing.sm : spacing.lg },
+          { paddingEnd: onRemove ? spacing.xs : spacing.lg },
           pressed ? { backgroundColor: on ? c.accentPressed : c.surfaceMuted } : undefined,
         ]}
       >
@@ -80,7 +86,7 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
           accessibilityLabel={theme.t('ui.remove', { name: label })}
           onPress={onRemove}
           disabled={disabled}
-          style={{ alignItems: 'center', justifyContent: 'center' }}
+          style={styles.removeBtn}
         >
           <Icon name="close" size={16} color={disabled ? c.disabledText : fg} />
         </Touchable>

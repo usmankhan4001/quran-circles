@@ -14,6 +14,7 @@ import {
   Toast,
   formatNumber,
   minTouchTarget,
+  radii,
   spacing,
   useTheme,
 } from '@qc/ui';
@@ -239,6 +240,7 @@ function DayPanel({
   onRefresh: () => Promise<void>;
 }) {
   const { t, locale } = useT();
+  const { colors } = useTheme();
   const api = useApi();
   const reference = useReference();
   const [form, setForm] = useState<AyahForm>(() => ayahFormOf(pick));
@@ -321,7 +323,18 @@ function DayPanel({
             />
           </View>
           {pick ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.md,
+                padding: spacing.md,
+                backgroundColor: colors.surfaceMuted,
+                borderRadius: radii.lg,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
               <StarNumber value={pick.surah} />
               <View style={{ flex: 1, gap: spacing.xxs }}>
                 <Text variant="title2" testID="daily-ayah-current-ref">
@@ -502,15 +515,23 @@ function Upcoming({
                     reference: ref,
                   })}
                   onPress={() => onSelect(p.date)}
-                  style={{
+                  style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: spacing.md,
                     minHeight: minTouchTarget,
                     paddingVertical: spacing.sm,
+                    paddingHorizontal: spacing.sm,
+                    borderRadius: radii.md,
+                    backgroundColor:
+                      p.date === selected
+                        ? colors.accentSubtle
+                        : pressed
+                          ? colors.surfaceMuted
+                          : undefined,
                     borderTopWidth: i === 0 ? 0 : 1,
                     borderTopColor: colors.border,
-                  }}
+                  })}
                 >
                   <StarNumber value={p.surah} />
                   <View style={{ flex: 1, gap: spacing.xxs }}>
@@ -519,7 +540,11 @@ function Upcoming({
                       {dateLabel}
                     </Text>
                   </View>
-                  <Icon name="chevron-forward" size={20} color={colors.textSecondary} />
+                  <Icon
+                    name="chevron-forward"
+                    size={20}
+                    color={p.date === selected ? colors.accent : colors.textSecondary}
+                  />
                 </Pressable>
               );
             })}

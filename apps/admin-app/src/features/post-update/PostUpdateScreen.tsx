@@ -4,6 +4,7 @@ import type { AdminSession, Locale } from '@qc/contracts';
 import {
   Button,
   Card,
+  Chip,
   ConfirmSheet,
   Select,
   SegmentedControl,
@@ -402,6 +403,24 @@ function PostUpdateFlow({
                 ...templates.map((x) => ({ value: x.key, label: templateLabel(t, x.key) })),
               ]}
             />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
+              <Chip
+                label={t('admin.postUpdate.template.none')}
+                selected={!form.templateKey}
+                onPress={() => setForm((f) => applyTemplate({ ...f, templateValues: {} }, null))}
+              />
+              {templates.map((x) => (
+                <Chip
+                  key={x.key}
+                  label={templateLabel(t, x.key)}
+                  selected={form.templateKey === x.key}
+                  onPress={() => {
+                    const values = suggestedValues(x, session, locale, form.templateValues);
+                    setForm((f) => applyTemplate({ ...f, templateValues: values }, x));
+                  }}
+                />
+              ))}
+            </View>
             {template
               ? template.variables.map((name) => (
                   <TextField
@@ -496,7 +515,7 @@ function ReachCount({ reach }: { reach: RecipientPreview }) {
   }
   if (reach.status !== 'ready' || reach.recipients === null) return null;
   return (
-    <Text variant="label" testID="post-update-count">
+    <Text variant="label" color="textAccent" testID="post-update-count">
       {t.plural('admin.postUpdate.willReach', reach.recipients)}
     </Text>
   );

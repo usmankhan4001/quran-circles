@@ -35,6 +35,8 @@ export function ActionTile({ icon, label, onPress, half, testID }: ActionTilePro
         paddingVertical: spacing.sm,
         paddingHorizontal: spacing.xs,
         borderRadius: radii.lg,
+        borderWidth: 1,
+        borderColor: pressed ? colors.accent : colors.border,
         backgroundColor: pressed ? colors.accentSubtle : colors.surfaceMuted,
       })}
     >

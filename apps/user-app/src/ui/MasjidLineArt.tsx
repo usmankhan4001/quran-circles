@@ -117,6 +117,22 @@ export function MasjidLineArt({ height: h = 120, testID }: MasjidLineArtProps) {
           },
         ]}
       />
+      {/* inner arched portal */}
+      <View
+        style={[
+          s.abs,
+          outline,
+          {
+            bottom: 0,
+            start: center(h * 0.12),
+            width: h * 0.12,
+            height: h * 0.18,
+            borderTopLeftRadius: h * 0.06,
+            borderTopRightRadius: h * 0.06,
+            borderBottomWidth: 0,
+          },
+        ]}
+      />
     </View>
   );
 }

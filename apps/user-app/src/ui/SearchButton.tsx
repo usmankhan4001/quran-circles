@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
+import { Icon, Text, elevation, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
 
 export interface SearchButtonProps {
   /** The name a screen reader says. */
@@ -34,16 +34,18 @@ export function SearchButton({ label, placeholder, onPress, testID }: SearchButt
       aria-label={`${label}. ${placeholder}`}
       testID={testID}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: c.surface,
-          borderWidth: theme.mode === 'light' ? 0 : 1,
-          borderColor: c.borderStrong,
+          backgroundColor: pressed ? c.surfaceMuted : c.surface,
+          borderWidth: 1,
+          borderColor: theme.mode === 'light' ? 'transparent' : c.borderStrong,
+          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.995 }] : undefined,
         },
       ]}
     >
-      <Icon name="search" size={22} color={c.textSecondary} />
+      <Icon name="search" size={20} color={c.textAccent} />
       <View style={styles.grow}>
         <Text variant="body" color="textSecondary" numberOfLines={1}>
           {placeholder}

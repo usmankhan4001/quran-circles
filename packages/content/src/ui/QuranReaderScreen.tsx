@@ -535,15 +535,35 @@ const HeadingRow = memo(function HeadingRow({
   i18n: ContentI18n;
 }) {
   const info = row.surah !== null ? getSurah(row.surah) : undefined;
+  const theme = useTheme();
   return (
-    <View style={{ paddingHorizontal: screenGutter, paddingVertical: spacing.md, gap: spacing.sm }}>
+    <View
+      style={{
+        marginHorizontal: screenGutter,
+        marginVertical: spacing.sm,
+        paddingHorizontal: spacing.lg,
+        paddingVertical: spacing.md,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.accentSubtle,
+        gap: spacing.sm,
+      }}
+    >
       {info ? (
-        <Text variant="title3" heading={2} align="center">
+        <Text variant="title3" heading={2} align="center" color="textOnAccentSubtle">
           {i18n.t('quran.surah.title', { name: surahName(i18n, info) })}
         </Text>
       ) : null}
       {row.bismillah ? (
-        <Text variant="quran" lang="ar" align="center" style={arabicStyle} testID="bismillah">
+        <Text
+          variant="quran"
+          lang="ar"
+          align="center"
+          color="textOnAccentSubtle"
+          style={arabicStyle}
+          testID="bismillah"
+        >
           {row.bismillah}
         </Text>
       ) : null}
@@ -579,12 +599,13 @@ const VerseRow = memo(function VerseRow({
       testID={`verse-${surah}-${ayah}`}
       style={{
         paddingHorizontal: screenGutter,
-        paddingVertical: spacing.md,
+        paddingVertical: spacing.lg,
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
         borderStartWidth: highlighted ? 4 : 0,
         borderStartColor: theme.colors.accent,
-        gap: spacing.sm,
+        backgroundColor: highlighted ? theme.colors.surfaceMuted : 'transparent',
+        gap: spacing.md,
       }}
     >
       <View accessible style={{ gap: spacing.sm }}>
@@ -594,7 +615,7 @@ const VerseRow = memo(function VerseRow({
           style={{
             flexDirection: theme.direction === 'rtl' ? 'row' : 'row-reverse',
             alignItems: 'flex-start',
-            gap: spacing.sm,
+            gap: spacing.md,
           }}
         >
           <StarNumber
@@ -631,7 +652,7 @@ const VerseRow = memo(function VerseRow({
       >
         <Button
           variant="tertiary"
-          icon={bookmarked ? 'close' : 'plus'}
+          icon={bookmarked ? 'close' : 'bookmark'}
           label={bookmarked ? i18n.t('quran.bookmark.remove') : i18n.t('quran.bookmark.add')}
           accessibilityLabel={
             bookmarked
@@ -643,6 +664,7 @@ const VerseRow = memo(function VerseRow({
         />
         <Button
           variant="tertiary"
+          icon="share"
           label={i18n.t('quran.share.action')}
           onPress={() => onShare(row)}
           testID={`share-${surah}-${ayah}`}

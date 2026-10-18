@@ -200,7 +200,9 @@ function ScheduleFlow({ loaded, now }: { loaded: Loaded; now: Date }) {
               borderRadius: 22,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: colors.surface,
+              backgroundColor: colors.accentSubtle,
+              borderWidth: 1,
+              borderColor: colors.border,
             }}
           >
             <Icon name="clock" color={colors.accent} size={22} />

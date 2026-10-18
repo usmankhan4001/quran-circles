@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
+import { Icon, Text, elevation, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
 
 export interface ChoiceOption<T extends string> {
   value: T;
@@ -29,8 +29,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.section,
-    borderWidth: 1.5,
+    borderRadius: radii.card,
+    borderWidth: 1,
   },
   tick: { height: 20, justifyContent: 'center' },
   icon: { height: 32, justifyContent: 'center' },
@@ -48,7 +48,8 @@ export function ChoiceCards<T extends string>({
   accessibilityLabel,
   testID,
 }: ChoiceCardsProps<T>) {
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   return (
     <View testID={testID} role="radiogroup" aria-label={accessibilityLabel} style={styles.row}>
       {options.map((option) => {
@@ -64,11 +65,25 @@ export function ChoiceCards<T extends string>({
             disabled={off}
             testID={testID ? `${testID}-${option.value}` : undefined}
             onPress={() => onChange(option.value)}
-            style={[
+            style={({ pressed }) => [
               styles.card,
               {
                 backgroundColor: off ? c.disabledBackground : selected ? c.accent : c.surface,
-                borderColor: off ? c.disabledBackground : selected ? c.accent : c.borderStrong,
+                borderColor: off
+                  ? c.disabledBackground
+                  : selected
+                    ? c.accent
+                    : theme.mode === 'highContrast'
+                      ? c.borderStrong
+                      : c.border,
+                boxShadow:
+                  !off && theme.mode === 'light'
+                    ? selected
+                      ? elevation.medium
+                      : elevation.low
+                    : undefined,
+                transform:
+                  pressed && !off && !theme.reduceMotion ? [{ scale: 0.98 }] : undefined,
               },
             ]}
           >

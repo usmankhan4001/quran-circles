@@ -37,14 +37,15 @@ const TILE = 40;
 const styles = StyleSheet.create({
   hero: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xl,
     overflow: 'hidden',
   },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 48 },
   grow: { flex: 1 },
-  titles: { marginTop: spacing.sm },
-  body: { marginTop: spacing.md },
+  titles: { marginTop: spacing.sm, gap: spacing.xxs },
+  giltRule: { width: 32, height: 3, borderRadius: radii.pill, marginTop: spacing.xs },
+  body: { marginTop: spacing.lg },
   pattern: {
     position: 'absolute',
     top: 0,
@@ -141,6 +142,9 @@ export function HeroHeader({
             <Text variant="body" color="textOnHero">
               {subtitle}
             </Text>
+          ) : null}
+          {title && theme.mode !== 'highContrast' && !forced ? (
+            <View aria-hidden style={[styles.giltRule, { backgroundColor: c.decoration }]} />
           ) : null}
         </View>
       ) : null}

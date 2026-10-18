@@ -181,24 +181,26 @@ function PlaceView({
         </Text>
       </Card>
 
-      <View testID="today-times">
-        {PRAYER_NAMES.map((prayer) => {
-          const isNext = !next.tomorrow && next.prayer === prayer;
-          const time = clockText(i18n, todayTimes.times[prayer], place);
-          return (
-            <ListItem
-              key={prayer}
-              testID={`time-${prayer}`}
-              title={prayerName(i18n, prayer)}
-              {...(isNext ? { subtitle: i18n.t('prayer.badge.next'), selected: true } : {})}
-              trailing={<Text strong>{time}</Text>}
-              accessibilityLabel={`${prayerName(i18n, prayer)}, ${time}${isNext ? `, ${i18n.t('prayer.badge.next')}` : ''}`}
-              chevron={false}
-              divider
-            />
-          );
-        })}
-      </View>
+      <Card variant="outlined" padding="none">
+        <View testID="today-times">
+          {PRAYER_NAMES.map((prayer, index) => {
+            const isNext = !next.tomorrow && next.prayer === prayer;
+            const time = clockText(i18n, todayTimes.times[prayer], place);
+            return (
+              <ListItem
+                key={prayer}
+                testID={`time-${prayer}`}
+                title={prayerName(i18n, prayer)}
+                {...(isNext ? { subtitle: i18n.t('prayer.badge.next'), selected: true } : {})}
+                trailing={<Text strong>{time}</Text>}
+                accessibilityLabel={`${prayerName(i18n, prayer)}, ${time}${isNext ? `, ${i18n.t('prayer.badge.next')}` : ''}`}
+                chevron={false}
+                divider={index < PRAYER_NAMES.length - 1}
+              />
+            );
+          })}
+        </View>
+      </Card>
 
       <Text variant="caption" color="textSecondary" testID="hijri-note">
         {i18n.t('prayer.hijriNote')}

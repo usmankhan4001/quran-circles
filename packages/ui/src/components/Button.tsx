@@ -31,9 +31,9 @@ export interface ButtonProps {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   base: {
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + spacing.xxs,
   },
   full: { alignSelf: 'stretch' },
   gap: { marginEnd: spacing.sm },

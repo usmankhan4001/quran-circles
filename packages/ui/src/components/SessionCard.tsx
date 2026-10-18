@@ -1,6 +1,7 @@
 import type { GestureResponderEvent } from 'react-native';
 import { StyleSheet, View } from 'react-native';
-import { spacing } from '../tokens';
+import { useTheme } from '../theme';
+import { radii, spacing } from '../tokens';
 import { Card } from './Card';
 import { SeatMeter } from './SeatMeter';
 import { Tag, type TagKind } from './Tag';
@@ -27,10 +28,20 @@ export interface SessionCardProps {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'flex-start' },
-  main: { flex: 1, paddingEnd: spacing.md },
-  when: { alignItems: 'flex-end' },
+  top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  main: { flex: 1, paddingEnd: spacing.md, gap: spacing.xxs },
+  when: {
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.md,
+  },
   gap: { marginTop: spacing.sm },
+  seatsFooter: {
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+  },
 });
 
 /** A session in a list or on Home (D11): what and where on the start side, when on the end. */
@@ -47,6 +58,8 @@ export function SessionCard({
   accessibilityLabel,
   testID,
 }: SessionCardProps) {
+  const theme = useTheme();
+  const c = theme.colors;
   return (
     <Card
       onPress={onPress}
@@ -67,12 +80,12 @@ export function SessionCard({
             {place}
           </Text>
         </View>
-        <View style={styles.when}>
-          <Text variant="title2" lang="en" direction="ltr" color="textAccent">
+        <View style={[styles.when, { backgroundColor: c.accentSubtle }]}>
+          <Text variant="title2" lang="en" direction="ltr" color="textOnAccentSubtle">
             {time}
           </Text>
           {day ? (
-            <Text variant="caption" color="textSecondary">
+            <Text variant="caption" color="textOnAccentSubtle">
               {day}
             </Text>
           ) : null}
@@ -91,7 +104,7 @@ export function SessionCard({
         </View>
       ) : null}
       {seats ? (
-        <View style={styles.gap}>
+        <View style={[styles.seatsFooter, { borderTopColor: c.border }]}>
           <SeatMeter taken={seats.taken} capacity={seats.capacity} />
         </View>
       ) : null}

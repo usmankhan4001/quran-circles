@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { Text, formatNumber, useTheme } from '@qc/ui';
+import { Text, elevation, formatNumber, useTheme } from '@qc/ui';
 
 export interface MapPinProps {
   /** How many circles are at this place. One shows a plain dot. */
@@ -38,6 +38,7 @@ export function MapPin({ count = 1, selected = false, size = 32, testID }: MapPi
             backgroundColor: c.hero,
             borderWidth: selected ? 3 : 2,
             borderColor: selected ? c.decoration : c.textOnHero,
+            boxShadow: theme.mode === 'light' ? elevation.medium : undefined,
           },
         ]}
       >

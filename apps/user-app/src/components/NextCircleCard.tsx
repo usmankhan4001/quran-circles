@@ -111,8 +111,8 @@ export function NextCircleCard({
         styles.card,
         {
           backgroundColor: c.surface,
-          borderWidth: theme.mode === 'light' ? 0 : 1,
-          borderColor: c.border,
+          borderWidth: 1,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
           boxShadow: theme.mode === 'light' ? elevation.medium : undefined,
         },
       ]}
@@ -159,7 +159,14 @@ export function NextCircleCard({
       <View style={styles.chips}>
         {portion ? (
           <View
-            style={[styles.chip, { backgroundColor: c.warningSubtle }]}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: c.warningSubtle,
+                borderWidth: 1,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.decoration,
+              },
+            ]}
             testID="home-lead-portion"
           >
             <Icon name="book" size={16} color={c.textOnWarningSubtle} />
@@ -168,7 +175,17 @@ export function NextCircleCard({
             </Text>
           </View>
         ) : null}
-        <View style={[styles.chip, { backgroundColor: c.accentSubtle }]} testID="home-lead-section">
+        <View
+          style={[
+            styles.chip,
+            {
+              backgroundColor: c.accentSubtle,
+              borderWidth: 1,
+              borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+            },
+          ]}
+          testID="home-lead-section"
+        >
           <SectionIcon section={session.section} size={16} color={c.textOnAccentSubtle} />
           <Text variant="caption" color="textOnAccentSubtle" strong>
             {section}

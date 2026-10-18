@@ -244,22 +244,28 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       </Card>
 
       <Card>
-        <Text variant="title3" heading={2}>
-          {t('admin.venueEditor.facilities.title')}
-        </Text>
-        <Text variant="caption" color="textSecondary">
-          {t('admin.venueEditor.facilities.help')}
-        </Text>
-        {FACILITY_KEYS.map((key) => (
-          <Checkbox
-            key={key}
-            testID={`venue-facility-${key}`}
-            label={t(`admin.venueEditor.facility.${key}`)}
-            checked={form.facilities[key]}
-            onChange={(on) => patch({ facilities: { ...form.facilities, [key]: on } })}
-            disabled={busy}
-          />
-        ))}
+        <View style={{ gap: spacing.md }}>
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="title3" heading={2}>
+              {t('admin.venueEditor.facilities.title')}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              {t('admin.venueEditor.facilities.help')}
+            </Text>
+          </View>
+          <View style={{ gap: spacing.sm }}>
+            {FACILITY_KEYS.map((key) => (
+              <Checkbox
+                key={key}
+                testID={`venue-facility-${key}`}
+                label={t(`admin.venueEditor.facility.${key}`)}
+                checked={form.facilities[key]}
+                onChange={(on) => patch({ facilities: { ...form.facilities, [key]: on } })}
+                disabled={busy}
+              />
+            ))}
+          </View>
+        </View>
       </Card>
       <Card>
         <BilingualField

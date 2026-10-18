@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Button, Card, Text, spacing } from '@qc/ui';
+import { Button, Card, Icon, Text, radii, spacing, useTheme } from '@qc/ui';
 import { getSurah } from '../meta/surahs';
 import { surahName } from './format';
 import { useReadingPosition } from './hooks';
@@ -23,17 +23,40 @@ export function ContinueReadingCard({
   testID,
 }: ContinueReadingCardProps) {
   const i18n = useContentI18n();
+  const theme = useTheme();
+  const c = theme.colors;
   const { position, loading } = useReadingPosition();
   const surah = position ? getSurah(position.surah) : undefined;
   if (loading) return null;
+
+  const badge = (
+    <View
+      aria-hidden
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: radii.md,
+        backgroundColor: c.accentSubtle,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Icon name="book" size={22} color={c.textOnAccentSubtle} />
+    </View>
+  );
 
   if (!position || !surah) {
     if (variant === 'tab') return null;
     return (
       <Card testID={testID}>
-        <Text variant="title3" heading={2}>
-          {i18n.t('home.reading.title')}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          {badge}
+          <View style={{ flex: 1 }}>
+            <Text variant="title3" heading={2}>
+              {i18n.t('home.reading.title')}
+            </Text>
+          </View>
+        </View>
         <View style={{ height: spacing.md }} />
         <Button
           label={i18n.t('home.reading.start')}
@@ -49,12 +72,17 @@ export function ContinueReadingCard({
   if (variant === 'tab') {
     return (
       <Card testID={testID}>
-        <Text variant="caption" color="textSecondary">
-          {i18n.t('home.reading.title')}
-        </Text>
-        <Text variant="title3" heading={2} testID="continue-reading-place">
-          {place}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          {badge}
+          <View style={{ flex: 1, gap: spacing.xxs }}>
+            <Text variant="caption" color="textSecondary">
+              {i18n.t('home.reading.title')}
+            </Text>
+            <Text variant="title3" heading={2} testID="continue-reading-place">
+              {place}
+            </Text>
+          </View>
+        </View>
         <View style={{ height: spacing.md }} />
         <Button
           size="large"
@@ -71,13 +99,17 @@ export function ContinueReadingCard({
       onPress={() => onOpen({ surah: position.surah, ayah: position.ayah })}
       accessibilityLabel={`${i18n.t('home.reading.title')}. ${place}`}
     >
-      <Text variant="caption" color="textSecondary" decorative>
-        {i18n.t('home.reading.title')}
-      </Text>
-      <View style={{ height: spacing.xs }} />
-      <Text variant="title3" heading={2} decorative testID="continue-reading-place">
-        {place}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        {badge}
+        <View style={{ flex: 1, gap: spacing.xxs }}>
+          <Text variant="caption" color="textSecondary" decorative>
+            {i18n.t('home.reading.title')}
+          </Text>
+          <Text variant="title3" heading={2} decorative testID="continue-reading-place">
+            {place}
+          </Text>
+        </View>
+      </View>
     </Card>
   );
 }

@@ -19,8 +19,9 @@ const styles = StyleSheet.create({
     margin: spacing.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
+    borderRadius: radii.md,
     gap: spacing.xxs,
+    borderWidth: 1,
   },
 });
 
@@ -47,11 +48,14 @@ export function MapPreviewCard({ pins, title, caption, onPress, testID }: MapPre
       aria-label={[title, caption].filter(Boolean).join(', ')}
       testID={testID}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: c.accentSubtle,
+          borderWidth: 1,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
           boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.995 }] : undefined,
         },
       ]}
     >
@@ -65,6 +69,7 @@ export function MapPreviewCard({ pins, title, caption, onPress, testID }: MapPre
             start: -8,
             end: -8,
             transform: [{ rotate: '-8deg' }],
+            opacity: 0.85,
           },
         ]}
       />
@@ -78,6 +83,7 @@ export function MapPreviewCard({ pins, title, caption, onPress, testID }: MapPre
             start: '30%',
             width: '60%',
             transform: [{ rotate: '24deg' }],
+            opacity: 0.7,
           },
         ]}
       />
@@ -86,7 +92,16 @@ export function MapPreviewCard({ pins, title, caption, onPress, testID }: MapPre
           <MapPin size={24} selected={index === 0} />
         </View>
       ))}
-      <View style={[styles.caption, { backgroundColor: c.surface }]}>
+      <View
+        style={[
+          styles.caption,
+          {
+            backgroundColor: c.surface,
+            borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+            boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          },
+        ]}
+      >
         <Text variant="label">{title}</Text>
         {caption ? (
           <Text variant="caption" color="textSecondary">

@@ -12,6 +12,7 @@ import {
   Text,
   isolate,
   spacing,
+  useTheme,
 } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
@@ -200,9 +201,24 @@ function Totals({
   totals: { registrations: number; people: number; waitlisted: number };
 }) {
   const { t, n } = useT();
-  const stat = (label: string, value: number, id: string) => (
-    <View style={{ flex: 1, alignItems: 'center' }} key={id}>
-      <Text variant="title2" align="center" testID={`registrants-total-${id}`}>
+  const { colors } = useTheme();
+  const stat = (label: string, value: number, id: string, isLast: boolean, isPrimary: boolean) => (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        borderEndWidth: isLast ? 0 : 1,
+        borderEndColor: colors.border,
+        paddingHorizontal: spacing.xs,
+      }}
+      key={id}
+    >
+      <Text
+        variant="title2"
+        align="center"
+        testID={`registrants-total-${id}`}
+        color={isPrimary ? 'textAccent' : undefined}
+      >
         {n(value)}
       </Text>
       <Text variant="caption" color="textSecondary" align="center">
@@ -212,10 +228,10 @@ function Totals({
   );
   return (
     <Card variant="flat">
-      <View style={{ flexDirection: 'row', gap: spacing.md }}>
-        {stat(t('admin.registrants.stat.people'), totals.people, 'people')}
-        {stat(t('admin.registrants.stat.registrations'), totals.registrations, 'registrations')}
-        {stat(t('admin.registrants.stat.waitlisted'), totals.waitlisted, 'waitlisted')}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        {stat(t('admin.registrants.stat.people'), totals.people, 'people', false, true)}
+        {stat(t('admin.registrants.stat.registrations'), totals.registrations, 'registrations', false, false)}
+        {stat(t('admin.registrants.stat.waitlisted'), totals.waitlisted, 'waitlisted', true, false)}
       </View>
     </Card>
   );

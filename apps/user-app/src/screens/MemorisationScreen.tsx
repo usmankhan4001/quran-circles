@@ -50,7 +50,8 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.section,
+    borderRadius: radii.card,
+    borderWidth: 1,
   },
   sheet: { gap: spacing.md },
 });
@@ -71,7 +72,8 @@ function revisedLine(entry: MemorisationEntry, t: TFunction, locale: Locale): st
 /** Counts by mark, on the glass of the green header (as the numbers on My Journey). */
 function MemorisationSummary({ items }: { items: readonly MemorisationEntry[] }) {
   const { t, locale } = useI18n();
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   const counts = countByStatus(items);
   return (
     <View style={styles.stats} testID="memorisation-summary">
@@ -82,7 +84,13 @@ function MemorisationSummary({ items }: { items: readonly MemorisationEntry[] })
           <View
             key={status}
             accessible
-            style={[styles.stat, { backgroundColor: c.heroGlass }]}
+            style={[
+              styles.stat,
+              {
+                backgroundColor: c.heroGlass,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.heroGlass,
+              },
+            ]}
             testID={`memorisation-stat-${status}`}
           >
             <Text variant="title1" color="textOnHero">

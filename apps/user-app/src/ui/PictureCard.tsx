@@ -32,9 +32,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.sm,
     start: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.sm + spacing.xxs,
     paddingVertical: spacing.xxs,
     borderRadius: radii.pill,
+    borderWidth: 1,
   },
   body: { padding: spacing.md, gap: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -67,7 +68,16 @@ export function PictureCard({
     <>
       <VenueArt seed={seed} height={artHeight}>
         {distance ? (
-          <View style={[styles.tag, { backgroundColor: c.surface }]}>
+          <View
+            style={[
+              styles.tag,
+              {
+                backgroundColor: c.surface,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+                boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+              },
+            ]}
+          >
             <Text variant="caption" strong decorative>
               {distance}
             </Text>
@@ -99,8 +109,8 @@ export function PictureCard({
     {
       ...(width ? { width } : {}),
       backgroundColor: c.surface,
-      borderWidth: theme.mode === 'light' ? 0 : 1,
-      borderColor: c.border,
+      borderWidth: 1,
+      borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
       boxShadow: theme.mode === 'light' ? elevation.low : undefined,
     },
   ];
@@ -114,7 +124,17 @@ export function PictureCard({
   const label =
     accessibilityLabel ?? [title, caption, sectionLabel, distance].filter(Boolean).join(', ');
   return (
-    <Pressable role="button" aria-label={label} testID={testID} onPress={onPress} style={style}>
+    <Pressable
+      role="button"
+      aria-label={label}
+      testID={testID}
+      onPress={onPress}
+      style={({ pressed }) => [
+        style,
+        pressed ? { backgroundColor: c.surfaceMuted } : undefined,
+        pressed && !theme.reduceMotion ? { transform: [{ scale: 0.992 }] } : undefined,
+      ]}
+    >
       {body}
     </Pressable>
   );

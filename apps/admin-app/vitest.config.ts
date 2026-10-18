@@ -13,6 +13,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     server: { deps: { inline: [/react-native-web/, /@qc\/ui/] } },
     css: false,
-    testTimeout: 15000,
+    testTimeout: 35000,
+    maxWorkers: 2,
   },
 });

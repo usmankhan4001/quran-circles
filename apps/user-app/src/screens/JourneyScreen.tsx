@@ -30,7 +30,8 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.section,
+    borderRadius: radii.card,
+    borderWidth: 1,
   },
   stack: { gap: spacing.xl },
   list: { gap: spacing.lg },
@@ -40,7 +41,8 @@ const styles = StyleSheet.create({
 /** The three numbers at the top of My Journey (J1), on the glass of the green header. */
 function JourneySummary() {
   const { t, locale } = useI18n();
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   const registrations = useMyRegistrations();
   const follows = useMyFollows();
   const confirmed = registrations.data?.filter((r) => r.status === 'confirmed').length ?? 0;
@@ -59,7 +61,13 @@ function JourneySummary() {
         <View
           key={stat.key}
           accessible
-          style={[styles.stat, { backgroundColor: c.heroGlass }]}
+          style={[
+            styles.stat,
+            {
+              backgroundColor: c.heroGlass,
+              borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.heroGlass,
+            },
+          ]}
           testID={`journey-stat-${stat.key}`}
         >
           <Text variant="title1" color="textOnHero">

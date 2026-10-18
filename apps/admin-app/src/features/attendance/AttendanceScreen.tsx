@@ -7,11 +7,13 @@ import {
   Card,
   Checkbox,
   EmptyState,
+  SeatMeter,
   Text,
   TextField,
   Toast,
   isolate,
   spacing,
+  useTheme,
 } from '@qc/ui';
 import { useMutation, useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
@@ -100,6 +102,7 @@ export function AttendanceScreen({
 
 function AttendanceFlow({ sessionId, occurrenceId }: { sessionId: string; occurrenceId: string }) {
   const api = useApi();
+  const session = useSession(sessionId);
   const attendance = useQuery(
     () => api.adminAttendance.get({ params: { occurrenceId } }),
     [occurrenceId],
@@ -107,7 +110,12 @@ function AttendanceFlow({ sessionId, occurrenceId }: { sessionId: string; occurr
   return (
     <QueryBoundary query={attendance} testID="attendance-data">
       {(initial) => (
-        <AttendanceForm sessionId={sessionId} occurrenceId={occurrenceId} initial={initial} />
+        <AttendanceForm
+          sessionId={sessionId}
+          occurrenceId={occurrenceId}
+          initial={initial}
+          capacity={session.data?.registration.capacity ?? null}
+        />
       )}
     </QueryBoundary>
   );
@@ -118,12 +126,15 @@ function AttendanceForm({
   sessionId,
   occurrenceId,
   initial,
+  capacity,
 }: {
   sessionId: string;
   occurrenceId: string;
   initial: Attendance;
+  capacity?: number | null;
 }) {
   const { t, n } = useT();
+  const { colors } = useTheme();
   const api = useApi();
   const [state, dispatch] = useReducer(attendanceReducer, initial, (saved) =>
     attendanceReducer(initialAttendanceState, { type: 'load', attendance: saved }),
@@ -197,6 +208,14 @@ function AttendanceForm({
               {t('admin.attendance.tickedTotal', { count: n(total) })}
             </Text>
           ) : null}
+          {capacity !== null && capacity !== undefined ? (
+            <View style={{ gap: spacing.xs, paddingTop: spacing.xs }}>
+              <SeatMeter taken={state.headcount} capacity={capacity} />
+              <Text variant="caption" color="textSecondary">
+                {t('admin.home.seats', { taken: n(state.headcount), capacity: n(capacity) })}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </Card>
 
@@ -267,21 +286,29 @@ function AttendanceForm({
               </View>
             ) : (
               <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-                {registrants.items.map((r) => (
-                  <Checkbox
+                {registrants.items.map((r, i) => (
+                  <View
                     key={r.id}
-                    testID={`attendance-tick-${r.id}`}
-                    label={r.name ? isolate(r.name) : t('admin.registrants.noName')}
-                    description={t('admin.registrants.party', { count: n(r.partySize) })}
-                    checked={r.id in state.ticked}
-                    onChange={(on) =>
-                      dispatch(
-                        on
-                          ? { type: 'tick', registrationId: r.id, count: r.partySize }
-                          : { type: 'untick', registrationId: r.id },
-                      )
-                    }
-                  />
+                    style={{
+                      paddingVertical: spacing.sm,
+                      borderTopWidth: i === 0 ? 0 : 1,
+                      borderTopColor: colors.border,
+                    }}
+                  >
+                    <Checkbox
+                      testID={`attendance-tick-${r.id}`}
+                      label={r.name ? isolate(r.name) : t('admin.registrants.noName')}
+                      description={t('admin.registrants.party', { count: n(r.partySize) })}
+                      checked={r.id in state.ticked}
+                      onChange={(on) =>
+                        dispatch(
+                          on
+                            ? { type: 'tick', registrationId: r.id, count: r.partySize }
+                            : { type: 'untick', registrationId: r.id },
+                        )
+                      }
+                    />
+                  </View>
                 ))}
                 {registrants.hasMore ? (
                   <Button
@@ -309,13 +336,20 @@ function AttendanceForm({
               {t('admin.attendance.dropInsHelper')}
             </Text>
           </View>
-          {state.dropIns.map((d) => (
+          {state.dropIns.map((d, i) => (
             <View
               key={d.id}
               testID={`attendance-dropin-${d.id}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.sm,
+                paddingVertical: spacing.xs,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: colors.border,
+              }}
             >
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, gap: spacing.xxs }}>
                 <Text variant="label">
                   {d.name ? isolate(d.name) : t('admin.attendance.unnamed')}
                 </Text>

@@ -76,7 +76,7 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
           styles.bar,
           {
             backgroundColor: c.surfaceRaised,
-            borderColor: theme.mode === 'light' ? c.surfaceRaised : c.border,
+            borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
             boxShadow: theme.mode === 'light' ? elevation.high : undefined,
           },
         ]}
@@ -98,6 +98,7 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
                 selected ? chosen : other,
                 {
                   backgroundColor: selected ? c.accent : pressed ? c.surfaceMuted : 'transparent',
+                  boxShadow: selected && theme.mode === 'light' ? elevation.medium : undefined,
                 },
               ]}
             >

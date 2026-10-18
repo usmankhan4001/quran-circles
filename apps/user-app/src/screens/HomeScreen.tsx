@@ -6,6 +6,7 @@ import {
   EmptyState,
   Icon,
   Text,
+  elevation,
   formatNumber,
   minTouchTarget,
   radii,
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
   filter: {
     width: minTouchTarget + spacing.sm,
     height: minTouchTarget + spacing.sm,
-    borderRadius: radii.field,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
     // Invisible normally; forced colours (Windows high contrast) paint it, so the filled
@@ -272,7 +273,14 @@ export function HomeScreen() {
             aria-label={t('nearby.filters.open')}
             testID="home-filters"
             onPress={() => nav.tab({ name: 'nearby' })}
-            style={[styles.filter, { backgroundColor: c.accent }]}
+            style={({ pressed }) => [
+              styles.filter,
+              {
+                backgroundColor: pressed ? c.accentPressed : c.accent,
+                boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+                transform: pressed && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
+              },
+            ]}
           >
             <Icon name="filter" size={22} color={c.textOnAccent} />
           </Pressable>

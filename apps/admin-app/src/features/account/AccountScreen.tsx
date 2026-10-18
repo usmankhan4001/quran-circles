@@ -9,6 +9,7 @@ import {
   Text,
   Toast,
   spacing,
+  useTheme,
   type TextSizeStep,
 } from '@qc/ui';
 import {
@@ -25,6 +26,7 @@ import { isolate } from '@qc/ui';
 /** Who is signed in, which role they are working as, and the display choices. */
 export function AccountScreen() {
   const { t } = useT();
+  const { colors } = useTheme();
   const { me, signOut } = useAuth();
   const { locale, setLocale, textSize, setTextSize, colorChoice, setColorChoice } = useAppearance();
   const sizes: TextSizeStep[] = [0, 1, 2, 3];
@@ -33,7 +35,16 @@ export function AccountScreen() {
   return (
     <Screen title={t('admin.account.title')} testID="account">
       <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.md,
+            borderStartWidth: 3,
+            borderStartColor: colors.accent,
+            paddingStart: spacing.sm,
+          }}
+        >
           <Avatar name={me?.displayName ?? t('admin.account.noName')} size="lg" />
           <View style={{ flex: 1, gap: spacing.xs }}>
             <Text variant="caption" color="textSecondary">

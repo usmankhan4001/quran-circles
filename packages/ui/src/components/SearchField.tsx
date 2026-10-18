@@ -1,7 +1,7 @@
 import { StyleSheet, TextInput, View } from 'react-native';
 import { textAlignStart } from '../direction';
 import { useTheme } from '../theme';
-import { radii, spacing } from '../tokens';
+import { elevation, radii, spacing } from '../tokens';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
 
@@ -24,7 +24,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: radii.pill,
     paddingStart: spacing.lg,
-    paddingEnd: spacing.xxs,
+    paddingEnd: spacing.xs,
   },
   // `minWidth: 0` lets the field shrink below the browser's default input width, so it fits
   // a 320 px screen at the largest text size (A-06).
@@ -53,10 +53,11 @@ export function SearchField({
           // high contrast), where the field would otherwise have no edge at all (A-07).
           borderWidth: 1,
           borderColor: theme.mode === 'light' ? 'transparent' : c.borderStrong,
+          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
         },
       ]}
     >
-      <Icon name="search" size={20} color={c.textSecondary} />
+      <Icon name="search" size={20} color={c.textAccent} />
       <TextInput
         testID={testID}
         role="searchbox"

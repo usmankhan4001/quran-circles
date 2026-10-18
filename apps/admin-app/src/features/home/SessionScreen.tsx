@@ -60,9 +60,13 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                     {t(`admin.home.section.${s.section}`)} ·{' '}
                     {s.language === 'ur' ? 'اردو' : 'English'}
                   </Text>
-                  {s.status === 'draft' ? <Tag label={t('admin.home.draft')} kind="gilt" /> : null}
+                  {s.status === 'draft' ? (
+                    <View style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }}>
+                      <Tag label={t('admin.home.draft')} kind="gilt" />
+                    </View>
+                  ) : null}
                   {s.registration.capacity !== null ? (
-                    <>
+                    <View style={{ gap: spacing.xs, paddingTop: spacing.xs }}>
                       <SeatMeter
                         taken={s.registration.seatsTaken ?? 0}
                         capacity={s.registration.capacity}
@@ -73,7 +77,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                           capacity: formatNumber(s.registration.capacity, locale),
                         })}
                       </Text>
-                    </>
+                    </View>
                   ) : null}
                 </View>
               </Card>
@@ -166,16 +170,25 @@ function OccurrenceCard({
   return (
     <Card testID={`occurrence-${o.id}`}>
       <View style={{ gap: spacing.sm }}>
-        <Text variant="label">
-          {formatInstantDate(o.startsAt, locale)} · {formatInstantTime(o.startsAt, locale)}
-        </Text>
-        {o.status === 'cancelled' ? <Tag label={t('admin.home.cancelled')} kind="alert" /> : null}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.sm,
+          }}
+        >
+          <Text variant="label">
+            {formatInstantDate(o.startsAt, locale)} · {formatInstantTime(o.startsAt, locale)}
+          </Text>
+          {o.status === 'cancelled' ? <Tag label={t('admin.home.cancelled')} kind="alert" /> : null}
+        </View>
         {notes.length > 0 ? (
           <Text variant="caption" color={o.status === 'cancelled' ? 'textDanger' : 'textSecondary'}>
             {notes.join(' · ')}
           </Text>
         ) : null}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingTop: spacing.xxs }}>
           {canMark ? (
             <Button
               testID={`occurrence-${o.id}-attendance`}

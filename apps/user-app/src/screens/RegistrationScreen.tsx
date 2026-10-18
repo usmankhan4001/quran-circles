@@ -9,6 +9,7 @@ import {
   Select,
   Text,
   TextField,
+  elevation,
   radii,
   spacing,
   useTheme,
@@ -39,13 +40,19 @@ const styles = StyleSheet.create({
   summary: { gap: spacing.xs },
   summaryLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   grow: { flex: 1 },
-  alert: { gap: spacing.sm, padding: spacing.md, borderRadius: radii.section },
+  alert: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.card,
+    borderWidth: 1,
+  },
   tick: {
     width: 72,
     height: 72,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
 });
 
@@ -251,7 +258,16 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
         <View
           role="alert"
           testID="registration-error"
-          style={[styles.alert, { backgroundColor: theme.colors.dangerSubtle }]}
+          style={[
+            styles.alert,
+            {
+              backgroundColor: theme.colors.dangerSubtle,
+              borderColor:
+                theme.mode === 'highContrast'
+                  ? theme.colors.borderStrong
+                  : theme.colors.border,
+            },
+          ]}
         >
           <Text variant="body" color="textOnDangerSubtle" strong>
             {t(errorMessageKey(failure.code))}
@@ -296,7 +312,19 @@ function Confirmation({ registration, session }: { registration: Registration; s
   return (
     <View style={styles.stack} testID="registration-confirmation">
       <View style={styles.center}>
-        <View style={[styles.tick, { backgroundColor: theme.colors.successSubtle }]}>
+        <View
+          style={[
+            styles.tick,
+            {
+              backgroundColor: theme.colors.successSubtle,
+              borderColor:
+                theme.mode === 'highContrast'
+                  ? theme.colors.borderStrong
+                  : theme.colors.border,
+              boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+            },
+          ]}
+        >
           <Icon name="success" size={40} color={theme.colors.success} />
         </View>
         <Text variant="title2" align="center" heading={2}>

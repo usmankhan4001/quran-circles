@@ -24,6 +24,7 @@ import {
   TextField,
   formatNumber,
   spacing,
+  useTheme,
   type TagKind,
 } from '@qc/ui';
 import { errorCodeOf, errorMessageKey } from '../../api/errors';
@@ -127,6 +128,7 @@ type EditRequest = { form: PosterForm; n: number };
 function PostersBody({ session, canCreate }: { session: AdminSession; canCreate: boolean }) {
   const { t, locale } = useT();
   const api = useApi();
+  const { colors } = useTheme();
   const [recent, setRecent] = useState<Poster[]>([]);
   const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
   const [poll, setPoll] = useState(false);
@@ -157,7 +159,14 @@ function PostersBody({ session, canCreate }: { session: AdminSession; canCreate:
   return (
     <View style={{ gap: spacing.lg }} testID="posters-body">
       <Card variant="flat" testID="posters-source">
-        <View style={{ gap: spacing.xs }}>
+        <View
+          style={{
+            gap: spacing.xs,
+            borderStartWidth: 3,
+            borderStartColor: colors.accent,
+            paddingStart: spacing.sm,
+          }}
+        >
           <Text variant="title3" heading={2}>
             {t('admin.posters.source.title')}
           </Text>
@@ -254,6 +263,7 @@ function PosterCard({
 }) {
   const { t, locale } = useT();
   const api = useApi();
+  const { colors } = useTheme();
   const [busy, setBusy] = useState<'regenerate' | 'download' | null>(null);
   const [failure, setFailure] = useState<CardFailure | null>(null);
   const [notice, setNotice] = useState<MessageKey | null>(null);
@@ -261,6 +271,7 @@ function PosterCard({
   const outOfDate = p.outOfDate ? outOfDateKind(p.outOfDate.reasons) : null;
   const pdf = posterMime(p.format) === 'application/pdf';
   const id = `poster-${p.id}`;
+  const hasActions = actions.regenerate || actions.download || actions.edit;
 
   const regenerate = async () => {
     setBusy('regenerate');
@@ -326,9 +337,20 @@ function PosterCard({
           </View>
         </View>
         {title ? (
-          <Text variant="title3" lang={p.locale}>
-            {title}
-          </Text>
+          <View
+            style={{
+              paddingVertical: spacing.xs,
+              paddingHorizontal: spacing.sm,
+              backgroundColor: colors.surfaceMuted,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text variant="title3" lang={p.locale}>
+              {title}
+            </Text>
+          </View>
         ) : null}
         <Text variant="caption" color="textSecondary">
           {t('admin.posters.card.meta', {
@@ -375,38 +397,49 @@ function PosterCard({
           </Text>
         ) : null}
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          {actions.regenerate ? (
-            <Button
-              testID={`${id}-regenerate`}
-              label={
-                p.status === 'failed' ? t('admin.posters.retry') : t('admin.posters.regenerate')
-              }
-              variant={outOfDate ? 'primary' : 'secondary'}
-              loading={busy === 'regenerate'}
-              disabled={busy !== null}
-              onPress={() => void regenerate()}
-            />
-          ) : null}
-          {actions.download ? (
-            <Button
-              testID={`${id}-download`}
-              label={pdf ? t('admin.posters.download.pdf') : t('admin.posters.download.png')}
-              variant="secondary"
-              loading={busy === 'download'}
-              disabled={busy !== null}
-              onPress={() => void download()}
-            />
-          ) : null}
-          {actions.edit ? (
-            <Button
-              testID={`${id}-edit`}
-              label={t('admin.posters.editAgain')}
-              variant="tertiary"
-              onPress={() => onEdit(p)}
-            />
-          ) : null}
-        </View>
+        {hasActions ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: spacing.sm,
+              paddingTop: spacing.xs,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+            }}
+          >
+            {actions.regenerate ? (
+              <Button
+                testID={`${id}-regenerate`}
+                label={
+                  p.status === 'failed' ? t('admin.posters.retry') : t('admin.posters.regenerate')
+                }
+                variant={outOfDate ? 'primary' : 'secondary'}
+                loading={busy === 'regenerate'}
+                disabled={busy !== null}
+                onPress={() => void regenerate()}
+              />
+            ) : null}
+            {actions.download ? (
+              <Button
+                testID={`${id}-download`}
+                label={pdf ? t('admin.posters.download.pdf') : t('admin.posters.download.png')}
+                variant="secondary"
+                loading={busy === 'download'}
+                disabled={busy !== null}
+                onPress={() => void download()}
+              />
+            ) : null}
+            {actions.edit ? (
+              <Button
+                testID={`${id}-edit`}
+                label={t('admin.posters.editAgain')}
+                variant="tertiary"
+                onPress={() => onEdit(p)}
+              />
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </Card>
   );

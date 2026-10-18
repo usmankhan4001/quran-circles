@@ -14,6 +14,7 @@ export interface StarNumberProps {
 const styles = StyleSheet.create({
   box: { alignItems: 'center', justifyContent: 'center' },
   square: { position: 'absolute', borderWidth: 1.5 },
+  disc: { position: 'absolute' },
 });
 
 /**
@@ -24,10 +25,17 @@ export function StarNumber({ value, accessibilityLabel, testID }: StarNumberProp
   const theme = useTheme();
   const c = theme.colors;
   const size = Math.round(40 * theme.scale);
-  const side = size * 0.66;
+  const side = Math.round(size * 0.66);
+  const innerDisc = Math.round(size * 0.56);
   const square = [
     styles.square,
-    { width: side, height: side, borderColor: c.textAccent, borderRadius: 3 },
+    {
+      width: side,
+      height: side,
+      borderColor: c.textAccent,
+      backgroundColor: c.accentSubtle,
+      borderRadius: 3,
+    },
   ];
   return (
     <View
@@ -38,6 +46,20 @@ export function StarNumber({ value, accessibilityLabel, testID }: StarNumberProp
     >
       <View aria-hidden style={square} />
       <View aria-hidden style={[square, { transform: [{ rotate: '45deg' }] }]} />
+      <View
+        aria-hidden
+        style={[
+          styles.disc,
+          {
+            width: innerDisc,
+            height: innerDisc,
+            borderRadius: innerDisc / 2,
+            backgroundColor: c.accentSubtle,
+            borderWidth: theme.mode === 'highContrast' ? 0 : 1,
+            borderColor: c.decoration,
+          },
+        ]}
+      />
       <Text
         variant="eyebrow"
         color="textAccent"

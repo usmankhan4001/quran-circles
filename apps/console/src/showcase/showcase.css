@@ -1,0 +1,660 @@
+:root {
+  --iq-green-deep: #1E563B;
+  --iq-green-mid: #3B8861;
+  --iq-green-soft: #E8F5EE;
+  --iq-green-check: #10B981;
+  --iq-amber: #F59E0B;
+  --iq-amber-soft: #FEF3C7;
+  --iq-ink: #111827;
+  --iq-ink-sub: #64748B;
+  --iq-ink-muted: #94A3B8;
+  --iq-border: #F1F5F9;
+  --iq-pill-border: #E2E8F0;
+  --iq-surface-soft: #F8FAFC;
+
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-quran: 'Amiri Quran', 'Amiri', serif;
+  --font-urdu: 'Noto Nastaliq Urdu', serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #14181D;
+  color: var(--iq-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================================
+   FIGMA CANVAS SHELL (Matches Iqraa Screenshot 2 Layout)
+   ============================================================================ */
+.figma-workspace {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  background: #14181D;
+}
+
+@media (max-width: 1100px) {
+  .figma-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Figma-Style Layer & Screen Sidebar */
+.figma-sidebar {
+  background: #1C2127;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 20px 14px;
+  color: #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.figma-project-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.figma-project-sub {
+  font-size: 11px;
+  color: #94A3B8;
+  padding: 0 6px;
+  margin-top: 3px;
+}
+
+.figma-nav-group-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748B;
+  padding: 0 8px;
+  margin-bottom: 6px;
+}
+
+.figma-nav-btn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #CBD5E1;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.figma-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
+}
+
+.figma-nav-btn.active {
+  background: rgba(59, 136, 97, 0.22);
+  color: #6EE7B7;
+  font-weight: 600;
+}
+
+.figma-layer-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11.5px;
+  color: #94A3B8;
+  padding-left: 6px;
+}
+
+.figma-layer-item {
+  padding: 5px 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.figma-layer-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #E2E8F0;
+}
+
+.figma-layer-item.highlight {
+  background: rgba(59, 136, 97, 0.16);
+  color: #A7F3D0;
+}
+
+/* Main Dark Artboard Stage */
+.figma-stage {
+  padding: 32px 40px 80px;
+  overflow-x: auto;
+}
+
+.figma-stage-banner {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 18px 26px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.figma-stage-banner h1 {
+  font-size: 22px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.figma-stage-banner p {
+  font-size: 13px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.artboard-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding-bottom: 40px;
+}
+
+.artboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.artboard-caption {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+
+/* ============================================================================
+   375px iOS ARTBOARD (Borderless, Full-Height, Authentic Iqraa Proportions)
+   ============================================================================ */
+.ios-artboard {
+  width: 375px;
+  min-height: 812px;
+  background: #FFFFFF;
+  border-radius: 38px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 92px;
+}
+
+/* 1. IQRAA EMERALD GRADIENT HEADER */
+.iq-hero-gradient {
+  background: linear-gradient(
+    180deg,
+    #1F573C 0%,
+    #327A56 48%,
+    #77B293 78%,
+    #FFFFFF 100%
+  );
+  padding: 14px 20px 58px;
+  color: #FFFFFF;
+  position: relative;
+}
+
+.iq-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+}
+
+.iq-top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iq-location-trigger {
+  border: none;
+  background: transparent;
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  opacity: 0.95;
+}
+
+.iq-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iq-season-pill {
+  background: #FFFFFF;
+  color: #1E563B;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.iq-bell-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.iq-bell-dot {
+  position: absolute;
+  top: 6px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #FBBF24;
+}
+
+.iq-hero-center {
+  text-align: center;
+  margin-top: 26px;
+  margin-bottom: 8px;
+}
+
+.iq-hero-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: #FFFFFF;
+}
+
+.iq-hero-sub {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.86);
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* 2. FLOATING 4-ICON SHORTCUT TRAY */
+.iq-shortcut-tray {
+  margin: -42px 20px 0;
+  background: #FFFFFF;
+  border-radius: 22px;
+  padding: 16px 12px;
+  box-shadow: 0 12px 32px -4px rgba(17, 24, 39, 0.07), 0 2px 6px rgba(17, 24, 39, 0.03);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  position: relative;
+  z-index: 5;
+}
+
+.iq-shortcut-item {
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.iq-shortcut-icon-wrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: #FFF9EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease;
+}
+
+.iq-shortcut-item:hover .iq-shortcut-icon-wrap {
+  transform: translateY(-2px);
+}
+
+.iq-shortcut-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* 3. CALM SECTION HEADERS (Zero Colored Eyebrows!) */
+.iq-section {
+  padding: 24px 20px 0;
+}
+
+.iq-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.iq-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.015em;
+}
+
+.iq-see-more {
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+
+/* 4. CONTINUE READING / NEXT CIRCLE CARD (Iqraa Pure White Card) */
+.iq-white-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 6px 24px -4px rgba(17, 24, 39, 0.04);
+  padding: 18px;
+}
+
+.iq-card-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.iq-card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.iq-card-sub {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.iq-arabic-display {
+  font-family: var(--font-quran);
+  font-size: 22px;
+  line-height: 1.95;
+  color: #111827;
+  direction: rtl;
+  text-align: center;
+  margin: 16px 0 6px;
+}
+
+.iq-transliteration {
+  font-size: 11.5px;
+  color: #94A3B8;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.iq-pill-cta {
+  width: 100%;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #111827;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+}
+
+.iq-pill-cta:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.iq-pill-cta.dark {
+  background: #111827;
+  border-color: #111827;
+  color: #FFFFFF;
+  height: 46px;
+  font-size: 13.5px;
+}
+
+/* 5. PORTRAIT 3:4 PHOTOGRAPHY CARDS (Iqraa "A verse from this week's" / Near You) */
+.iq-photo-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 20px 4px;
+  scrollbar-width: none;
+}
+
+.iq-photo-row::-webkit-scrollbar {
+  display: none;
+}
+
+.iq-photo-card {
+  width: 136px;
+  height: 182px;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 8px 20px -4px rgba(17, 24, 39, 0.12);
+  cursor: pointer;
+}
+
+.iq-photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.iq-photo-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.05) 0%,
+    rgba(0, 0, 0, 0) 40%,
+    rgba(10, 26, 18, 0.88) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px 12px;
+  color: #FFFFFF;
+}
+
+.iq-photo-tag {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(6px);
+  color: #111827;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* 6. 2-COLUMN MINIMAL PORTION / HIFZ CARDS (Iqraa Bottom Grid) */
+.iq-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.iq-mini-card {
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid #F1F5F9;
+  box-shadow: 0 4px 16px rgba(17, 24, 39, 0.03);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* 7. STREAK / DAYS READ (Iqraa Minimal 7-Day Row) */
+.iq-streak-box {
+  background: #F8FAFC;
+  border-radius: 18px;
+  padding: 16px 14px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.iq-streak-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.iq-streak-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.iq-streak-dot.done {
+  background: #D1FAE5;
+  color: #059669;
+}
+
+.iq-streak-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* 8. FLOATING PILL BOTTOM NAVIGATION BAR (Iqraa 5-Icon Dock) */
+.iq-floating-nav {
+  position: absolute;
+  bottom: 18px;
+  left: 34px;
+  right: 34px;
+  height: 56px;
+  background: #FFFFFF;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12), 0 1px 3px rgba(17, 24, 39, 0.05);
+  border: 1px solid #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+  z-index: 20;
+}
+
+.iq-nav-icon-btn {
+  border: none;
+  background: transparent;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  cursor: pointer;
+}
+
+.iq-nav-icon-btn.active {
+  color: #111827;
+}
+
+.qc-ayah-medallion {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin: 0 6px;
+}
+
+.qc-ayah-medallion-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #1E563B;
+  line-height: 1;
+}
+

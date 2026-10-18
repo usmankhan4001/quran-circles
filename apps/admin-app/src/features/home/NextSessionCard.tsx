@@ -55,10 +55,12 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
         >
           <View
             style={{
-              minWidth: 64,
+              minWidth: 68,
               paddingVertical: spacing.sm,
               paddingHorizontal: spacing.sm,
               borderRadius: radii.lg,
+              borderWidth: 1,
+              borderColor: colors.border,
               backgroundColor: colors.accentSubtle,
               alignItems: 'center',
               justifyContent: 'center',
@@ -85,17 +87,33 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
               {place} · {t(`admin.home.section.${s.section}`)}
             </Text>
             {next?.portionLabel ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  paddingVertical: spacing.xxs,
+                  paddingHorizontal: spacing.xs,
+                  backgroundColor: colors.accentSubtle,
+                  borderRadius: radii.sm,
+                  alignSelf: 'flex-start',
+                  marginTop: spacing.xxs,
+                }}
+              >
                 <Icon name="book" size={16} color={colors.textAccent} />
                 <Text testID="today-next-portion" variant="caption" color="textAccent">
                   {next.portionLabel}
                 </Text>
               </View>
             ) : null}
-            {s.status === 'draft' ? <Tag label={t('admin.home.draft')} kind="gilt" /> : null}
+            {s.status === 'draft' ? (
+              <View style={{ marginTop: spacing.xxs, alignSelf: 'flex-start' }}>
+                <Tag label={t('admin.home.draft')} kind="gilt" />
+              </View>
+            ) : null}
           </View>
           {coming !== null ? (
-            <View style={{ alignItems: 'flex-end' }}>
+            <View style={{ alignItems: 'flex-end', paddingStart: spacing.xs }}>
               <Text testID="today-next-coming" variant="title2" color="textAccent" lang="en">
                 {n(coming)}
               </Text>

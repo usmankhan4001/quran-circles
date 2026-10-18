@@ -1,5 +1,14 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Icon, Text, formatNumber, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
+import {
+  Icon,
+  Text,
+  elevation,
+  formatNumber,
+  minTouchTarget,
+  radii,
+  spacing,
+  useTheme,
+} from '@qc/ui';
 
 export interface StepperProps {
   label: string;
@@ -21,7 +30,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radii.section,
+    borderRadius: radii.card,
+    borderWidth: 1,
   },
   text: { flex: 1 },
   badge: {
@@ -30,6 +40,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   button: {
@@ -58,7 +69,8 @@ export function Stepper({
   locale,
   testID,
 }: StepperProps) {
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   const atMin = value <= min;
   const atMax = value >= max;
   return (
@@ -66,9 +78,24 @@ export function Stepper({
       testID={testID}
       role="group"
       aria-label={label}
-      style={[styles.row, { backgroundColor: c.accentSubtle }]}
+      style={[
+        styles.row,
+        {
+          backgroundColor: c.accentSubtle,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+        },
+      ]}
     >
-      <View style={[styles.badge, { backgroundColor: c.surface }]}>
+      <View
+        style={[
+          styles.badge,
+          {
+            backgroundColor: c.surface,
+            borderColor: c.border,
+            boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          },
+        ]}
+      >
         <Icon name="people" size={22} color={c.accent} />
       </View>
       <View style={styles.text}>
@@ -89,7 +116,16 @@ export function Stepper({
           disabled={atMin}
           onPress={() => onChange(Math.max(min, value - 1))}
           testID={testID ? `${testID}-minus` : undefined}
-          style={[styles.button, { backgroundColor: atMin ? c.disabledBackground : c.surface }]}
+          style={({ pressed }) => [
+            styles.button,
+            {
+              backgroundColor: atMin ? c.disabledBackground : c.surface,
+              borderWidth: 1,
+              borderColor: atMin ? 'transparent' : c.border,
+              boxShadow: !atMin && theme.mode === 'light' ? elevation.low : undefined,
+              transform: pressed && !atMin && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
+            },
+          ]}
         >
           <MinusBar color={atMin ? c.disabledText : c.accent} />
         </Pressable>
@@ -109,7 +145,14 @@ export function Stepper({
           disabled={atMax}
           onPress={() => onChange(Math.min(max, value + 1))}
           testID={testID ? `${testID}-plus` : undefined}
-          style={[styles.button, { backgroundColor: atMax ? c.disabledBackground : c.accent }]}
+          style={({ pressed }) => [
+            styles.button,
+            {
+              backgroundColor: atMax ? c.disabledBackground : c.accent,
+              boxShadow: !atMax && theme.mode === 'light' ? elevation.low : undefined,
+              transform: pressed && !atMax && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
+            },
+          ]}
         >
           <Icon name="plus" size={22} color={atMax ? c.disabledText : c.textOnAccent} />
         </Pressable>

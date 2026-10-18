@@ -1,5 +1,14 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Badge, Icon, Text, minTouchTarget, spacing, useTheme, type IconName } from '@qc/ui';
+import {
+  Badge,
+  Icon,
+  Text,
+  elevation,
+  minTouchTarget,
+  spacing,
+  useTheme,
+  type IconName,
+} from '@qc/ui';
 
 export interface ShortcutProps {
   icon: IconName;
@@ -38,7 +47,8 @@ export function Shortcut({
   accessibilityLabel,
   testID,
 }: ShortcutProps) {
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   return (
     <Pressable
       role="button"
@@ -55,7 +65,9 @@ export function Shortcut({
               {
                 backgroundColor: pressed ? c.accent : c.accentSubtle,
                 borderWidth: 1,
-                borderColor: c.border,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+                boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+                transform: pressed && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
               },
             ]}
           >
@@ -66,7 +78,7 @@ export function Shortcut({
               </View>
             ) : null}
           </View>
-          <Text variant="caption" align="center" decorative>
+          <Text variant="caption" align="center" decorative color="textSecondary">
             {label}
           </Text>
         </>

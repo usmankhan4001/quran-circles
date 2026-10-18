@@ -126,7 +126,8 @@ export default function RegistrationsPage() {
     {
       id: 'whatsapp',
       header: t('console.exports.col.whatsapp'),
-      cell: (r) => (r.allowsWhatsapp ? t('ui.on') : t('ui.off')),
+      cell: (r) =>
+        r.allowsWhatsapp ? <Badge tone="accent">{t('ui.on')}</Badge> : <Badge>{t('ui.off')}</Badge>,
     },
     {
       id: 'created',

@@ -62,7 +62,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radii.section,
+    borderRadius: radii.card,
+    borderWidth: 1,
   },
   stack: { gap: spacing.xl },
   account: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
@@ -74,7 +75,8 @@ const styles = StyleSheet.create({
 function QuickTiles() {
   const { t } = useI18n();
   const nav = useNav();
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   const tiles: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
     {
       key: 'journey',
@@ -106,7 +108,11 @@ function QuickTiles() {
           onPress={tile.onPress}
           style={({ pressed }) => [
             styles.tile,
-            { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
+            {
+              backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass,
+              borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.heroGlass,
+              transform: pressed && !theme.reduceMotion ? [{ scale: 0.96 }] : undefined,
+            },
           ]}
         >
           <Icon name={tile.icon} size={24} color={c.textOnHero} />

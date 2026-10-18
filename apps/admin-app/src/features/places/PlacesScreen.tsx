@@ -150,6 +150,7 @@ interface CircleRows {
 
 function CircleList() {
   const { t, locale, n } = useT();
+  const { colors } = useTheme();
   const api = useApi();
   const nav = useNavigation();
   const { filter, principal, active } = useWorkingScope();
@@ -200,9 +201,19 @@ function CircleList() {
           return (
             <View style={{ gap: spacing.md }}>
               {pending > 0 ? (
-                <Text testID="places-pending-count" variant="label" color="textWarning">
-                  {t.plural('admin.places.needsDecision', pending, { count: n(pending) })}
-                </Text>
+                <View
+                  style={{
+                    padding: spacing.sm,
+                    backgroundColor: colors.warningSubtle,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Text testID="places-pending-count" variant="label" color="textWarning">
+                    {t.plural('admin.places.needsDecision', pending, { count: n(pending) })}
+                  </Text>
+                </View>
               ) : null}
               <SearchField
                 testID="places-circle-search"
@@ -269,7 +280,7 @@ function VenueCard({
   const label = [title, detail, circles, tag?.label].filter(Boolean).join(', ');
   return (
     <Card testID={testID} onPress={onPress} accessibilityLabel={label} padding="none">
-      <View>
+      <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <VenueArt seed={venueId} testID={`${testID}-art`} />
         {tag ? (
           <View style={{ position: 'absolute', top: spacing.sm, start: spacing.sm }}>

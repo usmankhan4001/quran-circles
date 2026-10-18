@@ -13,8 +13,14 @@ export interface SeatMeterProps {
 }
 
 const styles = StyleSheet.create({
-  track: { height: 6, borderRadius: radii.pill, overflow: 'hidden', marginTop: spacing.xs },
-  fill: { height: 6, borderRadius: radii.pill },
+  track: {
+    height: 8,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginTop: spacing.xs + spacing.xxs,
+  },
+  fill: { height: '100%', borderRadius: radii.pill },
 });
 
 /** How full a session is (D2): a thin bar and the places left. Gold when nearly full. */
@@ -47,7 +53,7 @@ export function SeatMeter({ taken, capacity, testID }: SeatMeterProps) {
           aria-valuemin={0}
           aria-valuemax={capacity}
           aria-valuenow={Math.min(taken, capacity)}
-          style={[styles.track, { backgroundColor: c.surfaceMuted }]}
+          style={[styles.track, { backgroundColor: c.surfaceMuted, borderColor: c.border }]}
         >
           <View style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: tone }]} />
         </View>

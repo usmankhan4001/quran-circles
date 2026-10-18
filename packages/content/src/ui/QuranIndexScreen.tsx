@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import { FlatList, View } from 'react-native';
 import {
   Button,
+  Card,
   EmptyState,
   ListItem,
   SegmentedControl,
@@ -73,7 +74,7 @@ export function QuranIndexScreen({ onOpen, initialTab = 'surahs', testID }: Qura
   }, [tab, results, bookmarks.items]);
 
   const header = (
-    <View style={{ gap: spacing.md, paddingBottom: spacing.md }}>
+    <View style={{ gap: spacing.md, paddingTop: spacing.xs, paddingBottom: spacing.md }}>
       <V1ImportBanner />
       <ContinueReadingCard
         variant="tab"
@@ -272,21 +273,23 @@ function BookmarkRow({
   const title = bookmarkTitle(i18n, bookmark);
   const target = targetForBookmark(bookmark);
   return (
-    <View testID={`bookmark-row-${bookmark.id}`}>
-      <ListItem
-        title={title}
-        {...(bookmark.note ? { subtitle: bookmark.note } : {})}
-        {...(target ? { onPress: () => onOpen(target) } : {})}
-      />
-      <View style={{ alignItems: 'flex-start', paddingBottom: spacing.sm }}>
-        <Button
-          variant="tertiary"
-          label={i18n.t('quran.bookmark.remove')}
-          accessibilityLabel={i18n.t('quran.bookmark.removeItem', { place: title })}
-          onPress={onRemove}
-          testID={`bookmark-remove-${bookmark.id}`}
+    <View testID={`bookmark-row-${bookmark.id}`} style={{ marginBottom: spacing.sm }}>
+      <Card variant="outlined" padding="sm">
+        <ListItem
+          title={title}
+          {...(bookmark.note ? { subtitle: bookmark.note } : {})}
+          {...(target ? { onPress: () => onOpen(target) } : {})}
         />
-      </View>
+        <View style={{ alignItems: 'flex-start', paddingHorizontal: spacing.sm }}>
+          <Button
+            variant="tertiary"
+            label={i18n.t('quran.bookmark.remove')}
+            accessibilityLabel={i18n.t('quran.bookmark.removeItem', { place: title })}
+            onPress={onRemove}
+            testID={`bookmark-remove-${bookmark.id}`}
+          />
+        </View>
+      </Card>
     </View>
   );
 }

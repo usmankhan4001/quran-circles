@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Card, Text, spacing } from '@qc/ui';
+import { Card, Icon, Text, radii, spacing, useTheme } from '@qc/ui';
 import { todayAt, type PrayerPlace } from '../prayer/calc';
 import { hijriDate } from '../prayer/hijri';
 import { useContent } from './context';
@@ -21,17 +21,35 @@ export interface NextPrayerCardProps {
  */
 export function NextPrayerCard({ place, onPress, testID }: NextPrayerCardProps) {
   const i18n = useContentI18n();
+  const theme = useTheme();
+  const c = theme.colors;
   if (!place) {
     return (
       <Card onPress={onPress} testID={testID} accessibilityLabel={i18n.t('prayer.noCity.title')}>
-        <Text variant="caption" color="textSecondary">
-          {i18n.t('prayer.next')}
-        </Text>
-        <View style={{ height: spacing.xs }} />
-        <Text variant="title3" heading={2}>
-          {i18n.t('prayer.noCity.title')}
-        </Text>
-        <Text color="textSecondary">{i18n.t('prayer.noCity.body')}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md }}>
+          <View
+            aria-hidden
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: radii.md,
+              backgroundColor: c.accentSubtle,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon name="prayer" size={22} color={c.textOnAccentSubtle} />
+          </View>
+          <View style={{ flex: 1, gap: spacing.xxs }}>
+            <Text variant="caption" color="textSecondary">
+              {i18n.t('prayer.next')}
+            </Text>
+            <Text variant="title3" heading={2}>
+              {i18n.t('prayer.noCity.title')}
+            </Text>
+            <Text color="textSecondary">{i18n.t('prayer.noCity.body')}</Text>
+          </View>
+        </View>
       </Card>
     );
   }
@@ -48,6 +66,8 @@ function WithPlace({
   testID: string | undefined;
 }) {
   const i18n = useContentI18n();
+  const theme = useTheme();
+  const c = theme.colors;
   const { hijriOffsetDays } = useContent();
   const { next, countdown, now } = useNextPrayer(place);
   // The Hijri date follows the calendar day at the place, like the prayer times screen.
@@ -60,23 +80,45 @@ function WithPlace({
       testID={testID}
       accessibilityLabel={`${i18n.t('prayer.next')}. ${line}. ${at}`}
     >
-      <Text variant="caption" color="textSecondary" decorative>
-        {i18n.t('prayer.next')}
-      </Text>
-      <View style={{ height: spacing.xs }} />
-      <Text variant="title3" heading={2} testID="next-prayer-countdown" decorative>
-        {line}
-      </Text>
-      <Text color="textSecondary" decorative testID="next-prayer-time">
-        {`${prayerName(i18n, next.prayer)}, ${at}`}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+        <View
+          aria-hidden
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: radii.md,
+            backgroundColor: c.accentSubtle,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon name="prayer" size={22} color={c.textOnAccentSubtle} />
+        </View>
+        <View style={{ flex: 1, gap: spacing.xxs }}>
+          <Text variant="caption" color="textSecondary" decorative>
+            {i18n.t('prayer.next')}
+          </Text>
+          <Text variant="title3" heading={2} testID="next-prayer-countdown" decorative>
+            {line}
+          </Text>
+          <Text color="textSecondary" decorative testID="next-prayer-time">
+            {`${prayerName(i18n, next.prayer)}, ${at}`}
+          </Text>
+        </View>
+      </View>
       {hijri ? (
-        <>
-          <View style={{ height: spacing.sm }} />
+        <View
+          style={{
+            marginTop: spacing.sm,
+            paddingTop: spacing.sm,
+            borderTopWidth: 1,
+            borderTopColor: c.border,
+          }}
+        >
           <Text variant="caption" color="textSecondary" decorative testID="next-prayer-hijri">
             {`${i18n.t('prayer.hijri')}: ${hijriText(i18n, hijri)}`}
           </Text>
-        </>
+        </View>
       ) : null}
     </Card>
   );

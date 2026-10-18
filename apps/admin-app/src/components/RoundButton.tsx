@@ -41,6 +41,8 @@ export function RoundButton({
         borderRadius: size === 'large' ? radii.lg : radii.pill,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: disabled ? colors.border : pressed ? colors.accent : colors.border,
         backgroundColor: disabled
           ? colors.surfaceMuted
           : pressed

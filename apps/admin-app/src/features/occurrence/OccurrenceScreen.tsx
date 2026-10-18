@@ -134,7 +134,14 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
   return (
     <View style={{ gap: spacing.lg }} testID="occurrence-form">
       <Card variant="flat">
-        <View style={{ gap: spacing.xs }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: spacing.sm,
+          }}
+        >
           <Text variant="label">
             {formatInstantDate(occurrence.startsAt, locale)} ·{' '}
             {formatInstantTime(occurrence.startsAt, locale)}

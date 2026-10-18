@@ -38,14 +38,11 @@ export function Card({
   const base = {
     padding: spacing[padding],
     backgroundColor: variant === 'flat' ? c.surfaceMuted : c.surface,
-    // D11: raised cards have no border by day, only the soft shadow; at night a hairline
-    // replaces the shadow.
+    // Whisper-thin hairline border pairs with soft shadow in light mode; strong border for outlined/HC.
     borderColor:
       variant === 'outlined' || isHighContrast
         ? c.borderStrong
-        : variant === 'raised' && theme.mode === 'light'
-          ? c.surface
-          : c.border,
+        : c.border,
     boxShadow: variant === 'raised' && theme.mode === 'light' ? elevation.low : undefined,
   };
   if (!onPress) {
@@ -67,6 +64,7 @@ export function Card({
         styles.base,
         base,
         pressed ? { backgroundColor: c.surfaceMuted } : undefined,
+        pressed && !disabled && !theme.reduceMotion ? { transform: [{ scale: 0.992 }] } : undefined,
         disabled ? { opacity: 0.6 } : undefined,
       ]}
     >

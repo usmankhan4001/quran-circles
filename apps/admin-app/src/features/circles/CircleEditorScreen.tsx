@@ -455,7 +455,9 @@ function StatusBanner({
   return (
     <Card variant="flat" testID="circle-status">
       <View style={{ gap: spacing.xs }}>
-        <Tag label={t(`admin.circleEditor.status.${status}`)} kind={kind[status]} />
+        <View style={{ alignSelf: 'flex-start' }}>
+          <Tag label={t(`admin.circleEditor.status.${status}`)} kind={kind[status]} />
+        </View>
         {text !== t(`admin.circleEditor.status.${status}`) ? (
           <Text variant="caption" color="textSecondary">
             {text}

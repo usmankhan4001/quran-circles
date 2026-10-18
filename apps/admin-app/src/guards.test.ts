@@ -15,7 +15,7 @@ function sourceFiles(dir: string): string[] {
 }
 
 const files = sourceFiles(root).map((path) => ({
-  path: path.slice(root.length + 1),
+  path: path.slice(root.length + 1).replace(/\\/g, '/'),
   text: readFileSync(path, 'utf8'),
 }));
 

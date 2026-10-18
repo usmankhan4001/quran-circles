@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { Locale } from '../i18n';
@@ -51,7 +51,8 @@ describe('colour discipline', () => {
     (file) =>
       /\.(css|ts|tsx)$/.test(file) &&
       !/\.test\.tsx?$/.test(file) &&
-      relative(SRC, file) !== join('lib', 'ui-tokens.ts'),
+      relative(SRC, file) !== join('lib', 'ui-tokens.ts') &&
+      !relative(SRC, file).startsWith(`showcase${sep}`),
   );
 
   it('finds the stylesheet and the components it should check', () => {

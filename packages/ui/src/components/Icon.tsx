@@ -194,6 +194,7 @@ function Ring({
 /** The line icons of the drawings. Physical on purpose, like the rest of this file. */
 function objectArt(name: IconName, size: number, tint: string) {
   const w = Math.max(2, Math.round(size / 11));
+  const thin = Math.max(1.5, Math.round(size / 14));
   const line = (style: ViewStyle) => (
     <View style={[abs, { backgroundColor: tint, borderRadius: w }, style]} />
   );
@@ -205,13 +206,13 @@ function objectArt(name: IconName, size: number, tint: string) {
             style={[
               abs,
               {
-                width: size * 0.5,
-                height: size * 0.5,
+                width: size * 0.54,
+                height: size * 0.54,
                 top: size * 0.12,
                 borderTopWidth: w,
                 borderLeftWidth: w,
                 borderColor: tint,
-                borderTopLeftRadius: w,
+                borderTopLeftRadius: w * 1.2,
                 transform: [{ rotate: '45deg' }],
               },
             ]}
@@ -220,14 +221,29 @@ function objectArt(name: IconName, size: number, tint: string) {
             style={[
               abs,
               {
-                width: size * 0.62,
-                height: size * 0.4,
+                width: size * 0.64,
+                height: size * 0.42,
                 bottom: size * 0.1,
                 borderWidth: w,
                 borderTopWidth: 0,
                 borderColor: tint,
-                borderBottomLeftRadius: w,
-                borderBottomRightRadius: w,
+                borderBottomLeftRadius: w * 1.5,
+                borderBottomRightRadius: w * 1.5,
+              },
+            ]}
+          />
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.22,
+                height: size * 0.24,
+                bottom: size * 0.1,
+                borderWidth: thin,
+                borderBottomWidth: 0,
+                borderColor: tint,
+                borderTopLeftRadius: size * 0.11,
+                borderTopRightRadius: size * 0.11,
               },
             ]}
           />
@@ -246,12 +262,18 @@ function objectArt(name: IconName, size: number, tint: string) {
                 borderWidth: w,
                 borderColor: tint,
                 borderRadius: size * 0.31,
-                borderBottomRightRadius: 0,
+                borderBottomRightRadius: w * 0.5,
                 transform: [{ rotate: '45deg' }],
               },
             ]}
           />
-          <Ring d={size * 0.2} color={tint} w={w} fill style={{ marginBottom: size * 0.1 }} />
+          <Ring
+            d={size * 0.24}
+            color={tint}
+            w={thin}
+            style={[abs, { top: size * 0.26 }]}
+          />
+          {line({ width: size * 0.36, height: thin, bottom: size * 0.06 })}
         </>
       );
     case 'book':
@@ -261,15 +283,19 @@ function objectArt(name: IconName, size: number, tint: string) {
             style={[
               abs,
               {
-                width: size * 0.86,
-                height: size * 0.62,
+                width: size * 0.84,
+                height: size * 0.66,
                 borderWidth: w,
                 borderColor: tint,
-                borderRadius: w * 1.5,
+                borderRadius: w * 1.8,
               },
             ]}
           />
-          {line({ width: w, height: size * 0.62 })}
+          {line({ width: w, height: size * 0.66 })}
+          {line({ width: size * 0.2, height: thin, top: size * 0.36, left: size * 0.18 })}
+          {line({ width: size * 0.2, height: thin, top: size * 0.5, left: size * 0.18 })}
+          {line({ width: size * 0.2, height: thin, top: size * 0.36, right: size * 0.18 })}
+          {line({ width: size * 0.2, height: thin, top: size * 0.5, right: size * 0.18 })}
         </>
       );
     case 'calendar':
@@ -281,16 +307,30 @@ function objectArt(name: IconName, size: number, tint: string) {
               {
                 width: size * 0.8,
                 height: size * 0.72,
-                bottom: size * 0.1,
+                bottom: size * 0.08,
                 borderWidth: w,
                 borderColor: tint,
-                borderRadius: w * 1.5,
+                borderRadius: w * 1.8,
               },
             ]}
           />
-          {line({ width: size * 0.8, height: w, top: size * 0.36 })}
+          {line({ width: size * 0.8, height: w, top: size * 0.38 })}
           {line({ width: w, height: size * 0.2, top: size * 0.08, left: size * 0.3 })}
           {line({ width: w, height: size * 0.2, top: size * 0.08, right: size * 0.3 })}
+          <Ring
+            d={w * 1.3}
+            color={tint}
+            w={w}
+            fill
+            style={[abs, { bottom: size * 0.26, left: size * 0.3 }]}
+          />
+          <Ring
+            d={w * 1.3}
+            color={tint}
+            w={w}
+            fill
+            style={[abs, { bottom: size * 0.26, right: size * 0.3 }]}
+          />
         </>
       );
     case 'clock':
@@ -299,18 +339,20 @@ function objectArt(name: IconName, size: number, tint: string) {
           <Ring d={size * 0.84} color={tint} w={w} />
           {line({ width: w, height: size * 0.26, top: size * 0.24 })}
           {line({ width: size * 0.22, height: w, left: size * 0.48 })}
+          <Ring d={w * 1.5} color={tint} w={w} fill />
         </>
       );
     case 'bell':
       return (
         <>
+          {line({ width: w, height: size * 0.12, top: size * 0.06 })}
           <View
             style={[
               abs,
               {
                 width: size * 0.6,
-                height: size * 0.56,
-                top: size * 0.12,
+                height: size * 0.54,
+                top: size * 0.14,
                 borderWidth: w,
                 borderBottomWidth: 0,
                 borderColor: tint,
@@ -319,23 +361,30 @@ function objectArt(name: IconName, size: number, tint: string) {
               },
             ]}
           />
-          {line({ width: size * 0.84, height: w, bottom: size * 0.24 })}
-          <Ring d={size * 0.18} color={tint} w={w} fill style={[abs, { bottom: size * 0.04 }]} />
+          {line({ width: size * 0.82, height: w, bottom: size * 0.24 })}
+          <Ring d={size * 0.18} color={tint} w={w} fill style={[abs, { bottom: size * 0.05 }]} />
         </>
       );
     case 'people':
     case 'user': {
-      const head = name === 'user' ? 0.36 : 0.3;
+      const isPeople = name === 'people';
+      const head = isPeople ? 0.3 : 0.36;
       return (
         <>
-          <Ring d={size * head} color={tint} w={w} style={[abs, { top: size * 0.08 }]} />
+          <Ring
+            d={size * head}
+            color={tint}
+            w={w}
+            style={[abs, { top: size * 0.08, left: isPeople ? size * 0.2 : undefined }]}
+          />
           <View
             style={[
               abs,
               {
-                width: size * 0.74,
+                width: size * (isPeople ? 0.62 : 0.74),
                 height: size * 0.34,
                 bottom: size * 0.08,
+                left: isPeople ? size * 0.06 : undefined,
                 borderWidth: w,
                 borderBottomWidth: 0,
                 borderColor: tint,
@@ -344,13 +393,30 @@ function objectArt(name: IconName, size: number, tint: string) {
               },
             ]}
           />
-          {name === 'people' ? (
-            <Ring
-              d={size * 0.22}
-              color={tint}
-              w={w}
-              style={[abs, { top: size * 0.16, right: 0 }]}
-            />
+          {isPeople ? (
+            <>
+              <Ring
+                d={size * 0.24}
+                color={tint}
+                w={thin}
+                style={[abs, { top: size * 0.14, right: size * 0.1 }]}
+              />
+              <View
+                style={[
+                  abs,
+                  {
+                    width: size * 0.34,
+                    height: size * 0.26,
+                    bottom: size * 0.08,
+                    right: size * 0.04,
+                    borderTopWidth: thin,
+                    borderRightWidth: thin,
+                    borderColor: tint,
+                    borderTopRightRadius: size * 0.24,
+                  },
+                ]}
+              />
+            </>
           ) : null}
         </>
       );
@@ -364,7 +430,7 @@ function objectArt(name: IconName, size: number, tint: string) {
               style={[
                 abs,
                 {
-                  width: size * (i === 1 ? 0.5 : 0.78),
+                  width: size * 0.78,
                   height: w,
                   top: size * top - w / 2,
                   backgroundColor: tint,
@@ -373,6 +439,27 @@ function objectArt(name: IconName, size: number, tint: string) {
               ]}
             />
           ))}
+          <Ring
+            d={size * 0.2}
+            color={tint}
+            w={thin}
+            fill
+            style={[abs, { top: size * 0.26 - size * 0.1, left: size * 0.22 }]}
+          />
+          <Ring
+            d={size * 0.2}
+            color={tint}
+            w={thin}
+            fill
+            style={[abs, { top: size * 0.5 - size * 0.1, right: size * 0.22 }]}
+          />
+          <Ring
+            d={size * 0.2}
+            color={tint}
+            w={thin}
+            fill
+            style={[abs, { top: size * 0.74 - size * 0.1, left: size * 0.34 }]}
+          />
         </>
       );
     case 'route':
@@ -382,26 +469,28 @@ function objectArt(name: IconName, size: number, tint: string) {
             d={size * 0.26}
             color={tint}
             w={w}
-            style={[abs, { bottom: size * 0.1, left: size * 0.1 }]}
+            style={[abs, { bottom: size * 0.08, left: size * 0.08 }]}
           />
           <Ring
             d={size * 0.26}
             color={tint}
             w={w}
-            style={[abs, { top: size * 0.1, right: size * 0.1 }]}
+            style={[abs, { top: size * 0.08, right: size * 0.08 }]}
           />
-          {line({ width: w, height: size * 0.5, transform: [{ rotate: '45deg' }] })}
+          <Ring d={w * 1.4} color={tint} w={w} fill />
+          {line({ width: w, height: size * 0.48, transform: [{ rotate: '45deg' }] })}
         </>
       );
     case 'prayer':
       return (
         <>
+          {line({ width: w, height: size * 0.16, top: size * 0.06 })}
           <View
             style={[
               abs,
               {
                 width: size * 0.62,
-                height: size * 0.6,
+                height: size * 0.58,
                 bottom: size * 0.12,
                 borderWidth: w,
                 borderBottomWidth: 0,
@@ -411,7 +500,21 @@ function objectArt(name: IconName, size: number, tint: string) {
               },
             ]}
           />
-          {line({ width: w, height: size * 0.18, top: size * 0.06 })}
+          <View
+            style={[
+              abs,
+              {
+                width: size * 0.22,
+                height: size * 0.26,
+                bottom: size * 0.12,
+                borderWidth: thin,
+                borderBottomWidth: 0,
+                borderColor: tint,
+                borderTopLeftRadius: size * 0.11,
+                borderTopRightRadius: size * 0.11,
+              },
+            ]}
+          />
           {line({ width: size * 0.88, height: w, bottom: size * 0.12 })}
         </>
       );
@@ -422,14 +525,14 @@ function objectArt(name: IconName, size: number, tint: string) {
             style={[
               abs,
               {
-                width: size * 0.66,
+                width: size * 0.68,
                 height: size * 0.44,
                 bottom: size * 0.1,
                 borderWidth: w,
                 borderTopWidth: 0,
                 borderColor: tint,
-                borderBottomLeftRadius: w * 1.5,
-                borderBottomRightRadius: w * 1.5,
+                borderBottomLeftRadius: w * 1.8,
+                borderBottomRightRadius: w * 1.8,
               },
             ]}
           />
@@ -444,6 +547,7 @@ function objectArt(name: IconName, size: number, tint: string) {
                 borderTopWidth: w,
                 borderLeftWidth: w,
                 borderColor: tint,
+                borderTopLeftRadius: w * 0.6,
                 transform: [{ rotate: '45deg' }],
               },
             ]}
@@ -458,16 +562,17 @@ function objectArt(name: IconName, size: number, tint: string) {
               abs,
               {
                 width: size * 0.56,
-                height: size * 0.6,
+                height: size * 0.62,
                 top: size * 0.1,
                 borderWidth: w,
                 borderBottomWidth: 0,
                 borderColor: tint,
-                borderTopLeftRadius: w,
-                borderTopRightRadius: w,
+                borderTopLeftRadius: w * 1.5,
+                borderTopRightRadius: w * 1.5,
               },
             ]}
           />
+          {line({ width: size * 0.32, height: thin, top: size * 0.26 })}
           {line({
             width: w,
             height: size * 0.36,
@@ -495,7 +600,7 @@ function objectArt(name: IconName, size: number, tint: string) {
                 height: size * 0.6,
                 borderWidth: w,
                 borderColor: tint,
-                borderRadius: w / 2,
+                borderRadius: w * 0.6,
               },
             ]}
           />
@@ -507,11 +612,12 @@ function objectArt(name: IconName, size: number, tint: string) {
                 height: size * 0.6,
                 borderWidth: w,
                 borderColor: tint,
-                borderRadius: w / 2,
+                borderRadius: w * 0.6,
                 transform: [{ rotate: '45deg' }],
               },
             ]}
           />
+          <Ring d={w * 1.4} color={tint} w={w} fill />
         </>
       );
     default:

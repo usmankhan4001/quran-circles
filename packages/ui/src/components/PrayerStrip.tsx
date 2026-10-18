@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
-import { radii, spacing } from '../tokens';
+import { elevation, radii, spacing } from '../tokens';
 import { Text } from './Text';
 
 export interface PrayerTime {
@@ -20,14 +20,21 @@ export interface PrayerStripProps {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', borderRadius: radii.section, padding: spacing.xs },
+  row: {
+    flexDirection: 'row',
+    borderRadius: radii.section,
+    padding: spacing.xs + spacing.xxs,
+    borderWidth: 1,
+    gap: spacing.xxs,
+  },
   cell: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + spacing.xxs,
     borderRadius: radii.md,
+    borderWidth: 1,
   },
-  mark: { height: 3, width: 18, borderRadius: 2, marginTop: spacing.xs },
+  mark: { height: 3, width: 20, borderRadius: radii.pill, marginTop: spacing.xs },
 });
 
 /** Today's five prayers in a row (D2). Secondary on Home; the full list lives under Quran. */
@@ -35,7 +42,18 @@ export function PrayerStrip({ prayers, nextKey, nextLabel, testID }: PrayerStrip
   const theme = useTheme();
   const c = theme.colors;
   return (
-    <View testID={testID} role="list" style={[styles.row, { backgroundColor: c.surface }]}>
+    <View
+      testID={testID}
+      role="list"
+      style={[
+        styles.row,
+        {
+          backgroundColor: c.surface,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+        },
+      ]}
+    >
       {prayers.map((p) => {
         const next = p.key === nextKey;
         return (
@@ -43,7 +61,13 @@ export function PrayerStrip({ prayers, nextKey, nextLabel, testID }: PrayerStrip
             key={p.key}
             role="listitem"
             aria-label={next ? `${nextLabel}: ${p.name} ${p.time}` : `${p.name} ${p.time}`}
-            style={[styles.cell, next ? { backgroundColor: c.accentSubtle } : undefined]}
+            style={[
+              styles.cell,
+              {
+                backgroundColor: next ? c.accentSubtle : 'transparent',
+                borderColor: next ? c.accent : 'transparent',
+              },
+            ]}
           >
             <Text
               variant="caption"

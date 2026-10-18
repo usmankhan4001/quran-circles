@@ -132,13 +132,30 @@ export default function SessionsPage() {
     {
       id: 'seats',
       header: t('console.sessions.col.seats'),
-      cell: (s) =>
-        s.registration.capacity === null
-          ? t('console.sessions.seats.unlimited')
-          : t('console.sessions.seats.of', {
-              taken: number(s.registration.seatsTaken ?? 0),
-              capacity: number(s.registration.capacity),
-            }),
+      cell: (s) => {
+        if (s.registration.capacity === null) {
+          return t('console.sessions.seats.unlimited');
+        }
+        const taken = s.registration.seatsTaken ?? 0;
+        const capacity = s.registration.capacity;
+        const pct = capacity > 0 ? Math.min(100, Math.round((taken / capacity) * 100)) : 0;
+        return (
+          <div className="seat-cell">
+            <span>
+              {t('console.sessions.seats.of', {
+                taken: number(taken),
+                capacity: number(capacity),
+              })}
+            </span>
+            <div className="seat-bar" aria-hidden="true">
+              <span
+                className={`seat-fill${pct >= 80 ? ' seat-fill-warn' : ''}`}
+                style={{ inlineSize: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      },
     },
     {
       id: 'status',

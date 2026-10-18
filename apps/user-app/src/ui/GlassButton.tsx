@@ -36,7 +36,8 @@ export function GlassButton({
   count = 0,
   testID,
 }: GlassButtonProps) {
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const c = theme.colors;
   return (
     <Pressable
       role="button"
@@ -45,7 +46,12 @@ export function GlassButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
+        {
+          backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass,
+          borderWidth: 1,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.heroGlass,
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
+        },
       ]}
     >
       <Icon name={icon} size={22} color={c.textOnHero} />

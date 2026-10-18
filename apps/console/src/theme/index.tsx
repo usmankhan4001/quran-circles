@@ -69,6 +69,7 @@ export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   vars['--shadow-button'] = night ? 'none' : (elevation.medium ?? 'none');
   vars['--shadow-high'] = night ? 'none' : (elevation.high ?? 'none');
   vars['--card-edge'] = night ? colors.border : 'transparent';
+  vars['--c-card-outline'] = colors.border;
   return vars;
 }
 

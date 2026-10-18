@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Button, Card, Icon, Text, spacing, useTheme } from '@qc/ui';
+import { Button, Card, Icon, Text, radii, spacing, useTheme } from '@qc/ui';
 import { useFeatureFlag } from '../../api/featureFlags';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -24,7 +24,21 @@ export function AyahPickCard({ place }: { place: AyahPlace }) {
     <Card testID="ayah-pick-card">
       <View style={{ gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Icon name="book" size={22} color={colors.textAccent} />
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radii.md,
+              backgroundColor: colors.accentSubtle,
+              borderWidth: 1,
+              borderColor: colors.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            aria-hidden
+          >
+            <Icon name="book" size={20} color={colors.textAccent} />
+          </View>
           <View style={{ flex: 1 }}>
             <Text variant="title3" heading={2}>
               {t('admin.dailyAyah.title')}
