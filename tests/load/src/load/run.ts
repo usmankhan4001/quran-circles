@@ -95,7 +95,12 @@ export async function runEvening<T>(options: {
       `  ${result.requests} requests, ${result.rps} req/s, p95 ${result.overall.p95} ms, ` +
         `failed ${(result.failedRate * 100).toFixed(2)}%` +
         (pushResult
-          ? `; push ${pushResult.rowsQueued} rows, post ${pushResult.postMs} ms, drained in ${pushResult.allSentS ?? 'timeout'} s`
+          ? `; push ${pushResult.rowsQueued} rows, post ${pushResult.postMs} ms, drained in ${pushResult.allSentS ?? 'timeout'} s` +
+            (pushResult.perUpdate ? '' : ' (global counts)') +
+            (pushResult.timeline
+              ? ` (written ${pushResult.timeline.writtenS ?? '-'} s, last sent ${pushResult.timeline.lastSentS ?? '-'} s, ` +
+                `${pushResult.timeline.sendPerSecond ?? '-'} /s from the first send)`
+              : '')
           : '') +
         (failed.length ? `; over threshold: ${failed.join(', ')}` : '; within thresholds'),
     );

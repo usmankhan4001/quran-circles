@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Synthetic, type Api, type Person } from '../people';
-import { healthzProbe, pushBurst, type DrainProbe, type OutboxCounts } from './push';
+import { burstTimeline, healthzProbe, pushBurst, type DrainProbe, type OutboxCounts } from './push';
 
 /**
  * The push burst's drain logic against scripted probes: no network (a fake fetch answers the
@@ -189,5 +189,112 @@ describe('push burst, worker /healthz probe', () => {
     const c = await healthzProbe('http://127.0.0.1:2', fetchFake).counts('');
     expect(c).toEqual({ queued: 0, sending: 0, sent: 1, other: 0 });
     expect('pushesPending' in c).toBe(false);
+  });
+});
+
+describe('push burst, worker /healthz?update= probe (per update)', () => {
+  const times = {
+    postedAt: '2026-10-18T19:00:00.000Z',
+    writtenAt: '2026-10-18T19:00:00.800Z',
+    firstSentAt: '2026-10-18T19:00:01.000Z',
+    lastSentAt: '2026-10-18T19:00:03.000Z',
+  };
+
+  it("drains on the update's own rows, however much else the worker sends meanwhile", async () => {
+    const { api } = postingApi(840);
+    const { probe, ids } = scriptedProbe('worker-healthz', [
+      // Baseline (global): the virtual users' confirmations keep the global sent count growing.
+      counts({ sent: 50, pushesPending: 0 }),
+      counts({ pushesPending: 1, perUpdate: true }),
+      counts({ queued: 600, sending: 240, pushesPending: 0, perUpdate: true }),
+      counts({ sent: 839, other: 1, pushesPending: 0, perUpdate: true, times }),
+    ]);
+    const result = await pushBurst(api, admin, probe, fast);
+    expect(result.timedOut).toBe(false);
+    expect(result.perUpdate).toBe(true);
+    // No baseline subtracted from the update's own counts, and rows taken from them.
+    expect(result.final).toMatchObject({ sent: 839, other: 1 });
+    expect(result.rowsQueued).toBe(840);
+    expect(result.timeline).toEqual({
+      writtenS: 0.8,
+      firstSentS: 1,
+      lastSentS: 3,
+      sendPerSecond: 419,
+    });
+    // The baseline read is global (''), every later read asks for the update.
+    expect(ids[0]).toBe('');
+    expect(new Set(ids.slice(1))).toEqual(new Set([UPDATE_ID]));
+  });
+
+  it("keeps waiting while the update's rows are queued, and times out rather than guess", async () => {
+    const { api } = postingApi(840);
+    const { probe } = scriptedProbe('worker-healthz', [
+      counts({ sent: 0, pushesPending: 0 }),
+      counts({ queued: 840, pushesPending: 0, perUpdate: true }),
+    ]);
+    const result = await pushBurst(api, admin, probe, { ...fast, timeoutS: 0.05 });
+    expect(result.timedOut).toBe(true);
+    expect(result.allSentS).toBeNull();
+    expect(result.drainPerSecond).toBeNull();
+  });
+
+  it('asks /healthz?update=<id> and reads the per-update block', async () => {
+    const seen: string[] = [];
+    const fetchFake: typeof fetch = async (input) => {
+      seen.push(String(input));
+      return json(200, {
+        ok: true,
+        details: { sent: 9999 },
+        metrics: { workerLost: 7, updatePushesPending: 3 },
+        update: {
+          pushPending: false,
+          ...times,
+          rows: 840,
+          queued: 1,
+          sending: 2,
+          sent: 830,
+          other: 7,
+          workerLost: 0,
+          maxAttempts: 1,
+        },
+      });
+    };
+    const c = await healthzProbe('http://127.0.0.1:2/', fetchFake).counts(UPDATE_ID);
+    expect(seen).toEqual([`http://127.0.0.1:2/healthz?update=${UPDATE_ID}`]);
+    expect(c).toEqual({
+      queued: 1,
+      sending: 2,
+      sent: 830,
+      other: 7,
+      workerLost: 0,
+      maxAttempts: 1,
+      pushesPending: 0,
+      perUpdate: true,
+      times,
+    });
+  });
+
+  it('falls back to the global counts when the worker does not answer per update', async () => {
+    const fetchFake: typeof fetch = async () =>
+      json(200, { ok: true, details: { sent: 5 }, metrics: { updatePushesPending: 0 } });
+    const c = await healthzProbe('http://127.0.0.1:2', fetchFake).counts(UPDATE_ID);
+    expect(c).toEqual({ queued: 0, sending: 0, sent: 5, other: 0, pushesPending: 0 });
+    expect(c.perUpdate).toBeUndefined();
+    // An unknown update (null) also falls back rather than reading as an empty, drained burst.
+    const unknown: typeof fetch = async () => json(200, { ok: true, details: {}, update: null });
+    expect((await healthzProbe('http://127.0.0.1:2', unknown).counts(UPDATE_ID)).perUpdate).toBe(
+      undefined,
+    );
+  });
+
+  it('builds no send rate from fewer than two sends, and no timeline without times', () => {
+    expect(burstTimeline(undefined, 10)).toBeNull();
+    expect(
+      burstTimeline(
+        { postedAt: times.postedAt, writtenAt: null, firstSentAt: null, lastSentAt: null },
+        0,
+      ),
+    ).toEqual({ writtenS: null, firstSentS: null, lastSentS: null, sendPerSecond: null });
+    expect(burstTimeline({ ...times, lastSentAt: times.firstSentAt }, 1)?.sendPerSecond).toBeNull();
   });
 });

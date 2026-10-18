@@ -197,18 +197,35 @@ export function databaseProbe(databaseUrl: string): DrainProbe & { close(): Prom
       // The mark first: the worker writes the rows and clears the mark in one transaction, so once
       // this read sees the mark cleared, the rows query below (a later snapshot) sees every row.
       // The other order could see no rows, then a cleared mark, and call the burst drained.
-      const mark = await pool.query<{ pending: boolean }>(
-        `/* qc-load probe */ SELECT push_pending_since IS NOT NULL AS pending
+      const mark = await pool.query<{ pending: boolean; posted: Date }>(
+        `/* qc-load probe */ SELECT push_pending_since IS NOT NULL AS pending, created_at AS posted
            FROM updates WHERE id = $1`,
         [updateId],
       );
-      const res = await pool.query<{ status: string; n: string; lost: string; attempts: number }>(
+      const res = await pool.query<{
+        status: string;
+        n: string;
+        lost: string;
+        attempts: number;
+        written: Date | null;
+        first: Date | null;
+        last: Date | null;
+      }>(
         `/* qc-load probe */ SELECT status, count(*) AS n,
                 count(*) FILTER (WHERE last_error_code = 'worker_lost') AS lost,
-                max(attempts) AS attempts
+                max(attempts) AS attempts, min(created_at) AS written,
+                min(sent_at) AS first, max(sent_at) AS last
            FROM message_outbox WHERE update_id = $1 GROUP BY status`,
         [updateId],
       );
+      const pick = (
+        values: (Date | null)[],
+        f: (a: number, b: number) => number,
+      ): string | null => {
+        const ms = values.flatMap((v) => (v ? [v.getTime()] : []));
+        return ms.length ? new Date(ms.reduce(f)).toISOString() : null;
+      };
+      const posted = mark.rows[0]?.posted;
       const out: OutboxCounts = {
         queued: 0,
         sending: 0,
@@ -217,6 +234,26 @@ export function databaseProbe(databaseUrl: string): DrainProbe & { close(): Prom
         workerLost: 0,
         maxAttempts: 0,
         pushesPending: mark.rows[0]?.pending ? 1 : 0,
+        perUpdate: true,
+        ...(posted
+          ? {
+              times: {
+                postedAt: posted.toISOString(),
+                writtenAt: pick(
+                  res.rows.map((r) => r.written),
+                  Math.min,
+                ),
+                firstSentAt: pick(
+                  res.rows.map((r) => r.first),
+                  Math.min,
+                ),
+                lastSentAt: pick(
+                  res.rows.map((r) => r.last),
+                  Math.max,
+                ),
+              },
+            }
+          : {}),
       };
       for (const r of res.rows) {
         const n = Number(r.n);

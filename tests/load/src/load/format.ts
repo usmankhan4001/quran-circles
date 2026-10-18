@@ -29,8 +29,19 @@ export function formatLoad<T>(report: LoadReport<T>, dbLine?: (db: T) => string[
       lines.push(
         `   push burst: post ${push.postStatus} in ${push.postMs} ms, ${push.rowsQueued} rows for ${push.recipients} recipients; ` +
           `rows written ${push.pushesWrittenS ?? '-'} s, first sent ${push.firstSentS ?? '-'} s, all sent ${push.allSentS ?? 'timeout'} s (${push.drainPerSecond ?? '-'} /s); ` +
-          `under load ${push.sentUnderLoad ?? '-'} sent (${push.underLoadPerSecond ?? '-'} /s)`,
+          `under load ${push.sentUnderLoad ?? '-'} sent (${push.underLoadPerSecond ?? '-'} /s)` +
+          (push.perUpdate
+            ? ''
+            : '; GLOBAL counts (worker without /healthz?update=), drain time over-reported'),
       );
+      const t = push.timeline;
+      if (t) {
+        lines.push(
+          `   push timeline (database clock, from the post): written ${t.writtenS ?? '-'} s, ` +
+            `first sent ${t.firstSentS ?? '-'} s, last sent ${t.lastSentS ?? '-'} s; ` +
+            `send rate from the first send ${t.sendPerSecond ?? '-'} /s`,
+        );
+      }
       lines.push(
         `   push outbox: queued=${f.queued} sending=${f.sending} sent=${f.sent} other=${f.other}` +
           (f.workerLost !== undefined ? ` worker_lost=${f.workerLost}` : '') +

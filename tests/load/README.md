@@ -107,6 +107,11 @@ The scale target is about 200 venues and under 50,000 users in the first season
   is sent (locally from the database, remotely from the worker's `/healthz`). The burst is not
   drained while the fan-out is pending (`push_pending_since` set locally,
   `metrics.updatePushesPending` above 0 remotely), and the row count is taken at the end.
+  Remotely the probe asks the worker for the update's own rows (`/healthz?update=<id>`), so the
+  virtual users' own messages (registration confirmations) do not stretch the measured drain; a
+  worker without that answer falls back to the global counts, marked "global counts" in the
+  output. The report also gives the burst on the database clock (`timeline`: rows written, first
+  and last sent, and the senders' rate from the first send).
 
 ### Proposed pass thresholds
 

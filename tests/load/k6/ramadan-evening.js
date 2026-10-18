@@ -47,6 +47,10 @@ const failed = new Rate('qc_failed');
 const rateLimited = new Rate('qc_rate_limited');
 const pushPostMs = new Trend('qc_push_post_ms', true);
 const pushDrainRate = new Trend('qc_push_drain_per_s');
+// Reported, not thresholds: the burst on the database clock (seconds from the post to the last
+// row sent) and the senders' rate from the first send to the last (a worker with /healthz?update=).
+const pushLastSent = new Trend('qc_push_last_sent_s');
+const pushSendRate = new Trend('qc_push_send_per_s');
 
 const EXPECTED_CODES = [
   'already_registered',
@@ -461,10 +465,23 @@ export function evening(data) {
   get('ayah', '/v1/ayah-of-the-day', {}, user);
 }
 
-function outbox() {
-  const res = http.get(`${WORKER}/healthz`, { tags: { op: 'healthz' } });
+function outbox(updateId) {
+  const res = http.get(`${WORKER}/healthz${updateId ? `?update=${updateId}` : ''}`, {
+    tags: { op: 'healthz' },
+  });
   const d = res.json('details') || {};
   const m = res.json('metrics') || {};
+  const u = updateId ? res.json('update') : null;
+  if (u && typeof u.postedAt === 'string') {
+    // This update's own rows (a worker that answers per update): exact, whatever else it sends.
+    return {
+      perUpdate: true,
+      sent: u.sent || 0,
+      pending: (u.queued || 0) + (u.sending || 0),
+      fanOutPending: u.pushPending ? 1 : 0,
+      times: u,
+    };
+  }
   return {
     sent: d.sent || 0,
     pending: (d.queued || 0) + (d.sending || 0),
@@ -493,6 +510,26 @@ export function pushBurst(data) {
   pushPostMs.add(res.timings.duration);
   if (!WORKER || res.status !== 201) return;
   const started = Date.now();
+  const updateId = res.json('id');
+  // A worker that answers /healthz?update= gives the update's own rows: drained when its pushes
+  // are written and none is queued or sending.
+  while (Date.now() - started < 14 * 60_000) {
+    const own = outbox(updateId);
+    if (!own.perUpdate) break;
+    if (own.fanOutPending === 0 && own.pending === 0) {
+      const seconds = (Date.now() - started) / 1000;
+      pushDrainRate.add(seconds > 0 ? own.sent / seconds : 0);
+      const t = own.times;
+      if (t.lastSentAt)
+        pushLastSent.add((Date.parse(t.lastSentAt) - Date.parse(t.postedAt)) / 1000);
+      const span =
+        t.firstSentAt && t.lastSentAt ? Date.parse(t.lastSentAt) - Date.parse(t.firstSentAt) : 0;
+      if (own.sent >= 2 && span > 0) pushSendRate.add(((own.sent - 1) * 1000) / span);
+      return;
+    }
+    sleep(1);
+  }
+  // An older worker: global counts only.
   // The worker's counts are global (other bursts, reminders queued for later), so the burst is
   // measured by progress: drained when the sent count has grown and then stood still for 5 s.
   // Never while the worker still has an update's pushes to write: until then they are not rows.
