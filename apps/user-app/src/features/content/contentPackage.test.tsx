@@ -77,10 +77,15 @@ describe('the Quran & Prayer package inside the app', () => {
     expect(view.queryByTestId('quran-unavailable')).toBeNull();
   });
 
-  it('shows the prayer card on Home asking for a city, and opens the tab from it', async () => {
+  it('shows the prayer strip on Home with no times until a city is chosen, and opens the tab from it', async () => {
     const { content } = modules();
     const view = await renderScreen(<HomeScreen />, { content });
-    fireEvent.click(await view.findByText(en['prayer.noCity.title']));
+    const strip = await view.findByTestId('home-prayer-strip', {}, { timeout: 4000 });
+    // As drawn, the five prayers stay; the times read "--:--" and the strip asks for a city.
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(5);
+    expect(strip.textContent).toContain('--:--');
+    expect(strip.getAttribute('aria-label')).toContain(en['prayer.noCity.title']);
+    fireEvent.click(strip);
     expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
   });
 

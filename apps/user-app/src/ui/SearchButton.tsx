@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
+import { Icon, Text, radii, spacing, useTheme } from '@qc/ui';
 
 export interface SearchButtonProps {
   /** The name a screen reader says. */
@@ -10,12 +10,13 @@ export interface SearchButtonProps {
 }
 
 const styles = StyleSheet.create({
+  // As drawn on Home: 42 high, 14 inside, an 8 dp gap (the press area reaches 48 with the slop).
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: minTouchTarget,
-    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    minHeight: 42,
+    paddingHorizontal: 14,
     borderRadius: radii.pill,
   },
   grow: { flex: 1 },
@@ -34,6 +35,7 @@ export function SearchButton({ label, placeholder, onPress, testID }: SearchButt
       aria-label={`${label}. ${placeholder}`}
       testID={testID}
       onPress={onPress}
+      hitSlop={3}
       style={({ pressed }) => [
         styles.button,
         {
@@ -45,9 +47,9 @@ export function SearchButton({ label, placeholder, onPress, testID }: SearchButt
         },
       ]}
     >
-      <Icon name="search" size={20} color={c.textSecondary} />
+      <Icon name="search" size={16} color={c.textSecondary} />
       <View style={styles.grow}>
-        <Text variant="body" color="textSecondary" numberOfLines={1}>
+        <Text color="textSecondary" numberOfLines={1} variant="body">
           {placeholder}
         </Text>
       </View>

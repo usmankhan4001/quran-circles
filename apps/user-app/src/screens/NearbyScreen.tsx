@@ -1,21 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
-  Chip,
   EmptyState,
-  Icon,
   ListItem,
-  SegmentedControl,
-  SearchField,
   Sheet,
   Skeleton,
-  Tag,
   Text,
-  minTouchTarget,
   radii,
-  screenGutter,
   spacing,
   useTheme,
 } from '@qc/ui';
@@ -43,21 +36,34 @@ import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
 import { PictureCard } from '../ui/PictureCard';
 import { TabFrame } from '../ui/TabFrame';
+import { NearbyChip, NearbySearch, ViewSwitch } from '../ui/NearbyControls';
+import { ArtPill } from '../ui/ArtPill';
+import { useTextWeight } from '../ui/textWeight';
 import { describeWhenParts } from '../features/nearby/schedule';
 import { describePortion } from '../features/session/portion';
+
+/** The gutter of the drawings: 20 dp each side. */
+const GUTTER = 20;
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.lg },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   list: { gap: spacing.md },
   carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
-  chipRow: { gap: spacing.sm, paddingVertical: spacing.xxs, alignItems: 'center' },
-  active: { flexDirection: 'row', gap: spacing.sm },
-  header: {
-    paddingHorizontal: screenGutter,
+  chipRow: {
+    gap: 6,
     paddingTop: spacing.md,
-    gap: spacing.md,
+    paddingBottom: spacing.xs,
+    paddingHorizontal: GUTTER,
+    alignItems: 'center',
   },
+  active: { flexDirection: 'row', gap: 6 },
+  // As drawn: the title row 20 from the sides, the search 14 under it, the chips 12 under that
+  // and running to the screen's edge, the cards 12 under the chips.
+  header: { paddingTop: spacing.md },
+  gutter: { paddingHorizontal: GUTTER },
+  searchBox: { paddingTop: 14, paddingHorizontal: GUTTER },
+  body: { paddingTop: spacing.md, paddingHorizontal: GUTTER },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -65,15 +71,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   title: { flexShrink: 1 },
-  switch: { width: 160 },
-  place: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: minTouchTarget,
-    paddingHorizontal: spacing.md + spacing.xxs,
-    borderRadius: radii.pill,
-  },
   selectedTop: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -82,34 +79,11 @@ const styles = StyleSheet.create({
   },
   grow: { flexShrink: 1 },
   selected: { gap: spacing.xs },
+  selectedAction: { marginTop: spacing.md },
+  portion: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
 });
 
 const NEAREST_WIDTH = 176;
-
-/** The charcoal place chip that starts the chip row (D17): a pin and the city's name. */
-function PlaceChip({ label, onPress }: { label: string; onPress: () => void }) {
-  const theme = useTheme();
-  const c = theme.colors;
-  return (
-    <Pressable
-      role="button"
-      testID="nearby-city"
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.place,
-        {
-          backgroundColor: pressed ? c.ctaPressed : c.cta,
-          ...(theme.mode === 'highContrast' ? { borderWidth: 1, borderColor: c.borderStrong } : {}),
-        },
-      ]}
-    >
-      <Icon name="pin" size={14} color={c.progress} />
-      <Text variant="caption" color="textOnCta" strong>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
 
 type ViewMode = 'list' | 'map';
 
@@ -123,6 +97,9 @@ export function NearbyScreen() {
   const cities = useCities();
   const areas = useAreas(prefs.cityId);
   const origin = useOrigin();
+  const theme = useTheme();
+  const c = theme.colors;
+  const w = useTextWeight();
 
   const [local, setLocal] = useState<NearbyFilters>(emptyFilters);
   const filters: NearbyFilters = { ...local, cityId: prefs.cityId };
@@ -167,32 +144,33 @@ export function NearbyScreen() {
   const sep = t('schedule.separator');
   const header = (
     <View testID="screen-header" style={styles.header}>
-      <View style={styles.titleRow}>
+      <View style={[styles.titleRow, styles.gutter]}>
         <View style={styles.title}>
-          <Text variant="title2" heading={1}>
+          <Text variant="title1" heading={1}>
             {t('nearby.heading')}
           </Text>
         </View>
-        <View style={styles.switch}>
-          <SegmentedControl<ViewMode>
-            accessibilityLabel={t('nearby.view.label')}
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'list', label: t('nearby.view.list') },
-              { value: 'map', label: t('nearby.view.map') },
-            ]}
-            testID="nearby-view"
-          />
-        </View>
+        <ViewSwitch<ViewMode>
+          accessibilityLabel={t('nearby.view.label')}
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'list', label: t('nearby.view.list') },
+            { value: 'map', label: t('nearby.view.map') },
+          ]}
+          testID="nearby-view"
+        />
       </View>
-      <SearchField
-        accessibilityLabel={t('nearby.search.label')}
-        placeholder={t('nearby.search.placeholder')}
-        value={local.q}
-        onChangeText={(q) => setLocal((f) => ({ ...f, q }))}
-        testID="nearby-search"
-      />
+      <View style={styles.searchBox}>
+        <NearbySearch
+          accessibilityLabel={t('nearby.search.label')}
+          placeholder={t('nearby.search.placeholder')}
+          value={local.q}
+          onChangeText={(q) => setLocal((f) => ({ ...f, q }))}
+          clearLabel={t('ui.clearSearch')}
+          testID="nearby-search"
+        />
+      </View>
       {/* One row of chips under the search (N2, D17): the place in charcoal, then each filter;
           a filter that is on is an emerald pill with a cross to take it off. */}
       <ScrollView
@@ -201,59 +179,68 @@ export function NearbyScreen() {
         contentContainerStyle={styles.chipRow}
         testID="nearby-chips"
       >
-        <PlaceChip
+        <NearbyChip
+          kind="place"
+          icon="pin"
           label={selectedCity ? l(selectedCity.name).text : t('nearby.city.all')}
           onPress={() => setShowCities(true)}
+          testID="nearby-city"
         />
-        <Chip
+        <NearbyChip
           label={selectedArea ? l(selectedArea.name).text : t('nearby.area.button')}
-          selected={Boolean(selectedArea)}
+          kind={selectedArea ? 'chosen' : 'plain'}
+          checked={Boolean(selectedArea)}
           onPress={() => setShowAreas(true)}
           testID="nearby-area-button"
         />
         {local.timeBand || local.language || local.program ? (
           <View style={styles.active} testID="active-filters">
             {local.timeBand ? (
-              <Chip
+              <NearbyChip
+                kind="chosen"
                 label={t(`nearby.time.${local.timeBand}`)}
-                selected
+                onPress={() => setShowFilters(true)}
                 onRemove={() => setLocal((f) => ({ ...f, timeBand: null }))}
               />
             ) : null}
             {local.language ? (
-              <Chip
+              <NearbyChip
+                kind="chosen"
                 label={t(`profile.language.${local.language}`)}
-                selected
+                onPress={() => setShowFilters(true)}
                 onRemove={() => setLocal((f) => ({ ...f, language: null }))}
               />
             ) : null}
             {local.program ? (
-              <Chip
+              <NearbyChip
+                kind="chosen"
                 label={t(`programs.${local.program}`)}
-                selected
+                onPress={() => setShowFilters(true)}
                 onRemove={() => setLocal((f) => ({ ...f, program: null }))}
               />
             ) : null}
           </View>
         ) : null}
-        <Chip
+        <NearbyChip
           label={
             local.section
               ? t(`sections.${local.section}`)
               : `${t('nearby.filters.section')}: ${t('nearby.filters.any')}`
           }
-          selected={Boolean(local.section)}
+          kind={local.section ? 'chosen' : 'plain'}
+          checked={Boolean(local.section)}
           onPress={() => setShowFilters(true)}
           {...(local.section ? { onRemove: () => setLocal((f) => ({ ...f, section: null })) } : {})}
           testID="nearby-section"
         />
-        <Chip
+        <NearbyChip
           label={dayLabel}
-          selected={local.days.length > 0}
+          kind={local.days.length > 0 ? 'chosen' : 'plain'}
+          checked={local.days.length > 0}
           onPress={() => setShowFilters(true)}
           testID="nearby-day"
         />
-        <Chip
+        <NearbyChip
           label={count > 0 ? t('nearby.filters.buttonCount', { count }) : t('nearby.filters.open')}
           onPress={() => setShowFilters(true)}
           testID="nearby-filters-button"
@@ -264,7 +251,7 @@ export function NearbyScreen() {
 
   return (
     <TabFrame header={header} testID="nearby-screen">
-      <View style={styles.stack}>
+      <View style={[styles.stack, styles.body]}>
         {list.offline ? (
           <Text variant="caption" color="textSecondary" testID="saved-copy-note">
             {t('app.savedCopy')}
@@ -327,26 +314,36 @@ export function NearbyScreen() {
                       <View style={styles.selected}>
                         <View style={styles.selectedTop}>
                           <View style={styles.grow}>
-                            <Text variant="caption" color="textSuccess" strong>
+                            <Text variant="caption" color="textSuccess" style={w('700')}>
                               {distance ? `${place}${sep}${distance}` : place}
                             </Text>
                           </View>
-                          {portion ? <Tag label={portion} kind="gilt" /> : null}
+                          {portion ? (
+                            <View style={[styles.portion, { backgroundColor: c.warningSubtle }]}>
+                              <Text
+                                variant="eyebrow"
+                                color="textWarning"
+                                style={w('700', { letterSpacing: 0 })}
+                              >
+                                {portion}
+                              </Text>
+                            </View>
+                          ) : null}
                         </View>
                         <Text variant="title3" lang={title.lang}>
                           {title.text}
                         </Text>
-                        <Text variant="caption" color="textSecondary">
+                        <Text variant="caption" color="textSecondary" style={w('400')}>
                           {[when.day, when.time, t(`sections.${session.section}`)].join(sep)}
                         </Text>
-                        <Button
-                          variant="outline"
-                          fullWidth
-                          trailingIcon="arrow-forward"
-                          label={t('nearby.map.openDetails')}
-                          onPress={() => nav.go({ name: 'session', sessionId: session.id })}
-                          testID={`map-open-${session.id}`}
-                        />
+                        <View style={styles.selectedAction}>
+                          <ArtPill
+                            trailingIcon="arrow-forward"
+                            label={t('nearby.map.openDetails')}
+                            onPress={() => nav.go({ name: 'session', sessionId: session.id })}
+                            testID={`map-open-${session.id}`}
+                          />
+                        </View>
                       </View>
                     </Card>
                   );

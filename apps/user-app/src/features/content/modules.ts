@@ -31,10 +31,10 @@ export interface ContentModules {
   /** Small Home card: continue reading where the person stopped. */
   ContinueReadingCard?: ComponentType<{ onOpen: (place: QuranPlace) => void }>;
   /**
-   * Home's prayer strip (H4): today's five prayers for the city chosen in the prayer view, the
-   * next one marked. Without a city it asks for one.
+   * Home's prayer strip (H4): today's five prayers for the city chosen in the prayer view, else
+   * the app's city (`citySlug`), the current one marked. Without a city it shows "--:--".
    */
-  PrayerStrip?: ComponentType<{ onPress?: () => void }>;
+  PrayerStrip?: ComponentType<{ onPress?: () => void; citySlug?: string }>;
   /**
    * The words of one ayah for Home's ayah card: the Arabic, and the Urdu translation on an Urdu
    * screen. They come from the same online source and on-device cache as the reader; nothing

@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useEffect, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import {
   ContentProvider,
   ContinueReadingCard,
@@ -22,8 +22,9 @@ import {
   offsetOf,
   todayAt,
 } from '@qc/content/prayer';
-import { Card, PrayerStrip, Skeleton, Text, screenGutter, spacing } from '@qc/ui';
+import { Skeleton, Text, screenGutter, spacing } from '@qc/ui';
 import { useI18n } from '../../i18n/I18nProvider';
+import { HomePrayerTimes } from '../../ui/HomePrayerTimes';
 import type { ContentModules, QuranPlace } from './modules';
 
 /**
@@ -62,47 +63,49 @@ function usePrayerCityId(): string | null {
   return cityId;
 }
 
-/** Home's prayer strip: today's five prayers at the chosen city, worked out on the phone. */
-function HomePrayerStrip({ onPress }: { onPress?: () => void }) {
+/**
+ * Home's prayer strip: today's five prayers at the city chosen in the prayer view, else at the
+ * app's own city, worked out on the phone. The prayer whose time it is sits on a white pill.
+ * With no city at all the strip still shows, with "--:--" for each time, and opens the prayer
+ * view to choose one.
+ */
+function HomePrayerStrip({ onPress, citySlug }: { onPress?: () => void; citySlug?: string }) {
   const { t, locale } = useI18n();
   const cityId = usePrayerCityId();
   const now = useNow(30_000);
-  const place = PAKISTAN_CITIES.find((city) => city.id === cityId) ?? null;
+  const place =
+    PAKISTAN_CITIES.find((city) => city.id === cityId) ??
+    PAKISTAN_CITIES.find((city) => city.id === citySlug) ??
+    null;
+  const names = FIVE_PRAYERS.map((key) => ({ key, name: t(`prayer.${key}`) }));
   if (!place) {
     return (
-      <Card
+      <HomePrayerTimes
+        prayers={names.map((p) => ({ ...p, time: '--:--' }))}
+        activeLabel={t('home.prayer.now')}
+        accessibilityLabel={`${t('prayer.noCity.title')}. ${t('prayer.noCity.body')}`}
         {...(onPress ? { onPress } : {})}
-        accessibilityLabel={t('prayer.noCity.title')}
-        testID="home-prayer-city"
-      >
-        <Text variant="label">{t('prayer.noCity.title')}</Text>
-        <Text variant="caption" color="textSecondary">
-          {t('prayer.noCity.body')}
-        </Text>
-      </Card>
+        testID="home-prayer-strip"
+      />
     );
   }
   const day = computeDay(place, todayAt(place, now));
   const next = nextPrayer(place, now);
-  const labels = { am: t('prayer.am'), pm: t('prayer.pm') };
-  const prayers = FIVE_PRAYERS.map((key) => ({
-    key,
-    name: t(`prayer.${key}`),
-    time: formatClock(day.times[key], offsetOf(place), { locale, labels }),
+  // The figures only, as drawn ("6:28"): the strip has no room for "pm" under each prayer.
+  const labels = { am: '', pm: '' };
+  const prayers = names.map((p) => ({
+    ...p,
+    time: formatClock(day.times[p.key], offsetOf(place), { locale, labels }).trim(),
   }));
-  const strip = (
-    <PrayerStrip
+  return (
+    <HomePrayerTimes
       prayers={prayers}
-      nextKey={next.prayer}
-      nextLabel={t('prayer.next')}
+      activeKey={next.current ?? next.prayer}
+      activeLabel={next.current ? t('home.prayer.now') : t('prayer.next')}
+      accessibilityLabel={t('home.prayer.title')}
+      {...(onPress ? { onPress } : {})}
       testID="home-prayer-strip"
     />
-  );
-  if (!onPress) return strip;
-  return (
-    <Pressable role="button" aria-label={t('home.prayer.title')} onPress={onPress}>
-      {strip}
-    </Pressable>
   );
 }
 

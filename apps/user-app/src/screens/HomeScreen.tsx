@@ -1,15 +1,13 @@
-import { memo, useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { memo, useCallback, useState, type ReactNode } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import {
   Button,
   Card,
   EmptyState,
-  HeroHeader,
   Icon,
   Text,
   elevation,
   formatNumber,
-  minTouchTarget,
   radii,
   spacing,
   useTheme,
@@ -22,7 +20,6 @@ import { DaysReadCard } from '../components/DaysReadCard';
 import { NextCircleCard } from '../components/NextCircleCard';
 import { ReadAlongCard } from '../components/ReadAlongCard';
 import { QueryBoundary } from '../components/QueryBoundary';
-import { Section } from '../components/Section';
 import { distanceParts, haversineMetres, nearestMetres } from '../core/distance';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { useFeature } from '../features/reading/hooks';
@@ -42,22 +39,52 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthStatus, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useAreas, useCities } from '../features/places/usePlaces';
-import { GlassButton } from '../ui/GlassButton';
 import { MapPreviewCard } from '../ui/MapPreviewCard';
 import { PictureCard } from '../ui/PictureCard';
 import { SearchButton } from '../ui/SearchButton';
 import { useStartFrameDeferral } from '../ui/startFrame';
 import { TabFrame } from '../ui/TabFrame';
+import { HomePrayerTimes } from '../ui/HomePrayerTimes';
+import { useTextWeight } from '../ui/textWeight';
 import { venueMapUrl } from '../features/session/links';
 
+/** The gutter of the drawings: 20 dp each side (`.iq-section`). */
+const GUTTER = 20;
+
 const styles = StyleSheet.create({
-  stack: { gap: spacing.xl },
+  // The green header (`.iq-hero-gradient`): 14 on top, 20 at the sides and 72 under the top row,
+  // 54 of which the next-circle card covers.
+  hero: { paddingTop: 14, paddingHorizontal: GUTTER, paddingBottom: 72 },
+  heroSolid: { paddingBottom: 72, borderBottomStartRadius: 28, borderBottomEndRadius: 28 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  heroCard: { marginTop: -54, marginHorizontal: GUTTER, zIndex: 6 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  area: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1, minHeight: 32 },
+  areaText: { flexShrink: 1 },
+  season: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: radii.pill },
+  bell: {
+    width: 32,
+    height: 32,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellDot: { position: 'absolute', top: 6, end: 7, width: 6, height: 6, borderRadius: 3 },
+  // A page heading for screen readers: Home shows no big title (D17), the area leads instead.
+  hidden: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
+  gutter: { paddingHorizontal: GUTTER },
   list: { gap: spacing.md },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.lg,
+    paddingHorizontal: GUTTER,
+  },
   grow: { flex: 1 },
   filter: {
-    width: minTouchTarget + spacing.sm,
-    height: minTouchTarget + spacing.sm,
+    width: 42,
+    height: 42,
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -66,39 +93,44 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'transparent',
   },
-  carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  shortcuts: { flexDirection: 'row', gap: spacing.sm },
-  area: {
+  prayer: { paddingTop: 14, paddingHorizontal: GUTTER },
+  near: { paddingTop: 18, paddingStart: GUTTER },
+  head: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: minTouchTarget,
-    flexShrink: 1,
-    paddingEnd: spacing.sm,
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    paddingEnd: GUTTER,
   },
-  areaText: { flexShrink: 1 },
-  pill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
+  headTitle: { flexShrink: 1 },
+  flush: { paddingEnd: 0 },
+  carousel: { gap: spacing.md, paddingEnd: GUTTER, paddingBottom: spacing.xs },
+  nearState: { paddingEnd: GUTTER },
+  special: { paddingTop: spacing.lg, paddingHorizontal: GUTTER },
+  specialCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 13,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.card,
     borderWidth: 1,
   },
-  // A page heading for screen readers: Home shows no big title (D17), the area leads instead.
-  hidden: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
-  secondary: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  secondaryText: { flex: 1, gap: spacing.xxs },
-  seeAll: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    minHeight: minTouchTarget,
-    paddingStart: spacing.sm,
-  },
+  specialText: { flex: 1 },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  below: { paddingTop: spacing.xl, paddingHorizontal: GUTTER, gap: spacing.xl },
 });
 
-/** Width of a portrait picture card in the "near you" row (H4, D17). */
+/** Grows the 32 dp header buttons' press area to 48 dp. */
+const SLOP = 8;
+
+/** A portrait picture card in the "near you" row (H4, D17): 136 × 168 on Home. */
 const PICTURE_WIDTH = 136;
+const PICTURE_HEIGHT = 168;
+
+/** The five prayers, in order, for the strip's placeholder before the content package loads. */
+const PRAYER_KEYS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
 
 /** Unread updates for the person signed in; none when signed out. */
 function useHomeUnread(): number {
@@ -108,25 +140,45 @@ function useHomeUnread(): number {
 }
 
 /**
- * The bell in the header and the shortcuts at the bottom read the unread count themselves, so
- * the count arriving after start-up draws only them, not the whole of Home.
+ * The bell in the header reads the unread count itself, so the count arriving after start-up
+ * draws only the bell, not the whole of Home. As drawn: a 32 dp glass circle with an amber dot
+ * when something is unread; the count is in its name.
  */
 const HomeBell = memo(function HomeBell() {
   const { t } = useI18n();
   const nav = useNav();
+  const theme = useTheme();
+  const c = theme.colors;
   const unreadCount = useHomeUnread();
   return (
-    <GlassButton
-      icon="bell"
-      accessibilityLabel={
+    <Pressable
+      role="button"
+      aria-label={
         unreadCount > 0
           ? `${t('updates.title')}, ${t('ui.unread', { count: unreadCount })}`
           : t('updates.title')
       }
-      count={unreadCount}
-      onPress={() => nav.go({ name: 'updates' })}
       testID="home-bell"
-    />
+      hitSlop={SLOP}
+      onPress={() => nav.go({ name: 'updates' })}
+      style={({ pressed }) => [
+        styles.bell,
+        {
+          backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass,
+          ...(theme.mode === 'highContrast' ? { borderWidth: 1, borderColor: c.borderStrong } : {}),
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
+        },
+      ]}
+    >
+      <Icon name="bell" size={16} color={c.textOnHero} />
+      {unreadCount > 0 ? (
+        <View
+          aria-hidden
+          testID="home-bell-dot"
+          style={[styles.bellDot, { backgroundColor: c.progressWarn }]}
+        />
+      ) : null}
+    </Pressable>
   );
 });
 
@@ -136,63 +188,96 @@ const HomeBell = memo(function HomeBell() {
  */
 function AreaTrigger({ label, onPress }: { label: string; onPress: () => void }) {
   const { t } = useI18n();
-  const theme = useTheme();
-  const c = theme.colors;
+  const c = useTheme().colors;
   return (
     <Pressable
       role="button"
       aria-label={t('home.area.change', { place: label })}
       testID="home-area"
+      hitSlop={SLOP}
       onPress={onPress}
-      style={({ pressed }) => [styles.area, pressed ? { opacity: 0.8 } : null]}
+      style={({ pressed }) => [styles.area, { opacity: pressed ? 0.8 : 0.95 }]}
     >
-      <Icon name="pin" size={18} color={c.textOnHero} />
+      <Icon name="pin" size={13} color={c.textOnHero} />
       <View style={styles.areaText}>
-        <Text variant="label" color="textOnHero" numberOfLines={1} decorative>
+        <Text color="textOnHero" numberOfLines={1} decorative variant="label">
           {label}
         </Text>
       </View>
-      <Icon name="chevron-down" size={16} color={c.textOnHero} />
+      <Icon name="chevron-down" size={11} color={c.textOnHero} />
     </Pressable>
   );
 }
 
 /**
- * The second programme of the season as one compact row (D17): an amber line with the programme
- * and when, then the title and the venue, and a chevron. It opens the session.
+ * The special programme row at the foot of the fold (D17): a white card with an amber line
+ * (the programme and when), the title and venue in bold, and a chevron. It shows the season's
+ * other programme when one is coming; until then a sample row, marked as one, opens Nearby.
  */
-function SecondaryProgramCard({ item }: { item: OccurrenceWithSession }) {
+function SpecialProgramCard({ item }: { item: OccurrenceWithSession | undefined }) {
   const { t, l, locale } = useI18n();
   const nav = useNav();
-  const c = useTheme().colors;
-  const session = occurrenceAsSession(item);
-  const title = l(session.title);
-  const venue = l(session.venue.name);
-  const when = describeOccurrence(item, session.timezone, locale);
-  const program = t(`programs.${session.program}`);
-  const line = `${title.text}${t('schedule.separator')}${venue.text}`;
+  const theme = useTheme();
+  const w = useTextWeight();
+  const c = theme.colors;
+  let eyebrow: string;
+  let line: string;
+  let lineLang: 'en' | 'ur' | undefined;
+  let onPress: () => void;
+  let testID: string;
+  if (item) {
+    const session = occurrenceAsSession(item);
+    const title = l(session.title);
+    const venue = l(session.venue.name);
+    const when = describeOccurrence(item, session.timezone, locale);
+    eyebrow = t('home.dora.when', { program: t(`programs.${session.program}`), when });
+    line = `${title.text}${t('schedule.separator')}${venue.text}`;
+    lineLang = title.lang;
+    onPress = () => nav.go({ name: 'session', sessionId: item.sessionId });
+    testID = `home-other-${item.id}`;
+  } else {
+    eyebrow = t('home.special.sampleWhen');
+    line = t('home.special.sampleTitle');
+    onPress = () => nav.tab({ name: 'nearby' });
+    testID = 'home-special-sample';
+  }
   return (
-    <Card
-      onPress={() => nav.go({ name: 'session', sessionId: item.sessionId })}
-      accessibilityLabel={[program, when, title.text, venue.text].join(', ')}
-      testID={`home-other-${item.id}`}
-    >
-      <View style={styles.secondary}>
-        <View style={styles.secondaryText}>
-          <Text variant="caption" color="textWarning" strong decorative>
-            {t('home.dora.when', { program, when })}
+    <View style={styles.special}>
+      <Pressable
+        role="button"
+        aria-label={`${eyebrow}, ${line}`}
+        testID={testID}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.specialCard,
+          {
+            backgroundColor: pressed ? c.surfaceMuted : c.surface,
+            borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
+            boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          },
+        ]}
+      >
+        <View style={styles.specialText}>
+          <Text color="textWarning" decorative numberOfLines={1} variant="caption" style={w('700')}>
+            {eyebrow}
           </Text>
-          <Text variant="label" decorative numberOfLines={2}>
+          <Text
+            decorative
+            numberOfLines={2}
+            {...(lineLang ? { lang: lineLang } : {})}
+            variant="label"
+            style={[w('700'), { marginTop: 2 }]}
+          >
             {line}
           </Text>
         </View>
-        <Icon name="chevron-forward" size={18} color={c.textMuted} />
-      </View>
-    </Card>
+        <Icon name="chevron-forward" size={15} color={c.textMuted} />
+      </Pressable>
+    </View>
   );
 }
 
-/** A section's "See all" link at the end of its title row. */
+/** A section's "See all" link at the end of its title row (`.iq-see-more`). */
 function SeeAll({
   label,
   onPress,
@@ -203,13 +288,38 @@ function SeeAll({
   testID: string;
 }) {
   const c = useTheme().colors;
+  const w = useTextWeight();
   return (
-    <Pressable role="link" onPress={onPress} testID={testID} style={styles.seeAll}>
-      <Text variant="caption" color="textSecondary" strong>
+    <Pressable role="link" onPress={onPress} testID={testID} hitSlop={SLOP} style={styles.seeAll}>
+      <Text variant="caption" color="textSecondary" style={w('600')}>
         {label}
       </Text>
-      <Icon name="chevron-forward" size={14} color={c.textSecondary} />
+      <Icon name="chevron-forward" size={11} color={c.textSecondary} />
     </Pressable>
+  );
+}
+
+/** A section title on Home (`.iq-section-title`): 16 bold. */
+function HomeSectionHead({
+  title,
+  action,
+  flush,
+}: {
+  title: string;
+  action?: ReactNode;
+  /** True inside a block that already has the gutter on both sides. */
+  flush?: boolean;
+}) {
+  const w = useTextWeight();
+  return (
+    <View style={[styles.head, flush ? styles.flush : null]}>
+      <View style={styles.headTitle}>
+        <Text variant="title3" heading={2} style={w('700', { letterSpacing: -0.25 })}>
+          {title}
+        </Text>
+      </View>
+      {action}
+    </View>
   );
 }
 
@@ -217,6 +327,7 @@ export function HomeScreen() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const theme = useTheme();
+  const w = useTextWeight();
   const c = theme.colors;
   const { content, now, openUrl } = useServices();
   const prefs = usePreferences();
@@ -254,7 +365,6 @@ export function HomeScreen() {
         year: formatNumber(hijri.year, locale),
       })
     : null;
-  const sep = t('schedule.separator');
   const areaLabel = city
     ? area
       ? `${l(city.name).text} · ${l(area.name).text}`
@@ -308,83 +418,120 @@ export function HomeScreen() {
     />
   ) : null;
 
+  // D17: deep emerald, through the mid green and a pale green, into the page, fading out about
+  // halfway down the next-circle card. Native and high contrast keep the solid green.
+  const fade = Platform.OS === 'web' && theme.mode !== 'highContrast';
+  const heroLook: ViewStyle = fade
+    ? ({
+        backgroundColor: c.hero,
+        backgroundImage: `linear-gradient(180deg, ${c.hero} 0%, ${c.heroEnd} 48%, color-mix(in srgb, ${c.heroEnd} 60%, ${c.background}) 78%, ${c.background} 100%)`,
+      } as ViewStyle)
+    : { ...styles.heroSolid, backgroundColor: c.hero };
+
+  // The header block holds the green and the card half on it. Its own colour is the hero green
+  // (the green status-bar strip and forced colours read it), painted over on the web by the
+  // page colour, so the green shows only where the fade above draws it.
+  const headerLook: ViewStyle | null = fade
+    ? ({
+        backgroundColor: c.hero,
+        backgroundImage: `linear-gradient(${c.background}, ${c.background})`,
+      } as ViewStyle)
+    : null;
+
   const header = (
-    <HeroHeader
-      testID="screen-header"
-      leading={<AreaTrigger label={areaLabel} onPress={() => setShowArea(true)} />}
-      actions={
-        <View style={styles.actions}>
-          {hijri && hijriText ? (
-            <View
-              testID="home-season"
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: c.surface,
-                  borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.surface,
-                },
-              ]}
-            >
-              <Text variant="caption" color="textAccent" strong accessibilityLabel={hijriText}>
-                {t('home.hijri.short', { day: formatNumber(hijri.day, locale), month: hijriMonth })}
-              </Text>
-            </View>
-          ) : null}
-          <HomeBell />
+    <View testID="screen-header" style={headerLook}>
+      <View style={[styles.hero, heroLook]}>
+        <View style={styles.hidden}>
+          <Text variant="title1" color="textOnHero" heading={1}>
+            {t('tabs.home')}
+          </Text>
         </View>
-      }
-    >
-      <View style={styles.hidden}>
-        <Text variant="title1" color="textOnHero" heading={1}>
-          {t('tabs.home')}
-        </Text>
+        <View style={styles.topRow}>
+          <AreaTrigger label={areaLabel} onPress={() => setShowArea(true)} />
+          <View style={styles.actions}>
+            {hijri && hijriText ? (
+              <View
+                testID="home-season"
+                style={[
+                  styles.season,
+                  {
+                    backgroundColor: c.surface,
+                    boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+                    ...(theme.mode === 'highContrast'
+                      ? { borderWidth: 1, borderColor: c.borderStrong }
+                      : {}),
+                  },
+                ]}
+              >
+                <Text
+                  color="textAccent"
+                  accessibilityLabel={hijriText}
+                  numberOfLines={1}
+                  style={[
+                    w('800', { letterSpacing: 0.2 }),
+                    theme.script === 'latin' ? { textTransform: 'uppercase' } : null,
+                  ]}
+                >
+                  {t('home.hijri.short', {
+                    day: formatNumber(hijri.day, locale),
+                    month: hijriMonth,
+                  })}
+                </Text>
+              </View>
+            ) : null}
+            <HomeBell />
+          </View>
+        </View>
       </View>
-      {heroCard}
-    </HeroHeader>
+      {heroCard ? <View style={styles.heroCard}>{heroCard}</View> : null}
+    </View>
   );
 
   return (
     <TabFrame header={header} green testID="home-screen">
-      <View style={styles.stack}>
-        <View style={styles.searchRow}>
-          <View style={styles.grow}>
-            <SearchButton
-              label={t('nearby.search.label')}
-              placeholder={t('nearby.search.placeholder')}
-              onPress={() => nav.tab({ name: 'nearby' })}
-              testID="home-search"
-            />
-          </View>
-          <Pressable
-            role="button"
-            aria-label={t('nearby.filters.open')}
-            testID="home-filters"
+      <View style={styles.searchRow}>
+        <View style={styles.grow}>
+          <SearchButton
+            label={t('nearby.search.label')}
+            placeholder={t('nearby.search.placeholder')}
             onPress={() => nav.tab({ name: 'nearby' })}
-            style={({ pressed }) => [
-              styles.filter,
-              {
-                backgroundColor: pressed ? c.accentPressed : c.accent,
-                boxShadow: theme.mode === 'light' ? elevation.low : undefined,
-                transform: pressed && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
-              },
-            ]}
-          >
-            <Icon name="sliders" size={20} color={c.textOnAccent} />
-          </Pressable>
+            testID="home-search"
+          />
         </View>
+        <Pressable
+          role="button"
+          aria-label={t('nearby.filters.open')}
+          testID="home-filters"
+          hitSlop={3}
+          onPress={() => nav.tab({ name: 'nearby' })}
+          style={({ pressed }) => [
+            styles.filter,
+            {
+              backgroundColor: pressed ? c.accentPressed : c.accent,
+              transform: pressed && !theme.reduceMotion ? [{ scale: 0.94 }] : undefined,
+            },
+          ]}
+        >
+          <Icon name="sliders" size={16} color={c.textOnAccent} />
+        </Pressable>
+      </View>
 
+      <View style={styles.prayer}>
         {PrayerStrip ? (
-          <PrayerStrip onPress={openPrayer} />
+          <PrayerStrip onPress={openPrayer} {...(city ? { citySlug: city.slug } : {})} />
         ) : (
-          <Card onPress={() => nav.tab({ name: 'quran' })} testID="home-prayer-placeholder">
-            <Text variant="label">{t('home.prayer.title')}</Text>
-            <Text variant="caption" color="textSecondary">
-              {t('home.prayer.placeholder')}
-            </Text>
-          </Card>
+          <HomePrayerTimes
+            prayers={PRAYER_KEYS.map((key) => ({ key, name: t(`prayer.${key}`), time: '--:--' }))}
+            activeLabel={t('home.prayer.now')}
+            accessibilityLabel={`${t('home.prayer.title')}. ${t('home.prayer.placeholder')}`}
+            onPress={openPrayer}
+            testID="home-prayer-placeholder"
+          />
         )}
+      </View>
 
-        <Section
+      <View style={styles.near} testID="home-lead">
+        <HomeSectionHead
           title={
             leadingProgram === 'dora' ? t('home.season.doraTitle') : t('home.season.circlesTitle')
           }
@@ -397,9 +544,9 @@ export function HomeScreen() {
               />
             ) : undefined
           }
-          testID="home-lead"
-        >
-          {!prefs.cityId ? (
+        />
+        {!prefs.cityId ? (
+          <View style={styles.nearState}>
             <Card variant="flat">
               <View style={styles.list}>
                 <Text variant="body">{t('home.chooseCity')}</Text>
@@ -411,11 +558,13 @@ export function HomeScreen() {
                 />
               </View>
             </Card>
-          ) : null}
-          <QueryBoundary query={next}>
-            {(all) => {
-              if (!lead) {
-                return (
+          </View>
+        ) : null}
+        <QueryBoundary query={next}>
+          {(all) => {
+            if (!lead) {
+              return (
+                <View style={styles.nearState}>
                   <EmptyState
                     title={t('home.nextSession.empty.title')}
                     description={
@@ -429,85 +578,93 @@ export function HomeScreen() {
                     }}
                     testID="home-lead-empty"
                   />
-                );
-              }
-              // The hero already shows the first session, so the pictures show the rest (and
-              // the lead too when the hero is the person's own registration).
-              const heroId = mine ? null : lead.id;
-              const pictures = all.filter((o) => o.id !== heroId).slice(0, 8);
-              return (
-                <View style={styles.list}>
-                  {pictures.length > 0 ? (
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.carousel}
-                      testID="home-near"
-                    >
-                      {pictures.map((o) => {
-                        const session = occurrenceAsSession(o);
-                        const title = l(session.title);
-                        const when = describeOccurrence(o, session.timezone, locale);
-                        const distance = venueDistance(session.venue);
-                        return (
-                          <PictureCard
-                            key={o.id}
-                            variant="portrait"
-                            seed={session.venue.id}
-                            width={PICTURE_WIDTH}
-                            title={title.text}
-                            caption={`${l(session.venue.name).text}${sep}${when}`}
-                            section={session.section}
-                            sectionLabel={t(`sections.${session.section}`)}
-                            {...(distance ? { distance } : {})}
-                            onPress={() => nav.go({ name: 'session', sessionId: o.sessionId })}
-                            testID={`home-near-${o.id}`}
-                          />
-                        );
-                      })}
-                    </ScrollView>
-                  ) : null}
-                  {other && !pictures.some((o) => o.id === other.id) ? (
-                    <SecondaryProgramCard item={other} />
-                  ) : null}
                 </View>
               );
-            }}
-          </QueryBoundary>
-        </Section>
-
-        {belowFold ? <ReadAlongCard /> : null}
-
-        {belowFold && items && items.length > 0 ? (
-          <Section
-            title={t('home.map.title')}
-            action={
-              <SeeAll
-                label={t('home.map.open')}
-                onPress={() => nav.tab({ name: 'nearby' })}
-                testID="home-map-open"
-              />
             }
-          >
-            <MapPreviewCard
-              pins={items.length}
-              title={mapTitle(items.length)}
-              caption={t('home.map.open')}
-              onPress={() => nav.tab({ name: 'nearby' })}
-              testID="home-map"
-            />
-          </Section>
-        ) : null}
-
-        {belowFold ? <AyahOfTheDayCard /> : null}
-
-        {belowFold && (daysRead.on || community.on) ? (
-          <View style={styles.list} testID="home-reading">
-            {daysRead.on ? <DaysReadCard /> : null}
-            <CommunityTodayCard />
-          </View>
-        ) : null}
+            // The hero already shows the first session, so the pictures show the rest (and
+            // the lead too when the hero is the person's own registration).
+            const heroId = mine ? null : lead.id;
+            const pictures = all.filter((o) => o.id !== heroId).slice(0, 8);
+            if (pictures.length === 0) return null;
+            return (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.carousel}
+                testID="home-near"
+              >
+                {pictures.map((o) => {
+                  const session = occurrenceAsSession(o);
+                  const title = l(session.title);
+                  const venue = l(session.venue.name).text;
+                  const when = describeOccurrence(o, session.timezone, locale);
+                  const distance = venueDistance(session.venue);
+                  const section = t(`sections.${session.section}`);
+                  return (
+                    <PictureCard
+                      key={o.id}
+                      variant="portrait"
+                      seed={session.venue.id}
+                      width={PICTURE_WIDTH}
+                      artHeight={PICTURE_HEIGHT}
+                      title={title.text}
+                      caption={venue}
+                      section={session.section}
+                      sectionLabel={section}
+                      {...(distance ? { distance } : {})}
+                      accessibilityLabel={[title.text, venue, when, section, distance]
+                        .filter(Boolean)
+                        .join(', ')}
+                      onPress={() => nav.go({ name: 'session', sessionId: o.sessionId })}
+                      testID={`home-near-${o.id}`}
+                    />
+                  );
+                })}
+              </ScrollView>
+            );
+          }}
+        </QueryBoundary>
       </View>
+
+      <SpecialProgramCard item={other} />
+
+      {belowFold ? (
+        <View style={styles.below}>
+          <ReadAlongCard />
+
+          {items && items.length > 0 ? (
+            <View>
+              <HomeSectionHead
+                flush
+                title={t('home.map.title')}
+                action={
+                  <SeeAll
+                    label={t('home.map.open')}
+                    onPress={() => nav.tab({ name: 'nearby' })}
+                    testID="home-map-open"
+                  />
+                }
+              />
+              <MapPreviewCard
+                pins={items.length}
+                title={mapTitle(items.length)}
+                caption={t('home.map.open')}
+                onPress={() => nav.tab({ name: 'nearby' })}
+                testID="home-map"
+              />
+            </View>
+          ) : null}
+
+          <AyahOfTheDayCard />
+
+          {daysRead.on || community.on ? (
+            <View style={styles.list} testID="home-reading">
+              {daysRead.on ? <DaysReadCard /> : null}
+              <CommunityTodayCard />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
       <AreaPickerSheet
         visible={showArea}
         onClose={() => setShowArea(false)}

@@ -1,9 +1,10 @@
-import { StyleSheet, View } from 'react-native';
-import { Card, Icon, Tag, Text, spacing, useTheme } from '@qc/ui';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Icon, Text, elevation, radii, spacing, useTheme } from '@qc/ui';
 import type { Session } from '@qc/contracts';
 import { useI18n } from '../i18n/I18nProvider';
 import { describeWhenParts } from '../features/nearby/schedule';
 import { describePortion } from '../features/session/portion';
+import { useTextWeight } from '../ui/textWeight';
 
 export interface NearbyCircleCardProps {
   session: Session;
@@ -14,22 +15,26 @@ export interface NearbyCircleCardProps {
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.xxs },
+  // As drawn (Nearby artboard 01): 16 inside, corners 20, a hairline edge.
+  card: { padding: spacing.lg, borderRadius: radii.card, borderWidth: 1 },
   top: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    marginBottom: spacing.xs,
+    marginBottom: 6,
   },
   grow: { flexShrink: 1 },
-  rule: { height: 1, marginTop: spacing.md, marginBottom: spacing.sm + spacing.xxs },
+  portion: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
   bottom: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: 10,
+    borderTopWidth: 1,
   },
   seats: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
@@ -40,7 +45,9 @@ const styles = StyleSheet.create({
  */
 export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyCircleCardProps) {
   const { t, l, locale } = useI18n();
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const w = useTextWeight();
+  const c = theme.colors;
   const title = l(session.title);
   const venue = l(session.venue.name);
   const sep = t('schedule.separator');
@@ -63,43 +70,67 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
           : t('nearby.card.details');
   const when = `${day}${sep}${time}`;
   return (
-    <Card
+    <Pressable
+      role="button"
       onPress={onPress}
-      accessibilityLabel={[title.text, venue.text, when, eyebrow, portion, seats]
+      aria-label={[title.text, venue.text, when, eyebrow, portion, seats]
         .filter(Boolean)
         .join(', ')}
       testID={testID ?? `session-card-${session.id}`}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: pressed ? c.surfaceMuted : c.surface,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
+          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          transform: pressed && !theme.reduceMotion ? [{ scale: 0.992 }] : undefined,
+        },
+      ]}
     >
-      <View style={styles.stack}>
-        <View style={styles.top}>
-          <View style={styles.grow}>
-            <Text variant="caption" color="textAccent" strong decorative>
-              {eyebrow}
-            </Text>
-          </View>
-          {portion ? <Tag label={portion} kind="gilt" /> : null}
+      <View style={styles.top}>
+        <View style={styles.grow}>
+          <Text variant="caption" color="textAccent" decorative style={w('700')}>
+            {eyebrow}
+          </Text>
         </View>
-        <Text variant="title3" lang={title.lang} decorative>
-          {title.text}
-        </Text>
-        <Text variant="caption" color="textSecondary" lang={venue.lang} decorative>
-          {venue.text}
-        </Text>
-        <View style={[styles.rule, { backgroundColor: c.hairline }]} aria-hidden />
-        <View style={styles.bottom}>
-          <View style={styles.grow}>
-            <Text variant="caption" color="textSecondary" strong decorative>
-              {when}
+        {portion ? (
+          <View style={[styles.portion, { backgroundColor: c.warningSubtle }]}>
+            <Text
+              variant="eyebrow"
+              color="textWarning"
+              decorative
+              style={w('700', { letterSpacing: 0 })}
+            >
+              {portion}
             </Text>
           </View>
-          <View style={styles.seats}>
-            <Text variant="caption" strong decorative>
-              {seats}
-            </Text>
-            <Icon name="arrow-forward" size={14} color={c.text} />
-          </View>
+        ) : null}
+      </View>
+      <Text variant="title3" lang={title.lang} decorative>
+        {title.text}
+      </Text>
+      <Text
+        variant="caption"
+        color="textSecondary"
+        lang={venue.lang}
+        decorative
+        style={[w('400'), { marginTop: 2 }]}
+      >
+        {venue.text}
+      </Text>
+      <View style={[styles.bottom, { borderTopColor: c.hairline }]}>
+        <View style={styles.grow}>
+          <Text variant="caption" color="textSecondary" decorative style={w('600')}>
+            {when}
+          </Text>
+        </View>
+        <View style={styles.seats}>
+          <Text variant="caption" decorative style={w('700')}>
+            {seats}
+          </Text>
+          <Icon name="arrow-forward" size={12} color={c.text} />
         </View>
       </View>
-    </Card>
+    </Pressable>
   );
 }

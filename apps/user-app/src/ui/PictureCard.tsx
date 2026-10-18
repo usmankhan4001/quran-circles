@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
-import { Text, elevation, radii, spacing, useTheme } from '@qc/ui';
+import { Text, colors, elevation, radii, spacing, useTheme } from '@qc/ui';
+import { useTextWeight } from './textWeight';
 import type { Section } from '@qc/contracts';
 import { SectionIcon } from './SectionIcon';
 import { VenueArt } from './VenueArt';
@@ -46,19 +47,28 @@ const styles = StyleSheet.create({
   body: { padding: spacing.md, gap: spacing.xs },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   grow: { flexShrink: 1 },
+  // Portrait (`.iq-photo-shade`): the fade covers the whole picture, the distance at the top and
+  // the words at the foot, 10 × 12 inside.
   shade: {
     position: 'absolute',
+    top: 0,
     start: 0,
     end: 0,
     bottom: 0,
+    justifyContent: 'space-between',
+    paddingTop: 10,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
-    paddingTop: spacing.xxl,
-    gap: spacing.xxs,
+  },
+  photoTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.pill,
   },
 });
 
-/** Height of a portrait picture card (D17). */
+/** Height of a portrait picture card (`.iq-photo-card`, D17). */
 export const PORTRAIT_HEIGHT = 182;
 
 /**
@@ -83,6 +93,7 @@ export function PictureCard({
   testID,
 }: PictureCardProps) {
   const theme = useTheme();
+  const w = useTextWeight();
   const c = theme.colors;
   const distanceTag = distance ? (
     <View
@@ -100,32 +111,67 @@ export function PictureCard({
       </Text>
     </View>
   ) : null;
-  // The words sit on a fade into the scrim colour, so they read as white on any colouring. High
-  // contrast and native draw the scrim solid.
+  // As drawn: a faint shade at the top, clear to a third, then a deep green-black at the foot,
+  // so the words read white on any colouring (it darkens a little sooner than the drawing, as
+  // the drawn place is paler than a photo). High contrast and native draw the foot solid.
   const fade: ViewStyle =
     Platform.OS === 'web' && theme.mode !== 'highContrast'
       ? ({
-          backgroundImage: `linear-gradient(180deg, transparent 0%, ${c.hero} 55%, ${c.hero} 100%)`,
+          backgroundImage: `linear-gradient(180deg, color-mix(in srgb, ${colors.green[975]} 5%, transparent) 0%, transparent 35%, color-mix(in srgb, ${colors.green[975]} 88%, transparent) 78%, color-mix(in srgb, ${colors.green[975]} 92%, transparent) 100%)`,
         } as ViewStyle)
-      : { backgroundColor: c.hero };
+      : {};
+  const solidFoot = Platform.OS !== 'web' || theme.mode === 'highContrast';
   const portrait = (
     <VenueArt seed={seed} height={artHeight === 92 ? PORTRAIT_HEIGHT : artHeight}>
-      {distanceTag}
       <View style={[styles.shade, fade]}>
-        {sectionLabel ? (
-          <Text variant="caption" color="textOnHero" strong numberOfLines={1}>
-            {sectionLabel}
+        {distance ? (
+          <View style={[styles.photoTag, { backgroundColor: c.surface }]}>
+            <Text variant="eyebrow" decorative style={w('700', { letterSpacing: 0 })}>
+              {distance}
+            </Text>
+          </View>
+        ) : (
+          <View />
+        )}
+        <View
+          style={
+            solidFoot
+              ? { backgroundColor: c.hero, borderRadius: radii.sm, padding: spacing.xs }
+              : null
+          }
+        >
+          {sectionLabel ? (
+            <Text
+              numberOfLines={1}
+              variant="eyebrow"
+              style={[w('700', { letterSpacing: 0 }), { color: colors.green[200] }]}
+              decorative
+            >
+              {sectionLabel}
+            </Text>
+          ) : null}
+          <Text
+            color="textOnHero"
+            numberOfLines={2}
+            decorative
+            variant="label"
+            style={[w('700'), { marginTop: 1 }]}
+          >
+            {title}
           </Text>
-        ) : null}
-        <Text variant="label" color="textOnHero" numberOfLines={2}>
-          {title}
-        </Text>
-        {caption ? (
-          <Text variant="caption" color="textOnHero" numberOfLines={2}>
-            {caption}
-          </Text>
-        ) : null}
-        {footer}
+          {caption ? (
+            <Text
+              color="textOnHero"
+              numberOfLines={1}
+              decorative
+              variant="eyebrow"
+              style={[w('500', { letterSpacing: 0 }), { marginTop: 2, opacity: 0.82 }]}
+            >
+              {caption}
+            </Text>
+          ) : null}
+          {footer}
+        </View>
       </View>
     </VenueArt>
   );
@@ -163,7 +209,7 @@ export function PictureCard({
       ...(width ? { width } : {}),
       ...(variant === 'portrait' ? { borderRadius: radii.section } : {}),
       backgroundColor: c.surface,
-      borderWidth: 1,
+      borderWidth: variant === 'portrait' && theme.mode !== 'highContrast' ? 0 : 1,
       borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
       boxShadow:
         theme.mode === 'light'

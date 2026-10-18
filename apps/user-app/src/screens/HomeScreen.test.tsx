@@ -145,6 +145,48 @@ describe('HomeScreen', () => {
     });
   });
 
+  it('keeps the five prayers in the strip, with "--:--" times, before the times can load', async () => {
+    const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
+    const strip = await view.findByTestId('home-prayer-placeholder');
+    expect(within(strip).getAllByRole('listitem')).toHaveLength(5);
+    expect(strip.textContent).toContain(en['prayer.fajr']);
+    expect(strip.textContent).toContain('--:--');
+  });
+
+  it("ends the fold with the special programme row: the season's other programme, else a sample", async () => {
+    const view = await renderScreen(<HomeScreen />, {
+      cityId: CITY_RAWALPINDI.id,
+      mock: { handlers: configFor('circles') },
+    });
+    await view.findByTestId('home-lead-card');
+    const real = view.container.querySelector<HTMLElement>('[data-testid^="home-other-"]');
+    const row = real ?? view.getByTestId('home-special-sample');
+    if (real) {
+      fireEvent.click(real);
+      expect(view.world.nav.last()).toMatchObject({ type: 'go', route: { name: 'session' } });
+    } else {
+      expect(row.getAttribute('aria-label')).toContain(en['home.special.sampleWhen']);
+      fireEvent.click(row);
+      expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
+    }
+  });
+
+  it('shows the sample special row, marked as a sample, when no other programme is coming', async () => {
+    const view = await renderScreen(<HomeScreen />, {
+      cityId: CITY_RAWALPINDI.id,
+      mock: {
+        handlers: {
+          ...configFor('circles'),
+          'occurrences.list': () => ({ items: [], nextCursor: null }),
+        },
+      },
+    });
+    const row = await view.findByTestId('home-special-sample');
+    expect(row.textContent).toContain(en['home.special.sampleTitle']);
+    fireEvent.click(row);
+    expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
+  });
+
   it('shows a prayer placeholder until the content package provides the strip', async () => {
     const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
     fireEvent.click(await view.findByTestId('home-prayer-placeholder'));
