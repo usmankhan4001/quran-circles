@@ -1,0 +1,18 @@
+# Build context is the repository root. The staging tools image needs the package sources.
+**/node_modules
+**/dist
+**/build
+**/coverage
+**/.expo
+**/.turbo
+**/*.log
+**/.env
+**/.env.*
+!**/.env.example
+.git
+docs
+showcase
+infra/backup
+infra/monitoring
+infra/cron
+infra/scripts

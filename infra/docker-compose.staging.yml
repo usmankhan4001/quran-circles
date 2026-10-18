@@ -86,6 +86,35 @@ services:
         max-file: '5'
         tag: '{{.Name}}'
 
+  # One-shot: loads the @qc/db synthetic seed (idempotent; refuses APP_ENV=production). Behind the
+  # `seed` profile, so it runs only on a deploy with COMPOSE_PROFILES=seed in the env; remove that
+  # variable again afterwards.
+  seed:
+    profiles:
+      - seed
+    image: ${QC_IMAGE_REGISTRY:-qc-staging}/tools:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/tools-staging.Dockerfile
+      target: tools-staging
+    restart: 'no'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: ${APP_ENV:?set APP_ENV in the env file}
+      DATABASE_URL: postgres://qc_migrator:${POSTGRES_MIGRATOR_PASSWORD:?set POSTGRES_MIGRATOR_PASSWORD in the env file}@postgres:5432/qc
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+
   # Unique aliases on `edge`, merged into the production network list.
   api:
     networks:
