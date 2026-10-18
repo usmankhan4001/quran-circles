@@ -576,5 +576,8 @@
   "admin.posters.preview.scan": "Scan to register and read the portion",
   "admin.dailyAyah.themes": "Curated masjid themes",
   "admin.dailyAyah.themesSoon": "Themes to pick from are not ready yet. Choose the surah and ayah yourself.",
-  "admin.dailyAyah.textInApp": "People see the Arabic, Urdu and English in the app."
+  "admin.dailyAyah.textInApp": "People see the Arabic, Urdu and English in the app.",
+  "admin.venueEditor.profile.unnamed": "New masjid",
+  "admin.venueEditor.profile.pin": "Pin at {lat}, {lng}",
+  "admin.venueEditor.profile.noPin": "No pin yet. Enter the coordinates below."
 }

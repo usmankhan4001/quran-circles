@@ -4,15 +4,16 @@ import { can, type AdminCircle, type City, type Venue } from '@qc/contracts';
 import {
   Button,
   Card,
-  Checkbox,
   Icon,
   Select,
   Tag,
   Text,
   TextField,
   minTouchTarget,
+  radii,
   spacing,
   useTheme,
+  type IconName,
 } from '@qc/ui';
 import { serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
@@ -33,6 +34,7 @@ import {
   FACILITY_KEYS,
   validateVenue,
   venueFormOf,
+  type FacilityKey,
   type VenueErrors,
   type VenueForm,
 } from './form';
@@ -87,6 +89,7 @@ export function VenueEditorScreen({ venueId }: VenueEditorScreenProps) {
 
 function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
   const { t, locale } = useT();
+  const { colors } = useTheme();
   const api = useApi();
   const nav = useNavigation();
   const { principal } = useWorkingScope();
@@ -139,6 +142,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
 
   return (
     <View style={{ gap: spacing.lg }} testID="venue-editor-form">
+      <VenueProfile form={form} />
       <Card>
         <View style={{ gap: spacing.md }}>
           <Text variant="title3" heading={2}>
@@ -253,17 +257,49 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
               {t('admin.venueEditor.facilities.help')}
             </Text>
           </View>
-          <View style={{ gap: spacing.sm }}>
-            {FACILITY_KEYS.map((key) => (
-              <Checkbox
-                key={key}
-                testID={`venue-facility-${key}`}
-                label={t(`admin.venueEditor.facility.${key}`)}
-                checked={form.facilities[key]}
-                onChange={(on) => patch({ facilities: { ...form.facilities, [key]: on } })}
-                disabled={busy}
-              />
-            ))}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            {FACILITY_KEYS.map((key) => {
+              const on = form.facilities[key];
+              return (
+                <Pressable
+                  key={key}
+                  testID={`venue-facility-${key}`}
+                  role="checkbox"
+                  aria-checked={on}
+                  aria-disabled={busy || undefined}
+                  disabled={busy}
+                  accessibilityLabel={t(`admin.venueEditor.facility.${key}`)}
+                  onPress={() => patch({ facilities: { ...form.facilities, [key]: !on } })}
+                  hitSlop={spacing.xs}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: spacing.xs,
+                    minHeight: minTouchTarget - spacing.sm,
+                    paddingHorizontal: spacing.md,
+                    borderRadius: radii.pill,
+                    borderWidth: 1,
+                    borderColor: on ? colors.accent : colors.border,
+                    backgroundColor: on ? colors.accentSubtle : colors.surface,
+                  }}
+                >
+                  <Icon
+                    name={on ? 'check-circle' : FACILITY_ICONS[key]}
+                    weight={on ? 'fill' : 'regular'}
+                    size={14}
+                    color={on ? colors.textOnAccentSubtle : colors.textSecondary}
+                  />
+                  <Text
+                    variant="caption"
+                    strong
+                    color={on ? 'textOnAccentSubtle' : 'textSecondary'}
+                    decorative
+                  >
+                    {t(`admin.venueEditor.facility.${key}`)}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       </Card>
@@ -409,6 +445,84 @@ function VenueCircles({ venue }: { venue: Venue }) {
             onPress={() => nav.push(routes.newCircle(venue.id))}
           />
         ) : null}
+      </View>
+    </Card>
+  );
+}
+
+const FACILITY_ICONS: Record<FacilityKey, IconName> = {
+  womenSection: 'door-open',
+  parking: 'car-profile',
+  wuduArea: 'drop',
+  elderWheelchairAccess: 'wheelchair',
+  childFriendly: 'users',
+};
+
+/**
+ * D17 masjid profile: the name in both languages and the address as typed, and where the pin sits.
+ * A drawn map needs map tiles the app does not have, so the pin shows its coordinates.
+ */
+function VenueProfile({ form }: { form: VenueForm }) {
+  const { t, n } = useT();
+  const { colors } = useTheme();
+  const lat = Number.parseFloat(form.lat);
+  const lng = Number.parseFloat(form.lng);
+  const pinned = Number.isFinite(lat) && Number.isFinite(lng);
+  const name = form.name.en.trim() || form.name.ur.trim();
+  return (
+    <Card padding="md" testID="venue-profile">
+      <View style={{ gap: spacing.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <View
+            aria-hidden
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: radii.md,
+              backgroundColor: colors.accentSubtle,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon name="mosque" weight="duotone" size={20} color={colors.textOnAccentSubtle} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="label" strong>
+              {name || t('admin.venueEditor.profile.unnamed')}
+            </Text>
+            {form.address.en.trim() ? (
+              <Text variant="caption" color="textSecondary" numberOfLines={1}>
+                {form.address.en.trim()}
+              </Text>
+            ) : null}
+          </View>
+          {form.name.ur.trim() && form.name.en.trim() ? (
+            <Text variant="label" lang="ur" color="textAccent">
+              {form.name.ur.trim()}
+            </Text>
+          ) : null}
+        </View>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: spacing.xs,
+            minHeight: 56,
+            borderRadius: radii.md,
+            backgroundColor: colors.accentSubtle,
+          }}
+        >
+          <Icon name="map-pin" weight="fill" size={14} color={colors.textOnAccentSubtle} />
+          <Text variant="caption" strong color="textOnAccentSubtle" testID="venue-profile-pin">
+            {pinned
+              ? t('admin.venueEditor.profile.pin', {
+                  lat: n(Number(lat.toFixed(4))),
+                  lng: n(Number(lng.toFixed(4))),
+                })
+              : t('admin.venueEditor.profile.noPin')}
+          </Text>
+        </View>
       </View>
     </Card>
   );

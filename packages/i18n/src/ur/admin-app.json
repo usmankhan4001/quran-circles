@@ -577,5 +577,8 @@
   "admin.posters.preview.scan": "رجسٹر ہونے اور حصہ پڑھنے کے لیے اسکین کریں",
   "admin.dailyAyah.themes": "مسجد کے منتخب موضوعات",
   "admin.dailyAyah.themesSoon": "منتخب موضوعات ابھی تیار نہیں۔ سورت اور آیت خود چنیں۔",
-  "admin.dailyAyah.textInApp": "لوگ ایپ میں عربی، اردو اور انگریزی دیکھتے ہیں۔"
+  "admin.dailyAyah.textInApp": "لوگ ایپ میں عربی، اردو اور انگریزی دیکھتے ہیں۔",
+  "admin.venueEditor.profile.unnamed": "نئی مسجد",
+  "admin.venueEditor.profile.pin": "پن: {lat}، {lng}",
+  "admin.venueEditor.profile.noPin": "ابھی پن نہیں۔ نیچے نقاط درج کریں۔"
 }

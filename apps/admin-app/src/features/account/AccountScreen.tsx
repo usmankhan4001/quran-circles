@@ -4,6 +4,7 @@ import {
   Avatar,
   Button,
   Card,
+  Icon,
   Select,
   SegmentedControl,
   Text,
@@ -36,34 +37,29 @@ export function AccountScreen() {
   const [languageFailed, setLanguageFailed] = useState(false);
   return (
     <Screen title={t('admin.account.title')} onBack={nav.back} testID="account">
-      <Card>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: spacing.md,
-            borderStartWidth: 3,
-            borderStartColor: colors.accent,
-            paddingStart: spacing.sm,
-          }}
-        >
-          <Avatar name={me?.displayName ?? t('admin.account.noName')} size="lg" />
+      <Card padding="md">
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Avatar name={me?.displayName ?? t('admin.account.noName')} size="md" />
           <View style={{ flex: 1, gap: spacing.xs }}>
             <Text variant="caption" color="textSecondary">
               {t('admin.account.signedInAs')}
             </Text>
-            <Text variant="label">
+            <Text variant="label" strong>
               {me?.displayName ? isolate(me.displayName) : t('admin.account.noName')}
             </Text>
           </View>
+          <Icon name="shield-check" weight="duotone" size={20} color={colors.textAccent} />
         </View>
       </Card>
-      <Text variant="title3" heading={2}>
+      <Text variant="label" strong heading={2}>
         {t('admin.account.lookAfter')}
       </Text>
       <ScopeSwitcher />
-      <Text variant="title3" heading={2}>
+      <Text variant="label" strong heading={2}>
         {t('admin.account.display')}
+      </Text>
+      <Text variant="caption" color="textSecondary">
+        {t('admin.account.language')}
       </Text>
       <SegmentedControl
         accessibilityLabel={t('admin.account.language')}
@@ -87,6 +83,9 @@ export function AccountScreen() {
           dismissLabel={t('ui.dismiss')}
         />
       ) : null}
+      <Text variant="caption" color="textSecondary">
+        {t('admin.account.textSize')}
+      </Text>
       <SegmentedControl
         accessibilityLabel={t('admin.account.textSize')}
         value={String(textSize)}
