@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { useMemo, useState } from 'react';
 import type { Venue } from '@qc/contracts';
 import { useSignedIn } from '../api/auth';
@@ -15,13 +16,12 @@ import {
   NoMatch,
   PageHeader,
   Phone,
-  SearchField,
-  SelectField,
   StatRow,
   TableCard,
   type Column,
   type Stat,
 } from '../components/ui';
+import { useShellCity, useShellSearch } from '../components/ShellFilters';
 import { useI18n } from '../i18n';
 import { venueStats } from '../lib/kpis';
 import { canSomewhere, isNavAllowed } from '../lib/permissions';
@@ -29,12 +29,12 @@ import { filterBySearch } from '../lib/search';
 
 /** Venues in the person's scope, including archived ones when asked. */
 export default function VenuesPage() {
-  const { t, localized } = useI18n();
+  const { t, localized, number } = useI18n();
   const { api, principal } = useSignedIn();
   const dir = useDirectory();
-  const [cityId, setCityId] = useState('');
+  const [cityId] = useShellCity();
   const [includeArchived, setIncludeArchived] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query] = useShellSearch(t('console.venues.search'));
 
   const list = usePaged(
     (cursor) =>
@@ -121,30 +121,26 @@ export default function VenuesPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.venues.title')} intro={t('console.venues.intro')} />
+      <PageHeader title={t('console.venues.title')} intro={t('console.venues.intro')} hidden />
       {list.status === 'ready' ? (
         <StatRow label={t('console.kpi.label')} partial={list.hasMore} stats={statCards} />
       ) : null}
       <TableCard
-        search={
-          <SearchField
-            id="venues-search"
-            label={t('console.venues.search')}
-            value={query}
-            onChange={setQuery}
-          />
+        tabs={
+          <>
+            {isNavAllowed(principal, 'sessions') ? (
+              <Link className="tab-pill" to="/sessions">
+                {t('console.venues.tab.sessions')}
+              </Link>
+            ) : null}
+            <span className="tab-pill tab-pill-on" aria-current="page">
+              {t('console.sessions.tab.venues', { count: number(loaded.length) })}
+            </span>
+          </>
         }
         filtersLabel={t('console.shell.filters')}
         filters={
           <>
-            <SelectField
-              id="filter-city"
-              label={t('console.shell.filter.city')}
-              value={cityId}
-              placeholder={t('console.shell.filter.all')}
-              onChange={(e) => setCityId(e.target.value)}
-              options={dir.cities.map((c) => ({ value: c.id, label: localized(c.name) }))}
-            />
             <CheckboxField
               label={t('console.venues.includeArchived')}
               checked={includeArchived}

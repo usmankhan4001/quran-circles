@@ -698,5 +698,6 @@
   "console.posters.generator.sub": "Print A4/A3 PDF & WhatsApp PNG · Flags posters when the session changes",
   "console.posters.generator.bulk": "Download Bulk A4 PDFs",
   "console.posters.generator.bulkSoon": "Downloading many posters at once is not available yet; download each poster below",
-  "console.posters.generator.foot": "QR Target: registration or session page, chosen per poster · Templates: {templates}"
+  "console.posters.generator.foot": "QR Target: registration or session page, chosen per poster · Templates: {templates}",
+  "console.venues.tab.sessions": "Circle Sessions"
 }
