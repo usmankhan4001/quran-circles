@@ -409,6 +409,21 @@ services:
       POSTGRES_DB: qc
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
       POSTGRES_INITDB_ARGS: --data-checksums
+    # Statement statistics (pg_stat_statements, Gate 5 load test): which queries take the time.
+    # Loaded at server start; `track=top` counts the statements clients send, not those inside
+    # functions, and utility commands (BEGIN, SET, ...) are left out, to keep it cheap. `db-roles`
+    # creates the view in the `postgres` database; read it as `qc` (infra/README.md, "Query
+    # statistics"). Changing this line restarts Postgres on the next `up`.
+    command:
+      [
+        postgres,
+        -c,
+        shared_preload_libraries=pg_stat_statements,
+        -c,
+        pg_stat_statements.track=top,
+        -c,
+        pg_stat_statements.track_utility=off,
+      ]
     # No `ports:` on purpose. Backups run pg_dump inside this container (infra/backup/), as `qc`.
     volumes:
       - pgdata:/var/lib/postgresql/data

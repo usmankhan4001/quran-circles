@@ -1,7 +1,20 @@
 # Status: platform
 
-Updated: 2026-10-18 (API at 2 CPUs and 2 processes by default)
+Updated: 2026-10-18 (pg_stat_statements in production, Gate 5 pool measurement)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
+
+## Query statistics and the pool (2026-10-18, Gate 5 database performance)
+
+### Done
+
+- `infra/docker-compose.prod.yml` postgres: `command: [postgres, -c, shared_preload_libraries=pg_stat_statements, -c, pg_stat_statements.track=top, -c, pg_stat_statements.track_utility=off]`. Staging inherits it (checked with `docker compose -f prod -f staging config` and a fake env file). Changing it restarts Postgres on the next `up`.
+- `infra/postgres/roles.sql` (runs as `qc` on every `up`): connects to the maintenance database `postgres`, `CREATE EXTENSION IF NOT EXISTS pg_stat_statements` and revokes the view and its functions from PUBLIC. In `postgres`, not `qc`: the extension needs a superuser (a migration as `qc_migrator` cannot), the view sees every database anyway, and the application database, its schema handover (`qc_give`), its dumps and restores stay as they are. Checked on a scratch Postgres 16: two runs in a row (idempotent), the view returns rows as `qc`, `qc_api` gets "permission denied", nothing in the `qc` database, and a run on a server without the preload still succeeds.
+- `infra/README.md` Monitoring: "Query statistics" (the slowest statements as `qc`, reset before a load test). `infra/ENV.md` Database connections: the pool measurement below.
+- Pool measured (2 processes, 100 and 150 VUs, Postgres alone on one core): at most 14 connections of 20 in use, connection wait p95 under 1 ms outside the push burst, 20 to 35 ms during it, 12 to 29 new connections per step. Postgres CPU is the limit; 10 per process stays (24 with pg-boss, of `max_connections` 100).
+
+### Staging re-run
+
+Redeploy from the branch with these changes. `postgres` restarts with the preload, `db-roles` creates the view, `migrate` applies 0012 by itself, then the api starts. Before the load step run `ANALYZE` (as `qc`, change request `2026-10-18-load-runner-analyze.md`) and `SELECT pg_stat_statements_reset()` in `postgres`; after it, read the top statements with the query in `infra/README.md`.
 
 ## API at launch size: 2 CPUs, 2 processes (2026-10-18, owner decision)
 

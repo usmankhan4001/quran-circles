@@ -170,4 +170,16 @@ ALTER DEFAULT PRIVILEGES FOR ROLE qc_worker GRANT USAGE, SELECT ON SEQUENCES TO 
 
 COMMIT;
 
+-- Statement statistics ----------------------------------------------------------------------
+-- pg_stat_statements is loaded by the server (`shared_preload_libraries` on the postgres service)
+-- and counts statements in every database. Its view lives in the maintenance database `postgres`,
+-- so the application database, its migrations and its backups do not change. Only `qc` reads it
+-- (infra/README.md, "Query statistics"); the runtime roles can connect to `postgres` by default,
+-- so they get no access to the view or its functions.
+\connect postgres
+SET client_min_messages = warning;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+REVOKE ALL ON pg_stat_statements, pg_stat_statements_info FROM PUBLIC;
+REVOKE ALL ON FUNCTION pg_stat_statements(boolean), pg_stat_statements_info() FROM PUBLIC;
+
 \echo 'db-roles: qc_migrator, qc_api and qc_worker are up to date'

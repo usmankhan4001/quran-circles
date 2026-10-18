@@ -252,6 +252,18 @@ These are the recovery point and recovery time as the setup stands. Nobody has a
 - **check.sh** (every 5 minutes): public health URL, every container running and healthy, disk below 85 %, last backup under 26 h, TLS certificate valid for 14 more days, no new lost outbox leases (below), and on the restore host the weekly test. It alerts on a change of state only ("problem: ..." and "recovered").
 - **Lost outbox leases** (alert on any): the worker claims outbox rows with a lease (`WORKER_LEASE_MS`, 5 minutes by default). A lease that runs out before the row is finished means a worker died mid-send or the senders fell behind the claims; the row is handed out again (or goes `dead` after its last attempt). The worker then logs one error line, `{"level":"error","event":"outbox.worker_lost","fields":{"requeued":<n>,"dead":<n>}}`, and adds the rows to `metrics.workerLost` (and `metrics.workerLostDead`) on its `/healthz`, counters since it started. `check.sh` reads `metrics.workerLost` inside the worker container and reports a problem when it has grown since the last run; a log-based alert on `event` = `outbox.worker_lost` works as well once logs are shipped somewhere. Look first at `metrics.claimed`, `sent` and the outbox counts in `details`: steady growth under a push burst means `WORKER_PUSH_MAX_IN_FLIGHT` is above what the senders finish within one lease (see `infra/ENV.md`). `metrics.updatePushesPending` above 0 for more than a minute means the worker is not writing the pushes of `notify: true` updates.
 - **Logs**: the api and worker write structured JSON with personal data redacted. Docker rotates container logs (5 files of 10 MB each). Cron job logs in `/var/log/qc` are rotated weekly by `logrotate.conf`. Caddy writes no access log, because request URIs can carry the webhook verify token. Read logs with `QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh logs -f api worker`.
+- **Query statistics**: Postgres loads `pg_stat_statements` (the `command` of the `postgres` service: `track=top`, utility commands left out) and `db-roles` creates its view in the `postgres` database, so the application database and the backups do not change. Only `qc` can read it; the texts carry `$1` placeholders, not values. The slowest statements by total time, after a load test or a slow evening:
+
+  ```sh
+  QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh exec -T postgres psql -U qc -d postgres -c "
+    SELECT calls, round(total_exec_time) AS total_ms, round(mean_exec_time::numeric, 2) AS mean_ms,
+           rows, left(regexp_replace(query, '\s+', ' ', 'g'), 120) AS query
+      FROM pg_stat_statements WHERE dbid = (SELECT oid FROM pg_database WHERE datname = 'qc')
+     ORDER BY total_exec_time DESC LIMIT 20"
+  ```
+
+  `SELECT pg_stat_statements_reset()` (as `qc`, same database) starts the counts again, for example just before a load test. The counts also start again when Postgres restarts.
+
 - **Not yet in place**: self-hosted error tracking (GlitchTip). It needs an error-reporting hook in the api and worker (their lanes) and its own Postgres and Redis; it will be added as a separate compose file once that hook exists.
 
 ## Rotate keys
