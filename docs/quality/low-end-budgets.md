@@ -186,3 +186,7 @@ Use the reference phone, or the lowest-end Android phone the programme expects: 
 8. **Data use.** On a fresh install, read Android's per-app data usage after one cold start and after one day of normal use. Compare it with the 900 KiB start budget.
 9. **Urdu and the largest text size.** Repeat checks 1 and 6 in Urdu at the largest text size, which uses the Mehr font and longer layout.
 10. **Every release candidate.** Repeat checks 1, 2, 4 and 6 for each release candidate, and record the results next to this page. Then replace the provisional numbers and change the budgets if the phone disagrees with the emulation.
+
+## Owner's phone check (2026-10-18)
+
+Muhammad ran the one-page phone check (`/mnt/project-files/v2-waves/low-end-phone-check.md` in the project files: first open, Nearby and scroll, sign-in, a session, the Quran reader with airplane mode, the installed app, Urdu at the largest text size, dark mode) on his own Android phone against staging at `8690ca4`, the redesigned app, on 2026-10-18. He reported all eight checks good. No timings or device details were recorded, so the provisional numbers above stay as they are. Checks 3 (native build), 7 (memory), 8 (data use) and the coordinator app were not part of this run.
