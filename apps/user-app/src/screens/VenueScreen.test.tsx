@@ -3,7 +3,7 @@ import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS } from '../test/factories';
-import { MATRIX, directionOf, expectGreenHeader, renderScreen, waitFor } from '../test/harness';
+import { MATRIX, directionOf, renderScreen, waitFor } from '../test/harness';
 import { VenueScreen } from './VenueScreen';
 
 const en = messages.en;
@@ -12,54 +12,41 @@ const noor = fixtures.venues[0]!;
 const darul = fixtures.venues[3]!;
 
 describe('VenueScreen', () => {
-  it('shows the venue, its address and the fixed facilities checklist in words', async () => {
+  it('shows the venue, its address and its facilities as badges, with what is not listed in words', async () => {
     const view = await renderScreen(<VenueScreen venueId={noor.id} />);
     const list = await view.findByTestId('facilities');
-    expect(view.getAllByText(noor.name.en).length).toBeGreaterThan(0);
+    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(noor.name.en);
     expect(view.getByText(noor.address.en)).toBeTruthy();
     // Masjid Al-Noor: women's section yes, parking yes, wudu yes, access yes, child friendly no.
-    const row = (key: string) => within(view.getByTestId(`facility-${key}`));
-    expect(row('womenSection').getByText(en['facilities.available'])).toBeTruthy();
-    expect(row('parking').getByText(en['facilities.available'])).toBeTruthy();
-    expect(row('childFriendly').getByText(en['facilities.notListed'])).toBeTruthy();
-    expect(within(list).getByText(en['facilities.womenSection'])).toBeTruthy();
-    expect(within(list).getByText(en['facilities.wuduArea'])).toBeTruthy();
+    for (const key of ['womenSection', 'parking', 'wuduArea', 'elderWheelchairAccess'] as const) {
+      expect(
+        within(view.getByTestId(`facility-${key}`)).getByText(en[`facilities.${key}`]),
+      ).toBeTruthy();
+    }
+    expect(view.queryByTestId('facility-childFriendly')).toBeNull();
+    expect(view.getByTestId('facilities-missing').textContent).toContain(
+      en['facilities.childFriendly'],
+    );
     expect(within(list).getByText(noor.facilities.entranceNotes!.en)).toBeTruthy();
   });
 
-  it('lets a screen reader read each facility line as text, with no name on a plain row (A-02)', async () => {
+  it('lets a screen reader read each facility badge as a list item with its words (A-02)', async () => {
     const view = await renderScreen(<VenueScreen venueId={noor.id} />);
     await view.findByTestId('facilities');
-    for (const key of [
-      'womenSection',
-      'parking',
-      'wuduArea',
-      'elderWheelchairAccess',
-      'childFriendly',
-    ] as const) {
-      const row = view.getByTestId(`facility-${key}`);
-      // A name on an element with no role is ignored on the web (axe aria-prohibited-attr).
-      expect(row.getAttribute('aria-label')).toBeNull();
-      expect(row.getAttribute('role')).toBeNull();
-      // The words are not hidden: they are what is read. Only the icon is decoration.
-      const words = within(row).getByText(en[`facilities.${key}`]);
-      expect(words.closest('[aria-hidden="true"]')).toBeNull();
-      const state =
-        within(row).queryByText(en['facilities.available']) ??
-        within(row).getByText(en['facilities.notListed']);
-      expect(state.closest('[aria-hidden="true"]')).toBeNull();
-    }
+    const badge = view.getByTestId('facility-parking');
+    expect(badge.getAttribute('role')).toBe('listitem');
+    expect(badge.getAttribute('aria-label')).toBeNull();
+    const words = within(badge).getByText(en['facilities.parking']);
+    expect(words.closest('[aria-hidden="true"]')).toBeNull();
   });
 
   it('says "not listed" for what a venue lacks', async () => {
     const view = await renderScreen(<VenueScreen venueId={darul.id} />);
     await view.findByTestId('facilities');
-    expect(
-      within(view.getByTestId('facility-womenSection')).getByText(en['facilities.notListed']),
-    ).toBeTruthy();
-    expect(
-      within(view.getByTestId('facility-parking')).getByText(en['facilities.available']),
-    ).toBeTruthy();
+    expect(view.getByTestId('facilities-missing').textContent).toContain(
+      en['facilities.womenSection'],
+    );
+    expect(view.getByTestId('facility-parking')).toBeTruthy();
   });
 
   it('lists the sessions at the venue and opens one', async () => {
@@ -117,10 +104,16 @@ describe('VenueScreen', () => {
       });
       await view.findByTestId('facilities');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
+      // The drawn place on top with its glass back button; the name is the page's heading (D17).
+      const header = view.getByTestId('screen-header');
+      expect(within(header).getByTestId('venue-photo')).toBeTruthy();
+      expect(within(header).getByLabelText(words['ui.back'])).toBeTruthy();
+      expect(view.getByRole('heading', { level: 1 }).textContent).toBe(
+        locale === 'ur' ? noor.name.ur : noor.name.en,
+      );
       expect(view.getByText(words['facilities.wuduArea'])).toBeTruthy();
-      expect(view.getAllByText(words['facilities.available']).length).toBe(4);
+      expect(view.getAllByTestId(/^facility-/).length).toBe(4);
     });
   });
 });

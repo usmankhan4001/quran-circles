@@ -38,6 +38,11 @@ export interface ScreenPhoto {
   fade?: 'dark';
   /** A line above the title on a dark-faded picture, such as the section tag and the schedule. */
   overline?: ReactNode;
+  /**
+   * With `fade: 'dark'`: only the picture and its buttons, shorter, with the title left to the
+   * page below it (the venue page, D17). The page then carries the level-1 heading itself.
+   */
+  bare?: boolean;
   testID?: string;
 }
 
@@ -84,6 +89,8 @@ const GLASS_SIZE = 32;
 const GLASS_SLOP = (minTouchTarget - GLASS_SIZE) / 2;
 /** Height of the picture under a dark-faded header (D17). */
 const PHOTO_HEIGHT_DARK = 215;
+/** Height of the bare picture on top of a venue (D17). */
+const PHOTO_HEIGHT_BARE = 160;
 /** Until the header has been measured, the compact row shows after this much scrolling. */
 const FALLBACK_HEADER_HEIGHT = 160;
 
@@ -278,23 +285,30 @@ function DarkPhotoHeader({
   const web = Platform.OS === 'web' && theme.mode !== 'highContrast';
   // Two fades stacked: light at the top for the buttons, deep at the foot for the title. Off the
   // web (and in high contrast) one even scrim keeps the white text readable.
-  const fade: ViewStyle = web
-    ? ({
-        backgroundImage: `linear-gradient(180deg, ${c.scrim} 0%, transparent 45%, ${c.scrim} 100%), linear-gradient(180deg, transparent 35%, ${c.scrim} 100%), linear-gradient(180deg, transparent 55%, ${c.scrim} 100%)`,
-        backgroundColor: c.scrim,
-      } as ViewStyle)
-    : { backgroundColor: c.scrim };
+  const bare = photo.bare === true;
+  const height = bare ? PHOTO_HEIGHT_BARE : PHOTO_HEIGHT_DARK;
+  const fade: ViewStyle = bare
+    ? web
+      ? ({
+          backgroundImage: `linear-gradient(180deg, ${c.scrim} 0%, transparent 60%)`,
+        } as ViewStyle)
+      : {}
+    : web
+      ? ({
+          backgroundImage: `linear-gradient(180deg, ${c.scrim} 0%, transparent 45%, ${c.scrim} 100%), linear-gradient(180deg, transparent 35%, ${c.scrim} 100%), linear-gradient(180deg, transparent 55%, ${c.scrim} 100%)`,
+          backgroundColor: c.scrim,
+        } as ViewStyle)
+      : { backgroundColor: c.scrim };
   return (
-    <View testID="screen-header" style={[styles.darkHeader, { backgroundColor: c.hero }]}>
+    <View
+      testID="screen-header"
+      style={[styles.darkHeader, { backgroundColor: c.hero, minHeight: height }]}
+    >
       <View style={styles.darkArt}>
-        <VenueArt
-          seed={photo.seed}
-          height={PHOTO_HEIGHT_DARK}
-          testID={photo.testID ?? 'screen-photo'}
-        />
+        <VenueArt seed={photo.seed} height={height} testID={photo.testID ?? 'screen-photo'} />
       </View>
       <View aria-hidden pointerEvents="none" style={[styles.fill, fade]} />
-      <View style={styles.darkContent}>
+      <View style={[styles.darkContent, { minHeight: height }]}>
         <View style={styles.darkTop}>
           {onBack ? (
             <Pressable
@@ -335,12 +349,14 @@ function DarkPhotoHeader({
             ) : null}
           </View>
         </View>
-        <View style={styles.darkTitles}>
-          {photo.overline}
-          <Text variant="title2" color="textOnHero" heading={1}>
-            {title}
-          </Text>
-        </View>
+        {bare ? null : (
+          <View style={styles.darkTitles}>
+            {photo.overline}
+            <Text variant="title2" color="textOnHero" heading={1}>
+              {title}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );

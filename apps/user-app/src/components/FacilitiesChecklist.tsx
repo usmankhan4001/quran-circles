@@ -16,6 +16,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 32 },
   label: { flex: 1 },
   chips: { flexDirection: 'row', gap: spacing.sm },
+  wrap: { flexWrap: 'wrap' },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -28,21 +29,53 @@ const styles = StyleSheet.create({
 });
 
 /**
- * The facilities a venue has, as small grey pills with a green tick (D17), for the session
- * page. Only what is available is shown; the venue page keeps the full checklist.
+ * The facilities a venue has as pills with a tick (D17). `scroll` is the session page's single
+ * grey row that scrolls sideways; `badges` is the venue page's emerald badges that wrap, with
+ * what is not listed said in words under them. The venue page's older full checklist is below.
  */
-export function FacilityChips({ facilities }: { facilities: VenueFacilities }) {
+export function FacilityChips({
+  facilities,
+  variant = 'scroll',
+}: {
+  facilities: VenueFacilities;
+  variant?: 'scroll' | 'badges';
+}) {
   const { t, l } = useI18n();
   const theme = useTheme();
   const c = theme.colors;
+  const hc = theme.mode === 'highContrast';
   const notes = facilities.entranceNotes ? l(facilities.entranceNotes) : null;
   const present = FACILITY_KEYS.filter((key) => facilities[key]);
+  const missing = FACILITY_KEYS.filter((key) => !facilities[key]);
+  const badges = variant === 'badges';
+  const chips = present.map((key) => (
+    <View
+      key={key}
+      role="listitem"
+      testID={`facility-${key}`}
+      style={[
+        styles.chip,
+        badges
+          ? { backgroundColor: c.accentSubtle, borderColor: hc ? c.borderStrong : c.accentSubtle }
+          : { backgroundColor: c.surfaceMuted, borderColor: hc ? c.borderStrong : c.hairline },
+      ]}
+    >
+      <Icon name="check" size={16} color={badges ? c.textOnAccentSubtle : c.textAccent} />
+      <Text variant="caption" color={badges ? 'textOnAccentSubtle' : 'textSecondary'} strong>
+        {t(`facilities.${key}`)}
+      </Text>
+    </View>
+  ));
   return (
     <View style={styles.list} testID="facilities">
       {present.length === 0 ? (
         <Text variant="body" color="textSecondary">
           {t('facilities.noneListed')}
         </Text>
+      ) : badges ? (
+        <View style={[styles.chips, styles.wrap]} role="list">
+          {chips}
+        </View>
       ) : (
         <ScrollView
           horizontal
@@ -50,27 +83,16 @@ export function FacilityChips({ facilities }: { facilities: VenueFacilities }) {
           contentContainerStyle={styles.chips}
           role="list"
         >
-          {present.map((key) => (
-            <View
-              key={key}
-              role="listitem"
-              testID={`facility-${key}`}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: c.surfaceMuted,
-                  borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
-                },
-              ]}
-            >
-              <Icon name="check" size={16} color={c.textAccent} />
-              <Text variant="caption" color="textSecondary" strong>
-                {t(`facilities.${key}`)}
-              </Text>
-            </View>
-          ))}
+          {chips}
         </ScrollView>
       )}
+      {badges && present.length > 0 && missing.length > 0 ? (
+        <Text variant="caption" color="textSecondary" testID="facilities-missing">
+          {t('facilities.notListedList', {
+            list: missing.map((key) => t(`facilities.${key}`)).join(t('facilities.joiner')),
+          })}
+        </Text>
+      ) : null}
       {notes ? (
         <Text variant="caption" color="textSecondary" lang={notes.lang}>
           {notes.text}
