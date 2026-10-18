@@ -160,6 +160,35 @@ services:
       - no-new-privileges:true
     init: true
 
+  # One-shot: in-stack backup and restore check (infra/scripts/staging-restore-check.sh). Dumps the
+  # live staging database through age with a throwaway key, restores it into qc_restore_check,
+  # compares row counts and key-table hashes, drops the scratch database. No host access, no swap.
+  # Behind the `restorecheck` profile: COMPOSE_PROFILES=restorecheck for one deploy, then remove.
+  restore-check:
+    profiles:
+      - restorecheck
+    image: ${QC_IMAGE_REGISTRY:-qc-staging}/restore-check:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/restore-check-staging.Dockerfile
+      target: restore-check-staging
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+    networks:
+      - backend
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+
   # Unique aliases on `edge`, merged into the production network list.
   api:
     networks:

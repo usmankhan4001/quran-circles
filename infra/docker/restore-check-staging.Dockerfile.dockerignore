@@ -1,0 +1,3 @@
+# Build context is the repository root; this image needs only the check script.
+*
+!infra/scripts/staging-restore-check.sh
