@@ -13,5 +13,5 @@ export { QuranHubHeader } from './QuranHubHeader';
 export type { QuranHubHeaderProps } from './QuranHubHeader';
 export { QuranLeadCard } from './QuranLeadCard';
 export type { QuranLeadCardProps } from './QuranLeadCard';
-export { PillCta, SectionHead, StatusLine, WhiteCard } from './parts';
+export { Medallion, PillCta, SectionHead, StatusLine, WhiteCard } from './parts';
 export { useArtSize } from './art';
