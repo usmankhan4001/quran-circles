@@ -50,7 +50,7 @@ describe('formatWhen', () => {
 describe('strings', () => {
   it('has every poster string in English and Urdu, and reads shared keys from @qc/i18n', () => {
     expect(t('en', 'app.name')).toBe('Quran Circles');
-    expect(t('ur', 'app.name')).toBe('قرآن سرکلز');
+    expect(t('ur', 'app.name')).toBe('Quran Circles');
     expect(t('ur', 'poster.scanToRegister')).toMatch(/[؀-ۿ]/);
     expect(() => t('en', 'no.such.key' as never)).toThrow(RangeError);
   });

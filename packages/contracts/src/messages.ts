@@ -146,7 +146,7 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
     requiresConsent: false,
     body: {
       en: '{code} is your Quran Circles code. It works for {minutes} minutes. Do not share it.',
-      ur: 'آپ کا قرآن سرکلز کوڈ {code} ہے۔ یہ {minutes} منٹ تک کارآمد ہے۔ اسے کسی کو نہ بتائیں۔',
+      ur: 'آپ کا قرآن حلقے کوڈ {code} ہے۔ یہ {minutes} منٹ تک کارآمد ہے۔ اسے کسی کو نہ بتائیں۔',
     },
     urduStatus: 'draft',
   },
@@ -158,7 +158,7 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
     requiresConsent: true,
     body: {
       en: 'Assalamu alaikum {name}. You are registered for {sessionTitle} at {venueName}, {when}. Details: {link}',
-      ur: 'السلام علیکم {name}۔ آپ {venueName} میں {sessionTitle} کے لیے رجسٹر ہو گئے ہیں، {when}۔ تفصیل: {link}',
+      ur: 'السلام علیکم {name}۔ آپ {venueName} میں {sessionTitle} کے لیے اندراج ہو گیا ہے، {when}۔ تفصیل: {link}',
     },
     urduStatus: 'draft',
   },
@@ -218,7 +218,7 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
     requiresConsent: false,
     body: {
       en: '{inviterName} invited you to help run {scopeName} on Quran Circles. Sign in with this number: {link}',
-      ur: '{inviterName} نے آپ کو قرآن سرکلز پر {scopeName} چلانے کی دعوت دی ہے۔ اسی نمبر سے سائن اِن کریں: {link}',
+      ur: '{inviterName} نے آپ کو قرآن حلقے پر {scopeName} چلانے کی دعوت دی ہے۔ اسی نمبر سے سائن اِن کریں: {link}',
     },
     urduStatus: 'draft',
   },
@@ -230,7 +230,7 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
     requiresConsent: true,
     body: {
       en: 'A new circle opened in {areaName}: {circleName}. {link}',
-      ur: '{areaName} میں نیا سرکل شروع ہوا: {circleName}۔ {link}',
+      ur: '{areaName} میں نیا حلقہ شروع ہوا: {circleName}۔ {link}',
     },
     urduStatus: 'draft',
   },

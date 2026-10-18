@@ -92,7 +92,7 @@ describe('provider code sender', () => {
     await sender.send({ phone: PHONE, code: CODE, locale: 'ur', channel: 'sms', minutes: 5 });
     expect(sms.sent[0]!.body).toContain(CODE);
     expect(sms.sent[0]!.body).toContain('5');
-    expect(sms.sent[0]!.body).toContain('قرآن سرکلز');
+    expect(sms.sent[0]!.body).toContain('قرآن حلقے');
   });
 
   it('goes straight to SMS when the caller asks for SMS', async () => {
