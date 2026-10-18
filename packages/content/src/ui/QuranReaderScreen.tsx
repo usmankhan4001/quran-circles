@@ -266,7 +266,8 @@ export function QuranReaderScreen({
       }}
     >
       <BarIcon
-        icon="chevron-back"
+        strong
+        icon="caret-left"
         accessibilityLabel={theme.t('ui.back')}
         onPress={() => {
           tracker.flush();
@@ -276,7 +277,7 @@ export function QuranReaderScreen({
       />
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <BarIcon
-          icon="search"
+          icon="magnifying-glass"
           accessibilityLabel={i18n.t('quran.reader.surahs')}
           onPress={() => setSheet('surahs')}
           testID="reader-surahs"
@@ -289,7 +290,7 @@ export function QuranReaderScreen({
           testID="reader-theme"
         />
         <BarIcon
-          icon="sliders"
+          icon="sliders-horizontal"
           accessibilityLabel={i18n.t('quran.reader.settings')}
           onPress={() => setSheet('settings')}
           testID="reader-settings"
@@ -330,12 +331,7 @@ export function QuranReaderScreen({
         paddingBottom: 10,
       }}
     >
-      <Text
-        variant="title2"
-        heading={1}
-        style={[size(15.5, 'title2'), { fontWeight: '800' }]}
-        testID="reader-title"
-      >
+      <Text variant="title3" heading={1} testID="reader-title">
         {title}
       </Text>
       <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -444,10 +440,10 @@ export function QuranReaderScreen({
                 gap: spacing.sm,
               }}
             >
-              <Text strong style={size(12, 'label')}>
+              <Text variant="caption" strong>
                 {i18n.t('quran.textSize')}
               </Text>
-              <Text color="textSuccess" strong style={size(11.5, 'caption')} testID="zoom-value">
+              <Text variant="caption" color="textSuccess" strong testID="zoom-value">
                 {i18n.t('quran.reader.sizeValue', {
                   step: i18n.n(prefs.arabicZoomIndex + 1),
                   total: i18n.n(ARABIC_ZOOM_STEPS.length),
@@ -457,7 +453,7 @@ export function QuranReaderScreen({
             <ZoomStepper index={prefs.arabicZoomIndex} onChange={setZoomIndex} i18n={i18n} />
           </View>
           <View style={{ gap: 8 }}>
-            <Text strong style={size(12, 'label')}>
+            <Text variant="caption" strong>
               {i18n.t('quran.reader.translation')}
             </Text>
             <View
@@ -480,7 +476,7 @@ export function QuranReaderScreen({
             </View>
           </View>
           <View style={{ gap: 8 }}>
-            <Text strong style={size(12, 'label')}>
+            <Text variant="caption" strong>
               {i18n.t('quran.reader.jump')}
             </Text>
             {shown?.kind === 'surah' ? (
@@ -690,7 +686,6 @@ function TabStrip({
 }) {
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   const max = kind === 'surah' ? SURAH_COUNT : JUZ_COUNT;
   const from = Math.max(1, Math.min(id - 3, max - 4));
   const ids = Array.from({ length: Math.min(5, max) }, (_, i) => from + i);
@@ -727,7 +722,7 @@ function TabStrip({
                 borderBottomColor: chosen ? c.progress : 'transparent',
               }}
             >
-              <Text strong color={chosen ? 'textSuccess' : 'textMuted'} style={size(13, 'label')}>
+              <Text variant="label" strong color={chosen ? 'textSuccess' : 'textMuted'}>
                 {label(n)}
               </Text>
             </Pressable>
@@ -741,7 +736,6 @@ function TabStrip({
 /** A small grey tag in the surah subheader, such as the ayah count. */
 function SmallTag({ label, tone = 'grey' }: { label: string; tone?: 'grey' | 'green' }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   return (
     <View
       style={{
@@ -755,7 +749,6 @@ function SmallTag({ label, tone = 'grey' }: { label: string; tone?: 'grey' | 'gr
         variant="caption"
         color={tone === 'green' ? 'textOnAccentSubtle' : 'textSecondary'}
         strong
-        style={size(10.5, 'caption')}
       >
         {label}
       </Text>
@@ -775,7 +768,6 @@ function ZoomStepper({
 }) {
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   const last = ARABIC_ZOOM_STEPS.length - 1;
   const step = (label: string, a11y: string, next: number, off: boolean, testID: string) => (
     <Pressable
@@ -798,7 +790,7 @@ function ZoomStepper({
         opacity: off ? 0.45 : 1,
       })}
     >
-      <Text strong lang="en" style={size(13, 'label')}>
+      <Text variant="label" strong lang="en">
         {label}
       </Text>
     </Pressable>
@@ -858,7 +850,6 @@ function MilestoneChip({
   testID?: string;
 }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   return (
     <Pressable
       role="button"
@@ -876,7 +867,7 @@ function MilestoneChip({
         borderColor: dark ? c.cta : c.border,
       }}
     >
-      <Text strong color={dark ? 'textOnCta' : 'textSecondary'} style={size(11.5, 'label')}>
+      <Text variant="caption" strong color={dark ? 'textOnCta' : 'textSecondary'}>
         {label}
       </Text>
     </Pressable>
@@ -886,7 +877,6 @@ function MilestoneChip({
 /** Whether the open surah is kept on this phone for reading offline. */
 function OfflineRow({ surah, saved, i18n }: { surah: number; saved: boolean; i18n: ContentI18n }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   const info = getSurah(surah);
   return (
     <View
@@ -905,13 +895,18 @@ function OfflineRow({ surah, saved, i18n }: { surah: number; saved: boolean; i18
       }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
-        <Icon name="check-circle" size={18} color={saved ? c.progress : c.textMuted} />
+        <Icon
+          name={saved ? 'cloud-check' : 'cloud-slash'}
+          weight="fill"
+          size={18}
+          color={saved ? c.progress : c.textMuted}
+        />
         <View style={{ flexShrink: 1 }}>
-          <Text strong style={size(12.5, 'label')}>
+          <Text variant="label" strong>
             {saved ? i18n.t('quran.offline.saved') : i18n.t('quran.reader.offlineNot')}
           </Text>
           {saved ? (
-            <Text variant="caption" color="textSecondary" style={size(11, 'caption')}>
+            <Text variant="caption" color="textSecondary">
               {i18n.t('quran.reader.offlineDetail', {
                 surah: info ? surahName(i18n, info) : i18n.n(surah),
               })}
@@ -920,7 +915,7 @@ function OfflineRow({ surah, saved, i18n }: { surah: number; saved: boolean; i18
         </View>
       </View>
       {saved ? (
-        <Text color="textSuccess" strong style={size(11, 'caption')}>
+        <Text variant="caption" color="textSuccess" strong>
           {i18n.t('quran.reader.offlineState')}
         </Text>
       ) : null}
@@ -935,7 +930,6 @@ function OfflineRow({ surah, saved, i18n }: { surah: number; saved: boolean; i18
 function ReciterPill({ i18n }: { i18n: ContentI18n }) {
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   return (
     <View pointerEvents="box-none" style={{ position: 'absolute', start: 28, end: 28, bottom: 96 }}>
       <View
@@ -957,12 +951,15 @@ function ReciterPill({ i18n }: { i18n: ContentI18n }) {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 }}>
-          <Icon name="chevron-up" size={13} color={c.textSecondary} />
-          <Text strong color="textSecondary" style={size(12.5, 'label')} numberOfLines={1}>
+          <Icon name="caret-up" weight="bold" size={13} color={c.textSecondary} />
+          <Text variant="label" strong color="textSecondary" numberOfLines={1}>
             {i18n.t('quran.reader.reciter')}
           </Text>
         </View>
-        <Icon name="play" size={22} color={c.textMuted} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Icon name="repeat" size={15} color={c.textMuted} />
+          <Icon name="play-circle" size={22} color={c.textMuted} />
+        </View>
       </View>
     </View>
   );
@@ -981,7 +978,6 @@ function ChoicePill({
   testID?: string;
 }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   return (
     <Pressable
       role="radio"
@@ -1002,10 +998,10 @@ function ChoicePill({
       }}
     >
       <Text
+        variant="caption"
         strong
         align="center"
         color={chosen ? 'textOnAccentSubtle' : 'textSecondary'}
-        style={size(12, 'label')}
       >
         {label}
       </Text>
@@ -1023,12 +1019,11 @@ const HeadingRow = memo(function HeadingRow({
   i18n: ContentI18n;
 }) {
   const info = row.surah !== null ? getSurah(row.surah) : undefined;
-  const size = useArtSize();
   return (
     <View style={{ paddingHorizontal: 20, paddingVertical: 6 }}>
       <WhiteCard padding={16} style={{ gap: spacing.sm }}>
         {info ? (
-          <Text variant="title3" heading={2} align="center" style={size(15, 'title3')}>
+          <Text variant="title3" heading={2} align="center">
             {i18n.t('quran.surah.title', { name: surahName(i18n, info) })}
           </Text>
         ) : null}
@@ -1063,7 +1058,6 @@ const VerseRow = memo(function VerseRow({
 }) {
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   const { surah, ayah } = row.verse;
   const translation = verseTranslation(row.verse, i18n.locale);
   const number = i18n.n(ayah);
@@ -1106,10 +1100,11 @@ const VerseRow = memo(function VerseRow({
           {showTranslation ? (
             translation.text ? (
               <Text
+                variant="body"
                 lang={translation.lang}
                 color="textSecondary"
                 selectable
-                style={size(12.5, 'body')}
+
                 testID={`translation-${surah}-${ayah}`}
               >
                 {translation.text}
@@ -1148,13 +1143,18 @@ const VerseRow = memo(function VerseRow({
               paddingHorizontal: 6,
             }}
           >
-            <Icon name="check-circle" size={16} color={bookmarked ? c.progress : c.textMuted} />
-            <Text strong style={size(11.5, 'label')}>
+            <Icon
+              name="check-circle"
+              weight="fill"
+              size={16}
+              color={bookmarked ? c.progress : c.textMuted}
+            />
+            <Text variant="caption" strong>
               {bookmarked ? i18n.t('quran.bookmark.marked') : i18n.t('quran.bookmark.mark')}
             </Text>
           </Pressable>
           <IconButton
-            icon="share"
+            icon="share-network"
             accessibilityLabel={i18n.t('quran.share.action')}
             onPress={() => onShare(row)}
             testID={`share-${surah}-${ayah}`}

@@ -275,17 +275,12 @@ function SurahRow({
                 <View
                   style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}
                 >
-                  <Text strong decorative style={size(13, 'label')}>
+                  <Text variant="label" strong decorative>
                     {surah.nameSimple}
                   </Text>
                   {portion ? <PortionTag label={portion} /> : null}
                 </View>
-                <Text
-                  variant="caption"
-                  color="textSecondary"
-                  decorative
-                  style={size(10.5, 'caption')}
-                >
+                <Text variant="caption" color="textSecondary" decorative>
                   {subtitle}
                 </Text>
               </View>
@@ -300,7 +295,7 @@ function SurahRow({
               </Text>
               {saved ? (
                 <View aria-hidden testID={`surah-saved-${surah.id}`}>
-                  <Icon name="check-circle" size={14} color={c.progress} />
+                  <Icon name="check-circle" weight="fill" size={14} color={c.progress} />
                 </View>
               ) : null}
             </View>
@@ -314,7 +309,6 @@ function SurahRow({
 /** The small green tag on a surah that is a circle's portion, such as "Tonight · 1–31". */
 function PortionTag({ label }: { label: string }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   return (
     <View
       style={{
@@ -324,7 +318,7 @@ function PortionTag({ label }: { label: string }) {
         paddingVertical: 1,
       }}
     >
-      <Text variant="caption" color="textOnAccentSubtle" strong style={size(9.5, 'caption')}>
+      <Text variant="caption" color="textOnAccentSubtle" strong>
         {label}
       </Text>
     </View>

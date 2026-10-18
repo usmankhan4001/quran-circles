@@ -61,7 +61,7 @@ export function QuranLeadCard({
             variant="caption"
             color="textSuccess"
             strong
-            style={size(11, 'caption')}
+
             testID="lead-progress"
           >
             {progress}
@@ -70,14 +70,14 @@ export function QuranLeadCard({
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text variant="title3" heading={2} style={size(15.5, 'title3')} testID="lead-title">
+          <Text variant="title3" heading={2} testID="lead-title">
             {title}
           </Text>
           {detail ? (
             <Text
               variant="caption"
               color="textSecondary"
-              style={[size(12, 'caption'), { marginTop: 2 }]}
+              style={{ marginTop: 2 }}
               testID={detailTestID}
             >
               {detail}
@@ -95,7 +95,6 @@ export function QuranLeadCard({
         <PillCta
           label={actionLabel}
           height={36}
-          textSize={12}
           onPress={onAction}
           {...(actionAccessibilityLabel ? { accessibilityLabel: actionAccessibilityLabel } : {})}
           {...(actionTestID ? { testID: actionTestID } : {})}

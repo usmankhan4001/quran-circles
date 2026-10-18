@@ -121,7 +121,7 @@ function HifzSection({ onOpen }: { onOpen: (target: ReaderTarget) => void }) {
       <View testID="quran-hifz" style={{ marginTop: spacing.xs }}>
         <SectionHead title={t('quran.hifz.title')} />
         <WhiteCard radius={18} padding={14} style={{ gap: 10 }}>
-          <Text variant="caption" color="textSecondary" style={size(12, 'caption')}>
+          <Text variant="caption" color="textSecondary">
             {status !== 'signedIn'
               ? t('memorisation.signedOut')
               : tracker.enabled
@@ -131,7 +131,7 @@ function HifzSection({ onOpen }: { onOpen: (target: ReaderTarget) => void }) {
           <PillCta
             label={t('memorisation.title')}
             height={30}
-            textSize={11}
+            small
             onPress={() => nav.go({ name: 'memorisation' })}
             testID="quran-hifz-open"
           />
@@ -164,10 +164,10 @@ function HifzSection({ onOpen }: { onOpen: (target: ReaderTarget) => void }) {
                     gap: 4,
                   }}
                 >
-                  <Text strong style={size(11.5, 'label')} numberOfLines={1}>
+                  <Text variant="caption" strong numberOfLines={1}>
                     {names.simple}
                   </Text>
-                  <Text variant="caption" color="textSecondary" style={size(11, 'caption')}>
+                  <Text variant="caption" color="textSecondary">
                     {t(`memorisation.status.${entry.status}`)}
                   </Text>
                 </View>
@@ -184,7 +184,7 @@ function HifzSection({ onOpen }: { onOpen: (target: ReaderTarget) => void }) {
                   label={t('quran.hifz.read')}
                   accessibilityLabel={`${t('quran.hifz.read')}: ${names.simple}`}
                   height={30}
-                  textSize={11}
+                  small
                   onPress={() => onOpen({ kind: 'surah', id: entry.surah })}
                   testID={`quran-hifz-${entry.surah}`}
                 />
@@ -205,7 +205,6 @@ function LatestUpdate() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const feed = useUpdatesFeed(1);
-  const size = useArtSize();
   const update = feed.items[0];
   if (!update) return null;
   const when = formatShortDate(update.publishedAt, 'Asia/Karachi', locale);
@@ -228,19 +227,14 @@ function LatestUpdate() {
           }}
         >
           <StatusLine label={t('updates.title')} />
-          <Text variant="caption" color="textMuted" style={size(10.5, 'caption')}>
+          <Text variant="caption" color="textMuted">
             {when}
           </Text>
         </View>
-        <Text strong style={size(13, 'label')} numberOfLines={2}>
+        <Text variant="label" strong numberOfLines={2}>
           {l(update.title).text}
         </Text>
-        <Text
-          variant="caption"
-          color="textSecondary"
-          style={[size(11.5, 'caption'), { marginTop: 2 }]}
-          numberOfLines={2}
-        >
+        <Text variant="caption" color="textSecondary" style={{ marginTop: 2 }} numberOfLines={2}>
           {l(update.body).text}
         </Text>
       </WhiteCard>

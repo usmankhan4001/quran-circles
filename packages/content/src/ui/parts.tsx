@@ -11,7 +11,6 @@ import {
   useTheme,
   type IconName,
 } from '@qc/ui';
-import { useArtSize } from './art';
 
 // Small pieces of the showcase artboards (D17 override) that the Quran and prayer screens share.
 
@@ -58,14 +57,13 @@ export function WhiteCard({
 /** The 6 px green dot and short bold line that opens a lead card. */
 export function StatusLine({ label, testID }: { label: string; testID?: string }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 }}>
       <View
         aria-hidden
         style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.progress }}
       />
-      <Text variant="caption" color="textAccent" strong style={size(11, 'caption')} testID={testID}>
+      <Text variant="caption" color="textAccent" strong testID={testID}>
         {label}
       </Text>
     </View>
@@ -80,20 +78,20 @@ export function PillCta({
   label,
   onPress,
   height = 40,
-  textSize = 12.5,
+  small,
   accessibilityLabel,
   testID,
 }: {
   label: string;
   onPress: () => void;
   height?: number;
-  textSize?: number;
+  /** The smaller pill of the mini cards: caption text. */
+  small?: boolean;
   accessibilityLabel?: string;
   testID?: string;
 }) {
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   const slop = Math.max(0, Math.ceil((minTouchTarget - height) / 2));
   return (
     <Pressable
@@ -115,10 +113,10 @@ export function PillCta({
         paddingHorizontal: spacing.md,
       })}
     >
-      <Text variant="label" strong style={size(textSize, 'label')}>
+      <Text variant={small ? 'caption' : 'label'} strong>
         {label}
       </Text>
-      <Icon name="arrow-forward" size={Math.round(textSize * theme.scale)} color={c.text} />
+      <Icon name="arrow-right" size={small ? 12 : 14} color={c.text} />
     </Pressable>
   );
 }
@@ -136,7 +134,6 @@ export function SectionHead({
   moreTestID?: string;
 }) {
   const c = useTheme().colors;
-  const size = useArtSize();
   return (
     <View
       style={{
@@ -147,7 +144,7 @@ export function SectionHead({
         marginBottom: 8,
       }}
     >
-      <Text variant="title3" heading={2} style={size(15, 'title3')}>
+      <Text variant="title3" heading={2}>
         {title}
       </Text>
       {more && onMore ? (
@@ -157,10 +154,10 @@ export function SectionHead({
           testID={moreTestID}
           style={{ minHeight: minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 3 }}
         >
-          <Text variant="caption" color="textSecondary" strong style={size(12, 'caption')}>
+          <Text variant="caption" color="textSecondary" strong>
             {more}
           </Text>
-          <Icon name="chevron-forward" size={12} color={c.textSecondary} />
+          <Icon name="caret-right" weight="bold" size={11} color={c.textSecondary} />
         </Pressable>
       ) : null}
     </View>
@@ -186,7 +183,6 @@ export function PillTabs<T extends string>({
 }) {
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   const hc = theme.mode === 'highContrast';
   return (
     <View
@@ -226,12 +222,7 @@ export function PillTabs<T extends string>({
                 chosen && theme.mode === 'light' ? '0px 1px 3px rgba(0,0,0,0.06)' : undefined,
             })}
           >
-            <Text
-              variant="label"
-              strong={chosen}
-              color={chosen ? 'text' : 'textSecondary'}
-              style={size(11, 'label')}
-            >
+            <Text variant="caption" strong={chosen} color={chosen ? 'text' : 'textSecondary'}>
               {option.label}
             </Text>
           </Pressable>
@@ -272,7 +263,12 @@ export function RoundButton({
         justifyContent: 'center',
       })}
     >
-      <Icon name={icon} size={13} color={c.textSecondary} />
+      <Icon
+        name={icon === 'search' ? 'magnifying-glass' : 'x'}
+        weight="bold"
+        size={13}
+        color={c.textSecondary}
+      />
     </Pressable>
   );
 }
@@ -355,12 +351,15 @@ export function BarIcon({
   accessibilityLabel,
   onPress,
   disabled,
+  strong,
   testID,
 }: {
   icon: IconName;
   accessibilityLabel: string;
   onPress?: () => void;
   disabled?: boolean;
+  /** The back caret is bold and in the text colour, as drawn. */
+  strong?: boolean;
   testID?: string;
 }) {
   const c = useTheme().colors;
@@ -382,7 +381,12 @@ export function BarIcon({
         opacity: disabled ? 0.45 : 1,
       })}
     >
-      <Icon name={icon} size={18} color={c.textSecondary} />
+      <Icon
+        name={icon}
+        size={strong ? 16 : 17}
+        weight={strong ? 'bold' : 'regular'}
+        color={strong ? c.text : c.textSecondary}
+      />
     </Pressable>
   );
 }

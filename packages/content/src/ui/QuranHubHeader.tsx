@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { HeroHeader, Text, radii, spacing, useTheme } from '@qc/ui';
-import { useArtSize } from './art';
 import type { Section } from '../state/viewState';
 import { useContentI18n } from './i18n';
 
@@ -19,25 +18,15 @@ export interface QuranHubHeaderProps {
  */
 export function QuranHubHeader({ section, onSectionChange, actions, testID }: QuranHubHeaderProps) {
   const i18n = useContentI18n();
-  const size = useArtSize();
   return (
     <HeroHeader
       testID={testID}
       leading={
         <View style={{ flexShrink: 1, gap: spacing.xxs, paddingEnd: spacing.sm }}>
-          <Text
-            variant="title2"
-            color="textOnHero"
-            heading={1}
-            style={[size(20, 'title2'), { fontWeight: '800', letterSpacing: -0.4 }]}
-          >
+          <Text variant="title2" color="textOnHero" heading={1}>
             {i18n.t('quran.hub.title')}
           </Text>
-          <Text
-            variant="caption"
-            color="textOnHero"
-            style={[size(11.5, 'caption'), { opacity: 0.86 }]}
-          >
+          <Text variant="caption" color="textOnHero" style={{ opacity: 0.86 }}>
             {i18n.t('quran.hub.subtitle')}
           </Text>
         </View>
@@ -83,7 +72,6 @@ function HeroSwitch<T extends string>({
   const theme = useTheme();
   const c = theme.colors;
   const hc = theme.mode === 'highContrast';
-  const size = useArtSize();
   return (
     <View
       role="radiogroup"
@@ -117,12 +105,7 @@ function HeroSwitch<T extends string>({
               backgroundColor: chosen ? c.surface : pressed ? c.heroGlassPressed : 'transparent',
             })}
           >
-            <Text
-              variant="label"
-              strong
-              color={chosen ? 'textAccent' : 'textOnHero'}
-              style={size(11, 'label')}
-            >
+            <Text variant="caption" strong color={chosen ? 'textAccent' : 'textOnHero'}>
               {option.label}
             </Text>
           </Pressable>

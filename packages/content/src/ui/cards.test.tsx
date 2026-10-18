@@ -58,10 +58,10 @@ describe.each(matrix)('NextPrayerCard in $name', (combo) => {
     expect(getComputedStyle(card).backgroundColor).toBe(rgbOf(semanticColors[combo.mode].surface));
     const line = screen.getByTestId('next-prayer-countdown');
     expect(getComputedStyle(line).color).toBe(rgbOf(semanticColors[combo.mode].text));
-    // title3 at step 0, set larger for Urdu script, and scaled by the text size.
+    // title3 at step 0, set larger for Urdu script, scaled by the text size, to the half pixel.
     const script = combo.locale === 'ur' ? scriptSizeFactor.urdu : scriptSizeFactor.latin;
     expect(parseFloat(line.style.fontSize)).toBe(
-      Math.round(typeRoles.title3.size * script * textScale[combo.textSize]),
+      Math.round(typeRoles.title3.size * script * textScale[combo.textSize] * 2) / 2,
     );
   });
 

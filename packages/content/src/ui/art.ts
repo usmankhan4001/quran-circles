@@ -3,9 +3,10 @@ import type { TextStyle } from 'react-native';
 import { useTheme, type TypeRole } from '@qc/ui';
 
 /**
- * Text at the exact size of the showcase artboards (D17 override): a pixel size from the
- * artboard, grown with the chosen text size, with the line height the role keeps for the
- * script (Nastaliq and the Quran font need more room than Latin).
+ * Quran text at the artboards' sizes (17 to 21 px in lists and verse cards; the kit's `quran`
+ * role is 28, for full reading). Grown with the chosen text size, with the role's line height.
+ * Everything else uses the kit type roles, which copy the artboards (D17).
+ * TODO(ui lane): a smaller Quran role (such as `quranCompact`) would replace this.
  */
 export function useArtSize(): (px: number, role?: TypeRole, script?: 'quran') => TextStyle {
   const theme = useTheme();

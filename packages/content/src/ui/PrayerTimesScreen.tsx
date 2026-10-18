@@ -34,7 +34,6 @@ import {
 } from './format';
 import { useNextPrayer } from './hooks';
 import { useContentI18n, type ContentI18n } from './i18n';
-import { useArtSize } from './art';
 import { WhiteCard } from './parts';
 
 export interface PrayerTimesScreenProps {
@@ -180,7 +179,6 @@ function PlaceView({
   const { hijriOffsetDays } = useContent();
   const theme = useTheme();
   const c = theme.colors;
-  const size = useArtSize();
   const { next, countdown, now } = useNextPrayer(place);
   const today = todayAt(place, now);
   const dayKey = `${today.year}-${today.month}-${today.day}`;
@@ -201,7 +199,7 @@ function PlaceView({
           pointerEvents="none"
           style={{ position: 'absolute', end: 14, bottom: -6, opacity: 0.12 }}
         >
-          <Icon name="masjid" size={88} color={c.textAccent} />
+          <Icon name="mosque" size={88} color={c.textAccent} />
         </View>
         <View
           style={{
@@ -212,8 +210,8 @@ function PlaceView({
             marginBottom: 6,
           }}
         >
-          <Icon name="calendar" size={13} color={c.textSecondary} />
-          <Text variant="caption" color="textSecondary" style={size(11.5, 'caption')}>
+          <Icon name="calendar-blank" size={13} color={c.textSecondary} />
+          <Text variant="caption" color="textSecondary">
             {next.tomorrow
               ? `${i18n.t('prayer.next')} · ${i18n.t('prayer.next.tomorrow')}`
               : i18n.t('prayer.calendar.today')}
@@ -223,40 +221,35 @@ function PlaceView({
             <Text
               variant="caption"
               color="textSecondary"
-              style={size(11.5, 'caption')}
+
               testID="hijri-today"
             >
               {hijriText(i18n, hijriToday)}
             </Text>
           ) : null}
           {hijriToday ? (
-            <Text variant="caption" color="textSecondary" style={size(11.5, 'caption')}>
+            <Text variant="caption" color="textSecondary">
               {' · '}
             </Text>
           ) : null}
           <Text
             variant="caption"
             color="textSecondary"
-            style={size(11.5, 'caption')}
+
             testID="prayer-city"
           >
             {cityLabel}
           </Text>
         </View>
-        <Text
-          variant="title2"
-          heading={2}
-          style={[size(22, 'title2'), { fontWeight: '800', letterSpacing: -0.4 }]}
-          testID="next-prayer-time"
-        >
+        <Text variant="title1" heading={2} testID="next-prayer-time">
           {`${prayerName(i18n, next.prayer)} ${at}`}
         </Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-          <Icon name="clock" size={13} color={c.textSuccess} />
+          <Icon name="hourglass-medium" size={13} color={c.textSuccess} />
           <Text
-            variant="label"
+            variant="caption"
             color="textSuccess"
-            style={size(12, 'label')}
+
             testID="next-prayer-countdown"
           >
             {line}
@@ -290,7 +283,7 @@ function PlaceView({
                 }}
               >
                 <View style={{ flexShrink: 1 }}>
-                  <Text strong decorative style={size(13.5, 'label')}>
+                  <Text variant="label" strong decorative>
                     {name}
                   </Text>
                   {isNext ? (
@@ -299,24 +292,25 @@ function PlaceView({
                       color="textSuccess"
                       strong
                       decorative
-                      style={[size(11, 'caption'), { marginTop: 2 }]}
+                      style={{ marginTop: 2 }}
                     >
                       {i18n.t('prayer.badge.next')}
                     </Text>
                   ) : null}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text
-                    strong
-                    decorative
-                    style={[size(13, 'label'), { fontVariant: ['tabular-nums'] }]}
-                  >
+                  <Text variant="label" strong decorative style={{ fontVariant: ['tabular-nums'] }}>
                     {time}
                   </Text>
                   {/* The adhan speaker, as drawn. There is no adhan sound yet, so it is only
                       a mark: green for the next prayer, grey otherwise. */}
                   <View aria-hidden>
-                    <Icon name="bell" size={16} color={isNext ? c.progress : c.textMuted} />
+                    <Icon
+                      name="bell-ringing"
+                      weight={isNext ? 'fill' : 'regular'}
+                      size={16}
+                      color={isNext ? c.progress : c.textMuted}
+                    />
                   </View>
                 </View>
               </WhiteCard>
