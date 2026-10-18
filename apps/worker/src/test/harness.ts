@@ -12,7 +12,12 @@ import {
   type RetryPolicy,
 } from '@qc/messaging';
 import { tables, type Db } from '../db';
-import { createDispatcher, type SendJob, type SendQueue } from '../outbox/dispatcher';
+import {
+  createDispatcher,
+  type SendJob,
+  type SendLane,
+  type SendQueue,
+} from '../outbox/dispatcher';
 import {
   DEFAULT_WHATSAPP_LIMITS,
   createWhatsAppLimits,
@@ -38,8 +43,11 @@ export class TestClock {
 /** Collects jobs and runs them on demand, like a queue that only runs when told to. */
 export class InlineQueue implements SendQueue {
   readonly jobs: SendJob[] = [];
-  enqueue(job: SendJob): Promise<void> {
-    this.jobs.push(job);
+  /** The lane of each enqueue call, in order. */
+  readonly lanes: SendLane[] = [];
+  enqueue(jobs: readonly SendJob[], lane: SendLane): Promise<void> {
+    this.jobs.push(...jobs);
+    this.lanes.push(lane);
     return Promise.resolve();
   }
   async drain(deps: ProcessorDeps): Promise<void> {

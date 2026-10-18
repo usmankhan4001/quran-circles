@@ -50,8 +50,16 @@ export const updates = pgTable(
     publishAt: tstz('publish_at').notNull().defaultNow(),
     expiresAt: tstz('expires_at'),
     createdAt: createdAt(),
+    /**
+     * Migration 0011: the update's pushes were asked for (`notify`) and the worker has not written
+     * them yet (`fanOutPendingUpdatePushes`). NULL when there is nothing left to write.
+     */
+    pushPendingSince: tstz('push_pending_since'),
   },
   (t) => [
+    index('updates_push_pending_idx')
+      .on(t.pushPendingSince)
+      .where(sql`${t.pushPendingSince} IS NOT NULL`),
     index('updates_scope_publish_idx').on(
       t.scopeType,
       t.cityId,

@@ -17,7 +17,27 @@ export const WorkerEnv = MessagingEnv.extend({
   WORKER_HTTP_PORT: z.coerce.number().int().min(0).max(65535).default(8081),
   /** How often the dispatcher looks for due outbox rows. */
   WORKER_POLL_MS: z.coerce.number().int().min(250).max(60_000).default(5_000),
+  /** WhatsApp and SMS batches sent at once on this node (one message at a time per batch). */
   WORKER_SEND_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+  /** Push batches sent at once on this node. */
+  WORKER_PUSH_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
+  /** Push jobs fetched per batch. */
+  WORKER_PUSH_BATCH_SIZE: z.coerce.number().int().min(1).max(500).default(50),
+  /** Pushes sent at once within one batch (provider calls in flight = this x the concurrency). */
+  WORKER_PUSH_PARALLEL: z.coerce.number().int().min(1).max(100).default(10),
+  /** How often idle push senders look for jobs (pg-boss minimum 500 ms). */
+  WORKER_PUSH_POLL_MS: z.coerce.number().int().min(500).max(60_000).default(500),
+  /**
+   * Push rows claimed and not yet finished, across all workers. Keep it below what the senders can
+   * finish within one lease (`WORKER_LEASE_MS`): 2,000 is 20 s of work at 100 a second.
+   */
+  WORKER_PUSH_MAX_IN_FLIGHT: z.coerce.number().int().min(1).max(100_000).default(2_000),
+  /** WhatsApp and SMS rows claimed and not yet finished, across all workers. */
+  WORKER_MESSAGE_MAX_IN_FLIGHT: z.coerce.number().int().min(1).max(10_000).default(100),
+  /** How long a claim, or a sender's hold on a row, lasts before the row is handed out again. */
+  WORKER_LEASE_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(300_000),
+  /** How soon the dispatcher looks again while a lane is full or update pushes are being written. */
+  WORKER_BUSY_POLL_MS: z.coerce.number().int().min(100).max(60_000).default(1_000),
   /** How many days ahead the daily top-up keeps session occurrences. Same default as the API. */
   OCCURRENCE_HORIZON_DAYS: z.coerce
     .number()

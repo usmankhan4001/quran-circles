@@ -34,7 +34,11 @@ export interface WebhookHandlerDeps {
   /** Applies the events. Awaited before answering, so Meta retries when we could not store them. */
   onEvents(events: WhatsAppWebhookEvent[]): Promise<unknown>;
   /** Answers `/healthz`. */
-  health?: () => Promise<{ ok: boolean; details?: Record<string, unknown> }>;
+  health?: () => Promise<{
+    ok: boolean;
+    details?: Record<string, unknown>;
+    metrics?: Record<string, number>;
+  }>;
 }
 
 const text = (status: number, body: string): WebhookResponse => ({

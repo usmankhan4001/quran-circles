@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { PgBoss } from 'pg-boss';
 import pg from 'pg';
-import { schema } from '@qc/db';
+import { countPendingUpdatePushes, schema } from '@qc/db';
 import { createConsoleLogger, createMessaging } from '@qc/messaging';
 import { missingPosterEnv, parseWorkerEnv } from './config';
 import { LocalDiskPosterStorage } from './posters/storage';
@@ -80,6 +80,16 @@ export async function main(env: Record<string, string | undefined> = process.env
     now: () => new Date(),
     dispatchIntervalMs: config.WORKER_POLL_MS,
     sendConcurrency: config.WORKER_SEND_CONCURRENCY,
+    pushConcurrency: config.WORKER_PUSH_CONCURRENCY,
+    pushBatchSize: config.WORKER_PUSH_BATCH_SIZE,
+    pushParallel: config.WORKER_PUSH_PARALLEL,
+    pushPollingSeconds: config.WORKER_PUSH_POLL_MS / 1000,
+    maxInFlight: {
+      push: config.WORKER_PUSH_MAX_IN_FLIGHT,
+      message: config.WORKER_MESSAGE_MAX_IN_FLIGHT,
+    },
+    leaseMs: config.WORKER_LEASE_MS,
+    busyIntervalMs: config.WORKER_BUSY_POLL_MS,
     occurrenceHorizonDays: config.OCCURRENCE_HORIZON_DAYS,
     posters,
     posterConcurrency: config.WORKER_POSTER_CONCURRENCY,
@@ -91,7 +101,13 @@ export async function main(env: Record<string, string | undefined> = process.env
     verifyToken: messaging.webhook.verifyToken,
     logger,
     onEvents: (events) => applyWhatsAppEvents({ db, logger }, events),
-    health: async () => ({ ok: true, details: await countByStatus(db) }),
+    // `details` stays the outbox counts by status (the load test reads it); `metrics` holds the
+    // counters since start, `workerLost` above 0 meaning leases ran out (see `outbox.worker_lost`).
+    health: async () => ({
+      ok: true,
+      details: await countByStatus(db),
+      metrics: { ...runtime.stats(), updatePushesPending: await countPendingUpdatePushes(db) },
+    }),
   });
   const server = createWebhookServer(handler, logger);
   await new Promise<void>((resolve, reject) => {

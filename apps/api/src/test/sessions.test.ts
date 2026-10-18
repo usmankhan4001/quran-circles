@@ -8,7 +8,7 @@ import type {
   Session,
   Update,
 } from '@qc/contracts';
-import { schema } from '@qc/db';
+import { fanOutPendingUpdatePushes, schema } from '@qc/db';
 import { topUpAllOccurrences } from '../jobs';
 import { createHarness, type Actor, type Harness } from './harness';
 import { auditRows, createOneOff, createSession, outboxRows, register } from './fixtures';
@@ -523,6 +523,9 @@ describe('changing the time', () => {
       params: { sessionId: session.id },
       body: { localStartTime: '17:00', effectiveFrom: '2026-10-16', notify: true },
     });
+    // WhatsApp rows are written in the request; the update's push rows by the worker afterwards.
+    expect((await outboxRows(h)).filter((r) => r.channel === 'push')).toEqual([]);
+    expect(await fanOutPendingUpdatePushes(h.db)).toMatchObject({ updates: 1, rows: 1 });
     const rows = (await outboxRows(h)).filter(
       (r) => r.templateKey === 'session_changed' || r.channel === 'push',
     );

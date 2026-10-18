@@ -57,6 +57,53 @@ describe('worker configuration', () => {
     }
   });
 
+  it('reads the send tunables, with defaults that keep a burst inside one lease', () => {
+    expect(parseWorkerEnv(base)).toMatchObject({
+      WORKER_PUSH_CONCURRENCY: 4,
+      WORKER_PUSH_BATCH_SIZE: 50,
+      WORKER_PUSH_PARALLEL: 10,
+      WORKER_PUSH_POLL_MS: 500,
+      WORKER_PUSH_MAX_IN_FLIGHT: 2000,
+      WORKER_MESSAGE_MAX_IN_FLIGHT: 100,
+      WORKER_LEASE_MS: 300_000,
+      WORKER_BUSY_POLL_MS: 1000,
+    });
+    expect(
+      parseWorkerEnv({
+        ...base,
+        WORKER_PUSH_CONCURRENCY: '8',
+        WORKER_PUSH_BATCH_SIZE: '100',
+        WORKER_PUSH_PARALLEL: '20',
+        WORKER_PUSH_POLL_MS: '1000',
+        WORKER_PUSH_MAX_IN_FLIGHT: '5000',
+        WORKER_MESSAGE_MAX_IN_FLIGHT: '50',
+        WORKER_LEASE_MS: '600000',
+        WORKER_BUSY_POLL_MS: '250',
+      }),
+    ).toMatchObject({
+      WORKER_PUSH_CONCURRENCY: 8,
+      WORKER_PUSH_BATCH_SIZE: 100,
+      WORKER_PUSH_PARALLEL: 20,
+      WORKER_PUSH_POLL_MS: 1000,
+      WORKER_PUSH_MAX_IN_FLIGHT: 5000,
+      WORKER_MESSAGE_MAX_IN_FLIGHT: 50,
+      WORKER_LEASE_MS: 600_000,
+      WORKER_BUSY_POLL_MS: 250,
+    });
+    for (const [name, bad] of [
+      ['WORKER_PUSH_CONCURRENCY', '0'],
+      ['WORKER_PUSH_BATCH_SIZE', '501'],
+      ['WORKER_PUSH_PARALLEL', '0'],
+      ['WORKER_PUSH_POLL_MS', '100'],
+      ['WORKER_PUSH_MAX_IN_FLIGHT', '0'],
+      ['WORKER_MESSAGE_MAX_IN_FLIGHT', 'lots'],
+      ['WORKER_LEASE_MS', '1000'],
+      ['WORKER_BUSY_POLL_MS', '10'],
+    ] as const) {
+      expect(() => parseWorkerEnv({ ...base, [name]: bad })).toThrow(new RegExp(name));
+    }
+  });
+
   it('requires a database', () => {
     expect(() => parseWorkerEnv({})).toThrow(WorkerConfigError);
   });

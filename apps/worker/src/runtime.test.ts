@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PgBoss, fromPglite } from 'pg-boss';
 import { POSTER_RENDER_QUEUE } from '@qc/contracts';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { tables } from './db';
 import {
@@ -15,6 +15,7 @@ import {
   AYAH_TIMEZONE,
   POSTER_DEAD_QUEUE,
   POSTER_QUEUE,
+  PUSH_SEND_QUEUE,
   RECONCILE_QUEUE,
   SEND_QUEUE,
   TOP_UP_CRON,
@@ -27,8 +28,10 @@ import { LocalDiskPosterStorage, type PosterStorage } from './posters/storage';
 import { createTestDb, type TestDb } from './test/db';
 import { FAKE_RENDERER_TOKEN, FakeRenderer } from './test/fake-renderer';
 import { createHarness, pushDraft, whatsappDraft, type Harness } from './test/harness';
+import type { SendJob as SendJobData } from './outbox/dispatcher';
 import {
   seedAuthSession,
+  seedConsent,
   seedDevice,
   seedOccurrence,
   seedOtpChallenge,
@@ -180,6 +183,9 @@ describe('pg-boss runtime', () => {
       () => h.row(row.id),
       (r) => r.status === 'sent',
     );
+    // A lost lease is an error line and a health metric.
+    expect(rt.stats()).toMatchObject({ workerLost: 1, workerLostDead: 0 });
+    expect(h.logger.lines.find((l) => l.event === 'outbox.worker_lost')?.level).toBe('error');
   });
 
   it('reconciles reminders on demand and registers the every-minute schedule', async () => {
@@ -426,6 +432,174 @@ describe('pg-boss runtime', () => {
     const row = await h.queue_(pushDraft('boss-stopped', user.id, h.clock.now()));
     await new Promise((r) => setTimeout(r, 300));
     expect((await h.row(row.id)).status).toBe('queued');
+  });
+});
+
+/** `count` people with one fake device each and a push row due now for each, in bulk. */
+async function pushBurst(count: number): Promise<void> {
+  const users = await test.db
+    .insert(tables.users)
+    .values(
+      Array.from({ length: count }, (_, i) => ({
+        phoneE164: `+92314${String(i).padStart(7, '0')}`,
+        phoneVerifiedAt: new Date('2026-01-01T00:00:00Z'),
+        displayName: 'Burst Person',
+      })),
+    )
+    .returning({ id: tables.users.id });
+  await test.db.insert(tables.devices).values(
+    users.map((u, i) => ({
+      userId: u.id,
+      platform: 'android' as const,
+      provider: 'fcm' as const,
+      token: `fake-burst-token-${i}`,
+      locale: 'en' as const,
+    })),
+  );
+  await test.db
+    .insert(tables.messageOutbox)
+    .values(users.map((u, i) => pushDraft(`burst:${i}`, u.id, h.clock.now())));
+}
+
+const sentCount = async (): Promise<number> =>
+  (
+    await test.db
+      .select({ id: tables.messageOutbox.id })
+      .from(tables.messageOutbox)
+      .where(eq(tables.messageOutbox.status, 'sent'))
+  ).length;
+
+describe('push and message lanes', () => {
+  it('puts push jobs on outbox-send-push and WhatsApp jobs on outbox-send, and sends both', async () => {
+    const rt = await start();
+    const user = await seedUser(test.db);
+    await seedConsent(test.db, user.id, { purpose: 'registration_updates' });
+    await seedDevice(test.db, user.id);
+    const push = await h.queue_(pushDraft('lane-push', user.id, h.clock.now()));
+    const wa = await h.queue_(
+      whatsappDraft('lane-wa', 'registration_confirmation', user.id, h.clock.now()),
+    );
+    expect(await rt.dispatchNow()).toMatchObject({ claimed: 2, saturated: false });
+    await until(
+      async () => [await h.row(push.id), await h.row(wa.id)],
+      (rows) => rows.every((r) => r.status === 'sent'),
+    );
+    const pushJobs = await boss.findJobs<{ outboxId: string }>(PUSH_SEND_QUEUE);
+    const sendJobs = await boss.findJobs<{ outboxId: string }>(SEND_QUEUE);
+    // pg-boss keeps earlier tests' jobs (its schema is not reset), so look for these two only.
+    const pushIds = pushJobs.map((j) => j.data.outboxId);
+    const sendIds = sendJobs.map((j) => j.data.outboxId);
+    expect(pushIds).toContain(push.id);
+    expect(pushIds).not.toContain(wa.id);
+    expect(sendIds).toContain(wa.id);
+    expect(sendIds).not.toContain(push.id);
+    expect(rt.stats()).toMatchObject({ claimed: 2, sent: 2, staleJobs: 0, workerLost: 0 });
+  });
+
+  it('drains a burst through pg-boss inside the in-flight limit, every row once', async () => {
+    const rt = await start({
+      maxInFlight: { push: 30 },
+      pushBatchSize: 10,
+      pushParallel: 5,
+      pushConcurrency: 2,
+    });
+    await pushBurst(150);
+    let maxSending = 0;
+    const deadline = Date.now() + 60_000;
+    while ((await sentCount()) < 150) {
+      if (Date.now() > deadline) throw new Error('the burst did not drain');
+      await rt.dispatchNow();
+      const [row] = await test.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(tables.messageOutbox)
+        .where(eq(tables.messageOutbox.status, 'sending'));
+      maxSending = Math.max(maxSending, row?.n ?? 0);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    expect(maxSending).toBeLessThanOrEqual(30);
+    expect(h.push.sent).toHaveLength(150);
+    expect(new Set(h.push.sent.map((p) => p.target.token)).size).toBe(150);
+    expect(rt.stats()).toMatchObject({ claimed: 150, sent: 150, workerLost: 0, staleJobs: 0 });
+  });
+
+  it('drops a duplicate push job without a send, and counts it', async () => {
+    const rt = await start();
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    const row = await h.queue_(pushDraft('lane-dup', user.id, h.clock.now()));
+    await rt.dispatchNow();
+    const job = (await boss.findJobs<SendJobData>(PUSH_SEND_QUEUE)).find(
+      (j) => j.data.outboxId === row.id,
+    );
+    await boss.send(PUSH_SEND_QUEUE, job!.data);
+    await boss.send(PUSH_SEND_QUEUE, job!.data);
+    await until(
+      () => h.row(row.id),
+      (r) => r.status === 'sent',
+    );
+    await until(
+      async () => rt.stats().staleJobs,
+      (n) => n >= 2,
+    );
+    expect(h.push.sent).toHaveLength(1);
+    expect(rt.stats()).toMatchObject({ sent: 1, staleJobs: 2 });
+  });
+
+  it('writes the pushes of an update posted with notify from the poll loop, and sends them', async () => {
+    const rt = await start({ dispatchIntervalMs: 100, busyIntervalMs: 100 });
+    const author = await seedUser(test.db);
+    const people = [await seedUser(test.db), await seedUser(test.db, { locale: 'ur' })];
+    for (const p of people) await seedDevice(test.db, p.id);
+    const [update] = await test.db
+      .insert(tables.updates)
+      .values({
+        scopeType: 'national',
+        authorId: author.id,
+        kind: 'announcement',
+        titleEn: 'Taraweeh tonight',
+        bodyEn: 'Synthetic announcement.',
+        publishAt: h.clock.now(),
+        pushPendingSince: h.clock.now(),
+      })
+      .returning();
+    await until(sentCount, (n) => n === 2);
+    const rows = await test.db
+      .select()
+      .from(tables.messageOutbox)
+      .where(eq(tables.messageOutbox.updateId, update!.id));
+    expect(rows.map((r) => r.recipientUserId).sort()).toEqual(people.map((p) => p.id).sort());
+    expect(rt.stats()).toMatchObject({ updatePushes: 1, updatePushRows: 2, sent: 2 });
+    expect(h.logger.lines.find((l) => l.event === 'updates.pushes_written')?.fields).toEqual({
+      updates: 1,
+      rows: 2,
+    });
+    // Nothing is pending, and a second run writes nothing.
+    expect(await rt.fanOutNow()).toEqual({ updates: 0, rows: 0 });
+    expect(h.push.sent).toHaveLength(2);
+  });
+
+  it('keeps dispatching when writing an update push fails, and logs it', async () => {
+    const rt = await start({ dispatchIntervalMs: 100, busyIntervalMs: 100 });
+    await test.pg.exec('ALTER TABLE updates RENAME COLUMN push_pending_since TO push_pending_gone');
+    try {
+      const user = await seedUser(test.db);
+      await seedDevice(test.db, user.id);
+      const row = await h.queue_(pushDraft('fanout-broken', user.id, h.clock.now()));
+      await until(
+        () => h.row(row.id),
+        (r) => r.status === 'sent',
+      );
+      await until(
+        async () => h.logger.lines.filter((l) => l.event === 'updates.push_fanout_failed'),
+        (lines) => lines.length > 0,
+      );
+    } finally {
+      await rt.stop({ timeoutMs: 5_000 });
+      runtime = undefined;
+      await test.pg.exec(
+        'ALTER TABLE updates RENAME COLUMN push_pending_gone TO push_pending_since',
+      );
+    }
   });
 });
 

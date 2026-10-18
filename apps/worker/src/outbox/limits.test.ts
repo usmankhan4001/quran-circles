@@ -6,7 +6,7 @@ import { createHarness, pushDraft, type Harness } from '../test/harness';
 import { nextPhone, seedConsent, seedDevice, seedUser, seedWorld } from '../test/seed';
 import { budgetAlertAt, createWhatsAppLimits, DEFAULT_WHATSAPP_LIMITS } from './limits';
 import { claimDue } from './repo';
-import { processClaimedRow } from './processor';
+import { processClaimedRow, processJobs } from './processor';
 
 // SEC-02: the per-person daily cap and the city budget, wired into the outbox processor.
 
@@ -112,6 +112,16 @@ describe('per-person daily cap', () => {
     expect(h.logger.lines.find((l) => l.event === 'outbox.blocked')?.fields).toMatchObject({
       reason: 'daily_cap',
     });
+  });
+
+  it.each([1, 4])('holds in a batch taken for sending at once (parallel %i)', async (parallel) => {
+    const h = createHarness(test.db, { limits: {} });
+    const user = await consenting();
+    for (let i = 0; i < 3; i++) await h.queue_(wa(h, 'session_changed', { userId: user.id }, null));
+    await h.dispatcher.tick();
+    const result = await processJobs(h.deps, h.queue.jobs.splice(0), { parallel });
+    expect(result.outcomes).toMatchObject({ sent: 1, failed: 2 });
+    expect(h.whatsapp.sent).toHaveLength(1);
   });
 
   it('counts critical templates: a confirmation after a change notice is capped', async () => {

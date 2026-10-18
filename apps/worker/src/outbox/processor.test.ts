@@ -467,7 +467,11 @@ describe('idempotency and crash safety', () => {
     const row = await h.queue_(pushDraft('dup:2', user.id, h.clock.now()));
     await h.dispatcher.tick();
     const [job] = h.queue.jobs;
-    expect(job).toEqual({ outboxId: row.id, attempt: 1 });
+    expect(job).toEqual({
+      outboxId: row.id,
+      attempt: 1,
+      lease: new Date(h.clock.now().getTime() + 5 * 60_000).toISOString(),
+    });
     expect(await processJob(h.deps, job!)).toEqual({ outcome: 'sent' });
     expect(await processJob(h.deps, job!)).toEqual({ outcome: 'skipped' });
     expect(h.push.sent).toHaveLength(1);

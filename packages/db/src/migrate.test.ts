@@ -640,6 +640,43 @@ describe('migration 0010: posters (contract 1.0.0-rc.5)', () => {
   });
 });
 
+describe('migration 0011: update push fan-out (load test finding)', () => {
+  const NAME = '0011_update_push_fanout';
+  const upTo = (count: number) => prefixDir(count);
+  const updateColumns = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    const { rows } = await test.exec.query<{ c: string }>(
+      `SELECT column_name AS c FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'updates' ORDER BY 1`,
+    );
+    return rows.map((r) => r.c);
+  };
+
+  it('adds the nullable mark and its partial index, and takes them away again', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(10) });
+    const tablesBefore = await publicTables(test);
+    const columnsBefore = await updateColumns(test);
+    const indexesBefore = await publicIndexes(test);
+    await migrateUp(test.exec, { dir: upTo(11) });
+    expect(await publicTables(test)).toEqual(tablesBefore);
+    expect((await updateColumns(test)).filter((c) => !columnsBefore.includes(c))).toEqual([
+      'push_pending_since',
+    ]);
+    expect((await publicIndexes(test)).filter((i) => !indexesBefore.includes(i))).toEqual([
+      'updates_push_pending_idx',
+    ]);
+    const { rows } = await test.exec.query<{ def: string }>(
+      `SELECT indexdef AS def FROM pg_indexes WHERE indexname = 'updates_push_pending_idx'`,
+    );
+    expect(rows[0]?.def).toContain('WHERE (push_pending_since IS NOT NULL)');
+
+    expect(await migrateDown(test.exec, { dir: upTo(11) })).toEqual([NAME]);
+    expect(await updateColumns(test)).toEqual(columnsBefore);
+    expect(await publicIndexes(test)).toEqual(indexesBefore);
+    expect(await migrateUp(test.exec, { dir: upTo(11) })).toEqual([NAME]);
+  });
+});
+
 describe('rollback arguments', () => {
   it('defaults to one migration', () => {
     expect(parseRollbackArgs([])).toEqual({ all: false });

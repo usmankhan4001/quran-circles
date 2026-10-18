@@ -1,7 +1,14 @@
 # Status: api-core
 
-Updated: 2026-10-18 (SEC-05, SEC-13 second half, `invite-and-poster-ceilings` applied)
+Updated: 2026-10-18 (update push fan-out to the worker)
 Branch: claude/peaceful-archimedes-ain95k
+
+## Done (2026-10-18: update push fan-out moved to the worker, quality WP12 finding)
+
+- `publishUpdate` (`modules/updates/publish.ts`) no longer writes one outbox row per recipient in the request. With `notify` and someone in reach, it sets `updates.push_pending_since` (migration 0011) in the same transaction as the post; the worker writes the rows straight after (`fanOutPendingUpdatePushes` in `@qc/db`), in chunks of 1,000, with the same people, wording, deep link (`PUBLIC_WEB_BASE` on both sides), city, venue, `sentBy` and idempotency keys (`update:<update>:<person>:push`). A rollback drops the mark with the post. The rule covers every caller: admin posts, and schedule changes and cancellations through `publishSessionEvent` (their WhatsApp rows are still written in the request, as before).
+- Recipient selection is shared, not copied: `reachUserIds` and `venueConnectedUserIds` moved unchanged to `packages/db/src/jobs/update-push.ts`; `modules/updates/reach.ts` re-exports them (`connectedScopes` stays here). The answer's `recipients` is still the reach counted in the request. The worker counts the reach again when it writes, so someone who joins or gets a device in the second between is included. That is the only difference.
+- Measured in the load run: a national post to 15,051 people answers in **30 ms** (was 1.8 s; 0.8 to 2.1 s for 5,839). The rows were written about 3 s later and all sent 26.7 s after the post (`status/messaging.md`).
+- Tests: `updates.test.ts` (the push test now checks that the post marks the update and writes nothing, then that the worker job writes the same row with every field and a second run writes nothing; +4: nothing marked when nobody is in reach; a national post leaves the fan-out to the worker, its count equals the preview, suspended people and people without devices get nothing, Urdu wording; a rolled-back transaction leaves no mark and no rows; the Urdu wording test runs the job). `sessions.test.ts`: the schedule-change test runs the job before checking the push. `@qc/api` 705 passing in 33 files; typecheck, eslint and prettier clean on the changed files.
 
 ## Done (2026-10-18: SEC-05, SEC-13 second half, change request `invite-and-poster-ceilings`)
 

@@ -37,6 +37,8 @@ export interface ProcessorDeps {
   afterSend?: (row: OutboxRow, limits: GateLimits | undefined) => void | Promise<void>;
   /** Meta language codes if they differ from `en` and `ur`. */
   languageCodes?: Partial<Record<'en' | 'ur', string>>;
+  /** The lease a sender takes on a row when it starts on it. Default `DEFAULT_LEASE_MS`. */
+  leaseMs?: number;
 }
 
 export type ProcessOutcome =
@@ -271,17 +273,89 @@ async function reminderIsStale(deps: ProcessorDeps, occurrenceId: string): Promi
   return null;
 }
 
+/** A queue job as the sender receives it (`SendJob` in `./dispatcher`). */
+export interface JobRef {
+  outboxId: string;
+  attempt: number;
+  /** The claim's lease end (ISO). Jobs queued before it was carried have none. */
+  lease?: string | undefined;
+}
+
 /**
- * Entry point for a queue job `{ outboxId, attempt }`. Ignores stale jobs: if the row is no
- * longer `sending` for this attempt (already handled, or reclaimed after a crash), it does nothing.
+ * Entry point for a queue job `{ outboxId, attempt, lease }`. Ignores stale jobs: if the row is no
+ * longer `sending` for this attempt and claim (already handled, taken by another sender, or
+ * reclaimed after a crash), it does nothing.
  */
 export async function processJob(
   deps: ProcessorDeps,
-  job: { outboxId: string; attempt: number },
+  job: JobRef,
 ): Promise<ProcessOutcome | { outcome: 'skipped' }> {
-  const row = await repo.getRow(deps.db, job.outboxId);
-  if (!row || row.status !== 'sending' || row.attempts !== job.attempt) {
-    return { outcome: 'skipped' };
-  }
+  const [row] = await repo.takeForSending(deps.db, [job], { leaseUntil: leaseEnd(deps) });
+  if (!row) return { outcome: 'skipped' };
   return processClaimedRow(deps, row);
+}
+
+const leaseEnd = (deps: ProcessorDeps): Date =>
+  new Date(deps.now().getTime() + (deps.leaseMs ?? repo.DEFAULT_LEASE_MS));
+
+export interface BatchResult {
+  /** Rows sent, requeued, failed or dead, by outcome. */
+  outcomes: Record<ProcessOutcome['outcome'], number>;
+  /** Jobs that were stale (or duplicates) and cost no send. */
+  skipped: number;
+  /** The first database failure, if any row hit one. The other rows were still handled. */
+  failure?: unknown;
+}
+
+/**
+ * Handles a batch of queue jobs: takes the rows still waiting for these jobs in one statement
+ * (`takeForSending`, so stale and duplicate jobs are dropped without a send slot), then sends the
+ * taken rows, at most `parallel` at once. Push rows can go in parallel; WhatsApp and SMS are
+ * handled one at a time (`parallel` 1), as before. A database failure on one row does not stop the
+ * others; it is returned so the caller can fail the batch for pg-boss to retry.
+ */
+export async function processJobs(
+  deps: ProcessorDeps,
+  jobs: readonly JobRef[],
+  options: { parallel?: number } = {},
+): Promise<BatchResult> {
+  const result: BatchResult = {
+    outcomes: { sent: 0, requeued: 0, failed: 0, dead: 0 },
+    skipped: 0,
+  };
+  if (jobs.length === 0) return result;
+  const rows = await repo.takeForSending(deps.db, jobs, { leaseUntil: leaseEnd(deps) });
+  result.skipped = jobs.length - rows.length;
+  // The statement returns rows in no set order; send in the order the jobs were queued.
+  const order = new Map(jobs.map((j, i) => [j.outboxId, i] as const));
+  rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  await forEachLimit(rows, Math.max(1, options.parallel ?? 1), async (row) => {
+    try {
+      const outcome = await processClaimedRow(deps, row);
+      result.outcomes[outcome.outcome]++;
+    } catch (error) {
+      result.failure ??= error;
+      deps.logger.error('outbox.job_failed', {
+        outboxId: row.id,
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+  });
+  return result;
+}
+
+/** Runs `fn` over `items`, at most `limit` at a time. */
+async function forEachLimit<T>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T) => Promise<void>,
+): Promise<void> {
+  let next = 0;
+  const lanes = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const item = items[next++] as T;
+      await fn(item);
+    }
+  });
+  await Promise.all(lanes);
 }

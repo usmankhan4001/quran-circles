@@ -2,7 +2,6 @@ import { and, asc, eq, gte, inArray, isNull, ne, or } from 'drizzle-orm';
 import {
   buildDeepLink,
   renderTemplate,
-  type DeepLink,
   type Locale,
   type OutboxPayload,
   type UpdateKind,
@@ -13,18 +12,8 @@ import { enqueueOutbox, type OutboxEntry } from '../shared/outbox';
 import { formatWhen } from '../shared/time';
 import { reachUserIds, type UpdateScopeRef } from './reach';
 
-const {
-  updates,
-  users,
-  devices,
-  registrations,
-  follows,
-  circles,
-  consents,
-  sessions,
-  venues,
-  occurrences,
-} = schema;
+const { updates, users, registrations, follows, circles, consents, sessions, venues, occurrences } =
+  schema;
 
 const clip = (text: string, max: number): string =>
   text.length <= max ? text : text.slice(0, max);
@@ -41,7 +30,7 @@ export interface PublishInput {
   title: Text;
   body: Text;
   sessionId: string | null;
-  /** Also queue a push to everyone in reach who has a device. */
+  /** Also push to everyone in reach who has a device (written by the worker, see below). */
   notify: boolean;
 }
 
@@ -50,20 +39,17 @@ export interface PublishDeps {
   webBase?: string | undefined;
 }
 
-const pick = (text: Text, locale: Locale): string =>
-  locale === 'ur' && text.ur ? text.ur : text.en;
-
-const PUSH_TYPE: Record<UpdateKind, 'update' | 'session_changed' | 'session_cancelled'> = {
-  announcement: 'update',
-  special_lecture: 'update',
-  time_change: 'session_changed',
-  cancellation: 'session_cancelled',
-};
-
 /**
- * Posts an update to the feed and queues a push for everyone in reach who has a registered device.
+ * Posts an update to the feed and asks for a push to everyone in reach who has a registered device.
  * Returns the number of people the update reaches. Run it in the same transaction as the write
  * that caused it.
+ *
+ * The push rows are not written here: with `notify` and someone in reach, the update is marked
+ * `push_pending_since` in the same transaction, and the worker writes one outbox row per person
+ * with a working device straight after (`fanOutPendingUpdatePushes` in `@qc/db`), with the same
+ * people, wording and idempotency keys as before. A national post to 50,000 people answers in
+ * milliseconds instead of seconds (load test finding). If the transaction rolls back, so does the
+ * mark, so no push goes out for an update that was never posted.
  */
 export async function publishUpdate(
   db: Db,
@@ -71,6 +57,7 @@ export async function publishUpdate(
   input: PublishInput,
 ): Promise<{ updateId: string; recipients: number }> {
   const { scope } = input;
+  const reach = await reachUserIds(db, scope);
   const [row] = await db
     .insert(updates)
     .values({
@@ -85,64 +72,11 @@ export async function publishUpdate(
       bodyUr: input.body.ur,
       sessionId: input.sessionId,
       publishAt: deps.now,
+      pushPendingSince: input.notify && reach.length > 0 ? deps.now : null,
     })
     .returning({ id: updates.id });
   if (!row) throw new Error('update insert returned no row');
-
-  const reach = await reachUserIds(db, scope);
-  if (input.notify && reach.length > 0) {
-    const entries = await pushEntries(db, deps, input, row.id, reach);
-    await enqueueOutbox(db, entries);
-  }
   return { updateId: row.id, recipients: reach.length };
-}
-
-async function pushEntries(
-  db: Db,
-  deps: PublishDeps,
-  input: PublishInput,
-  updateId: string,
-  reach: readonly string[],
-): Promise<OutboxEntry[]> {
-  const link: DeepLink = { type: 'update', updateId };
-  const deepLink = buildDeepLink(link, deps.webBase);
-  const out: OutboxEntry[] = [];
-  const cityId = input.scope.type === 'national' ? null : input.scope.cityId;
-  const venueId = input.scope.type === 'venue' ? input.scope.venueId : null;
-  for (let i = 0; i < reach.length; i += 1000) {
-    const rows = await db
-      .selectDistinct({ id: users.id, locale: users.locale })
-      .from(users)
-      .innerJoin(devices, eq(devices.userId, users.id))
-      .where(and(inArray(users.id, reach.slice(i, i + 1000)), isNull(devices.revokedAt)));
-    for (const user of rows) {
-      const payload: OutboxPayload = {
-        channel: 'push',
-        push: {
-          title: clip(pick(input.title, user.locale), 120),
-          body: clip(pick(input.body, user.locale), 500),
-          data: {
-            type: PUSH_TYPE[input.kind],
-            deepLink,
-            updateId,
-            ...(input.sessionId ? { sessionId: input.sessionId } : {}),
-          },
-          collapseKey: `update:${updateId}`,
-          ttlSeconds: 6 * 3600,
-        },
-      };
-      out.push({
-        key: `update:${updateId}:${user.id}:push`,
-        payload,
-        recipientUserId: user.id,
-        cityId,
-        venueId,
-        sentBy: input.authorId,
-        updateId,
-      });
-    }
-  }
-  return out;
 }
 
 // ---------------------------------------------------------------------------------------------

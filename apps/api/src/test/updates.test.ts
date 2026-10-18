@@ -2,7 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { PostedUpdate, type FeedResponse } from '@qc/contracts';
-import { schema } from '@qc/db';
+import { fanOutPendingUpdatePushes, schema } from '@qc/db';
+import { publishUpdate } from '../modules/updates/publish';
 import { createHarness, type Actor, type Harness } from './harness';
 import { auditRows, createSession, outboxRows, register } from './fixtures';
 
@@ -36,6 +37,17 @@ async function post(
   h.clock.advanceMinutes(1);
   return { status: res.status, body: res.json<Posted>() };
 }
+
+/** The worker's half of `notify`: writes the push rows of every pending update. */
+const writePushes = () => fanOutPendingUpdatePushes(h.db, { limit: 100 });
+
+const pendingSince = async (updateId: string) => {
+  const [row] = await h.db
+    .select({ at: schema.updates.pushPendingSince })
+    .from(schema.updates)
+    .where(eq(schema.updates.id, updateId));
+  return row?.at ?? null;
+};
 
 const feed = async (who: Actor, query: Record<string, string | number | boolean> = {}) =>
   (await h.api('updates.feed', { as: who, query })).json<FeedResponse>();
@@ -317,6 +329,8 @@ describe('posting an update', () => {
       { notify: false },
       'Quiet',
     );
+    expect(await pendingSince(quiet.body.id)).toBeNull();
+    expect(await writePushes()).toEqual({ updates: 0, rows: 0 });
     expect((await outboxRows(h)).filter((r) => r.channel === 'push')).toEqual([]);
     expect(quiet.body.recipients).toBe(2);
 
@@ -326,6 +340,13 @@ describe('posting an update', () => {
       { notify: true },
       'Loud',
     );
+    // The request only marks the update; the worker writes the rows afterwards.
+    expect(loud.body.recipients).toBe(2);
+    expect(await pendingSince(loud.body.id)).not.toBeNull();
+    expect((await outboxRows(h)).filter((r) => r.channel === 'push')).toEqual([]);
+    expect(await writePushes()).toEqual({ updates: 1, rows: 1 });
+    expect(await pendingSince(loud.body.id)).toBeNull();
+
     const pushes = (await outboxRows(h)).filter((r) => r.channel === 'push');
     expect(pushes).toHaveLength(1);
     expect(pushes[0]).toMatchObject({
@@ -334,9 +355,97 @@ describe('posting an update', () => {
       sentBy: admin.userId,
       idempotencyKey: `update:${loud.body.id}:${withApp.userId}:push`,
       venueId: h.world.venueA1,
+      cityId: h.world.cityA.id,
+      status: 'queued',
+      costCategory: 'free',
     });
     // Posts to the feed do not send WhatsApp: that is reserved for critical session changes.
     expect((await outboxRows(h)).filter((r) => r.channel === 'whatsapp' && r.updateId)).toEqual([]);
+    // A second run (a worker restarted mid-way) writes nothing new.
+    expect(await writePushes()).toEqual({ updates: 0, rows: 0 });
+  });
+
+  it('marks nothing when notify is on but nobody is in reach', async () => {
+    const res = await post(admin, { type: 'venue', venueId: h.world.venueA2 }, { notify: true });
+    expect(res.status).toBe(201);
+    expect(res.body.recipients).toBe(0);
+    expect(await pendingSince(res.body.id)).toBeNull();
+  });
+
+  it('answers a national post at once and leaves the fan-out to the worker, same people as the count', async () => {
+    const people = await Promise.all([h.person(), h.person(), h.person({ locale: 'ur' })]);
+    for (const [i, p] of people.entries()) {
+      await h.api('devices.register', {
+        as: p,
+        body: {
+          platform: 'android',
+          provider: 'fcm',
+          token: `fake-fcm-national-${i}`,
+          locale: 'en',
+        },
+      });
+    }
+    const suspended = await h.person();
+    await h.api('devices.register', {
+      as: suspended,
+      body: { platform: 'android', provider: 'fcm', token: 'fake-fcm-national-s', locale: 'en' },
+    });
+    await h.db
+      .update(schema.users)
+      .set({ status: 'suspended' })
+      .where(eq(schema.users.id, suspended.userId));
+
+    const res = await post(admin, { type: 'national' }, { notify: true }, 'Taraweeh');
+    expect(res.status).toBe(201);
+    expect((await outboxRows(h)).filter((r) => r.updateId === res.body.id)).toEqual([]);
+    const { recipients } = (
+      await h.api('adminUpdates.preview', {
+        as: admin,
+        body: { scope: { type: 'national' }, title: { en: 'x' }, body: { en: 'x' } },
+      })
+    ).json<{ recipients: number }>();
+    expect(res.body.recipients).toBe(recipients);
+
+    await writePushes();
+    const rows = (await outboxRows(h)).filter((r) => r.updateId === res.body.id);
+    expect(rows.map((r) => r.recipientUserId).sort()).toEqual(people.map((p) => p.userId).sort());
+    expect(rows.every((r) => r.cityId === null && r.venueId === null)).toBe(true);
+    const urdu = rows.find((r) => r.recipientUserId === people[2]!.userId);
+    expect((urdu?.payload as { push: { title: string } }).push.title).toBe('Taraweeh');
+  });
+
+  it('drops the mark with the post when its transaction rolls back, so no push is written', async () => {
+    const person = await h.person();
+    await h.api('devices.register', {
+      as: person,
+      body: { platform: 'android', provider: 'fcm', token: 'fake-fcm-rollback-1', locale: 'en' },
+    });
+    await expect(
+      h.db.transaction(async (tx) => {
+        await publishUpdate(
+          tx,
+          { now: h.clock.now() },
+          {
+            authorId: admin.userId,
+            scope: { type: 'national' },
+            kind: 'announcement',
+            title: { en: 'Rolled back', ur: null },
+            body: { en: 'Rolled back body', ur: null },
+            sessionId: null,
+            notify: true,
+          },
+        );
+        throw new Error('the write after the post failed');
+      }),
+    ).rejects.toThrow('the write after the post failed');
+    expect(
+      await h.db
+        .select({ id: schema.updates.id })
+        .from(schema.updates)
+        .where(eq(schema.updates.titleEn, 'Rolled back')),
+    ).toEqual([]);
+    expect(await writePushes()).toEqual({ updates: 0, rows: 0 });
+    expect(await outboxRows(h)).toEqual([]);
   });
 
   it('sends the Urdu wording to people whose language is Urdu, when it was given', async () => {
@@ -355,6 +464,7 @@ describe('posting an update', () => {
         body: { en: 'English body', ur: 'اردو متن' },
       },
     });
+    await writePushes();
     const [push] = (await outboxRows(h)).filter((r) => r.channel === 'push');
     const payload = push?.payload as { push: { title: string; body: string } };
     expect(payload.push.title).toBe('اردو عنوان');

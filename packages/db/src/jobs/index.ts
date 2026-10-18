@@ -21,3 +21,17 @@ export {
   type PlannedOccurrence,
   type ScheduleSpec,
 } from './occurrences';
+export {
+  UPDATE_PUSH_CHUNK,
+  countPendingUpdatePushes,
+  fanOutPendingUpdatePushes,
+  reachUserIds,
+  updatePushKey,
+  updatePushPayload,
+  updateScopeOf,
+  venueConnectedUserIds,
+  writeUpdatePushes,
+  type UpdatePushOptions,
+  type UpdatePushSummary,
+  type UpdateScopeRef,
+} from './update-push';

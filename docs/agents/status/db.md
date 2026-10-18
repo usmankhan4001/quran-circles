@@ -1,10 +1,11 @@
 # Status: db
 
-Updated: 2026-10-18 (security review SEC-05)
+Updated: 2026-10-18 (migration 0011, update push fan-out)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits)
 
 ## Done
 
+- 2026-10-18 (load test, api-core finding; applied with the orchestrator's go-ahead, new migration only): **migration 0011 `update_push_fanout`**: `updates.push_pending_since timestamptz NULL` and the partial index `updates_push_pending_idx` (`WHERE push_pending_since IS NOT NULL`). Additive; the down migration drops both (a fan-out still pending is lost, so run the worker dry first). Schema: `pushPendingSince` on `updates` in `schema/messaging.ts`. New job `src/jobs/update-push.ts`, exported from `@qc/db`: `reachUserIds`, `venueConnectedUserIds`, `UpdateScopeRef` (moved unchanged from the API), `updateScopeOf`, `updatePushPayload`, `updatePushKey`, `writeUpdatePushes`, `fanOutPendingUpdatePushes(db, { limit, chunkSize, webBase })` (one transaction per update, `FOR UPDATE SKIP LOCKED`, chunks of 1,000, `ON CONFLICT DO NOTHING` on the idempotency key, then the mark cleared), `countPendingUpdatePushes`, `UPDATE_PUSH_CHUNK`. Tests: `src/jobs/update-push.test.ts` (9: who gets a row and its exact fields, idempotent reruns, unmarked updates, oldest first and `limit`, chunking, a failing insert rolls the update back and keeps the mark, two workers at once, a venue update's reach, the reach count) and `migrate.test.ts` +1 (0011 adds exactly the column and index, rolls back and forward). `@qc/db` 235 tests in 10 files.
 - 2026-10-18 (SEC-05): no schema or migration change. Account deletion (`apps/api/src/modules/me/profile.ts`, api-core) now deletes the person's rows in `legacy_registrations` and `legacy_whatsapp_subscribers` by `phone_raw` = the account's E.164 number, every season, in the deletion transaction. Details and tests in `status/api-core.md`.
 
 ## In progress

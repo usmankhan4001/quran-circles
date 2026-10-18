@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lte, ne, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import type { OutboxRowDraft } from '@qc/messaging';
 import { tables, type Db, type OutboxRow } from '../db';
 
@@ -40,23 +40,47 @@ export function redactedPayload(): SQL {
   END`;
 }
 
+/**
+ * How long a claim lasts before a crashed worker's rows are handed out again. Senders renew it when
+ * they start on a row (`takeForSending`), so it bounds the time a row waits on the queue plus the
+ * time one send takes, not the whole burst.
+ */
+export const DEFAULT_LEASE_MS = 5 * 60_000;
+
 /** The statuses after which a row is never sent again. */
 export const FINISHED_STATUSES = ['sent', 'delivered', 'failed', 'dead'] as const;
+
+/**
+ * Which rows a claim or a count looks at. Push rows are sent on their own queue, faster and in
+ * parallel; WhatsApp and SMS keep theirs (one at a time per batch, with the SEC-02 limits), so a
+ * large push burst never holds up a reminder or a confirmation, and the reverse.
+ */
+export type SendLane = 'push' | 'message';
+
+const laneFilter = (lane: SendLane | undefined): SQL | undefined => {
+  const t = tables.messageOutbox;
+  if (lane === 'push') return eq(t.channel, 'push');
+  if (lane === 'message') return ne(t.channel, 'push');
+  return undefined;
+};
 
 export interface ClaimOptions {
   now: Date;
   limit: number;
   leaseMs: number;
+  /** Only this lane's rows. Every channel when left out. */
+  lane?: SendLane;
 }
 
 /** Takes due `queued` rows for this worker. Safe to run from several workers at once. */
 export async function claimDue(db: Db, opts: ClaimOptions): Promise<OutboxRow[]> {
   const t = tables.messageOutbox;
+  if (opts.limit <= 0) return [];
   return db.transaction(async (tx) => {
     const due = await tx
       .select({ id: t.id })
       .from(t)
-      .where(and(eq(t.status, 'queued'), lte(t.nextAttemptAt, opts.now)))
+      .where(and(eq(t.status, 'queued'), lte(t.nextAttemptAt, opts.now), laneFilter(opts.lane)))
       .orderBy(t.nextAttemptAt)
       .limit(opts.limit)
       .for('update', { skipLocked: true });
@@ -79,6 +103,60 @@ export async function claimDue(db: Db, opts: ClaimOptions): Promise<OutboxRow[]>
       )
       .returning();
   });
+}
+
+/**
+ * Rows of a lane claimed and not finished yet, by every worker: what is on the queue or being sent.
+ * The dispatcher claims no more than its in-flight limit minus this, so it never hands out more
+ * than the senders can finish within one lease.
+ */
+export async function countInFlight(db: Db, lane?: SendLane): Promise<number> {
+  const t = tables.messageOutbox;
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(t)
+    .where(and(eq(t.status, 'sending'), laneFilter(lane)));
+  return row?.n ?? 0;
+}
+
+/** One queue job as the sender sees it. `lease` is the claim's lease end, when the job carries it. */
+export interface TakeRequest {
+  outboxId: string;
+  attempt: number;
+  lease?: string | undefined;
+}
+
+/**
+ * The senders' compare-and-set before sending: of these jobs, takes the rows still `sending` for
+ * the job's attempt and, when the job names its claim's lease, still on that lease, and renews
+ * the lease to `leaseUntil`. One statement for the whole batch, so a stale job costs no send slot.
+ *
+ * Exactly one sender takes a claim: the renewed lease is always later than the claim's (at least
+ * by a millisecond), so a duplicate job for the same claim, on this worker or another, no longer
+ * matches. And a row taken is never reclaimed while it is being sent, because its lease starts
+ * again when sending starts, not when it was claimed. Jobs queued before leases were carried
+ * (no `lease`) are matched on the attempt alone, as before.
+ */
+export async function takeForSending(
+  db: Db,
+  jobs: readonly TakeRequest[],
+  opts: { leaseUntil: Date },
+): Promise<OutboxRow[]> {
+  const t = tables.messageOutbox;
+  if (jobs.length === 0) return [];
+  const until = opts.leaseUntil.toISOString();
+  const matches = jobs.map((j) =>
+    j.lease
+      ? and(eq(t.id, j.outboxId), eq(t.attempts, j.attempt), eq(t.nextAttemptAt, new Date(j.lease)))
+      : and(eq(t.id, j.outboxId), eq(t.attempts, j.attempt)),
+  );
+  return db
+    .update(t)
+    .set({
+      nextAttemptAt: sql`GREATEST(${until}::timestamptz, ${t.nextAttemptAt} + interval '1 millisecond')`,
+    })
+    .where(and(eq(t.status, 'sending'), or(...matches)))
+    .returning();
 }
 
 /**

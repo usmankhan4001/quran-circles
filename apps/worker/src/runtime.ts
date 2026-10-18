@@ -1,12 +1,24 @@
 import type { JobWithMetadata, PgBoss } from 'pg-boss';
 import { POSTER_RENDER_QUEUE, PosterRenderJob } from '@qc/contracts';
-import { DEFAULT_OCCURRENCE_HORIZON_DAYS, type PurgeResult, type TopUpSummary } from '@qc/db';
+import {
+  DEFAULT_OCCURRENCE_HORIZON_DAYS,
+  fanOutPendingUpdatePushes,
+  type PurgeResult,
+  type TopUpSummary,
+  type UpdatePushSummary,
+} from '@qc/db';
 import type { Logger, RetryPolicy } from '@qc/messaging';
 import { POSTER_ENV_NAMES } from './config';
 import type { Clock, Db } from './db';
-import { createDispatcher, type SendJob, type SendQueue } from './outbox/dispatcher';
-import { processJob, type ProcessorDeps } from './outbox/processor';
-import { redactFinishedPayloads } from './outbox/repo';
+import {
+  createDispatcher,
+  type SendJob,
+  type SendLane,
+  type SendQueue,
+  type TickResult,
+} from './outbox/dispatcher';
+import { processJobs, type BatchResult, type ProcessorDeps } from './outbox/processor';
+import { DEFAULT_LEASE_MS, redactFinishedPayloads } from './outbox/repo';
 import { runOccurrenceTopUp } from './occurrences/top-up';
 import { runMorningAyah, type AyahJobSummary } from './ayah/morning';
 import { runAuthPurge } from './auth/purge';
@@ -21,7 +33,10 @@ import {
   type PosterRenderSummary,
 } from './posters/render';
 
+/** WhatsApp and SMS sends (and any job queued before push had its own queue). */
 export const SEND_QUEUE = 'outbox-send';
+/** Push sends: bigger batches, sent in parallel, polled more often. Same dead letter. */
+export const PUSH_SEND_QUEUE = 'outbox-send-push';
 export const SEND_DEAD_QUEUE = 'outbox-send-dead';
 export const RECONCILE_QUEUE = 'reminders-reconcile';
 export const TOP_UP_QUEUE = 'occurrences-top-up';
@@ -53,8 +68,27 @@ export interface RuntimeOptions {
   dispatchIntervalMs?: number;
   /** How often idle queue workers poll, in seconds (pg-boss minimum 0.5). Default 2. */
   workPollingSeconds?: number;
-  /** Send jobs handled at once on this node. Default 4. */
+  /** WhatsApp and SMS batches handled at once on this node (one message at a time each). Default 4. */
   sendConcurrency?: number;
+  /** Push batches handled at once on this node. Default 4. */
+  pushConcurrency?: number;
+  /** Push jobs fetched per batch. Default 50. */
+  pushBatchSize?: number;
+  /** Pushes sent at once within one batch. Default 10. */
+  pushParallel?: number;
+  /** How often idle push workers poll, in seconds (pg-boss minimum 0.5). Default 0.5. */
+  pushPollingSeconds?: number;
+  /** Rows claimed and not finished, per lane, across all workers. See `DEFAULT_MAX_IN_FLIGHT`. */
+  maxInFlight?: Partial<Record<SendLane, number>>;
+  /** Rows claimed per statement. Default 500. */
+  claimBatchSize?: number;
+  /** How long a claim, or a sender's hold on a row, lasts. Default 5 minutes. */
+  leaseMs?: number;
+  /**
+   * How soon the poll loop looks again while a lane is at its in-flight limit or update pushes are
+   * still to be written. Default 1 second (or `dispatchIntervalMs` if that is shorter).
+   */
+  busyIntervalMs?: number;
   /** Run the reminder reconciliation on a schedule (every minute). Default true. */
   scheduleReminders?: boolean;
   /** Run the occurrence top-up on a schedule (daily). Default true. */
@@ -77,9 +111,33 @@ export interface RuntimeOptions {
   posterRetryDelaySeconds?: number;
 }
 
+/** Counts since the worker started, for `/healthz` and alerts. */
+export interface RuntimeStats {
+  /** Rows claimed and handed to a queue. */
+  claimed: number;
+  /** Rows whose lease ran out before they were finished (`outbox.worker_lost`), requeued or dead. */
+  workerLost: number;
+  /** Of those, rows that had used every attempt and went to `dead`. */
+  workerLostDead: number;
+  /** Queue jobs dropped because their row was already handled, taken or reclaimed. No send. */
+  staleJobs: number;
+  /** Rows sent, requeued, failed and dead by this node's senders. */
+  sent: number;
+  requeued: number;
+  failed: number;
+  dead: number;
+  /** Updates whose push rows this node wrote, and how many rows. */
+  updatePushes: number;
+  updatePushRows: number;
+}
+
 export interface Runtime {
   /** One dispatcher pass now. */
-  dispatchNow(): Promise<{ claimed: number; reclaimed: number; dead: number }>;
+  dispatchNow(): Promise<TickResult>;
+  /** Writes the push rows of updates posted with `notify` (one update per call by default). */
+  fanOutNow(limit?: number): Promise<UpdatePushSummary>;
+  /** Counts since start. */
+  stats(): RuntimeStats;
   /** One reminder reconciliation now. */
   reconcileNow(): Promise<ReconcileSummary>;
   /** One occurrence top-up now. */
@@ -100,11 +158,21 @@ export interface Runtime {
 /**
  * Wires the outbox into pg-boss:
  *
- * - a poll loop claims due rows (`queued` -> `sending`) and puts one `outbox-send` job on the queue
- *   per row. Exactly-once sending does not rest on the queue: the claim is a compare-and-set and
- *   `processJob` ignores a job whose attempt no longer matches the row, so a duplicate job is a no-op;
- * - `outbox-send` workers send; pg-boss retries a job only when the database itself failed, since
- *   provider failures are recorded on the row with their own backoff;
+ * - a poll loop writes the push rows of updates posted with `notify` (`fanOutPendingUpdatePushes`,
+ *   one update per pass, migration 0011), then claims due rows (`queued` -> `sending`) and puts
+ *   one job per row on `outbox-send-push` (push) or `outbox-send` (WhatsApp, SMS). It claims no
+ *   more than each lane's in-flight limit (`maxInFlight`), so a burst waits as `queued` rows rather
+ *   than as claims whose leases run out on the queue; while a lane is full it looks again every
+ *   `busyIntervalMs` instead of every `dispatchIntervalMs`;
+ * - exactly-once sending does not rest on the queue: the claim is a compare-and-set, and senders
+ *   take a batch's rows in one compare-and-set on the attempt and the claim's lease
+ *   (`takeForSending`), renewing the lease. A duplicate or stale job is dropped there and costs no
+ *   send slot; a row being sent is never reclaimed;
+ * - `outbox-send-push` workers send pushes in parallel (`pushParallel` per batch, `pushConcurrency`
+ *   batches); `outbox-send` workers send WhatsApp and SMS one at a time per batch, with the SEC-02
+ *   cap and budget checked per message. pg-boss retries a job only when the database itself
+ *   failed, since provider failures are recorded on the row with their own backoff (and a
+ *   provider's retry-after is honoured);
  * - jobs that run out of retries land in `outbox-send-dead`, where they are logged; the row's lease
  *   then expires and the dispatcher recovers it;
  * - a cron job reconciles reminder rows every minute;
@@ -126,7 +194,7 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
 
   // The dead-letter queue has to exist before a queue can point at it.
   await boss.createQueue(SEND_DEAD_QUEUE, { retentionSeconds: 30 * 24 * 3600 });
-  await boss.createQueue(SEND_QUEUE, {
+  const sendQueue = {
     deadLetter: SEND_DEAD_QUEUE,
     retryLimit: 3,
     retryDelay: 15,
@@ -135,7 +203,9 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     expireInSeconds: 120,
     retentionSeconds: 24 * 3600,
     deleteAfterSeconds: 24 * 3600,
-  });
+  };
+  await boss.createQueue(SEND_QUEUE, sendQueue);
+  await boss.createQueue(PUSH_SEND_QUEUE, sendQueue);
   await boss.createQueue(RECONCILE_QUEUE, {
     retryLimit: 1,
     expireInSeconds: 120,
@@ -188,9 +258,35 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
   await boss.createQueue(POSTER_QUEUE, { ...posterQueue, deadLetter: POSTER_DEAD_QUEUE });
   await boss.updateQueue(POSTER_QUEUE, { ...posterQueue, deadLetter: POSTER_DEAD_QUEUE });
 
+  const stats: RuntimeStats = {
+    claimed: 0,
+    workerLost: 0,
+    workerLostDead: 0,
+    staleJobs: 0,
+    sent: 0,
+    requeued: 0,
+    failed: 0,
+    dead: 0,
+    updatePushes: 0,
+    updatePushRows: 0,
+  };
+  const count = (result: BatchResult): void => {
+    stats.staleJobs += result.skipped;
+    stats.sent += result.outcomes.sent;
+    stats.requeued += result.outcomes.requeued;
+    stats.failed += result.outcomes.failed;
+    stats.dead += result.outcomes.dead;
+  };
+
+  const leaseMs = options.leaseMs ?? DEFAULT_LEASE_MS;
+  const processor: ProcessorDeps = { leaseMs, ...options.processor };
   const queue: SendQueue = {
-    async enqueue(job: SendJob) {
-      await boss.send(SEND_QUEUE, job);
+    async enqueue(jobs: readonly SendJob[], lane: SendLane) {
+      if (jobs.length === 0) return;
+      await boss.insert(
+        lane === 'push' ? PUSH_SEND_QUEUE : SEND_QUEUE,
+        jobs.map((data) => ({ data })),
+      );
     },
   };
   const dispatcher = createDispatcher({
@@ -198,28 +294,46 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     queue,
     logger,
     now: options.now,
+    leaseMs,
+    ...(options.claimBatchSize ? { batchSize: options.claimBatchSize } : {}),
+    ...(options.maxInFlight ? { maxInFlight: options.maxInFlight } : {}),
     ...(options.retry ? { retry: options.retry } : {}),
   });
 
+  /** A batch handler: one take for the batch, then the sends; a database failure fails the batch. */
+  const sendBatch =
+    (parallel: number) =>
+    async (jobs: Array<{ data: SendJob }>): Promise<void> => {
+      const result = await processJobs(
+        processor,
+        jobs.map((job) => job.data),
+        { parallel },
+      );
+      count(result);
+      // A database failure. The rest of the batch was still handled; failing it makes pg-boss
+      // retry, and rows already finished or taken are skipped on the retry.
+      if (result.failure) throw result.failure;
+    };
   await boss.work<SendJob>(
     SEND_QUEUE,
-    { batchSize: 10, localConcurrency: options.sendConcurrency ?? 4, pollingIntervalSeconds },
-    async (jobs) => {
-      let failure: unknown;
-      for (const job of jobs) {
-        try {
-          await processJob(options.processor, job.data);
-        } catch (error) {
-          // A database failure. Keep going with the rest, then fail the batch so pg-boss retries it;
-          // finished rows are skipped on the retry because their status has moved on.
-          failure ??= error;
-          logger.error('outbox.job_failed', {
-            error: error instanceof Error ? error.name : 'unknown',
-          });
-        }
-      }
-      if (failure) throw failure;
+    {
+      batchSize: 10,
+      localConcurrency: options.sendConcurrency ?? 4,
+      pollingIntervalSeconds,
+      // While batches come back full, fetch the next at once instead of waiting for the poll.
+      burstWhenBatchFull: true,
     },
+    sendBatch(1),
+  );
+  await boss.work<SendJob>(
+    PUSH_SEND_QUEUE,
+    {
+      batchSize: Math.max(1, options.pushBatchSize ?? 50),
+      localConcurrency: Math.max(1, options.pushConcurrency ?? 4),
+      pollingIntervalSeconds: Math.max(0.5, options.pushPollingSeconds ?? 0.5),
+      burstWhenBatchFull: true,
+    },
+    sendBatch(Math.max(1, options.pushParallel ?? 10)),
   );
   await boss.work<SendJob>(
     SEND_DEAD_QUEUE,
@@ -377,29 +491,66 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     },
   );
 
+  const fanOut = async (limit = 1): Promise<UpdatePushSummary> => {
+    const summary = await fanOutPendingUpdatePushes(options.db, {
+      limit,
+      ...(options.webBase ? { webBase: options.webBase } : {}),
+    });
+    if (summary.updates > 0) {
+      stats.updatePushes += summary.updates;
+      stats.updatePushRows += summary.rows;
+      logger.info('updates.pushes_written', { updates: summary.updates, rows: summary.rows });
+    }
+    return summary;
+  };
+  const dispatch = async (): Promise<TickResult> => {
+    const result = await dispatcher.tick();
+    stats.claimed += result.claimed;
+    stats.workerLost += result.reclaimed + result.dead;
+    stats.workerLostDead += result.dead;
+    return result;
+  };
+
   // The poll loop. One pass at a time; a slow pass delays the next instead of overlapping it.
+  // A pass first writes the pushes of at most one posted update, then claims what is due.
   const intervalMs = options.dispatchIntervalMs ?? 5_000;
+  const busyMs = Math.min(intervalMs, Math.max(100, options.busyIntervalMs ?? 1_000));
   let stopped = false;
   let timer: NodeJS.Timeout | undefined;
   let inFlight: Promise<unknown> = Promise.resolve();
-  const loop = (): void => {
+  const pass = async (): Promise<boolean> => {
+    let busy = false;
+    try {
+      busy = (await fanOut()).updates > 0;
+    } catch (error) {
+      logger.error('updates.push_fanout_failed', {
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+    try {
+      busy = (await dispatch()).saturated || busy;
+    } catch (error) {
+      logger.error('outbox.dispatch_failed', {
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+    return busy;
+  };
+  const loop = (delayMs: number): void => {
     if (stopped || intervalMs <= 0) return;
     timer = setTimeout(() => {
-      inFlight = dispatcher
-        .tick()
-        .catch((error: unknown) => {
-          logger.error('outbox.dispatch_failed', {
-            error: error instanceof Error ? error.name : 'unknown',
-          });
-        })
-        .finally(loop);
-    }, intervalMs);
+      const run = pass();
+      inFlight = run;
+      void run.then((busy) => loop(busy ? busyMs : intervalMs));
+    }, delayMs);
     timer.unref();
   };
-  loop();
+  loop(intervalMs);
 
   return {
-    dispatchNow: () => dispatcher.tick(),
+    dispatchNow: dispatch,
+    fanOutNow: fanOut,
+    stats: () => ({ ...stats }),
     reconcileNow: reconcile,
     topUpNow: topUp,
     ayahNow: ayah,
