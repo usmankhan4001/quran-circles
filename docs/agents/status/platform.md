@@ -1,6 +1,6 @@
 # Status: platform
 
-Updated: 2026-10-18 (security review fixes: SEC-10, 12, 14, 16 to 19; messaging env follow-ups)
+Updated: 2026-10-18 (staging redeployed with the security review fixes)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
 
 ## Security review fixes (2026-10-18)
@@ -27,12 +27,13 @@ From `docs/security/review.md`. Edited only `infra/`, `.github/`, root `.env.exa
 - Roles on a throwaway Postgres 16 with the real migrations, dev seed and pg-boss 12.38 through the bundled CLI: (1) existing database owned by `qc` with pg-boss installed by `qc`: converged, migrate as `qc_migrator` no-op, worker creates queues (new partitions) and api sends; (2) new database: roles, migrate, pg-boss install as `qc_worker`, send and work, second run revokes the worker's CREATE; (3) restore: `pg_dump --no-owner --no-privileges`, restore as `qc`, swap, api refused, then `db-roles` converges and everything works again. The api is refused CREATE TABLE, ALTER TABLE, COPY TO PROGRAM, CREATE SCHEMA, temp tables, `schema_migrations`; the worker DROP TABLE and CREATE in public. Missing and short passwords stop the script (exit 3). Wrong password: `pgboss.mjs` exits 1 without echoing it.
 - `docker compose ... --env-file infra/.env.example config -q` passes for prod, prod + staging, and dev (no daemon here, so no images built). Caddy `validate` and `fmt` clean on both Caddyfiles. shellcheck 0.11 clean on all scripts; `bundle.sh` runs (five bundles). `npx prettier --check infra .github docs/agents/status/platform.md` clean. `pnpm format:check` fails only on 8 files in `apps/admin-app`, `apps/user-app` and `packages/ui` that other lanes are changing. `@qc/api` tests not run: nothing it reads changed.
 
-### Needs redeploying on staging (Dokploy)
+### Redeployed on staging (Dokploy, 2026-10-18, main `dcf561d`)
 
-1. **Before deploying**, add three env vars in Dokploy, each `openssl rand -hex 32`: `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD`. Without them the compose file refuses to render and nothing changes.
-2. Deploy the compose service (after the commit is on `main`). This rebuilds `web` (new Caddyfile baked in) and the worker image (`dist/pgboss.mjs`), recreates the api (new `DATABASE_URL`, no `render` network or token) and the worker, and runs `db-roles`, `migrate`, `pgboss-migrate`. The existing staging database's objects move from `qc` to `qc_migrator`/`qc_worker`; nothing is dropped.
-3. Check: `db-roles` log ends with "up to date", `pgboss-migrate` says "already at version"; all services healthy; `curl -sI https://staging.doraquran.pk/` and `/api/health` and the console show the new headers; create and regenerate a poster in the console (api sends as `qc_api`, worker renders); open the PWA's Nearby map with the real Maps key and watch the browser console for CSP reports.
-4. Assumption to confirm: Dokploy resolves the relative bind mount `./postgres/roles.sql` in the git clone (Docker resolves it against `infra/`, the first compose file's directory). If `db-roles` fails with "No such file", tell me; the fallback is to bake the script into a small image.
+- Env: `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD` added in Dokploy (openssl, straight into Dokploy); `RENDERER_TOKEN` still set. `infra/docker-compose.staging.yml` needed no change (merged config: api on `edge` with its alias and `backend` only; no published ports).
+- Deploy done. `db-roles`, `migrate` and `pgboss-migrate` exited 0: Dokploy resolves the bind mount `./postgres/roles.sql` from the git clone, so no image is needed for it. api, worker, poster-renderer, web and postgres healthy. (The one-shots' own log lines are not visible through the Dokploy API, so the "up to date" and "already at version" messages were not read; the exit codes and the checks below stand in.)
+- Database, read-only check in the postgres container: `qc_api`, `qc_migrator`, `qc_worker` exist, none superuser or able to create roles or databases; `public` tables (41) owned by `qc_migrator`, `pgboss` tables (13) by `qc_worker`; the worker's connections are `qc_worker`, and no runtime service connects as `qc`. Demo poster templates still present.
+- Headers (`curl -I` through Cloudflare): app, console and `/api` all send HSTS `max-age=31536000`, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `X-Robots-Tag: noindex, nofollow`. CSP: app = the PWA policy (Maps, fonts, `api.alquran.cloud`), console = `'self'`-only policy, `/api` = `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`. Permissions-Policy: app `geolocation=(self)`, console `geolocation=()`. `/api/health` returns `{"ok":true,"service":"api"}`.
+- **Not verified**: poster create and regenerate, and the Maps CSP check in a browser. Staging has no staff account (no `bootstrap-admin` run, no seed data), so no console sign-in is possible. Needs the owner's go-ahead for a synthetic national-admin invite on staging (sign-in and roles are human-approval areas), and a way to run `bootstrap-admin` there (open item: bundle it into the `migrate` image).
 
 ### Open
 
