@@ -141,7 +141,10 @@ The owner pushed a new look with an 8-page showcase (`apps/console/showcase.html
 - Shapes: pill buttons (charcoal primary, emerald, emerald tint, white outline, soft red careful), pill chips (chosen = emerald tint, emerald edge and tick), pill fields with the label above, white cards radius 20 with a hairline and a whisper shadow, white sheets with a grab handle and a round close button.
 - Navigation: a white floating dock of icons; the chosen icon turns charcoal with a dot under it (not colour alone); every tab keeps its name for screen readers.
 - Header: deep emerald fading through mid and pale green into the page; no eight-point pattern by default.
-- Kept: Figtree, Mehr Nastaliq and KFGQPC (the showcase's Plus Jakarta Sans, Noto Nastaliq and Amiri are web stand-ins; Amiri was rejected in D4), the kit's own line icons, four text sizes, 48 dp targets and the contrast minimums.
+- Fonts and icons (owner, 2026-10-18): Plus Jakarta Sans for English and Phosphor icons, as in the showcase. Urdu stays Mehr Nastaliq and Quran text stays KFGQPC.
+- Copy, don't reinterpret (owner, 2026-10-18): every screen reproduces its artboard element for element. A drawn element with no data yet shows placeholder, sample or disabled content instead of being dropped.
+- Text sizes (owner, 2026-10-18): the default text size copies the artboards (body 13, caption 11.5, eyebrow 10.5). This replaces the old 14 dp caption floor at the default step; the three larger steps still scale up to 19.5 dp body.
+- Kept: four text sizes, 48 dp targets (smaller drawn pills get hit slop) and the contrast minimums.
 
 ## Open questions
 

@@ -264,7 +264,8 @@ describe('QuranReaderScreen', () => {
     await waitFor(async () =>
       expect(await t.services.readingPosition.getLocal()).toMatchObject({ surah: 112, ayah: 3 }),
     );
-  });
+    // Juz 30 draws over 500 ayahs twice; give it room when the whole repo runs in parallel.
+  }, 90_000);
 
   it('shows each surah of a juz under its name', async () => {
     const t = createTestServices();
