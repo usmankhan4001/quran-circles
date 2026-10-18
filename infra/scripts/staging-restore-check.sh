@@ -15,7 +15,7 @@ W=/tmp/restore-check
 mkdir -p "$W" && chmod 700 "$W"
 
 # Milliseconds since boot (busybox `date` has no %N).
-now() { awk '{ printf "%d", $1 * 1000 }' /proc/uptime; }
+now() { awk '{ printf "%.0f", $1 * 1000 }' /proc/uptime; }
 ms() { echo $(($2 - $1)); }
 q() { psql -X -q -v ON_ERROR_STOP=1 -At -h postgres -U qc "$@"; }
 
