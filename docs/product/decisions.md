@@ -44,6 +44,7 @@ Agent-facing copy of the decisions in the Quran Circles V2 Plan. Do not re-decid
 - **Admin console:** a separate React web app (Vite) sharing the API client and design tokens.
 - **Maps:** Google Maps behind a swappable map interface.
 - **Hosting:** the owner's VPS with Docker Compose and automatic TLS. A few minutes of downtime on Ramadan evenings is acceptable. A standby can come later.
+- **API size at launch:** 2 CPUs for the API (owner, 2026-10-18), because one CPU queued requests at 100 concurrent users on staging. The load test is re-run at that size before launch.
 - **Backups and monitoring:** daily encrypted database backups to a second location with a tested restore; self-hosted error and uptime tracking. **Proposal.**
 - **Apple and Google:** organisation accounts exist. The Android app was never published, so the app ID is chosen once, from the final name and domain.
 
