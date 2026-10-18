@@ -5,7 +5,7 @@
 #     --env-file <staging env> up -d --build
 #
 # Differences from production, all in the proxy:
-# - No host ports and no TLS: Caddy serves plain HTTP on :80 and Dokploy domains route
+# - No host ports and no TLS: Caddy serves plain HTTP on :80 and Traefik labels (below) route
 #   QC_DOMAIN and QC_CONSOLE_DOMAIN to it. Cloudflare and Traefik terminate TLS.
 # - The PWA and console builds are baked into the proxy image instead of a host directory.
 # - The proxy also joins Dokploy's shared network, so it reaches the api and the worker by
@@ -29,6 +29,17 @@ services:
     networks:
       - edge
       - dokploy-network
+    # Routing for Dokploy's Traefik, set here rather than as Dokploy domains: Dokploy rewrites the
+    # compose file to add domain labels, which would drop the !reset/!override tags above.
+    # Cloudflare's tunnel reaches Traefik on its `web` (HTTP) entrypoint.
+    # List form, because Compose interpolates values but not mapping keys.
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-staging}-web.rule=Host(`${QC_DOMAIN}`) || Host(`${QC_CONSOLE_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-staging}-web.entrypoints=web
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-staging}-web.service=${COMPOSE_PROJECT_NAME:-qc-staging}-web
+      - traefik.http.services.${COMPOSE_PROJECT_NAME:-qc-staging}-web.loadbalancer.server.port=80
 
   api:
     networks: !override

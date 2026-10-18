@@ -1,6 +1,7 @@
 # Staging reverse proxy behind Dokploy (Traefik) and a Cloudflare tunnel. TLS ends at Cloudflare
-# and Traefik, so this Caddy listens on plain HTTP :80 only and publishes no host port; Dokploy
-# domains route both staging names to it. Routes are the same as the production Caddyfile.
+# and Traefik, so this Caddy listens on plain HTTP :80 only and publishes no host port; Traefik
+# labels in infra/docker-compose.staging.yml route both staging names to it. Routes are the same as
+# the production Caddyfile.
 #
 # The api and worker are reached by network aliases (qc-staging-api, qc-staging-worker) set in
 # infra/docker-compose.staging.yml: this container also sits on Dokploy's shared network, where a
