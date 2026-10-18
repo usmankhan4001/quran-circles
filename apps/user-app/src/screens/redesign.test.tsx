@@ -368,7 +368,7 @@ describe('Registration (R2)', () => {
 });
 
 describe('My Journey (J1)', () => {
-  it('opens with three numbers: upcoming, waiting and following', async () => {
+  it('shows each registration as a pass with its status, and the count of follows (D17)', async () => {
     const waitlisted = registrationFor(SESSIONS.womenFull, {
       id: '00000000-0000-4000-8000-0b0000000002',
       status: 'waitlisted',
@@ -387,17 +387,18 @@ describe('My Journey (J1)', () => {
       },
     });
     const view = await renderScreen(<JourneyScreen />, { world });
-    await waitFor(() =>
-      expect(view.getByTestId('journey-stat-upcoming').textContent).toContain('1'),
+    await waitFor(() => expect(view.getByTestId('journey-follow-count').textContent).toBe('1'));
+    expect(
+      view.getByTestId(`registration-status-${registrationFor(SESSIONS.taraweeh).id}`).textContent,
+    ).toBe(en['journey.status.confirmed']);
+    expect(view.getByTestId(`registration-status-${waitlisted.id}`).textContent).toBe(
+      en['journey.status.waitlisted'],
     );
-    expect(view.getByTestId('journey-stat-waiting').textContent).toContain('1');
-    expect(view.getByTestId('journey-stat-following').textContent).toContain('1');
-    expect(within(view.getByTestId('screen-header')).getByTestId('journey-summary')).toBeTruthy();
   });
 
-  it('shows no numbers to a signed-out person', async () => {
+  it('shows no follow count to a signed-out person', async () => {
     const view = await renderScreen(<JourneyScreen />);
-    expect(view.queryByTestId('journey-summary')).toBeNull();
+    expect(view.queryByTestId('journey-follow-count')).toBeNull();
   });
 });
 

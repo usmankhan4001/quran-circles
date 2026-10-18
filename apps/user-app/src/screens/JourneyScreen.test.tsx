@@ -1,16 +1,9 @@
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS, followFor, registrationFor } from '../test/factories';
-import {
-  MATRIX,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
 import { JourneyScreen } from './JourneyScreen';
 
 const en = messages.en;
@@ -41,23 +34,15 @@ describe('JourneyScreen', () => {
     expect(view.world.http.callsTo('GET /v1/registrations')).toHaveLength(0);
   });
 
-  it('lets a screen reader read the summary numbers as text, with no name on a plain tile (A-02)', async () => {
+  it('shows each registration as a seat pass with the party, directions and cancel (D17)', async () => {
     const world = await createWorld({ signedIn: true, mock: mine() });
     const view = await renderScreen(<JourneyScreen />, { world });
-    await waitFor(() =>
-      expect(view.getByTestId('journey-stat-upcoming').textContent).toContain('1'),
+    await view.findByTestId(`registration-${REG_ID}`);
+    expect(view.getByTestId(`cancel-${REG_ID}`).getAttribute('aria-label')).toBe(
+      en['journey.cancel'],
     );
-    for (const [key, label] of [
-      ['upcoming', en['journey.summary.upcoming']],
-      ['waiting', en['journey.summary.waiting']],
-      ['following', en['journey.summary.following']],
-    ] as const) {
-      const tile = view.getByTestId(`journey-stat-${key}`);
-      // A name on an element with no role is ignored on the web (axe aria-prohibited-attr).
-      expect(tile.getAttribute('aria-label')).toBeNull();
-      expect(tile.querySelector('[aria-hidden="true"]')).toBeNull();
-      expect(tile.textContent).toContain(label);
-    }
+    fireEvent.click(view.getByTestId(`directions-${REG_ID}`));
+    await waitFor(() => expect(world.opened[0]).toContain('https://www.google.com/maps/search/'));
   });
 
   it('lists registrations with their status and opens a session', async () => {
@@ -175,8 +160,11 @@ describe('JourneyScreen', () => {
       const view = await renderScreen(<JourneyScreen />, { world });
       await view.findByTestId(`registration-${REG_ID}`);
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
+      // A white tab page with its name large at the start (D17), not the green header.
+      expect(
+        within(view.getByTestId('screen-header')).getByText(words['tabs.myJourney']),
+      ).toBeTruthy();
       expect(view.getByText(words['journey.registrations.title'])).toBeTruthy();
       expect(view.getByText(words['journey.status.confirmed'])).toBeTruthy();
     });

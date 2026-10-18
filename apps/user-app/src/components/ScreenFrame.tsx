@@ -155,6 +155,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
   },
   plainSide: { width: minTouchTarget },
+  plainTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: minTouchTarget + spacing.sm,
+    paddingHorizontal: screenGutter,
+    paddingTop: spacing.sm,
+  },
   plainTitle: { flex: 1 },
 });
 
@@ -349,17 +357,28 @@ function PlainHeader({
   actions?: ReactNode;
 }) {
   const { t } = useI18n();
+  if (!onBack) {
+    // A tab page (D17): its name large at the start, on white, with any action at the end.
+    return (
+      <View testID="screen-header" style={styles.plainTab}>
+        <View style={styles.plainTitle}>
+          <Text variant="title2" heading={1}>
+            {title}
+          </Text>
+        </View>
+        {actions}
+      </View>
+    );
+  }
   return (
     <View testID="screen-header" style={styles.plainBar}>
       <View style={styles.plainSide}>
-        {onBack ? (
-          <IconButton
-            icon="chevron-back"
-            accessibilityLabel={t('ui.back')}
-            onPress={onBack}
-            testID="screen-back"
-          />
-        ) : null}
+        <IconButton
+          icon="chevron-back"
+          accessibilityLabel={t('ui.back')}
+          onPress={onBack}
+          testID="screen-back"
+        />
       </View>
       <View style={styles.plainTitle}>
         <Text variant="title3" align="center" heading={1} numberOfLines={2}>
