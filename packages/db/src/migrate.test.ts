@@ -677,6 +677,81 @@ describe('migration 0011: update push fan-out (load test finding)', () => {
   });
 });
 
+describe('migration 0012: occurrence start floor (Gate 5 load test)', () => {
+  const NAME = '0012_occurrence_start_floor';
+  const upTo = (count: number) => prefixDir(count);
+  /** The API's lookup of occurrences longer than a day (`occurrenceStartFloor`), as planned. */
+  const floorPlan = async (test: Awaited<ReturnType<typeof freshDb>>) => {
+    await test.exec.query('SET enable_seqscan = off');
+    try {
+      const { rows } = await test.exec.query<{ 'QUERY PLAN': string }>(
+        `EXPLAIN SELECT min(l.starts_at) FROM occurrences l
+          WHERE l.ends_at - l.starts_at > interval '1 day' AND l.ends_at >= now()`,
+      );
+      return rows.map((r) => r['QUERY PLAN']).join('\n');
+    } finally {
+      await test.exec.query('RESET enable_seqscan');
+    }
+  };
+
+  it('is the twelfth migration', () => {
+    expect(listMigrations()[11]?.name).toBe(NAME);
+  });
+
+  it('applies on top of 0011 with occurrences in place and keeps them', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(11) });
+    const world = await buildWorld(test);
+    await test.exec.query(
+      `INSERT INTO occurrences (session_id, starts_at, ends_at) VALUES
+         ($1, '2026-03-01T15:00:00Z', '2026-03-01T16:00:00Z'),
+         ($1, '2026-03-02T15:00:00Z', '2026-03-05T15:00:00Z')`,
+      [world.session.id],
+    );
+    const before = await test.exec.query(`SELECT * FROM occurrences ORDER BY starts_at`);
+    expect(await migrateUp(test.exec, { dir: upTo(12) })).toEqual([NAME]);
+    expect((await test.exec.query(`SELECT * FROM occurrences ORDER BY starts_at`)).rows).toEqual(
+      before.rows,
+    );
+    // Read through the new index (seq scans off): exactly the occurrence longer than a day.
+    await test.exec.query('SET enable_seqscan = off');
+    try {
+      const { rows } = await test.exec.query<{ starts_at: Date }>(
+        `SELECT starts_at FROM occurrences WHERE ends_at - starts_at > interval '1 day'`,
+      );
+      expect(rows.map((r) => new Date(r.starts_at).toISOString())).toEqual([
+        '2026-03-02T15:00:00.000Z',
+      ]);
+    } finally {
+      await test.exec.query('RESET enable_seqscan');
+    }
+  });
+
+  it('adds exactly the partial index the API lookup uses, and takes it away again', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(11) });
+    const tablesBefore = await publicTables(test);
+    const indexesBefore = await publicIndexes(test);
+    expect(await floorPlan(test)).not.toContain('occurrences_multiday_starts_idx');
+    await migrateUp(test.exec, { dir: upTo(12) });
+    expect(await publicTables(test)).toEqual(tablesBefore);
+    expect((await publicIndexes(test)).filter((i) => !indexesBefore.includes(i))).toEqual([
+      'occurrences_multiday_starts_idx',
+    ]);
+    const { rows } = await test.exec.query<{ def: string }>(
+      `SELECT indexdef AS def FROM pg_indexes WHERE indexname = 'occurrences_multiday_starts_idx'`,
+    );
+    expect(rows[0]?.def).toContain('(starts_at)');
+    expect(rows[0]?.def).toContain("WHERE ((ends_at - starts_at) > '1 day'::interval)");
+    // The predicate must match the API's lookup word for word, or Postgres cannot use the index.
+    expect(await floorPlan(test)).toContain('occurrences_multiday_starts_idx');
+
+    expect(await migrateDown(test.exec, { dir: upTo(12) })).toEqual([NAME]);
+    expect(await publicIndexes(test)).toEqual(indexesBefore);
+    expect(await migrateUp(test.exec, { dir: upTo(12) })).toEqual([NAME]);
+  });
+});
+
 describe('rollback arguments', () => {
   it('defaults to one migration', () => {
     expect(parseRollbackArgs([])).toEqual({ all: false });

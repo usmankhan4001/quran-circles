@@ -179,6 +179,11 @@ export const occurrences = pgTable(
     unique('occurrences_session_starts_unique').on(t.sessionId, t.startsAt),
     index('occurrences_starts_at_idx').on(t.startsAt),
     index('occurrences_session_idx').on(t.sessionId),
+    // Only occurrences stretched past a day, for the exact `starts_at` floor of upcoming reads
+    // (migration 0012). Normally empty.
+    index('occurrences_multiday_starts_idx')
+      .on(t.startsAt)
+      .where(sql`${t.endsAt} - ${t.startsAt} > interval '1 day'`),
     enumCheck('occurrences', 'status', OCCURRENCE_STATUSES),
     enumCheck('occurrences', 'recap_locale', LOCALES),
     rawCheck('occurrences_times_chk', '"ends_at" > "starts_at"'),
