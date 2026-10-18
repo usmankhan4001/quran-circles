@@ -1,4 +1,17 @@
-import { and, desc, eq, gt, inArray, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  notExists,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import type { Update } from '@qc/contracts';
 import { schema, type Db } from '../../db';
 import { fail } from '../shared/errors';
@@ -86,13 +99,65 @@ export const toUpdateBase = (r: UpdateRecord): Omit<Update, 'isRead'> => ({
   publishedAt: r.publishedAt.toISOString(),
 });
 
+const { registrations, sessions, follows, circles, profiles, areas, venues } = schema;
+
+/**
+ * The Updates badge in one statement (load test, Gate 5). Same people, scopes and rule as
+ * `feedScopes` plus `visibleTo`: the venues a person is connected to (registrations that are not
+ * cancelled, followed venues, followed circles' venues), those venues' cities and the home city of
+ * their profile, and the city hint only for someone connected to nothing. Postgres works the
+ * scopes out inside the count instead of five lookups and a count, one round trip each.
+ * `updates.test.ts` checks it against that step-by-step reading.
+ */
 export async function unreadCount(db: Db, now: Date, userId: string, cityHint?: string) {
-  const scopes = await feedScopes(db, userId, cityHint);
+  const connectedVenues = sql`(
+    select ${sessions.venueId} from ${registrations}
+      inner join ${sessions} on ${sessions.id} = ${registrations.sessionId}
+     where ${registrations.userId} = ${userId} and ${registrations.status} <> 'cancelled'
+    union
+    select ${follows.venueId} from ${follows}
+     where ${follows.userId} = ${userId} and ${follows.venueId} is not null
+    union
+    select ${circles.venueId} from ${follows}
+      inner join ${circles} on ${circles.id} = ${follows.circleId}
+     where ${follows.userId} = ${userId})`;
+  const homeCities = sql`(
+    select ${areas.cityId} from ${profiles}
+      inner join ${areas} on ${areas.id} = ${profiles.areaId}
+     where ${profiles.userId} = ${userId})`;
+  const connectedCities = sql`(
+    select ${venues.cityId} from ${venues} where ${venues.id} in ${connectedVenues}
+    union
+    ${homeCities})`;
+  const hint =
+    cityHint === undefined
+      ? undefined
+      : sql`(${updates.cityId} = ${cityHint}
+          and not exists (select 1 from ${connectedVenues} as v)
+          and not exists (select 1 from ${homeCities} as h))`;
   const [row] = await db
     .select({ n: sql<number>`count(*)`.mapWith(Number) })
     .from(updates)
-    .leftJoin(updateReads, mine(userId))
-    .where(and(visibleTo(scopes, now), isNull(updateReads.updateId)));
+    .where(
+      and(
+        lte(updates.publishAt, now),
+        or(isNull(updates.expiresAt), gt(updates.expiresAt, now)),
+        or(
+          eq(updates.scopeType, 'national'),
+          and(
+            eq(updates.scopeType, 'city'),
+            or(sql`${updates.cityId} in ${connectedCities}`, hint),
+          ),
+          and(eq(updates.scopeType, 'venue'), sql`${updates.venueId} in ${connectedVenues}`),
+        ),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(updateReads)
+            .where(and(eq(updateReads.updateId, updates.id), eq(updateReads.userId, userId))),
+        ),
+      ),
+    );
   return row?.n ?? 0;
 }
 

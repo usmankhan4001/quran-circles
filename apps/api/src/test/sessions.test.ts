@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { and, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt, sql } from 'drizzle-orm';
 import type {
   AdminOccurrence,
   AdminSession,
@@ -11,7 +11,15 @@ import type {
 import { fanOutPendingUpdatePushes, schema } from '@qc/db';
 import { topUpAllOccurrences } from '../jobs';
 import { createHarness, type Actor, type Harness } from './harness';
-import { auditRows, createOneOff, createSession, outboxRows, register } from './fixtures';
+import { distanceKm, publicSessionConditions } from '../modules/sessions/public';
+import {
+  auditRows,
+  createCircle,
+  createOneOff,
+  createSession,
+  outboxRows,
+  register,
+} from './fixtures';
 
 let h: Harness;
 let admin: Actor;
@@ -374,6 +382,185 @@ describe('public sessions', () => {
       })
     ).json<{ items: Occurrence[] }>().items;
     expect(again.length).toBe(topped.length);
+  });
+});
+
+describe('query shapes from the load test (Gate 5)', () => {
+  const { sessions, venues, areas, programs, circles, occurrences } = schema;
+
+  async function venueAt(cityId: string, areaId: string, lat: number | null, lng: number | null) {
+    const [v] = await h.db
+      .insert(venues)
+      .values({
+        cityId,
+        areaId,
+        slug: `gate5-${crypto.randomUUID()}`,
+        nameEn: 'Synthetic venue',
+        nameUr: 'Synthetic venue ur',
+        addressEn: '1 Test Road',
+        addressUr: '1 Test Road ur',
+        lat,
+        lng,
+      })
+      .returning({ id: venues.id });
+    return v!.id;
+  }
+
+  /** The order the list had before the cutoff: every public session, nearest, soonest, id. */
+  async function fullOrder(lat: number, lng: number, program?: 'dora' | 'circles') {
+    const now = h.clock.now();
+    const rows = await h.db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .innerJoin(venues, eq(venues.id, sessions.venueId))
+      .innerJoin(areas, eq(areas.id, venues.areaId))
+      .innerJoin(programs, eq(programs.id, sessions.programId))
+      .leftJoin(circles, eq(circles.id, sessions.circleId))
+      .where(and(...publicSessionConditions(), program ? eq(programs.key, program) : undefined))
+      .orderBy(
+        asc(distanceKm(lat, lng)),
+        sql`(select min(o.starts_at) from ${occurrences} o where o.session_id = ${sessions.id}
+          and o.status = 'scheduled' and o.ends_at >= ${now.toISOString()}::timestamptz) asc nulls last`,
+        asc(sessions.id),
+      );
+    return rows.map((r) => r.id);
+  }
+
+  async function pagedIds(query: Record<string, string | number>) {
+    const seen: string[] = [];
+    let cursor: string | undefined;
+    for (let guard = 0; guard < 50; guard++) {
+      const page = (
+        await h.api('sessions.list', { query: { ...query, ...(cursor ? { cursor } : {}) } })
+      ).json<Page<Session>>();
+      seen.push(...page.items.map((s) => s.id));
+      if (!page.nextCursor) return seen;
+      cursor = page.nextCursor;
+    }
+    throw new Error('the list did not end');
+  }
+
+  it('pages nearby sessions exactly as the full ordering does, ties and empty schedules included', async () => {
+    const w = h.world;
+    const here = { lat: 31.52, lng: 74.35 };
+    const spots = [
+      await venueAt(w.cityA.id, w.cityA.areaId, 31.53, 74.36),
+      await venueAt(w.cityA.id, w.cityA.areaId2, 31.6, 74.5),
+      // No position of its own: it is placed at its area (31.6, 74.4).
+      await venueAt(w.cityA.id, w.cityA.areaId2, null, null),
+      await venueAt(w.cityB.id, w.cityB.areaId, 31.9, 74.9),
+      w.venueA1, // exactly here
+    ];
+    const made: string[] = [];
+    for (const [i, venueId] of spots.entries()) {
+      // Several sessions at one venue tie on distance; two with the same days tie on start too.
+      for (const [j, days] of [[5], [6], [6], [1]].slice(0, 2 + (i % 3)).entries()) {
+        made.push(
+          (
+            await createSession(h, {
+              venueId,
+              as: admin,
+              title: `S${i}.${j}`,
+              daysOfWeek: days,
+              program: (i + j) % 2 === 0 ? 'dora' : 'circles',
+            })
+          ).id,
+        );
+      }
+    }
+    // One with nothing left to attend: its next start is empty and it sorts last at its venue.
+    await h.db
+      .update(occurrences)
+      .set({ status: 'cancelled' })
+      .where(eq(occurrences.sessionId, made[1]!));
+
+    const reference = await fullOrder(here.lat, here.lng);
+    expect(new Set(reference)).toEqual(new Set(made));
+    for (const limit of [1, 2, 3, 5, 100]) {
+      expect(await pagedIds({ ...here, limit }), `limit ${limit}`).toEqual(reference);
+    }
+    const dora = await fullOrder(here.lat, here.lng, 'dora');
+    expect(dora.length).toBeGreaterThan(2);
+    for (const limit of [1, 2, 4]) {
+      expect(await pagedIds({ ...here, limit, program: 'dora' }), `dora ${limit}`).toEqual(dora);
+    }
+    // From somewhere else the order changes, and still matches.
+    const far = { lat: 31.9, lng: 74.9 };
+    expect(await pagedIds({ ...far, limit: 2 })).toEqual(await fullOrder(far.lat, far.lng));
+  });
+
+  it('still finds an occurrence stretched over several days that started before the last day', async () => {
+    const stretched = await createSession(h, {
+      venueId: h.world.venueA1,
+      as: admin,
+      title: 'Stretched',
+      daysOfWeek: [5],
+    });
+    const monday = await createSession(h, {
+      venueId: h.world.venueA1,
+      as: admin,
+      title: 'Monday',
+      daysOfWeek: [1],
+    });
+    const [first] = await occurrencesOf(stretched.id);
+    // Monday 2026-10-19, 10:00 Pakistan time: Friday's occurrence started three days ago, and an
+    // organiser has kept it open until tomorrow (a retreat). The Monday session starts tonight.
+    h.clock.advanceDays(3);
+    const tomorrow = new Date(h.clock.now().getTime() + 24 * 3_600_000);
+    await h.db.update(occurrences).set({ endsAt: tomorrow }).where(eq(occurrences.id, first!.id));
+
+    const view = (
+      await h.api('sessions.get', { params: { sessionId: stretched.id } })
+    ).json<Session>();
+    expect(view.nextOccurrence?.id).toBe(first!.id);
+    const own = (
+      await h.api('sessions.occurrences', {
+        params: { sessionId: stretched.id },
+        query: { limit: 2 },
+      })
+    ).json<{ items: Occurrence[] }>().items;
+    expect(own[0]?.id).toBe(first!.id);
+    const listed = (await h.api('occurrences.list', { query: { limit: 2 } })).json<
+      Page<OccurrenceWithSession>
+    >();
+    expect(listed.items[0]?.id).toBe(first!.id);
+    // It is under way, so it starts sooner than tonight's Monday session in both list orders.
+    expect(await pagedIds({ limit: 10 })).toEqual([stretched.id, monday.id]);
+    expect(await pagedIds({ lat: 31.52, lng: 74.35, limit: 10 })).toEqual([
+      stretched.id,
+      monday.id,
+    ]);
+
+    // One that ended before now is not upcoming any more, however long it was.
+    await h.db
+      .update(occurrences)
+      .set({ endsAt: new Date(h.clock.now().getTime() - 60_000) })
+      .where(eq(occurrences.id, first!.id));
+    const after = (
+      await h.api('sessions.get', { params: { sessionId: stretched.id } })
+    ).json<Session>();
+    expect(after.nextOccurrence?.id).not.toBe(first!.id);
+    expect(await pagedIds({ limit: 10 })).toEqual([monday.id, stretched.id]);
+  });
+
+  it('answers not found for a session of an unpublished circle, on the session and its dates', async () => {
+    const coordinator = await h.venueCoordinator(h.world.venueA1);
+    const pending = await createCircle(h, { venueId: h.world.venueA1, as: coordinator });
+    expect(pending.status).toBe('pending_approval');
+    const session = await createSession(h, {
+      venueId: h.world.venueA1,
+      as: admin,
+      circleId: pending.id,
+    });
+    const params = { sessionId: session.id };
+    expect((await h.api('sessions.get', { params })).status).toBe(404);
+    expect((await h.api('sessions.occurrences', { params })).status).toBe(404);
+    expect((await h.api('sessions.list')).json<Page<Session>>().items).toEqual([]);
+    expect(
+      (await h.api('sessions.list', { query: { lat: 31.52, lng: 74.35 } })).json<Page<Session>>()
+        .items,
+    ).toEqual([]);
+    expect((await h.api('occurrences.list')).json<Page<OccurrenceWithSession>>().items).toEqual([]);
   });
 });
 

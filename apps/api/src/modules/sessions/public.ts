@@ -2,12 +2,10 @@ import {
   and,
   arrayOverlaps,
   asc,
-  desc,
   eq,
   gte,
   ilike,
   inArray,
-  isNull,
   lte,
   ne,
   or,
@@ -15,22 +13,24 @@ import {
   type SQL,
 } from 'drizzle-orm';
 import type { Occurrence, OccurrenceWithSession, Session, SessionListQuery } from '@qc/contracts';
+import type { PgSelect } from 'drizzle-orm/pg-core';
 import { schema, type Db } from '../../db';
 import { fail } from '../shared/errors';
 import { likePattern, venueLat, venueLng } from '../shared/mappers';
 import { decodeOffsetCursor, offsetPage, type Page } from '../shared/pagination';
 import { topUpOccurrences, type ScheduleSpec } from './occurrences';
-import { loadSessions, selectSessionRecords, toOccurrence, toPublicSession } from './views';
+import {
+  loadSessions,
+  occurrenceStartFloor,
+  publicSessionConditions,
+  toOccurrence,
+  toPublicSession,
+} from './views';
 import { toLocalTime } from '../shared/time';
 
 const { sessions, venues, areas, programs, circles, occurrences } = schema;
 
-/** Sessions the public may see: published, at an active venue, and not tied to an unapproved circle. */
-export const publicSessionConditions = (): SQL[] => [
-  eq(sessions.status, 'published'),
-  eq(venues.status, 'active'),
-  or(isNull(sessions.circleId), eq(circles.status, 'published')) as SQL,
-];
+export { publicSessionConditions };
 
 type Filters = Pick<
   SessionListQuery,
@@ -91,9 +91,29 @@ export const distanceKm = (lat: number, lng: number) =>
     cos(radians(${lat})) * cos(radians(${venueLat})) * cos(radians(${venueLng}) - radians(${lng}))
     + sin(radians(${lat})) * sin(radians(${venueLat}))))))`;
 
-const nextStart = (now: Date) =>
-  sql`(select min(o.starts_at) from occurrences o where o.session_id = ${sessions.id}
-    and o.status = 'scheduled' and o.ends_at >= ${now.toISOString()}::timestamptz)`;
+/** When a session next starts (its first scheduled occurrence not yet over), or NULL. */
+const nextStart = (sessionId: SQL | typeof sessions.id, now: Date) =>
+  sql`(select min(o.starts_at) from ${occurrences} o where o.session_id = ${sessionId}
+    and o.status = 'scheduled' and o.ends_at >= ${now.toISOString()}::timestamptz
+    and o.starts_at >= ${occurrenceStartFloor(now)})`;
+
+/**
+ * Load test, Gate 5: the joins a list needs and no more. `areas` only feeds the distance (a
+ * venue without its own position falls back to its area's) and `programs` only the program
+ * filter. Both are inner joins on NOT NULL foreign keys, so leaving them out changes no result,
+ * and each join less is planning time saved on every call.
+ */
+function withListJoins<T extends PgSelect>(
+  query: T,
+  needs: { distance: boolean; program: boolean },
+): T {
+  // The callers select explicit fields, so a join adds tables to the FROM clause and nothing to
+  // the result's type; the casts only tell TypeScript so.
+  let q: PgSelect = query.innerJoin(venues, eq(venues.id, sessions.venueId));
+  if (needs.distance) q = q.innerJoin(areas, eq(areas.id, venues.areaId));
+  if (needs.program) q = q.innerJoin(programs, eq(programs.id, sessions.programId));
+  return q.leftJoin(circles, eq(circles.id, sessions.circleId)) as unknown as T;
+}
 
 export async function listPublicSessions(
   db: Db,
@@ -101,25 +121,47 @@ export async function listPublicSessions(
   query: SessionListQuery,
 ): Promise<Page<Session>> {
   const offset = decodeOffsetCursor(query.cursor);
-  const order =
-    query.lat !== undefined && query.lng !== undefined
-      ? [
-          asc(distanceKm(query.lat, query.lng)),
-          sql`${nextStart(now)} asc nulls last`,
-          asc(sessions.id),
-        ]
-      : [sql`${nextStart(now)} asc nulls last`, asc(sessions.id)];
-  const ids = await db
-    .select({ id: sessions.id })
-    .from(sessions)
-    .innerJoin(venues, eq(venues.id, sessions.venueId))
-    .innerJoin(areas, eq(areas.id, venues.areaId))
-    .innerJoin(programs, eq(programs.id, sessions.programId))
-    .leftJoin(circles, eq(circles.id, sessions.circleId))
-    .where(and(...publicSessionConditions(), ...filterConditions(query)))
-    .orderBy(...order)
-    .limit(query.limit + 1)
-    .offset(offset);
+  const where = and(...publicSessionConditions(), ...filterConditions(query));
+  const program = query.program !== undefined;
+  let ids: { id: string }[];
+  if (query.lat !== undefined && query.lng !== undefined) {
+    // Nearest first, then the soonest start, then id. The next start costs a lookup per session,
+    // so it is worked out only for the sessions that can reach this page: those no farther than
+    // the (offset + limit + 1)-th nearest. Distance leads the order, so that set holds every row
+    // the full ordering would put on the page, and the result is the same (load test, Gate 5).
+    const base = db.$with('nearby').as(
+      withListJoins(
+        db
+          .select({
+            id: sessions.id,
+            dist: sql<number>`${distanceKm(query.lat, query.lng)}`.as('dist'),
+          })
+          .from(sessions)
+          .$dynamic(),
+        { distance: true, program },
+      ).where(where),
+    );
+    const reach = offset + query.limit + 1;
+    const cutoff = sql`coalesce((select ${base.dist} from ${base} order by ${base.dist}
+      offset ${reach - 1} limit 1), 'Infinity'::float8)`;
+    ids = await db
+      .with(base)
+      .select({ id: base.id })
+      .from(base)
+      .where(lte(base.dist, cutoff))
+      .orderBy(asc(base.dist), sql`${nextStart(sql`${base.id}`, now)} asc nulls last`, asc(base.id))
+      .limit(query.limit + 1)
+      .offset(offset);
+  } else {
+    ids = await withListJoins(db.select({ id: sessions.id }).from(sessions).$dynamic(), {
+      distance: false,
+      program,
+    })
+      .where(where)
+      .orderBy(sql`${nextStart(sessions.id, now)} asc nulls last`, asc(sessions.id))
+      .limit(query.limit + 1)
+      .offset(offset);
+  }
   const page = offsetPage(ids, query.limit, offset);
   const views = await loadSessions(
     db,
@@ -131,14 +173,7 @@ export async function listPublicSessions(
 
 /** A published, publicly visible session, or `not_found`. */
 export async function getPublicSession(db: Db, now: Date, sessionId: string): Promise<Session> {
-  const [visible] = await db
-    .select({ id: sessions.id })
-    .from(sessions)
-    .innerJoin(venues, eq(venues.id, sessions.venueId))
-    .leftJoin(circles, eq(circles.id, sessions.circleId))
-    .where(and(eq(sessions.id, sessionId), ...publicSessionConditions()));
-  if (!visible) return fail('not_found');
-  const [view] = await loadSessions(db, [sessionId], now);
+  const [view] = await loadSessions(db, [sessionId], now, { publicOnly: true });
   if (!view) return fail('not_found');
   return toPublicSession(view);
 }
@@ -169,19 +204,14 @@ export const OCCURRENCE_LAPSE_DAYS = 7;
 async function topUpIfLapsed(
   db: Db,
   row: typeof sessions.$inferSelect,
+  latestStartsAt: Date | null,
   now: Date,
   horizonDays: number,
 ): Promise<void> {
   if (row.kind !== 'recurring') return;
-  const [latest] = await db
-    .select({ startsAt: occurrences.startsAt })
-    .from(occurrences)
-    .where(eq(occurrences.sessionId, row.id))
-    .orderBy(desc(occurrences.startsAt))
-    .limit(1);
   const lapseDays = Math.min(OCCURRENCE_LAPSE_DAYS, horizonDays);
   const lapsesAt = now.getTime() + lapseDays * 24 * 60 * 60 * 1000;
-  if (latest && latest.startsAt.getTime() >= lapsesAt) return;
+  if (latestStartsAt && latestStartsAt.getTime() >= lapsesAt) return;
   await topUpOccurrences(db, row.id, specOf(row), now, horizonDays);
 }
 
@@ -192,11 +222,20 @@ export async function getPublicOccurrences(
   sessionId: string,
   query: { from?: string | undefined; to?: string | undefined; limit: number },
 ): Promise<{ items: Occurrence[] }> {
-  const [row] = await selectSessionRecords(db)
+  // The visibility check and the latest stored occurrence (for the lapse fallback) in one
+  // statement (load test, Gate 5: it was two).
+  const [row] = await db
+    .select({
+      s: sessions,
+      latestStartsAt: sql<Date | null>`(select max(o.starts_at) from ${occurrences} o
+        where o.session_id = ${sessions.id})`.mapWith(occurrences.startsAt),
+    })
+    .from(sessions)
+    .innerJoin(venues, eq(venues.id, sessions.venueId))
     .leftJoin(circles, eq(circles.id, sessions.circleId))
     .where(and(eq(sessions.id, sessionId), ...publicSessionConditions()));
   if (!row) return fail('not_found');
-  await topUpIfLapsed(db, row.s, now, horizonDays);
+  await topUpIfLapsed(db, row.s, row.latestStartsAt, now, horizonDays);
   const from = query.from ? new Date(query.from) : now;
   const rows = await db
     .select()
@@ -205,6 +244,7 @@ export async function getPublicOccurrences(
       and(
         eq(occurrences.sessionId, sessionId),
         gte(occurrences.endsAt, from),
+        gte(occurrences.startsAt, occurrenceStartFloor(from)),
         query.to ? lte(occurrences.startsAt, new Date(query.to)) : undefined,
       ),
     )
@@ -232,21 +272,24 @@ export async function listPublicOccurrences(
     ...publicSessionConditions(),
     ...filterConditions(query),
     gte(occurrences.endsAt, from),
+    // Exact, and lets the starts_at index skip every occurrence that is long over.
+    gte(occurrences.startsAt, occurrenceStartFloor(from)),
     query.to ? lte(occurrences.startsAt, new Date(query.to)) : undefined,
     query.includeCancelled ? undefined : ne(occurrences.status, 'cancelled'),
   ];
+  const distance = query.lat !== undefined && query.lng !== undefined;
   const order =
     query.lat !== undefined && query.lng !== undefined
       ? [asc(distanceKm(query.lat, query.lng)), asc(occurrences.startsAt), asc(occurrences.id)]
       : [asc(occurrences.startsAt), asc(occurrences.id)];
-  const rows = await db
-    .select({ occurrence: occurrences })
-    .from(occurrences)
-    .innerJoin(sessions, eq(sessions.id, occurrences.sessionId))
-    .innerJoin(venues, eq(venues.id, sessions.venueId))
-    .innerJoin(areas, eq(areas.id, venues.areaId))
-    .innerJoin(programs, eq(programs.id, sessions.programId))
-    .leftJoin(circles, eq(circles.id, sessions.circleId))
+  const rows = await withListJoins(
+    db
+      .select({ occurrence: occurrences })
+      .from(occurrences)
+      .innerJoin(sessions, eq(sessions.id, occurrences.sessionId))
+      .$dynamic(),
+    { distance, program: query.program !== undefined },
+  )
     .where(and(...conditions))
     .orderBy(...order)
     .limit(query.limit + 1)

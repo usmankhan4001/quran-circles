@@ -5,7 +5,9 @@ import { PostedUpdate, type FeedResponse } from '@qc/contracts';
 import { fanOutPendingUpdatePushes, schema } from '@qc/db';
 import { publishUpdate } from '../modules/updates/publish';
 import { createHarness, type Actor, type Harness } from './harness';
-import { auditRows, createSession, outboxRows, register } from './fixtures';
+import { auditRows, createCircle, createSession, outboxRows, register } from './fixtures';
+import { unreadCount } from '../modules/updates/feed';
+import { connectedScopes } from '../modules/updates/reach';
 
 let h: Harness;
 let admin: Actor;
@@ -221,6 +223,141 @@ describe('paging, reading and the unread count', () => {
     const person = await h.person();
     const res = await h.api('updates.markRead', { as: person, body: { updateIds: [] } });
     expect(res.status).toBe(400);
+  });
+});
+
+describe('the unread count in one statement (Gate 5 load test)', () => {
+  /** The step-by-step reading `unreadCount` replaced: scopes first, then the rule, then reads. */
+  async function stepByStep(userId: string, cityHint?: string): Promise<number> {
+    const now = h.clock.now();
+    const connected = await connectedScopes(h.db, userId);
+    const scopes =
+      connected.cityIds.length === 0 && connected.venueIds.length === 0 && cityHint
+        ? { cityIds: [cityHint], venueIds: [] as string[] }
+        : connected;
+    const all = await h.db.select().from(schema.updates);
+    const read = new Set(
+      (await h.db.select().from(schema.updateReads))
+        .filter((r) => r.userId === userId)
+        .map((r) => r.updateId),
+    );
+    return all.filter(
+      (u) =>
+        u.publishAt <= now &&
+        (u.expiresAt === null || u.expiresAt > now) &&
+        (u.scopeType === 'national' ||
+          (u.scopeType === 'city' && u.cityId !== null && scopes.cityIds.includes(u.cityId)) ||
+          (u.scopeType === 'venue' && u.venueId !== null && scopes.venueIds.includes(u.venueId))) &&
+        !read.has(u.id),
+    ).length;
+  }
+
+  it('counts exactly what the scopes, the rule and the reads give, for every kind of person', async () => {
+    const w = h.world;
+    const atA1 = await createSession(h, { venueId: w.venueA1, as: admin });
+    const atB1 = await createSession(h, { venueId: w.venueB1, as: admin, title: 'B1 circle' });
+    const circleB1 = await createCircle(h, { venueId: w.venueB1, as: admin });
+    const ids: Record<string, string> = {};
+    for (const [name, scope] of [
+      ['national', { type: 'national' }],
+      ['cityA', { type: 'city', cityId: w.cityA.id }],
+      ['cityB', { type: 'city', cityId: w.cityB.id }],
+      ['venueA1', { type: 'venue', venueId: w.venueA1 }],
+      ['venueA2', { type: 'venue', venueId: w.venueA2 }],
+      ['venueB1', { type: 'venue', venueId: w.venueB1 }],
+    ] as [string, PostBody][]) {
+      ids[name] = (await post(admin, scope, {}, name)).body.id;
+    }
+    const hour = 3_600_000;
+    for (const [titleEn, publishAt, expiresAt] of [
+      ['future city A', new Date(h.clock.now().getTime() + hour), null],
+      [
+        'expired venue A1',
+        new Date(h.clock.now().getTime() - hour),
+        new Date(h.clock.now().getTime() - 1),
+      ],
+      [
+        'expiring later',
+        new Date(h.clock.now().getTime() - hour),
+        new Date(h.clock.now().getTime() + hour),
+      ],
+    ] as [string, Date, Date | null][]) {
+      await h.db.insert(schema.updates).values({
+        scopeType: titleEn === 'future city A' ? 'city' : 'venue',
+        cityId: titleEn === 'future city A' ? w.cityA.id : null,
+        venueId: titleEn === 'future city A' ? null : w.venueA1,
+        authorId: admin.userId,
+        kind: 'announcement',
+        titleEn,
+        bodyEn: `${titleEn} body`,
+        publishAt,
+        expiresAt,
+      });
+    }
+
+    const stranger = await h.person();
+    const registered = await h.person();
+    await register(h, registered, atA1.id, { areaId: w.cityA.areaId });
+    const cancelled = await h.person();
+    const reg = await register(h, cancelled, atB1.id, { areaId: w.cityB.areaId });
+    await h.db
+      .update(schema.registrations)
+      .set({ status: 'cancelled' })
+      .where(eq(schema.registrations.id, reg.body.id));
+    const venueFollower = await h.person();
+    await h.api('follows.create', {
+      as: venueFollower,
+      body: { target: 'venue', venueId: w.venueA2 },
+    });
+    const circleFollower = await h.person();
+    await h.api('follows.create', {
+      as: circleFollower,
+      body: { target: 'circle', circleId: circleB1.id },
+    });
+    const homeB = await h.person();
+    await h.api('me.update', { as: homeB, body: { areaId: w.cityB.areaId } });
+    const reader = await h.person();
+    await register(h, reader, atA1.id, { areaId: w.cityA.areaId });
+    await h.db.insert(schema.updateReads).values([
+      { userId: reader.userId, updateId: ids.national!, readAt: h.clock.now() },
+      { userId: reader.userId, updateId: ids.venueA1!, readAt: h.clock.now() },
+      // A read of something the reader cannot see changes nothing.
+      { userId: reader.userId, updateId: ids.venueB1!, readAt: h.clock.now() },
+    ]);
+
+    const people = {
+      stranger,
+      registered,
+      cancelled,
+      venueFollower,
+      circleFollower,
+      homeB,
+      reader,
+    };
+    const counts: Record<string, number> = {};
+    for (const [name, who] of Object.entries(people)) {
+      for (const hint of [undefined, w.cityA.id, w.cityB.id]) {
+        const expected = await stepByStep(who.userId, hint);
+        expect(await unreadCount(h.db, h.clock.now(), who.userId, hint), `${name} ${hint}`).toBe(
+          expected,
+        );
+        counts[`${name}:${hint === undefined ? '-' : hint === w.cityA.id ? 'A' : 'B'}`] = expected;
+      }
+    }
+    // The reading itself, so the test cannot pass by both sides counting nothing.
+    expect(counts).toMatchObject({
+      'stranger:-': 1, // national
+      'stranger:B': 2, // national, city B through the hint
+      'registered:-': 4, // national, city A, venue A1, expiring later; the hint is ignored
+      'registered:B': 4,
+      'cancelled:-': 1, // a cancelled registration connects to nothing
+      'cancelled:A': 2, // so the hint still counts
+      'venueFollower:-': 3, // national, city A, venue A2
+      'circleFollower:-': 3, // national, city B, venue B1
+      'homeB:-': 2, // national, city B
+      'homeB:A': 2, // a home city is a connection: the hint is ignored
+      'reader:-': 2, // registered at A1, minus national and venue A1 read
+    });
   });
 });
 

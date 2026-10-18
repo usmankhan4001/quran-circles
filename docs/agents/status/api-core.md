@@ -1,7 +1,42 @@
 # Status: api-core
 
-Updated: 2026-10-18 (API on 2 processes: node:cluster, shared limits)
+Updated: 2026-10-18 (Gate 5 database performance: query shapes, migration 0012)
 Branch: claude/peaceful-archimedes-ain95k
+
+## Done (2026-10-18: Gate 5 database performance, staging p95 over the limits)
+
+Staging at 100 VUs had nearby 503 ms (limit 500), session_view 394 (300), session_occurrences 337 (300), unread_count 484 (300). Reproduced locally with `@qc/load local` at 100 and 150 VUs, `API_PROCESSES=2`, pg_stat_statements with `track_planning`, Postgres pinned alone to one core. Postgres CPU was the limit (66 % of its core at 100 VUs), and much of it was planning and round trips: the routes ran 4 to 6 statements each, and the multi-join reads plan in 1 to 3 ms and execute in under 1 ms. Query and index changes only, no caching. Results unchanged (tests below).
+
+- **unread_count** (`modules/updates/feed.ts` `unreadCount`): was `connectedScopes` (5 lookups) plus the count, 6 statements; now one statement that works out the connected venues (registrations not cancelled, followed venues, followed circles' venues), their cities, the home city and the hint-only-when-unconnected rule inside the count. `getFeed` and `markRead` still use `feedScopes` (unchanged).
+- **session_view** (`modules/sessions/views.ts` `loadSessions`, `public.ts` `getPublicSession`): was the session record, the next occurrence, the seats and the circle, 4 to 5 statements; now one (next occurrence as a `LEFT JOIN LATERAL`, confirmed seats as a scalar subquery, public visibility in the same statement with `publicOnly`), plus the circle only when there is one. `publicSessionConditions` moved to `views.ts` (re-exported from `public.ts`).
+- **session_occurrences** (`getPublicOccurrences`): the visibility check and the latest stored start (for the lapse fallback) in one statement; `topUpIfLapsed` takes that value instead of querying. 3 statements, now 2.
+- **nearby** (`listPublicSessions` with `lat`/`lng`): the next start (a correlated lookup) ran for every public session (about 600) on every call. Now the distance is computed once per session in a CTE, cut at the (offset + limit + 1)-th distance, and the next start is looked up only for sessions inside the cutoff. Distance leads the order, so the page is the same. 2.6 ms rising to 7.4 ms late in a season, now 1.35 to 1.6 ms.
+- **Upcoming occurrences skip the past** (`occurrenceStartFloor` in `views.ts`): every `ends_at >= from` read walked the `starts_at` index through all past occurrences, one more per session per day (home_next 4 ms late in a season). Each read now also has the exact bound `starts_at >= least(from - 1 day, earliest start of an occurrence longer than a day still running)`: generated occurrences last at most 1,440 minutes; one an organiser stretched is found through the new partial index (migration 0012, `status/db.md`). Used by the next start, the lateral next occurrence, `getPublicOccurrences` and `listPublicOccurrences` (home_next). 1.23 ms.
+- **Fewer joins** (`withListJoins`): lists join `areas` only for distance and `programs` only for the program filter (inner joins on NOT NULL foreign keys that add no columns, so no result changes); each join less is planning saved.
+- Before and after, local, same data, one run each, Postgres alone on one core, 2 API processes, 40 s steps, p95 / p99 ms:
+
+  | VUs | route               | before        | after         |
+  | --- | ------------------- | ------------- | ------------- |
+  | 100 | req/s               | 272.4         | 281.9         |
+  | 100 | all                 | 148.3 / 238.3 | 92.2 / 169.4  |
+  | 100 | nearby              | 198.8 / 264.2 | 108.3 / 194.2 |
+  | 100 | session_view        | 139.3 / 213.8 | 70.8 / 137.4  |
+  | 100 | session_occurrences | 119.2 / 179.1 | 83.6 / 154.1  |
+  | 100 | unread_count        | 166.0 / 266.9 | 69.9 / 120.5  |
+  | 100 | register            | 284.6 / 366.1 | 237.8 / 377.7 |
+  | 150 | req/s               | 341.3         | 378.7         |
+  | 150 | all                 | 325.1 / 434.0 | 212.9 / 303.5 |
+  | 150 | nearby              | 343.9 / 457.5 | 231.2 / 310.9 |
+  | 150 | session_view        | 328.7 / 408.1 | 177.3 / 236.7 |
+  | 150 | session_occurrences | 268.0 / 337.3 | 226.2 / 293.7 |
+  | 150 | unread_count        | 395.0 / 477.2 | 175.0 / 233.7 |
+  | 150 | register            | 498.2 / 587.0 | 423.6 / 523.1 |
+
+  150 VUs failed the thresholds before (session_view, unread_count) and passes after. Postgres CPU at 100 VUs 66 % before, 43 % after; database time per request 5.97 ms before, 4.64 ms after.
+
+- **Pool**: measured, kept at 10 per process. At most 14 connections of 20 in use at once; a wait for a connection p95 under 1 ms outside the push burst, 20 to 35 ms during it. Postgres CPU is the limit, not connections (`infra/ENV.md`).
+- Tests: `updates.test.ts` +1 (the one-statement count equals the step-by-step reading, scopes then the rule then reads, for a stranger, a registrant, a cancelled registration, venue and circle followers, a home city and a reader, each with no hint and with either city as the hint; plus the expected counts, so both sides cannot agree on nothing; fails on a mutant without the home-city part of the hint rule). `sessions.test.ts` +3 (nearby pages equal the full ordering at limits 1, 2, 3, 5 and 100, with ties at a venue, ties on start, a venue placed at its area, a session with nothing left, the program filter and a second position; fails on a strict cutoff and on a reach one short. An occurrence stretched over several days that started before the last day is still the next occurrence, first in the session's dates and in `occurrences.list`, and orders the lists; not once it ended; fails on a floor without the long-occurrence part. A session of an unpublished circle is `not_found` on get and dates and absent from the lists). `@qc/api` 740 passing in 35 files; typecheck, eslint and prettier clean.
+- Not applied, change requests: `2026-10-18-api-named-statements.md` (this lane: named prepared statements, measured 150 VUs p95 212.9 to 51.6 ms; plan caching, so the owner's call), `2026-10-18-auth-principal-one-query.md` (auth-scopes: two principal lookups per signed-in request), `2026-10-18-load-runner-analyze.md` (quality and platform: stale planner statistics right after the seed inflated the first baseline about ninefold in database time).
 
 ## Done (2026-10-18: the API on 2 CPUs, owner decision)
 
