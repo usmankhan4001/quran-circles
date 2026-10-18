@@ -28,16 +28,17 @@ The four database passwords must differ; `db-roles` (`infra/postgres/roles.sql`)
 
 ## API and worker
 
-| Name                      | Read by | Required | Meaning                                                                   |
-| ------------------------- | ------- | -------- | ------------------------------------------------------------------------- |
-| `APP_ENV`                 | A, W    | yes      | `production` or `staging`                                                 |
-| `PUBLIC_WEB_BASE`         | A, W    | yes      | Public https origin for links in messages                                 |
-| `AUTH_SECRET`             | A       | yes      | Token signing secret, 32+ characters                                      |
-| `CORS_ORIGINS`            | A       | no       | Extra browser origins, comma-separated                                    |
-| `AUTH_FIXED_CODE`         | A       | no       | Staging only: fixed six-digit sign-in code; refused in production         |
-| `WORKER_POLL_MS`          | W       | no       | Outbox poll interval (250-60000, default 5000)                            |
-| `WORKER_SEND_CONCURRENCY` | W       | no       | WhatsApp and SMS batches sent at once per node (1-32, default 4)          |
-| `OCCURRENCE_HORIZON_DAYS` | W       | no       | Days ahead the daily top-up keeps session occurrences (1-366, default 90) |
+| Name                      | Read by | Required | Meaning                                                                                                                       |
+| ------------------------- | ------- | -------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `APP_ENV`                 | A, W    | yes      | `production` or `staging`                                                                                                     |
+| `PUBLIC_WEB_BASE`         | A, W    | yes      | Public https origin for links in messages                                                                                     |
+| `AUTH_SECRET`             | A       | yes      | Token signing secret, 32+ characters                                                                                          |
+| `CORS_ORIGINS`            | A       | no       | Extra browser origins, comma-separated                                                                                        |
+| `AUTH_FIXED_CODE`         | A       | no       | Staging only: fixed six-digit sign-in code; refused in production                                                             |
+| `WORKER_POLL_MS`          | W       | no       | Longest time without a full outbox pass; a safety net (250-60000, default 30000)                                              |
+| `WORKER_WAKE_MS`          | W       | no       | Wake probe interval; starts a pass as soon as work is pending (0 or 100-60000, default 1000; 0 = pass every `WORKER_POLL_MS`) |
+| `WORKER_SEND_CONCURRENCY` | W       | no       | WhatsApp and SMS batches sent at once per node (1-32, default 4)                                                              |
+| `OCCURRENCE_HORIZON_DAYS` | W       | no       | Days ahead the daily top-up keeps session occurrences (1-366, default 90)                                                     |
 
 ### Worker send lanes and claim limits
 

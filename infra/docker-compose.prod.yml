@@ -203,6 +203,7 @@ services:
       DATABASE_URL: postgres://qc_worker:${POSTGRES_WORKER_PASSWORD:?set POSTGRES_WORKER_PASSWORD in the env file}@postgres:5432/qc
       # Serves /healthz (internal) and /webhooks/whatsapp (routed by Caddy).
       WORKER_HTTP_PORT: '8081'
+      WORKER_WAKE_MS:
       WORKER_POLL_MS:
       # WhatsApp and SMS only; push has its own lane below.
       WORKER_SEND_CONCURRENCY:
