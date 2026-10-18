@@ -6,23 +6,27 @@ import { REPO_DIR, TSX_BIN } from '@qc/e2e/src/stack/paths';
 import { run } from '@qc/e2e/src/stack/processes';
 import { LOAD_DIR, RESULTS_DIR, arg, writeReport } from '../args';
 import { formatLoad } from '../load/format';
+import { formatAnalyze, formatStatements, parseWaitSeconds } from '../load/prep';
 import { runEvening } from '../load/run';
 import { SCENARIO, type ScenarioFile } from '../load/scenario';
 import { seedEvening } from '../load/seed';
 import { Synthetic, signIn, type Api } from '../people';
 import { formatMatrix, runScope } from '../scope/run';
 import { startCluster, type Cluster } from './cluster';
+import { analyzeDatabase } from './dbprep';
 import { DbSampler, databaseProbe, insertBulkPushUsers, type DbStepStats } from './dbstats';
 import { CpuSampler, pidOnPort } from './procstats';
 
 /**
  * `pnpm --filter @qc/load local [--only scope|load|k6] [--steps 10,25,50] [--duration 40]
- *   [--users 800] [--venues 200] [--bulk-push-users 5000] [--k6-bin <path>]`
+ *   [--users 800] [--venues 200] [--bulk-push-users 5000] [--k6-bin <path>] [--after-seed-wait <s>]`
  *
  * The stand-in for staging: starts a private Postgres 16 (with pg_stat_statements), the e2e
  * stack's real API and worker on free ports (no web targets, no stack file), bootstraps national
  * admins with the `@qc/db` command, runs the scope matrix and the evening load test, writes the
- * reports and stops everything it started. Results on a shared container are provisional.
+ * reports and stops everything it started. Between the seed and the first step it runs ANALYZE on
+ * the seeded tables and resets pg_stat_statements; the report ends with the top 15 statements.
+ * Results on a shared container are provisional.
  */
 const argv = process.argv.slice(2);
 const only = arg(argv, 'only');
@@ -82,9 +86,11 @@ function dbLines(db: DbStepStats): string[] {
             `postgres ${db.cpu.postgres ?? '-'}, load generator ${db.cpu.loadGenerator}`,
         ]
       : []),
-    `db statements: ${s.calls} calls, ${s.totalMs} ms total; top by total time:`,
+    s
+      ? `db statements: ${s.calls} calls, ${s.totalMs} ms total; top by total time (max since the reset):`
+      : 'db statements: pg_stat_statements not available',
   ];
-  for (const t of s.top.slice(0, 6)) {
+  for (const t of s?.top.slice(0, 6) ?? []) {
     out.push(
       `  ${String(t.totalMs).padStart(10)} ms ${String(t.calls).padStart(7)} calls mean ${t.meanMs} max ${t.maxMs}  ${t.query.slice(0, 110)}`,
     );
@@ -147,6 +153,10 @@ try {
     log(
       `seeded ${data.venueIds.length} venues, ${data.sessionIds.length} sessions, ${data.users.length} users`,
     );
+    // Fresh planner statistics on what the seed just wrote, as a real evening has: without them
+    // the planner still sees near-empty tables and one baseline spent about 9x the database time.
+    const analyze = await analyzeDatabase(info.databaseUrl);
+    log(analyze.ran ? formatAnalyze(analyze) : `WARNING ${formatAnalyze(analyze)}`);
     const cpu = new CpuSampler({
       api: pidOnPort(Number(new URL(info.apiUrl).port)),
       worker: pidOnPort(Number(new URL(info.workerUrl).port)),
@@ -155,6 +165,11 @@ try {
     const sampler = new DbSampler(cluster.serverUrl, dbName, cpu);
     const probe = databaseProbe(info.databaseUrl);
     try {
+      log(
+        (await sampler.statements.reset())
+          ? 'pg_stat_statements reset just before the load steps'
+          : 'pg_stat_statements not available; statement figures skipped',
+      );
       const report = await runEvening<DbStepStats>({
         api,
         admin,
@@ -165,9 +180,14 @@ try {
         bulkPushUsers: bulk,
         log,
       });
-      console.log(`\n${formatLoad(report, dbLines)}\n`);
+      const statements = await sampler.statements.report(15);
+      console.log(
+        `\n${formatLoad(report, dbLines)}\n${[formatAnalyze(analyze), ...formatStatements(statements, 15)].join('\n')}\n`,
+      );
       const file = writeReport(`load-local-${data.runTag}.json`, {
         ...report,
+        analyze,
+        statements,
         environment: {
           note: 'Local stack on a shared container: API, worker, Postgres and the load generator share the same CPUs. Provisional.',
           workerPollMs: 500,
@@ -203,6 +223,9 @@ try {
           QC_FIXED_CODE: FIXED_CODE,
           QC_ADMIN_PHONE: adminPhone,
           QC_USERS: users,
+          // The k6 script seeds in its own setup, so the runner cannot ANALYZE between the seed
+          // and the steps; `--after-seed-wait` lets autovacuum do it first.
+          QC_AFTER_SEED_WAIT_S: String(parseWaitSeconds(arg(argv, 'after-seed-wait'))),
           K6_NO_USAGE_REPORT: 'true',
         },
       });

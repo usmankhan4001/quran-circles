@@ -1,11 +1,14 @@
 import { loadavg } from 'node:os';
 import pg from 'pg';
+import type { StatementTotals } from '../load/prep';
 import type { DrainProbe, OutboxCounts } from '../load/push';
+import { StatementStats, type StatementSnap } from './dbprep';
 import type { CpuSampler, CpuStats } from './procstats';
 
 /**
- * Database load for a local run: pg_stat_statements (top statements by total time, reset at the
- * start of each step), pg_stat_database deltas, and pg_stat_activity samples once a second. The
+ * Database load for a local run: pg_stat_statements (top statements by total time in each step,
+ * as the difference between snapshots at its start and end; the runner resets it once before the
+ * first step), pg_stat_database deltas, and pg_stat_activity samples once a second. The
  * statements are normalised by Postgres ($1 placeholders), so no values appear in the report.
  */
 /**
@@ -23,17 +26,9 @@ export function pickTime(
   return new Date(ms.slice(1).reduce((a, b) => f(a, b), first)).toISOString();
 }
 
-export interface StatementRow {
-  query: string;
-  calls: number;
-  totalMs: number;
-  meanMs: number;
-  maxMs: number;
-  rows: number;
-}
-
 export interface DbStepStats {
-  statements: { calls: number; totalMs: number; top: StatementRow[] };
+  /** Null when pg_stat_statements is not available (the report says why). */
+  statements: StatementTotals | null;
   database: {
     commits: number;
     rollbacks: number;
@@ -78,7 +73,10 @@ export class DbSampler {
   private readonly pool: pg.Pool;
   private timer: NodeJS.Timeout | undefined;
   private before: DbRow | null = null;
+  private statementsBefore: Map<string, StatementSnap> | null = null;
   private samples: { total: number; active: number; lock: number }[] = [];
+  /** pg_stat_statements for the stack's database: reset before the first step, report at the end. */
+  readonly statements: StatementStats;
 
   /** `serverUrl`: the cluster's maintenance database; `dbName`: the stack's database. */
   constructor(
@@ -87,6 +85,7 @@ export class DbSampler {
     private readonly cpu: CpuSampler | null = null,
   ) {
     this.pool = new pg.Pool({ connectionString: serverUrl, max: 2 });
+    this.statements = new StatementStats(this.pool, dbName);
   }
 
   private async dbRow(): Promise<DbRow> {
@@ -102,7 +101,7 @@ export class DbSampler {
   }
 
   async start(): Promise<void> {
-    await this.pool.query('SELECT pg_stat_statements_reset()');
+    this.statementsBefore = await this.statements.snapshot();
     this.before = await this.dbRow();
     this.cpu?.begin();
     this.samples = [];
@@ -135,39 +134,13 @@ export class DbSampler {
     const after = await this.dbRow();
     const before = this.before ?? after;
     const d = (k: keyof DbRow): number => Number(after[k]) - Number(before[k]);
-    const statements = await this.pool.query<{
-      query: string;
-      calls: string;
-      total: number;
-      mean: number;
-      max: number;
-      rows: string;
-    }>(
-      `SELECT left(regexp_replace(s.query, '\\s+', ' ', 'g'), 180) AS query, s.calls,
-              s.total_exec_time AS total, s.mean_exec_time AS mean, s.max_exec_time AS max, s.rows
-         FROM pg_stat_statements s JOIN pg_database d ON d.oid = s.dbid
-        WHERE d.datname = $1 AND s.query NOT LIKE '%qc-load probe%'
-        ORDER BY s.total_exec_time DESC`,
-      [this.dbName],
-    );
-    const all = statements.rows;
+    const statements = await this.statements.since(this.statementsBefore, 10);
     const round = (v: number): number => Math.round(v * 100) / 100;
     const hit = d('blks_hit');
     const read = d('blks_read');
     const active = this.samples.map((s) => s.active);
     return {
-      statements: {
-        calls: all.reduce((s, r) => s + Number(r.calls), 0),
-        totalMs: round(all.reduce((s, r) => s + r.total, 0)),
-        top: all.slice(0, 10).map((r) => ({
-          query: r.query,
-          calls: Number(r.calls),
-          totalMs: round(r.total),
-          meanMs: round(r.mean),
-          maxMs: round(r.max),
-          rows: Number(r.rows),
-        })),
-      },
+      statements,
       database: {
         commits: d('xact_commit'),
         rollbacks: d('xact_rollback'),

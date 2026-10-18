@@ -21,6 +21,26 @@ Options of `local`: `--steps 10,25,50` (VUs per step), `--duration 40` (seconds 
 `--users`, `--venues`, `--bulk-push-users`. Reports (JSON) go to
 `tests/load/node_modules/.cache/qc-load/`, out of git, lint and format.
 
+### Database steps between the seed and the load
+
+The seed writes hundreds of venues and sessions and thousands of occurrences seconds before the
+first step, before autovacuum has analysed them. With the planner's statistics still describing
+near-empty tables, one baseline spent about 9 times the database time (CR
+`docs/engineering/change-requests/2026-10-18-load-runner-analyze.md`). So:
+
+- `local` runs `ANALYZE` on the tables its setup filled (`SEEDED_TABLES` in `src/local/dbprep.ts`,
+  those that exist) right after the seed, then resets `pg_stat_statements` just before the first
+  step. Per-step statement figures are differences between snapshots (the `max` column is the
+  slowest call since the reset). The report (`analyze`, `statements`) and the text summary end
+  with the top 15 statements by total time over the whole load. Without `pg_stat_statements`
+  (not preloaded, not installed, or a role that may not read it) the statement figures are
+  skipped and the report says why; a failed `ANALYZE` is reported and logged as a warning, and
+  the run goes on.
+- `load` and the k6 script reach the API only, so they cannot do either. Their report says so.
+  `--after-seed-wait <s>` (`QC_AFTER_SEED_WAIT_S`, 0 to 900, default 0) pauses between the seed
+  and the first step, so autovacuum (about a minute) or an operator can analyse the seeded tables
+  and reset `pg_stat_statements`. On staging, see step 3 below.
+
 `scope` and `load` need the API's test-mode sign-in code and a national admin:
 
 - `--fixed-code` / `QC_FIXED_CODE`: the API's `AUTH_FIXED_CODE` (the API refuses it in production).
@@ -153,5 +173,13 @@ devices (the local runner's `insertBulkPushUsers` does this with direct database
 3. `QC_ALLOW_REMOTE=staging QC_BASE_URL=<api> QC_WORKER_URL=<worker> QC_FIXED_CODE=<code> QC_ADMIN_PHONE=<n2> k6 run k6/ramadan-evening.js`
    (or `pnpm --filter @qc/load load` with the same settings). The k6 thresholds are generated from
    `scenario.json`; k6 exits non-zero when one is crossed.
+   Set `QC_AFTER_SEED_WAIT_S=150` (k6 and `load` alike): the runner seeds through the API, so
+   `ANALYZE` must happen between its seed and its first step. During the pause, when the log
+   says `seeded; waiting`, run as `qc`:
+   `infra/scripts/compose.sh exec -T postgres psql -U qc -d qc -c ANALYZE` and
+   `infra/scripts/compose.sh exec -T postgres psql -U qc -d postgres -c "SELECT pg_stat_statements_reset()"`.
+   If nobody runs them, autovacuum analyses the seeded tables within the pause, and the statement
+   counts then include the seed. Where this belongs in the `gate5` service is in the CR above.
 4. Watch the database during step 3 with `pg_stat_statements` and `pg_stat_activity` (or the
-   staging monitoring) and record CPU, connections and the top statements next to the results.
+   staging monitoring) and record CPU, connections and the top 15 statements by total time
+   (`infra/README.md`, "Query statistics", with `LIMIT 15`) next to the results.

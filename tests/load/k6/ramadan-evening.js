@@ -1,4 +1,4 @@
-/* global __ENV, open */
+/* global __ENV, open, console */
 /**
  * The Ramadan-evening load test for k6 (staging). The same model as the Node runner
  * (`pnpm --filter @qc/load load`), read from the same `scenario.json`: many people open Nearby,
@@ -24,6 +24,13 @@ const WORKER = (__ENV.QC_WORKER_URL || '').replace(/\/+$/, '');
 const FIXED_CODE = __ENV.QC_FIXED_CODE || '';
 const ADMIN_PHONE = __ENV.QC_ADMIN_PHONE || '';
 const USERS = Number(__ENV.QC_USERS || SCENARIO.seed.users);
+// Seconds to pause after seeding, before the first step: the script reaches the API only, so it
+// cannot ANALYZE the seeded tables; the pause lets autovacuum or an operator (as qc) do it. Same
+// rule as the Node runner's --after-seed-wait (src/load/prep.ts), 0 to 900.
+const AFTER_SEED_WAIT_S = Number(__ENV.QC_AFTER_SEED_WAIT_S || 0);
+if (!Number.isInteger(AFTER_SEED_WAIT_S) || AFTER_SEED_WAIT_S < 0 || AFTER_SEED_WAIT_S > 900) {
+  throw new Error('QC_AFTER_SEED_WAIT_S must be whole seconds from 0 to 900');
+}
 // The API sends at most 1,000 sign-in codes an hour for all numbers together and the ceiling is
 // not configurable, so a run plans at most 900 (see src/limits.ts).
 const SIGN_IN_BUDGET = 900;
@@ -368,6 +375,12 @@ export function setup() {
     );
     return signIn(phone, ipFor(ipBase + USERS + 1 + i));
   });
+  if (AFTER_SEED_WAIT_S > 0) {
+    console.log(
+      `seeded; waiting ${AFTER_SEED_WAIT_S} s before the first step so the seeded tables get analysed`,
+    );
+    sleep(AFTER_SEED_WAIT_S);
+  }
   return { runTag, cityId: city.id, areaIds, sessionIds, users, pushAdmins };
 }
 
