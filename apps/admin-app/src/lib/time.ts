@@ -1,5 +1,6 @@
 import type { Locale } from '@qc/contracts';
-import { ltrRun } from '@qc/ui';
+import { messages, timePeriodKey } from '@qc/i18n';
+import { isolate } from '@qc/ui';
 
 /**
  * Time in this product is stored in UTC and shown in Pakistan time (UTC+5, no daylight saving).
@@ -55,25 +56,27 @@ export function pkInstant(localDate: string, localTime: string): string {
 }
 
 /**
- * `7:30 pm` from a 24-hour `19:30`, with Latin digits in both languages. In Urdu the time is
- * kept as one left-to-right run (`ltrRun`), so a right-to-left line shows "4:30 PM" and not
- * "PM 4:30".
+ * `7:30 pm` from a 24-hour `19:30`, with Latin digits in both languages. Urdu names the part of
+ * the day first and then the figures, `رات 7:30` (A-09): `Intl` in `ur-PK` writes a Latin "PM",
+ * so the Urdu time is built here. The figures are isolated so they stay left to right inside a
+ * right-to-left line. Never a narrow no-break space (U+202F): the Urdu font has no glyph for it.
  */
 export function formatLocalTime(localTime: string, locale: Locale): string {
   const [h, m] = localTime.split(':').map(Number) as [number, number];
-  let text: string;
+  const clock = `${h % 12 === 0 ? 12 : h % 12}:${pad(m)}`;
+  if (locale === 'ur') return `${messages.ur[timePeriodKey(h)]} ${isolate(clock)}`;
   try {
-    text = new Intl.DateTimeFormat(intlTag(locale), {
+    return new Intl.DateTimeFormat(intlTag(locale), {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
       timeZone: 'UTC',
-    }).format(new Date(Date.UTC(2000, 0, 1, h, m)));
+    })
+      .format(new Date(Date.UTC(2000, 0, 1, h, m)))
+      .replace(/\u202f/g, ' ');
   } catch {
-    const suffix = h >= 12 ? 'pm' : 'am';
-    text = `${h % 12 === 0 ? 12 : h % 12}:${pad(m)} ${suffix}`;
+    return `${clock} ${h >= 12 ? 'pm' : 'am'}`;
   }
-  return locale === 'ur' ? ltrRun(text) : text;
 }
 
 export const formatInstantTime = (instant: string, locale: Locale): string =>

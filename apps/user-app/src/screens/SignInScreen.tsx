@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { issueMessageKey } from '@qc/contracts';
 import { Button, Card, CodeField, Text, TextField, spacing } from '@qc/ui';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { MasjidLineArt } from '../ui/MasjidLineArt';
@@ -23,19 +24,21 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
   const problemText =
     flow.problem === 'invalid_phone'
       ? t('signIn.problem.phone')
-      : flow.problem === 'invalid_code'
-        ? t('signIn.problem.code')
-        : flow.problem === 'invalid_name'
-          ? t('signIn.problem.name')
-          : flow.error
-            ? flow.error.code === 'rate_limited' || flow.error.code === 'otp_too_many_attempts'
-              ? `${t(errorMessageKey(flow.error.code))}${
-                  flow.error.retryAfterSeconds
-                    ? ` ${t('signIn.retryAfter', { count: flow.error.retryAfterSeconds })}`
-                    : ''
-                }`
-              : t(errorMessageKey(flow.error.code))
-            : undefined;
+      : flow.problem === 'phone_not_pakistan_mobile'
+        ? t(issueMessageKey('phone_not_pakistan_mobile'))
+        : flow.problem === 'invalid_code'
+          ? t('signIn.problem.code')
+          : flow.problem === 'invalid_name'
+            ? t('signIn.problem.name')
+            : flow.error
+              ? flow.error.code === 'rate_limited' || flow.error.code === 'otp_too_many_attempts'
+                ? `${t(errorMessageKey(flow.error.code))}${
+                    flow.error.retryAfterSeconds
+                      ? ` ${t('signIn.retryAfter', { count: flow.error.retryAfterSeconds })}`
+                      : ''
+                  }`
+                : t(errorMessageKey(flow.error.code))
+              : undefined;
 
   return (
     <ScreenFrame

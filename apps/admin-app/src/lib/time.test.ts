@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ltrRun } from '@qc/ui';
+import { messages } from '@qc/i18n';
+import { isolate } from '@qc/ui';
 import {
   dayParts,
   formatInstantDate,
@@ -63,16 +64,59 @@ describe('formatting', () => {
     expect(formatInstantTime('2027-02-15T14:30:00Z', 'en')).toMatch(/7:30\s?pm/i);
   });
 
-  it('keeps an Urdu time as one left-to-right run, so it reads "4:30 PM" in a right-to-left line', () => {
-    const LRM = '\u200e';
-    const ur = formatLocalTime('16:30', 'ur');
-    expect(ur.startsWith(LRM)).toBe(true);
-    expect(ur.endsWith(LRM)).toBe(true);
-    expect(ur.slice(1, -1)).toMatch(/^4:30\s?(PM|pm|\S+)$/);
-    expect(ur).toBe(ltrRun(ur.slice(1, -1)));
-    expect(formatInstantTime('2027-02-15T11:30:00Z', 'ur').startsWith(LRM)).toBe(true);
+  it('keeps the Urdu figures left to right, isolated after the part of the day', () => {
+    const FSI = '\u2068';
+    const PDI = '\u2069';
+    expect(formatLocalTime('16:30', 'ur')).toBe(`شام ${FSI}4:30${PDI}`);
+    expect(formatLocalTime('16:30', 'ur')).toBe(`شام ${isolate('4:30')}`);
+    // 11:30 UTC is 16:30 in Pakistan.
+    expect(formatInstantTime('2027-02-15T11:30:00Z', 'ur')).toBe(`شام ${isolate('4:30')}`);
     // English needs no marks.
-    expect(formatLocalTime('16:30', 'en')).not.toContain(LRM);
+    expect(formatLocalTime('16:30', 'en')).not.toMatch(/[\u2066-\u2069\u200e]/);
+  });
+
+  describe('Urdu times (A-09)', () => {
+    const plain = (text: string) => text.replace(/[\u2066-\u2069]/g, '');
+
+    it('names the part of the day in Urdu before the figures', () => {
+      expect(plain(formatLocalTime('21:00', 'ur'))).toBe('رات 9:00');
+      expect(plain(formatLocalTime('05:15', 'ur'))).toBe('صبح 5:15');
+      expect(plain(formatLocalTime('12:30', 'ur'))).toBe('دوپہر 12:30');
+      expect(plain(formatLocalTime('00:05', 'ur'))).toBe('رات 12:05');
+      // 16:00 UTC is 21:00 in Pakistan.
+      expect(plain(formatInstantTime('2027-02-15T16:00:00Z', 'ur'))).toBe('رات 9:00');
+    });
+
+    it.each([
+      '00:00',
+      '03:59',
+      '04:00',
+      '11:59',
+      '12:00',
+      '15:59',
+      '16:00',
+      '18:59',
+      '19:00',
+      '23:59',
+    ])('writes %s with no Latin letters and no narrow no-break space', (time) => {
+      const text = formatLocalTime(time, 'ur');
+      expect(text).not.toMatch(/[A-Za-z]/);
+      expect(text).not.toContain('\u202f');
+    });
+
+    it('says "بجے" once in a schedule line', () => {
+      const line = plain(
+        messages.ur['session.schedule.everyDay'].replace('{time}', formatLocalTime('21:00', 'ur')),
+      );
+      expect(line).toBe('ہر روز رات 9:00 بجے');
+      expect(line.split('بجے')).toHaveLength(2);
+    });
+
+    it('leaves English as it was, with a plain space before "pm"', () => {
+      expect(formatLocalTime('21:00', 'en')).toBe('9:00 pm');
+      expect(formatLocalTime('05:15', 'en')).toBe('5:15 am');
+      expect(formatLocalTime('21:00', 'en')).not.toContain('\u202f');
+    });
   });
 
   it('writes the date with a short weekday', () => {

@@ -4,7 +4,7 @@ import { canSomewhere } from '../lib/permissions';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { dryRun, issueMessage, reportToCsv } from '../import/run';
-import { commitImport } from '../import/server';
+import { commitImport, refusedFile } from '../import/server';
 import { templateCsv } from '../import/templates';
 import {
   IMPORT_KINDS,
@@ -143,6 +143,14 @@ export default function ImportPage() {
     setConfirming(false);
     if (fileInput.current) fileInput.current.value = '';
   };
+
+  // The server refused the whole file (too many invitation rows, or the 24-hour invite limit).
+  const failedFile =
+    phase.name === 'failed'
+      ? refusedFile(phase.error, kind)
+      : phase.name === 'reviewed' && phase.failure !== undefined
+        ? refusedFile(phase.failure, kind)
+        : null;
 
   const report =
     phase.name === 'reviewed' || phase.name === 'applying' || phase.name === 'applied'
@@ -292,7 +300,11 @@ export default function ImportPage() {
 
       {phase.name === 'choose' ? <p className="field-hint">{t('console.import.empty')}</p> : null}
       {phase.name === 'checking' ? <Loading label={t('console.import.dryRun.running')} /> : null}
-      {phase.name === 'failed' ? (
+      {phase.name === 'failed' && failedFile ? (
+        <Banner tone="danger" title={t('console.import.refused.title')}>
+          {t(failedFile.key, failedFile.params)}
+        </Banner>
+      ) : phase.name === 'failed' ? (
         <ErrorState
           error={phase.error}
           onRetry={fileText !== null ? () => void check(fileText, kind) : undefined}
@@ -309,7 +321,11 @@ export default function ImportPage() {
           ) : null}
           {phase.name === 'reviewed' && phase.failure !== undefined ? (
             <Banner tone="danger" title={t('console.import.refused.title')}>
-              <p>{t(errorMessageKeyOf(phase.failure))}</p>
+              <p>
+                {failedFile
+                  ? t(failedFile.key, failedFile.params)
+                  : t(errorMessageKeyOf(phase.failure))}
+              </p>
               <p>{t('console.import.failed.nothingSaved')}</p>
             </Banner>
           ) : null}

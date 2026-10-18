@@ -1,8 +1,10 @@
 import { useId, useMemo, useState, type FormEvent } from 'react';
 import {
   AssignRoleBody,
+  INVITE_DAILY_LIMIT,
   InviteBody,
   PersonName,
+  issueMessageKey,
   roleAssignAction,
   type Invite,
   type InviteStatus,
@@ -42,7 +44,7 @@ import {
 import { useI18n } from '../i18n';
 import { coordinatorStats } from '../lib/kpis';
 import { filterBySearch } from '../lib/search';
-import { errorKind, errorMessageKeyOf, fieldIssues } from '../lib/errors';
+import { errorKind, errorMessageKeyOf, fieldIssues, issuesOf } from '../lib/errors';
 import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, phoneTail } from '../lib/phone';
 import { canAssignRole, canSomewhere } from '../lib/permissions';
 
@@ -84,11 +86,22 @@ const INVITE_FIELD_PATHS = {
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
+/** True when the server refused an invite because of the person's 24-hour invitation limit. */
+const overInviteLimit = (error: unknown): boolean =>
+  issuesOf(error).some((i) => i.code === INVITE_DAILY_LIMIT);
+
+/** What went wrong with an invite call, in words: the invite limit has its own message. */
+function inviteFailureKey(error: unknown): MessageKey {
+  return overInviteLimit(error) ? issueMessageKey(INVITE_DAILY_LIMIT) : errorMessageKeyOf(error);
+}
+
 /** Messages for the invite fields the server rejected, so the person sees which one to fix. */
 function serverFieldErrors(error: unknown, t: Translate): Record<string, string> {
   const rejected = fieldIssues(error, INVITE_FIELD_PATHS);
   const out: Record<string, string> = {};
-  if (rejected.phone) out.phone = t(PHONE_ISSUE_KEYS.invalid);
+  // The invite limit is reported on `phone`, but nothing is wrong with the number.
+  if (rejected.phone && rejected.phone.code !== INVITE_DAILY_LIMIT)
+    out.phone = t(PHONE_ISSUE_KEYS.invalid);
   if (rejected.name) out.name = t('console.invites.form.name.invalid');
   if (rejected.role) out.role = t('console.invites.form.rejected');
   if (rejected.scope) out.scope = t('console.invites.form.rejected');
@@ -352,7 +365,7 @@ export default function CoordinatorsPage() {
       ) : null}
       {failure ? (
         <Banner tone="danger" onDismiss={() => setFailure(null)}>
-          {t(errorMessageKeyOf(failure))}
+          {t(inviteFailureKey(failure))}
         </Banner>
       ) : null}
       {handoverGone ? (
@@ -696,7 +709,7 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
         onSubmit={(e) => void submit(e)}
         noValidate
       >
-        {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
+        {failure ? <Banner tone="danger">{t(inviteFailureKey(failure))}</Banner> : null}
         {errors.form ? <Banner tone="danger">{errors.form}</Banner> : null}
         <SelectField
           id="invite-role"
@@ -914,7 +927,7 @@ function HandoverDialog({
           ? t('console.invites.handover.inviteWarning', { previous })
           : t('console.invites.handover.warning', { previous })}
       </p>
-      {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
+      {failure ? <Banner tone="danger">{t(inviteFailureKey(failure))}</Banner> : null}
       {errors.form ? <Banner tone="danger">{errors.form}</Banner> : null}
       <form id="handover-form" className="form" onSubmit={(e) => void submit(e)} noValidate>
         <SelectField

@@ -346,8 +346,9 @@ describe.each(combos)('TodayScreen next session card in $name', (combo) => {
     await screen.findByTestId('today-next');
     expect(screen.getAllByRole('button').length).toBeGreaterThan(4);
     const time = screen.getByTestId('today-next-time').textContent ?? '';
-    if (combo.locale === 'ur') expect(time.startsWith('\u200e')).toBe(true);
-    else expect(time).not.toContain('\u200e');
+    // Urdu: the part of the day, then the figures in an isolate (A-09): "رات ⁨9:00⁩".
+    if (combo.locale === 'ur') expect(time).toMatch(/^[\u0600-\u06ff]+ \u2068\d{1,2}:\d\d\u2069$/);
+    else expect(time).not.toMatch(/[\u2066-\u2069\u200e]/);
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 });

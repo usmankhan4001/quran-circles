@@ -1,5 +1,6 @@
 import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { makeApiError } from '@qc/contracts';
 import { messages } from '@qc/i18n';
 import {
   MATRIX,
@@ -55,6 +56,43 @@ describe('SignInScreen', () => {
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '12' } });
     fireEvent.click(view.getByTestId('send-code'));
     expect(await view.findByText(en['signIn.problem.phone'])).toBeTruthy();
+  });
+
+  it('says sign-in needs a Pakistani mobile number for a number from abroad, in both languages', async () => {
+    for (const locale of ['en', 'ur'] as const) {
+      const world = await openWorld({}, locale);
+      const view = await renderScreen(<SignInScreen />, { world });
+      fireEvent.change(view.getByTestId('phone-input'), { target: { value: '+447700900123' } });
+      fireEvent.click(view.getByTestId('send-code'));
+      const words = (locale === 'ur' ? ur : en)['issues.phone_not_pakistan_mobile'];
+      expect(await view.findByText(words)).toBeTruthy();
+      expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
+      view.unmount();
+    }
+  });
+
+  it('shows the same message when the server refuses the number', async () => {
+    const world = await createWorld({
+      mock: {
+        handlers: {
+          ...signInHandlers(),
+          'auth.requestCode': (_c: unknown, id: string) =>
+            new Response(
+              JSON.stringify(
+                makeApiError('validation_failed', id, {
+                  issues: [{ path: 'phone', code: 'phone_not_pakistan_mobile' }],
+                }),
+              ),
+              { status: 400, headers: { 'content-type': 'application/json' } },
+            ),
+        },
+      },
+    });
+    const view = await renderScreen(<SignInScreen />, { world });
+    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
+    fireEvent.click(view.getByTestId('send-code'));
+    expect(await view.findByText(en['issues.phone_not_pakistan_mobile'])).toBeTruthy();
+    expect(view.getByTestId('phone-input')).toBeTruthy();
   });
 
   it('shows the message for a wrong code and stays on the code step', async () => {

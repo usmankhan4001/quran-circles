@@ -1,4 +1,5 @@
 import {
+  COORDINATOR_IMPORT_MAX_ROWS,
   InviteBody,
   type City,
   type Invite,
@@ -85,6 +86,12 @@ export function validateCoordinators(
   ctx: CoordinatorContext,
 ): DryRunReport<CoordinatorBody> {
   const read = readTable(table, COORDINATOR_COLUMNS);
+  // Each row can send a paid WhatsApp invitation, so the API takes at most this many in one file
+  // (SEC-03) and refuses a longer one whole. Said here first, before anything is sent.
+  if (read.rows.length > COORDINATOR_IMPORT_MAX_ROWS)
+    read.fileIssues.push(
+      issue(0, null, 'too_many_invite_rows', { max: COORDINATOR_IMPORT_MAX_ROWS }),
+    );
   const rows: DryRunRow<CoordinatorBody>[] = [];
   const firstByIdentity = new Map<string, number>();
   const firstByPhone = new Map<string, number>();

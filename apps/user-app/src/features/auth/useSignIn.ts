@@ -3,7 +3,13 @@ import type { OtpChannel } from '@qc/contracts';
 import { toAppError, type AppError } from '../../core/errors';
 import { useI18n } from '../../i18n/I18nProvider';
 import { useServices } from '../../providers/services';
-import { checkCode, checkName, checkPhone, type FieldProblem } from './validation';
+import {
+  checkCode,
+  checkName,
+  checkPhone,
+  isNotPakistanMobile,
+  type FieldProblem,
+} from './validation';
 
 export type SignInStep = 'phone' | 'code' | 'name' | 'done';
 
@@ -109,7 +115,13 @@ export function useSignIn(onDone: () => void): SignInFlow {
           setProblem(checked.problem);
           return;
         }
-        await requestCode(checked.phone, 'whatsapp');
+        try {
+          await requestCode(checked.phone, 'whatsapp');
+        } catch (e) {
+          // The server's own word on the number goes under the field, like the check above.
+          if (!isNotPakistanMobile(e)) throw e;
+          setProblem('phone_not_pakistan_mobile');
+        }
       }),
     [guard, phoneInput, requestCode],
   );

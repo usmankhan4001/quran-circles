@@ -232,6 +232,7 @@ describe('AttendanceScreen tick list', () => {
     );
     await screen.findByTestId('attendance-form');
     const hero = screen.getByTestId('attendance-hero');
-    expect(hero.textContent).toMatch(/\u200e\d{1,2}:\d\d[^\u200e]*\u200e/);
+    // The Urdu part of the day, then the figures in an isolate (A-09): "رات ⁨9:00⁩".
+    expect(hero.textContent).toMatch(/[\u0600-\u06ff]+ \u2068\d{1,2}:\d\d\u2069/);
   });
 });

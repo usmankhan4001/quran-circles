@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ApiClient } from '@qc/contracts';
+import {
+  ApiClientError,
+  PHONE_NOT_PAKISTAN_MOBILE,
+  PakistaniMobilePhone,
+  issueCodeOf,
+  issueMessageKey,
+  type ApiClient,
+} from '@qc/contracts';
 import { errorCodeOf, retryAfterOf } from '../../api/errors';
 import type { SignInResult } from '../../auth/AuthProvider';
 import type { MessageKey } from '../../i18n/translate';
@@ -34,6 +41,32 @@ export interface SignInActions {
 }
 
 const DIGITS_ONLY = /^[0-9]{6}$/;
+
+/** "Sign-in works only with a Pakistani mobile number, such as 0300 1234567." */
+const NOT_PAKISTAN_MOBILE: MessageKey = issueMessageKey(PHONE_NOT_PAKISTAN_MOBILE);
+
+/**
+ * The message under the number field for a typed number, or null when a code may be asked for.
+ * It is the contract's own check (`PakistaniMobilePhone`), so a number from abroad or a
+ * Pakistani landline gets its message with no round trip.
+ */
+function phoneProblem(e164: string | null): MessageKey | null {
+  if (!e164) return 'admin.signIn.phoneInvalid';
+  const parsed = PakistaniMobilePhone.safeParse(e164);
+  if (parsed.success) return null;
+  return parsed.error.issues.some((i) => issueCodeOf(i) === PHONE_NOT_PAKISTAN_MOBILE)
+    ? NOT_PAKISTAN_MOBILE
+    : 'admin.signIn.phoneInvalid';
+}
+
+/** True when the server refused the number because it is not a Pakistani mobile number. */
+function isNotPakistanMobile(error: unknown): boolean {
+  return (
+    error instanceof ApiClientError &&
+    error.code === 'validation_failed' &&
+    (error.issues ?? []).some((i) => i.path === 'phone' && i.code === PHONE_NOT_PAKISTAN_MOBILE)
+  );
+}
 
 function noticeFor(error: unknown): { key: MessageKey; wait: number | null } {
   const code = errorCodeOf(error);
@@ -102,9 +135,15 @@ export function useSignIn(
         return true;
       } catch (error) {
         if (mounted.current) {
-          const n = noticeFor(error);
-          setNotice(n.key);
-          setWaitSeconds(n.wait);
+          if (isNotPakistanMobile(error)) {
+            // The server's word on the number goes under the number field.
+            setStep('phone');
+            setPhoneError(NOT_PAKISTAN_MOBILE);
+          } else {
+            const n = noticeFor(error);
+            setNotice(n.key);
+            setWaitSeconds(n.wait);
+          }
         }
         return false;
       } finally {
@@ -116,8 +155,9 @@ export function useSignIn(
 
   const submitPhone = useCallback(async () => {
     const e164 = normalizePhone(phoneInput);
-    if (!e164) {
-      setPhoneError('admin.signIn.phoneInvalid');
+    const problem = phoneProblem(e164);
+    if (problem || !e164) {
+      setPhoneError(problem ?? 'admin.signIn.phoneInvalid');
       return;
     }
     await sendCode(e164);

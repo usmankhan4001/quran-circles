@@ -803,3 +803,102 @@ describe('resending a handover invite', () => {
     expect(screen.queryByText(text('console.invites.handoverGone.title'))).toBeNull();
   });
 });
+
+describe('the 24-hour invite limit', () => {
+  const overLimit = validationError([{ path: 'phone', code: 'invite_daily_limit' }]);
+
+  it.each<Locale>(['en', 'ur'])(
+    'says the limit is reached, and does not blame the number (%s)',
+    async (locale) => {
+      const { user, calls } = renderConsole({
+        role: 'national',
+        locale,
+        path: '/coordinators',
+        handlers: { ...data, 'adminRoles.invite': overLimit },
+      });
+      await user.click(
+        await screen.findByRole('button', { name: text('console.invites.new', locale) }),
+      );
+      const form = await screen.findByRole('form', { name: text('console.invites.new', locale) });
+      await user.selectOptions(
+        within(form).getByLabelText(new RegExp(text('console.invites.role.label', locale))),
+        'national_admin',
+      );
+      const phone = within(form).getByLabelText(
+        new RegExp(text('console.invites.phone.label', locale)),
+      );
+      await user.type(phone, '0300 0000076');
+      await user.click(
+        within(form).getByRole('button', { name: text('console.invites.send', locale) }),
+      );
+      expect(await within(form).findByText(text('issues.invite_daily_limit', locale))).toBeTruthy();
+      expect(within(form).queryByText(text('console.phone.error.invalid', locale))).toBeNull();
+      expect(within(form).queryByText(text('errors.validation_failed', locale))).toBeNull();
+      expect(phone.getAttribute('aria-invalid')).not.toBe('true');
+      expect(find(calls, 'POST', '/v1/admin/invites')).toHaveLength(1);
+    },
+  );
+
+  it('says so when sending an invite again is over the limit', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: { ...allInvites, 'adminRoles.invite': overLimit },
+    });
+    await user.click(
+      await screen.findByRole('button', {
+        name: `${text('console.invites.resend')} for the number ending 061`,
+      }),
+    );
+    expect(await screen.findByText(text('issues.invite_daily_limit'))).toBeTruthy();
+    expect(screen.queryByText(text('errors.validation_failed'))).toBeNull();
+  });
+
+  it('says so in the handover dialog', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: { ...data, 'adminRoles.invite': overLimit },
+    });
+    const row = (await screen.findByText('Test Person Two')).closest('tr') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: text('console.invites.handover') }));
+    const dialog = await screen.findByRole('dialog');
+    await user.selectOptions(
+      within(dialog).getByLabelText(text('console.invites.handover.mode.label')),
+      'phone',
+    );
+    const phone = within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label')));
+    await user.type(phone, '0300 0000077');
+    await user.click(
+      within(dialog).getByRole('button', { name: text('console.invites.handover.sendInvite') }),
+    );
+    expect(await within(dialog).findByText(text('issues.invite_daily_limit'))).toBeTruthy();
+    expect(within(dialog).queryByText(text('console.phone.error.invalid'))).toBeNull();
+    expect(phone.getAttribute('aria-invalid')).not.toBe('true');
+  });
+
+  it('still points a bad number at the phone field', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: {
+        ...data,
+        'adminRoles.invite': validationError([{ path: 'phone', code: 'invalid_format' }]),
+      },
+    });
+    await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
+    await user.selectOptions(
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      'national_admin',
+    );
+    await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      '0300 0000078',
+    );
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
+    expect(await within(form).findByText(text('console.phone.error.invalid'))).toBeTruthy();
+    expect(within(form).getByText(text('errors.validation_failed'))).toBeTruthy();
+    expect(within(form).queryByText(text('issues.invite_daily_limit'))).toBeNull();
+  });
+});

@@ -1,12 +1,17 @@
-import type {
-  ApiClient,
-  ImportResult,
-  ImportRowResult,
-  InviteBody,
-  SessionCreate,
-  ValidationIssue,
-  VenueCreate,
+import {
+  COORDINATOR_IMPORT_MAX_ROWS,
+  INVITE_DAILY_LIMIT,
+  issueMessageKey,
+  type ApiClient,
+  type ImportResult,
+  type ImportRowResult,
+  type InviteBody,
+  type SessionCreate,
+  type ValidationIssue,
+  type VenueCreate,
 } from '@qc/contracts';
+import type { MessageKey } from '@qc/i18n';
+import { issuesOf } from '../lib/errors';
 import { COORDINATOR_PATH_COLUMNS } from './coordinators';
 import { SESSION_PATH_COLUMNS } from './sessions';
 import { columnForPath } from './table';
@@ -54,6 +59,32 @@ export function sendImport(
     case 'sessions':
       return api.adminImport.sessions({ body: { dryRun, rows: rows as SessionCreate[] } });
   }
+}
+
+/** Why the server refused a whole file, in words, with what the words need. */
+export interface RefusedFile {
+  key: MessageKey;
+  params?: Record<string, string | number>;
+}
+
+/**
+ * The words for a server answer that refuses the whole file, dry run included, with no per-row
+ * result (`IMPORT_REQUEST_ISSUE_CODES`, `validation_failed` on `rows`): a coordinator file over
+ * `COORDINATOR_IMPORT_MAX_ROWS` rows (`too_big`), or rows that would take the person past their
+ * invitations for the last 24 hours (`invite_daily_limit`). Null for any other failure, which
+ * keeps its general message.
+ */
+export function refusedFile(error: unknown, kind: ImportKind): RefusedFile | null {
+  for (const found of issuesOf(error)) {
+    if (found.path !== 'rows') continue;
+    if (found.code === INVITE_DAILY_LIMIT) return { key: issueMessageKey(INVITE_DAILY_LIMIT) };
+    if (found.code === 'too_big' && kind === 'coordinators')
+      return {
+        key: 'console.import.issue.tooManyInviteRows',
+        params: { max: COORDINATOR_IMPORT_MAX_ROWS },
+      };
+  }
+  return null;
 }
 
 /** Codes the console's own check uses for "this is already there". */

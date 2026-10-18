@@ -3,6 +3,14 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Urdu times and worded API issues (2026-10-18, orchestrator task)
+
+- **A-09 (Urdu time).** `lib/posters.ts` `formatLocalTime`: Urdu is the part of the day from `time.period.*` (via `timePeriodKey` in `@qc/i18n`) and then the isolated `h:mm`, "رات ⁨9:00⁩"; no Latin "PM", no U+202F. English is unchanged ("9:30 pm"; any U+202F from the browser becomes a plain space). Tests in `lib/posters.test.ts` (bands, no Latin letters, "بجے" once in `session.schedule.everyDay`, `console.posters.source.daily` reads "روزانہ رات 9:00").
+- **Sign-in** (`pages/SignInPage.tsx`): a number that is not a Pakistani mobile gets `issues.phone_not_pakistan_mobile` under the field, from the contract's `PakistaniMobilePhone` before any request (a UK number, a Pakistani landline), and also when `auth.requestCode` answers `validation_failed` with `{ path: "phone", code: "phone_not_pakistan_mobile" }`. Other refusals keep the general banner. Tests: new `pages/sign-in.test.tsx` (6).
+- **Invites** (`pages/CoordinatorsPage.tsx`): `invite_daily_limit` from `adminRoles.invite` shows `issues.invite_daily_limit` in the invite form, the page banner (Send again) and the handover dialog, and no longer marks the phone field as wrong. Tests: `pages/coordinators.test.tsx`, "the 24-hour invite limit" (5).
+- **Import**: a coordinator file over `COORDINATOR_IMPORT_MAX_ROWS` (100) gets the file problem `too_many_invite_rows` (`console.import.issue.tooManyInviteRows`, `{max}`) and is not sent (`import/coordinators.ts`, `import/types.ts`). When the server refuses the whole file (`validation_failed` on `rows` with `too_big` for coordinators, or `invite_daily_limit`), `refusedFile` in `import/server.ts` gives the words, shown on the dry run and on a refused import (`pages/ImportPage.tsx`). Tests: `import/validators.test.ts` (4) and `pages/import.test.tsx`, "coordinator import ceilings" (6).
+- Checks: `pnpm --filter @qc/console test` (449 passing, 25 files) and `typecheck`; eslint and prettier on the changed files clean.
+
 ## Accessibility fix pass (2026-10-18, `docs/quality/accessibility-rtl.md`)
 
 - **A-08 (landmarks).** In `components/Shell.tsx` the sidebar is a `<header>` (banner) and the language, colours and text size tools a named `<section>` (region), so no content sits outside a landmark. Tests: `pages/shell.test.tsx`, `theme/redesign.test.tsx`.

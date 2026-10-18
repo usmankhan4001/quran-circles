@@ -6,7 +6,7 @@ Owned by the contracts lane. Keys live in `packages/i18n/src/en.json` and `ur.js
 
 - Flat dotted keys: `<namespace>.<name>`, lower camel case after the namespace, for example `registration.partySize.label`.
 - **One namespace per screen or feature:** `home`, `nearby`, `venue`, `session`, `registration`, `signIn`, `journey`, `quran`, `prayer`, `profile`, `updates`, `admin.registrants`, `admin.postUpdate`, `admin.schedule`, `admin.venueEditor`, `admin.circleEditor`, `admin.attendance`, `console.invites`, `console.import`, `console.exports`, `admin.posters` and `console.posters` (the poster screens: template picker, out-of-date band, Regenerate).
-- **Shared namespaces:** `app` (name), `tabs`, `ui` (generic controls such as Close and Try again), `errors` (one key per API error code, `errors.<code>`, owned by the contracts lane), `facilities` (the venue checklist), `sections` (women, men, family), `days` (weekday names), `notifications` (push titles and bodies), `poster` (text printed on posters and their alt text, drawn by the renderer; contract 1.0.0-rc.5).
+- **Shared namespaces:** `app` (name), `tabs`, `ui` (generic controls such as Close and Try again), `errors` (one key per API error code, `errors.<code>`, owned by the contracts lane), `issues` (one key per worded issue code, `issues.<code>`, owned by the contracts lane: the server's own validation issue codes that the apps explain in words wherever they appear, listed in `WORDED_ISSUE_CODES` in `packages/contracts/src/errors.ts`, key from `issueMessageKey`; today `issues.phone_not_pakistan_mobile` and `issues.invite_daily_limit`), `facilities` (the venue checklist), `sections` (women, men, family), `days` (weekday names), `time` (parts of the day for times: `time.period.lateNight|morning|noon|evening|night`, with the hour bands 00–03, 04–11, 12–15, 16–18 and 19–23 in `timePeriodKey` in `@qc/i18n`; an Urdu time is the period word, then the figures, `رات 9:00`), `notifications` (push titles and bodies), `poster` (text printed on posters and their alt text, drawn by the renderer; contract 1.0.0-rc.5).
 - A key names what the text is for, not the English words: `registration.submit`, not `registration.registerNow`.
 - Never build a sentence by joining keys. One key per sentence, with placeholders.
 
@@ -23,6 +23,7 @@ Owned by the contracts lane. Keys live in `packages/i18n/src/en.json` and `ur.js
 ## Error messages
 
 - Every API error code `X` has `errors.X` in both languages. A contract test fails if one is missing.
+- Every worded issue code `Y` (`WORDED_ISSUE_CODES`) has `issues.Y` in both languages, also checked by a contract test. A screen shows it for a `validation_failed` answer whose `issues` carry that code, in place of the general `errors.validation_failed`.
 - Plain words, no blame, say what to do next.
 
 ## Urdu

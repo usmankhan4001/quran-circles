@@ -1,4 +1,5 @@
 import { within } from '@testing-library/react';
+import { COORDINATOR_IMPORT_MAX_ROWS, ERROR_CODES, makeApiError } from '@qc/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Locale } from '../i18n';
 import { parseCsv } from '../lib/csv';
@@ -443,5 +444,128 @@ describe('bulk import by role', () => {
     const template = parseCsv(await downloads.read());
     expect(template.header.slice(0, 3)).toEqual(['city', 'area', 'name_en']);
     expect(template.errors).toEqual([]);
+  });
+});
+
+describe('coordinator import ceilings', () => {
+  const coordinatorFile = (count: number) =>
+    new File(
+      [
+        [
+          'phone,name,role,city,venue',
+          ...Array.from(
+            { length: count },
+            (_v, i) =>
+              `0300 ${String(2000000 + i).padStart(7, '0')},Test ${i},venue_coordinator,,${venueA!.name.en}`,
+          ),
+        ].join('\r\n'),
+      ],
+      'people.csv',
+      { type: 'text/csv' },
+    );
+
+  /** The import endpoint refusing the whole file, as the API does for these ceilings. */
+  const refuseFile =
+    (code: string, when: 'dryRun' | 'import') => (c: { body: unknown }, id: string) => {
+      const body = c.body as ImportCall;
+      if ((when === 'dryRun') !== body.dryRun)
+        return {
+          dryRun: body.dryRun,
+          applied: !body.dryRun,
+          counts: { created: body.rows.length, duplicate: 0, invalid: 0 },
+          rows: body.rows.map((_r, index) => ({ index, status: 'created', issues: [] })),
+        };
+      return new Response(
+        JSON.stringify(makeApiError('validation_failed', id, { issues: [{ path: 'rows', code }] })),
+        { status: ERROR_CODES.validation_failed, headers: { 'content-type': 'application/json' } },
+      );
+    };
+
+  const pickCoordinators = async (
+    user: ReturnType<typeof renderConsole>['user'],
+    locale: Locale = 'en',
+  ) =>
+    user.selectOptions(
+      await screen.findByLabelText(text('console.import.kind.label', locale)),
+      'coordinators',
+    );
+
+  it.each<Locale>(['en', 'ur'])(
+    'refuses a coordinator file over the ceiling before asking the server (%s)',
+    async (locale) => {
+      const { user, calls } = renderConsole({ role: 'national', path: '/import', locale });
+      await pickCoordinators(user, locale);
+      await choose(user, coordinatorFile(COORDINATOR_IMPORT_MAX_ROWS + 1), locale);
+      const words = text('console.import.issue.tooManyInviteRows', locale).replace(
+        '{max}',
+        String(COORDINATOR_IMPORT_MAX_ROWS),
+      );
+      expect(await screen.findByText(words)).toBeTruthy();
+      expect(importCalls(calls, 'coordinators')).toEqual([]);
+      // The file cannot be imported as it is.
+      const apply = screen.getByRole('button', {
+        name: applyLabel(COORDINATOR_IMPORT_MAX_ROWS + 1, locale),
+      });
+      expect(apply.hasAttribute('disabled') || apply.getAttribute('aria-disabled') === 'true').toBe(
+        true,
+      );
+    },
+  );
+
+  it('words the server refusing the dry run as over the ceiling', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: { 'adminImport.coordinators': refuseFile('too_big', 'dryRun') },
+    });
+    await pickCoordinators(user);
+    await choose(user, coordinatorFile(2));
+    const words = text('console.import.issue.tooManyInviteRows').replace(
+      '{max}',
+      String(COORDINATOR_IMPORT_MAX_ROWS),
+    );
+    expect(await screen.findByText(words)).toBeTruthy();
+    expect(screen.queryByText(text('errors.validation_failed'))).toBeNull();
+  });
+
+  it('says the 24-hour invite limit is reached when the dry run is refused for it', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: { 'adminImport.coordinators': refuseFile('invite_daily_limit', 'dryRun') },
+    });
+    await pickCoordinators(user);
+    await choose(user, coordinatorFile(2));
+    expect(await screen.findByText(text('issues.invite_daily_limit'))).toBeTruthy();
+    expect(screen.queryByText(text('errors.validation_failed'))).toBeNull();
+    expect(imports(calls, 'coordinators')).toEqual([]);
+  });
+
+  it('says the limit is reached, and that nothing was saved, when the import is refused for it', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: { 'adminImport.coordinators': refuseFile('invite_daily_limit', 'import') },
+    });
+    await pickCoordinators(user);
+    await choose(user, coordinatorFile(2));
+    await user.click(await screen.findByRole('button', { name: 'Import 2 rows' }));
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import 2 rows' }),
+    );
+    expect(await screen.findByText(text('issues.invite_daily_limit'))).toBeTruthy();
+    expect(screen.getByText(text('console.import.failed.nothingSaved'))).toBeTruthy();
+    expect(imports(calls, 'coordinators')).toHaveLength(1);
+  });
+
+  it('keeps the general message for a venue file the server refuses', async () => {
+    const { user } = renderConsole({
+      role: 'national',
+      path: '/import',
+      handlers: { 'adminImport.venues': refuseFile('too_big', 'dryRun') },
+    });
+    await choose(user, csvFile([venue('Test Masjid One')]));
+    expect(await screen.findByText(text('errors.validation_failed'))).toBeTruthy();
+    expect(screen.queryByText(/coordinator file/i)).toBeNull();
   });
 });

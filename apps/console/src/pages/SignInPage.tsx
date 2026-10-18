@@ -1,12 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
+import { PHONE_NOT_PAKISTAN_MOBILE, PakistaniMobilePhone, issueMessageKey } from '@qc/contracts';
 import { useAuth } from '../api/auth';
 import { DisplayControls } from '../components/Shell';
 import { Icon, PatternLayer } from '../components/icons';
 import { Banner, Button, PageHeader, TextField } from '../components/ui';
 import { useI18n } from '../i18n';
-import { errorMessageKeyOf } from '../lib/errors';
+import { errorMessageKeyOf, issuesOf } from '../lib/errors';
 import { PHONE_ISSUE_KEYS, normalizePhone, toAsciiDigits } from '../lib/phone';
+
+/** "Sign-in works only with a Pakistani mobile number, such as 0300 1234567." */
+const NOT_PAKISTAN_MOBILE = issueMessageKey(PHONE_NOT_PAKISTAN_MOBILE);
+
+/** True when `auth.requestCode` refused the number as not a Pakistani mobile. */
+function refusedAsNotPakistanMobile(error: unknown): boolean {
+  return issuesOf(error).some((i) => i.path === 'phone' && i.code === PHONE_NOT_PAKISTAN_MOBILE);
+}
 
 interface Challenge {
   id: string;
@@ -45,7 +54,15 @@ export default function SignInPage() {
     event?.preventDefault();
     const result = normalizePhone(phone, { mobileOnly: true });
     if (!result.ok) {
-      setPhoneError(t(PHONE_ISSUE_KEYS[result.issue]));
+      // A landline is a real number that cannot sign in: the same words as the server's.
+      setPhoneError(
+        t(result.issue === 'not_mobile' ? NOT_PAKISTAN_MOBILE : PHONE_ISSUE_KEYS[result.issue]),
+      );
+      return;
+    }
+    // The contract's own check, so a number from abroad is told no without a round trip.
+    if (!PakistaniMobilePhone.safeParse(result.e164).success) {
+      setPhoneError(t(NOT_PAKISTAN_MOBILE));
       return;
     }
     setPhoneError(null);
@@ -57,7 +74,10 @@ export default function SignInPage() {
       setChallenge({ id: res.challengeId, resendIn: res.resendAfterSeconds });
       setCode('');
     } catch (error) {
-      setFailure(error);
+      if (refusedAsNotPakistanMobile(error)) {
+        setChallenge(null);
+        setPhoneError(t(NOT_PAKISTAN_MOBILE));
+      } else setFailure(error);
     } finally {
       setBusy(false);
     }

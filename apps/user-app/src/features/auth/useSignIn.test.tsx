@@ -1,9 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ERROR_CODES, makeApiError } from '@qc/contracts';
 import { act, createWorld, renderHookInApp, signInHandlers, waitFor } from '../../test/harness';
 import { secondsUntil, useSignIn } from './useSignIn';
 
-async function start(options: Parameters<typeof signInHandlers>[0] = {}) {
-  const world = await createWorld({ mock: { handlers: signInHandlers(options) } });
+/** The server's answer for a number it will not send a code to (contract `auth.requestCode`). */
+const notPakistanMobile = {
+  'auth.requestCode': (_c: unknown, id: string) =>
+    new Response(
+      JSON.stringify(
+        makeApiError('validation_failed', id, {
+          issues: [{ path: 'phone', code: 'phone_not_pakistan_mobile' }],
+        }),
+      ),
+      { status: ERROR_CODES.validation_failed, headers: { 'content-type': 'application/json' } },
+    ),
+};
+
+async function start(
+  options: Parameters<typeof signInHandlers>[0] = {},
+  overrides: Record<string, unknown> = {},
+) {
+  const world = await createWorld({
+    mock: { handlers: { ...signInHandlers(options), ...overrides } },
+  });
   const onDone = vi.fn();
   const hook = await renderHookInApp(() => useSignIn(onDone), { world });
   return { world, onDone, hook, flow: () => hook.result.current };
@@ -64,6 +83,32 @@ describe('useSignIn', () => {
     await enterPhone(flow);
     expect(flow().step).toBe('phone');
     expect(flow().error).toMatchObject({ code: 'rate_limited', retryAfterSeconds: 30 });
+  });
+
+  it('says a number from abroad cannot sign in, without calling the server', async () => {
+    const { world, flow } = await start();
+    await enterPhone(flow, '+44 7700 900123');
+    expect(flow().problem).toBe('phone_not_pakistan_mobile');
+    expect(flow().error).toBeUndefined();
+    expect(flow().step).toBe('phone');
+    expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
+  });
+
+  it('shows the server’s word when it refuses the number as not a Pakistani mobile', async () => {
+    const { world, flow } = await start({}, notPakistanMobile);
+    await enterPhone(flow);
+    expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(1);
+    expect(flow().problem).toBe('phone_not_pakistan_mobile');
+    expect(flow().error).toBeUndefined();
+    expect(flow().step).toBe('phone');
+  });
+
+  it('keeps other validation failures as an error, not as the phone message', async () => {
+    const { world, flow } = await start();
+    world.http.failNext('POST /v1/auth/code', 'validation_failed');
+    await enterPhone(flow);
+    expect(flow().problem).toBeNull();
+    expect(flow().error).toMatchObject({ code: 'validation_failed' });
   });
 
   it('checks the code has six digits before asking the server', async () => {

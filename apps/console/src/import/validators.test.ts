@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Invite, StaffRoleAssignment } from '@qc/contracts';
+import {
+  ApiClientError,
+  COORDINATOR_IMPORT_MAX_ROWS,
+  type Invite,
+  type StaffRoleAssignment,
+} from '@qc/contracts';
 import { cities, venues } from '@qc/contracts/fixtures';
 import { parseCsv } from '../lib/csv';
 import {
@@ -15,7 +20,7 @@ import { citiesMentioned, validateVenues } from './venues';
 import { validateCoordinators } from './coordinators';
 import { maskPhone } from '../lib/phone';
 import { parseDays, validateSessions } from './sessions';
-import { commitImport, mergeServerResult, rowsToSend, serverIssue } from './server';
+import { commitImport, mergeServerResult, refusedFile, rowsToSend, serverIssue } from './server';
 import { templateCsv } from './templates';
 import { IMPORT_KINDS } from './types';
 import { reportToCsv } from './run';
@@ -535,5 +540,59 @@ describe('the server dry run and the import', () => {
     expect(bodies[0]).toMatchObject({ dryRun: false });
     expect((bodies[0] as { rows: unknown[] }).rows).toHaveLength(2);
     expect(report.counts.total).toBe(4);
+  });
+});
+
+describe('coordinator invitation ceilings (SEC-03)', () => {
+  const coordFile = (count: number) =>
+    [
+      COORD_HEADER,
+      ...Array.from(
+        { length: count },
+        (_v, i) =>
+          `0300 ${String(1000000 + i).padStart(7, '0')},Test ${i},venue_coordinator,,${venueA!.name.en}`,
+      ),
+    ].join('\n');
+
+  it(`takes a file of ${COORDINATOR_IMPORT_MAX_ROWS} rows`, () => {
+    const r = validateCoordinators(parseCsv(coordFile(COORDINATOR_IMPORT_MAX_ROWS)), coordCtx());
+    expect(r.fileIssues.map((i) => i.code)).not.toContain('too_many_invite_rows');
+    expect(r.canApply).toBe(true);
+  });
+
+  it('refuses a longer file as a whole, before anything is sent, naming the ceiling', () => {
+    const r = validateCoordinators(
+      parseCsv(coordFile(COORDINATOR_IMPORT_MAX_ROWS + 1)),
+      coordCtx(),
+    );
+    const found = r.fileIssues.find((i) => i.code === 'too_many_invite_rows');
+    expect(found).toMatchObject({
+      line: 0,
+      severity: 'error',
+      params: { max: COORDINATOR_IMPORT_MAX_ROWS },
+    });
+    expect(r.canApply).toBe(false);
+  });
+
+  const refusal = (path: string, code: string) =>
+    new ApiClientError(400, 'validation_failed', 'test', undefined, [{ path, code }]);
+
+  it('words the server refusing a whole file', () => {
+    expect(refusedFile(refusal('rows', 'invite_daily_limit'), 'coordinators')).toEqual({
+      key: 'issues.invite_daily_limit',
+    });
+    expect(refusedFile(refusal('rows', 'too_big'), 'coordinators')).toEqual({
+      key: 'console.import.issue.tooManyInviteRows',
+      params: { max: COORDINATOR_IMPORT_MAX_ROWS },
+    });
+  });
+
+  it('leaves other failures to their general message', () => {
+    expect(refusedFile(refusal('rows', 'too_big'), 'venues')).toBeNull();
+    expect(refusedFile(refusal('rows.3.phone', 'invalid_format'), 'coordinators')).toBeNull();
+    expect(
+      refusedFile(new ApiClientError(429, 'rate_limited', 'test', 30), 'coordinators'),
+    ).toBeNull();
+    expect(refusedFile(new Error('offline'), 'coordinators')).toBeNull();
   });
 });

@@ -45,7 +45,8 @@ export type IssueCode =
   | 'already_assigned'
   | 'invalid_reference'
   | 'area_not_in_city'
-  | 'already_there';
+  | 'already_there'
+  | 'too_many_invite_rows';
 
 export const ISSUE_KEYS = {
   csv_empty_file: 'console.import.issue.csvEmptyFile',
@@ -80,6 +81,7 @@ export const ISSUE_KEYS = {
   invalid_reference: 'console.import.issue.invalidReference',
   area_not_in_city: 'console.import.issue.areaNotInCity',
   already_there: 'console.import.issue.alreadyThere',
+  too_many_invite_rows: 'console.import.issue.tooManyInviteRows',
 } as const satisfies Record<IssueCode, MessageKey>;
 
 export type Severity = 'error' | 'warning';

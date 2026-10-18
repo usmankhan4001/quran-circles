@@ -185,6 +185,57 @@ describe('the list', () => {
     expect(formatLocalTime('07:05', 'en')).toBe('7:05 am');
     expect(formatLocalTime('21:30', 'ur')).toMatch(/9:30/);
   });
+
+  describe('in Urdu (A-09)', () => {
+    const FSI = '\u2068';
+    const PDI = '\u2069';
+    const plain = (text: string) => text.replace(/[\u2066-\u2069]/g, '');
+
+    it('names the part of the day in Urdu, then the figures in an isolate', () => {
+      expect(formatLocalTime('21:00', 'ur')).toBe(`رات ${FSI}9:00${PDI}`);
+      expect(plain(formatLocalTime('05:15', 'ur'))).toBe('صبح 5:15');
+      expect(plain(formatLocalTime('12:30', 'ur'))).toBe('دوپہر 12:30');
+      expect(plain(formatLocalTime('17:00', 'ur'))).toBe('شام 5:00');
+      expect(plain(formatLocalTime('00:05', 'ur'))).toBe('رات 12:05');
+    });
+
+    it.each([
+      '00:00',
+      '03:59',
+      '04:00',
+      '11:59',
+      '12:00',
+      '15:59',
+      '16:00',
+      '18:59',
+      '19:00',
+      '23:59',
+    ])('writes %s with no Latin letters and no narrow no-break space', (time) => {
+      const text = formatLocalTime(time, 'ur');
+      expect(text).not.toMatch(/[A-Za-z]/);
+      expect(text).not.toContain('\u202f');
+    });
+
+    it('says "بجے" once in a schedule line', () => {
+      const line = plain(
+        messages.ur['session.schedule.everyDay'].replace('{time}', formatLocalTime('21:00', 'ur')),
+      );
+      expect(line).toBe('ہر روز رات 9:00 بجے');
+      expect(line.split('بجے')).toHaveLength(2);
+      expect(
+        plain(
+          messages.ur['console.posters.source.daily'].replace(
+            '{time}',
+            formatLocalTime('21:00', 'ur'),
+          ),
+        ),
+      ).toBe('روزانہ رات 9:00');
+    });
+
+    it('leaves English without marks or a narrow no-break space', () => {
+      expect(formatLocalTime('21:30', 'en')).not.toMatch(/[\u2066-\u2069\u202f]/);
+    });
+  });
 });
 
 describe('the form', () => {
