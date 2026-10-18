@@ -260,6 +260,44 @@ describe.each(matrix)('drawing details in $name', (combo) => {
   });
 });
 
+describe('style guide icons (D17)', () => {
+  const added = [
+    'arrow-forward',
+    'arrow-back',
+    'masjid',
+    'compass',
+    'ticket',
+    'qr',
+    'phone',
+    'minus',
+    'sun',
+    'sliders',
+    'play',
+    'check-circle',
+  ] as const;
+
+  it('are part of the kit set and each draws something', () => {
+    for (const name of added) {
+      expect(iconNames, name).toContain(name);
+      const { unmount } = renderThemed(<Icon name={name} accessibilityLabel={name} />);
+      expect(screen.getByRole('img', { name }).childElementCount, name).toBeGreaterThan(0);
+      unmount();
+    }
+  });
+
+  it('mirror the arrows in right to left and leave the objects alone', () => {
+    for (const name of added) {
+      const { unmount } = renderThemed(<Icon name={name} />, { locale: 'ur' });
+      const flipped = screen.getByTestId(`icon-${name}`).style.transform.includes('scaleX(-1)');
+      expect(flipped, name).toBe(name === 'arrow-forward' || name === 'arrow-back');
+      unmount();
+    }
+    const { unmount } = renderThemed(<Icon name="arrow-forward" />, { locale: 'en' });
+    expect(screen.getByTestId('icon-arrow-forward').style.transform).not.toContain('scaleX(-1)');
+    unmount();
+  });
+});
+
 describe('HeroHeader shapes', () => {
   it('draws the eight-point pattern only on request (D17), and never in high contrast', () => {
     const { unmount } = renderThemed(<HeroHeader title="Home" pattern />);
