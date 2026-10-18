@@ -56,7 +56,19 @@ From `docs/security/review.md`. Edited only `infra/`, `.github/`, root `.env.exa
 
     Throughput flattens at about 140 req/s between 50 and 100 VUs, which is where p95 jumps. Per-route p95/p99 were only in the report file, which was lost with the container; the next run prints it. Postgres CPU, connections and top statements were not recorded (no `pg_stat_statements` on staging, no host metrics access through the API). Staging shares a Dokploy host with other apps and uses the default limits (api 1 CPU, 512 MB), so absolute numbers are not production-sized.
 
-  - Restore drill: not run yet. The procedure needs host-level commands (`docker compose exec/run`, `age`, `rclone`, stop/start of the stack) that on Dokploy mean root on the shared host; waiting for the owner's go-ahead on that approach.
+  - **Load re-run after the worker wake-probe fix** (staging on `956126c`, `WORKER_POLL_MS`/`WORKER_WAKE_MS` unset, load only via `QC_GATE5_ONLY=load`, admin `+923189990002`, 2026-10-18 ~07:56 UTC). 0.00 % failed requests; push lines no longer say "(global counts)" and the timeline (written, first sent, last sent) is printed. Push burst 1,610 rows per step, all sent, `workerLost` 0, one attempt each.
+
+    | Step    | Req/s | p95 (all) | Push post | Drained in | sendPerSecond | Thresholds                                                |
+    | ------- | ----- | --------- | --------- | ---------- | ------------- | --------------------------------------------------------- |
+    | 10 VUs  | 31.2  | 30 ms     | 20 ms     | 9.3 s      | 172           | pass                                                      |
+    | 25 VUs  | 74.0  | 35.8 ms   | 21 ms     | 7.8 s      | 205           | pass                                                      |
+    | 50 VUs  | 134.4 | 166.5 ms  | 131 ms    | 8.1 s      | 198           | pass                                                      |
+    | 100 VUs | 131.1 | 690 ms    | 507 ms    | 9.1 s      | 176           | fail: p95 of every read route, register, unread_count p99 |
+
+    Per-route p95/p99 (ms) at 10 / 25 / 50 / 100 VUs: config 11/16, 16/71, 92/117, 383/454; nearby 33/57, 41/66, 194/227, 704/754; nearby_filtered 29/36, 37/82, 178/205, 639/715; home_next 30/66, 38/99, 185/229, 698/742; session_view 17/29, 26/68, 150/199, 653/733; session_occurrences 16/22, 23/56, 133/172, 556/655; register 46/49, 100/292, 369/452, 957/1011; my_registrations 19/24, 29/96, 165/206, 704/729; unread_count 17/45, 26/78, 180/216, 812/896; ayah 9/77, 13/33, 89/116, 367/455. Throughput flattens at about 130 to 140 req/s from 50 VUs on, so at 100 VUs requests queue: consistent with the api's 1-CPU limit (`QC_API_CPUS` default) on a shared Dokploy host. Push drain passes in every step (limit 100/s). The report's `db` section is empty on staging (no `pg_stat_statements`).
+
+  - **In-stack restore check (owner chose "Inside staging")**: `restore-check` one-shot (profile `restorecheck`, `infra/docker/restore-check-staging.Dockerfile`, `infra/scripts/staging-restore-check.sh`): `pg_dump -Fc` of the live staging database piped through `age` with a throwaway key in the container's tmpfs, restored with `pg_restore --no-owner --no-acl` into `qc_restore_check`, compared, then dropped. **RESTORE CHECK OK**: row counts match in all 41 tables (26,833 rows); md5 over all rows matches for cities, venues, sessions, occurrences, poster_templates, message_templates. Times: backup 0.4 s (1.6 MB encrypted), restore 1.3 s, compare 0.7 s, drop 0.07 s, total 2.6 s. The scratch database is gone; key and dump went with the container. No host access, the stack kept running, no `--replace`.
+  - **Full host drill still needed**: `infra/backup/backup.sh` and `restore.sh` themselves (manifest, checksums, `--replace` beside the live database and the swap, `pre-restore` backup, stopping and starting api and worker, health wait), the poster volume archive, the second location (`rclone`), and the failure tests of step 9. On Dokploy that means root on the shared host (and `age`/`rclone` there); not done.
 
 ### Open
 
