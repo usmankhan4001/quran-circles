@@ -1,7 +1,44 @@
 # Status: api-core
 
-Updated: 2026-10-18 (Gate 5 database performance: query shapes, migration 0012)
+Updated: 2026-10-18 (named prepared statements, change request `2026-10-18-api-named-statements` done)
 Branch: claude/peaceful-archimedes-ain95k
+
+## Done (2026-10-18: named prepared statements, change request `api-named-statements`)
+
+- **Reviewed the patch and applied a safer version** (`apps/api/src/db.ts`: `nameStatements`, `StatementNames`, `isNamable`, `isStaleStatementError`). Problems in the patch:
+  - Its 64-parameter limit never applied, because drizzle passes values as the second argument of `client.query`.
+  - It named BEGIN, COMMIT and ROLLBACK.
+  - It had no recovery from "cached plan must not change result type". On real Postgres 16 even widening a varchar's length triggers that error, and inside a transaction the connection kept failing the statement.
+  - Its memory estimate was low: about 100 kB per named statement measured, so its 500-per-connection cap could reach about 1 GB for 20 connections.
+- **Applied rules:**
+  - Name only statements with 1 to 64 parameters, `IN` lists of at most 20, and no multi-row insert, from their third use on a connection.
+  - At most 64 named statements per connection.
+  - A stale statement is prepared again under a new name; one failed call per connection and statement.
+  - Pool `maxLifetimeSeconds: 3600`.
+  - The worker's pool and PGlite are not affected.
+- **Risks checked:**
+  - Generic plans: 14 hot statements, 40 real parameter sets each, plus a skewed venue. Only `home_next` has a bad generic plan (10.5 ms against 0.63 ms), and auto mode never picks it (estimated 413 against 15.75).
+  - Deploys always restart the API after `migrate`.
+  - Advisory locks still serialise when taken by a named statement.
+  - Details are in the change request ("Applied").
+- **Load, local** (`API_PROCESSES=2`, Postgres alone on one core, ANALYZE after the seed, 2 runs each), main against applied at 150 VUs:
+  - Throughput: 367 and 374 req/s, then 448 and 440.
+  - p95 all requests: 212 and 218 ms, then 43 and 52.
+  - Postgres core: 89 % busy, then 63 to 65 %.
+  - API RSS unchanged (about 560 to 620 MB for primary and 2 workers).
+  - Postgres memory: API backends +3.2 MB each, about 64 MB in total.
+  - Every route and the 100-VU table are in the change request.
+- **Tests:** new `src/test/named-statements.test.ts`, 18 tests. A fake node-postgres client keeps server-side statements and raises the real 0A000 after a "migration". The tests cover:
+  - when a statement may be named (lists, parameter count, multi-row inserts, BEGIN and COMMIT, already named statements);
+  - naming from the third use, without mutating the caller's config;
+  - the per-connection bound, kept by each connection separately;
+  - texts that never recur are never named;
+  - recovery after a result-type change, through both the promise form and the callback form (`pool.query`);
+  - other errors keep the name;
+  - through drizzle, where values arrive as the second argument.
+  - Mutants without the recovery, the bound, the list rule, `minUses`, or with the patch's values bug each fail tests.
+- **Checks:** `@qc/api` 758 passing in 36 files; typecheck, eslint and prettier clean; full `pnpm check` green.
+- **For the platform lane:** re-run the Gate 5 load on staging, which runs Postgres 17.6 (local runs used 16.15). Watch pg_stat_statements mean execution time per statement and backend memory.
 
 ## Done (2026-10-18: Gate 5 database performance, staging p95 over the limits)
 
@@ -36,7 +73,7 @@ Staging at 100 VUs had nearby 503 ms (limit 500), session_view 394 (300), sessio
 
 - **Pool**: measured, kept at 10 per process. At most 14 connections of 20 in use at once; a wait for a connection p95 under 1 ms outside the push burst, 20 to 35 ms during it. Postgres CPU is the limit, not connections (`infra/ENV.md`).
 - Tests: `updates.test.ts` +1 (the one-statement count equals the step-by-step reading, scopes then the rule then reads, for a stranger, a registrant, a cancelled registration, venue and circle followers, a home city and a reader, each with no hint and with either city as the hint; plus the expected counts, so both sides cannot agree on nothing; fails on a mutant without the home-city part of the hint rule). `sessions.test.ts` +3 (nearby pages equal the full ordering at limits 1, 2, 3, 5 and 100, with ties at a venue, ties on start, a venue placed at its area, a session with nothing left, the program filter and a second position; fails on a strict cutoff and on a reach one short. An occurrence stretched over several days that started before the last day is still the next occurrence, first in the session's dates and in `occurrences.list`, and orders the lists; not once it ended; fails on a floor without the long-occurrence part. A session of an unpublished circle is `not_found` on get and dates and absent from the lists). `@qc/api` 740 passing in 35 files; typecheck, eslint and prettier clean.
-- Not applied, change requests: `2026-10-18-api-named-statements.md` (this lane: named prepared statements, measured 150 VUs p95 212.9 to 51.6 ms; plan caching, so the owner's call), `2026-10-18-auth-principal-one-query.md` (auth-scopes: two principal lookups per signed-in request), `2026-10-18-load-runner-analyze.md` (quality and platform: stale planner statistics right after the seed inflated the first baseline about ninefold in database time).
+- Not applied, change requests: `2026-10-18-api-named-statements.md` (this lane: named prepared statements; since applied, see the section above), `2026-10-18-auth-principal-one-query.md` (auth-scopes: two principal lookups per signed-in request), `2026-10-18-load-runner-analyze.md` (quality and platform: stale planner statistics right after the seed inflated the first baseline about ninefold in database time).
 
 ## Done (2026-10-18: the API on 2 CPUs, owner decision)
 
