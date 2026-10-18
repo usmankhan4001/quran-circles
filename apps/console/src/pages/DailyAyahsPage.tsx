@@ -26,7 +26,6 @@ import {
   PageHeader,
   SegmentedControl,
   SelectField,
-  StatRow,
   TableCard,
   TextField,
   type Column,
@@ -176,6 +175,7 @@ export default function DailyAyahsPage() {
       for (let d = from; d <= to; d = addDays(d, 1)) days += 1;
     }
     return {
+      days,
       national: loaded.filter((p) => p.scopeType === 'national').length,
       venue: loaded.filter((p) => p.scopeType === 'venue').length,
       circle: loaded.filter((p) => p.scopeType === 'circle').length,
@@ -278,7 +278,11 @@ export default function DailyAyahsPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.dailyAyahs.title')} intro={t('console.dailyAyahs.intro')} />
+      <PageHeader
+        title={t('console.dailyAyahs.title')}
+        intro={t('console.dailyAyahs.intro')}
+        hidden
+      />
       {notice ? (
         <Banner tone="success" onDismiss={() => setNotice(null)}>
           {notice}
@@ -289,38 +293,13 @@ export default function DailyAyahsPage() {
           {t(errorMessageKeyOf(failure))}
         </Banner>
       ) : null}
-      {picks.status === 'ready' && rangeReady ? (
-        <StatRow
-          label={t('console.kpi.label')}
-          stats={[
-            {
-              id: 'national',
-              label: t('console.dailyAyahs.kpi.national'),
-              value: stats.national,
-              icon: 'book-open-text',
-            },
-            {
-              id: 'venue',
-              label: t('console.dailyAyahs.kpi.venue'),
-              value: stats.venue,
-              icon: 'mosque',
-            },
-            {
-              id: 'circle',
-              label: t('console.dailyAyahs.kpi.circle'),
-              value: stats.circle,
-              icon: 'calendar-blank',
-            },
-            {
-              id: 'gaps',
-              label: t('console.dailyAyahs.kpi.gaps'),
-              value: stats.gaps,
-              tone: 'notice',
-              icon: 'calendar-blank',
-            },
-          ]}
-        />
-      ) : null}
+      <CurationCard
+        days={fallback}
+        today={today}
+        spanDays={rangeReady ? stats.days : null}
+        counts={picks.status === 'ready' && rangeReady ? stats : null}
+        onSchedule={canSetAny ? () => openForm() : null}
+      />
 
       <div className={canSetAny ? 'split' : undefined}>
         <TableCard
@@ -436,6 +415,98 @@ export default function DailyAyahsPage() {
         </Modal>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The artboard's "Daily ayah curation" card: the span and pick counts, the days left to the
+ * built-in list, today's resolved ayah with where it comes from, and the next three days. The
+ * console keeps only surah and ayah numbers, so the Arabic and the translation are not drawn here;
+ * the card says the app's reader shows them.
+ */
+function CurationCard({
+  days,
+  today,
+  spanDays,
+  counts,
+  onSchedule,
+}: {
+  days: ReturnType<typeof fallbackDays>;
+  today: string;
+  spanDays: number | null;
+  counts: { national: number; venue: number; circle: number; gaps: number } | null;
+  onSchedule: (() => void) | null;
+}) {
+  const { t, number, weekday } = useI18n();
+  const reference = useReference();
+  const headingId = useId();
+  const todays = days.find((d) => d.date === today) ?? null;
+  const next = days.filter((d) => d.date > today).slice(0, 3);
+  const short = (d: { surah: number; ayah: number }) =>
+    t('console.dailyAyahs.curation.short', { surah: number(d.surah), ayah: number(d.ayah) });
+  const dayOf = (date: string) => weekday(new Date(`${date}T12:00:00Z`).getUTCDay());
+  const sourceKey =
+    todays?.source === 'national'
+      ? 'console.dailyAyahs.fallback.source.national'
+      : todays?.source === 'venue' || todays?.source === 'circle'
+        ? 'console.dailyAyahs.curation.source.place'
+        : 'console.dailyAyahs.fallback.source.builtIn';
+  return (
+    <section className="card curation-card" aria-labelledby={headingId}>
+      <div className="curation-head">
+        <div>
+          <h2 id={headingId}>{t('console.dailyAyahs.curation.title')}</h2>
+          {counts && spanDays !== null ? (
+            <p className="table-card-sub">
+              {t('console.dailyAyahs.curation.sub', {
+                days: number(spanDays),
+                national: number(counts.national),
+                venue: number(counts.venue),
+                circle: number(counts.circle),
+              })}
+            </p>
+          ) : null}
+        </div>
+        {counts ? (
+          <span className="tag tag-amber">
+            {t('console.dailyAyahs.curation.gaps', { count: number(counts.gaps) })}
+          </span>
+        ) : null}
+      </div>
+      <div className="curation-preview">
+        <div className="curation-preview-head">
+          <span>
+            {todays
+              ? t('console.dailyAyahs.curation.today', { ref: reference(todays) })
+              : t('console.dailyAyahs.curation.todayNone')}
+          </span>
+          {todays ? <span className="curation-source">{t(sourceKey)}</span> : null}
+        </div>
+        <p className="curation-ayah">
+          {todays ? (
+            <span className="ayah-medallion" aria-hidden="true">
+              {number(todays.ayah)}
+            </span>
+          ) : null}
+          <span>{t('console.dailyAyahs.form.textNote')}</span>
+        </p>
+      </div>
+      <div className="curation-foot">
+        <span>
+          {next.length > 0
+            ? t('console.dailyAyahs.curation.next', {
+                list: next.map((d) => `${short(d)} (${dayOf(d.date)})`).join(' · '),
+              })
+            : null}
+        </span>
+        {onSchedule ? (
+          <button type="button" className="link-action" onClick={onSchedule}>
+            {t('console.dailyAyahs.curation.schedule')}
+            <span className="card-foot-hint" aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

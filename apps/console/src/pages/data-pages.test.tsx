@@ -190,14 +190,16 @@ describe.each<Locale>(['en', 'ur'])('registrations page (%s)', (locale) => {
     expect(within(table).getByRole('rowheader', { name: 'Test Registrant 1' })).toBeTruthy();
     expect(within(table).getByText(text('console.exports.noName', locale))).toBeTruthy();
     expect(within(table).getByText(text('console.exports.status.waitlisted', locale))).toBeTruthy();
-    const people = await screen.findByText(text('console.exports.totals.people', locale), {
-      selector: 'dt',
-    });
-    expect(people.closest('div')?.textContent).toContain('4');
+    // The totals sit in the card's grey line, as drawn; the privacy note is its foot.
+    const card = table.closest('.table-card') as HTMLElement;
+    await waitFor(() => expect(card.querySelector('.table-card-sub')?.textContent).toMatch(/·/));
+    const sub = card.querySelector('.table-card-sub')?.textContent ?? '';
+    expect(sub).toContain(
+      text('console.registrations.sub', locale).split(' · ')[1]!.replace('{people}', '4'),
+    );
     expect(
-      screen.getByText(text('console.exports.totals.waitlisted', locale), { selector: 'dt' }),
+      within(card).getByText(text('console.exports.registrations.sensitive', locale)),
     ).toBeTruthy();
-    expect(screen.getByText(text('console.exports.registrations.sensitive', locale))).toBeTruthy();
   });
 
   it('exports the session as CSV through the audited endpoint, with a byte order mark', async () => {
@@ -210,7 +212,7 @@ describe.each<Locale>(['en', 'ur'])('registrations page (%s)', (locale) => {
     });
     await screen.findByRole('table');
     await user.click(
-      screen.getByRole('button', { name: text('console.exports.generate', locale) }),
+      screen.getByRole('button', { name: text('console.registrations.export', locale) }),
     );
     expect(await screen.findByText(text('console.exports.saved', locale))).toBeTruthy();
     expect(
@@ -232,7 +234,7 @@ describe.each<Locale>(['en', 'ur'])('registrations page (%s)', (locale) => {
     });
     await screen.findByRole('table');
     await user.click(
-      screen.getByRole('button', { name: text('console.exports.generate', locale) }),
+      screen.getByRole('button', { name: text('console.registrations.export', locale) }),
     );
     expect(await screen.findByText(text('errors.forbidden', locale))).toBeTruthy();
     expect(downloads.saved).toHaveLength(0);

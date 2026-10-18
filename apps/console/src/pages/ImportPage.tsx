@@ -26,7 +26,6 @@ import {
   PageHeader,
   Section,
   SelectField,
-  StatRow,
   StepIndicator,
   TableCard,
   type BadgeTone,
@@ -208,13 +207,26 @@ export default function ImportPage() {
       id: 'line',
       header: t('console.import.col.line'),
       rowHeader: true,
-      cell: (r) => number(r.line),
+      cell: (r) => (
+        <span className="line-cell" data-prefix={t('console.import.validator.linePrefix')}>
+          {number(r.line)}
+        </span>
+      ),
     },
     { id: 'row', header: t('console.import.col.row'), cell: (r) => r.label },
     {
       id: 'status',
       header: t('console.import.col.status'),
-      cell: (r) => <Badge tone={STATUS_TONE[r.status]}>{t(STATUS_KEYS[r.status])}</Badge>,
+      cell: (r) => (
+        <span className={`dry-status dry-status-${STATUS_TONE[r.status]}`}>
+          <Icon
+            name={STATUS_TONE[r.status] === 'success' ? 'check-circle' : 'warning-circle'}
+            size={13}
+            weight="fill"
+          />
+          {t(STATUS_KEYS[r.status])}
+        </span>
+      ),
     },
     {
       id: 'problems',
@@ -239,51 +251,89 @@ export default function ImportPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.import.title')} intro={t('console.import.intro')} />
-      <StepIndicator
-        label={t('console.import.steps.label')}
-        steps={[
-          t('console.import.step.upload'),
-          t('console.import.step.check'),
-          t('console.import.step.import'),
-        ]}
-        current={
-          phase.name === 'applied' ? 3 : phase.name === 'applying' ? 2 : report || busy ? 1 : 0
-        }
-      />
-      <Banner tone="info" title={t('console.import.dryRun.title')}>
-        {t('console.import.dryRun.help')}
-      </Banner>
-
-      <div className="form form-grid card">
-        <SelectField
-          id="import-kind"
-          label={t('console.import.kind.label')}
-          hint={t(KIND_HINT_KEYS[kind])}
-          value={kind}
-          disabled={busy}
-          onChange={(e) => {
-            setKind(e.target.value as ImportKind);
-            reset();
-          }}
-          options={kinds.map((k) => ({ value: k, label: t(KIND_KEYS[k]) }))}
-        />
-        <div className="form-actions">
-          <Button onClick={() => saveTextFile(`import-template-${kind}.csv`, templateCsv(kind))}>
-            {t('console.import.template.download')}
-          </Button>
+      <PageHeader title={t('console.import.title')} intro={t('console.import.intro')} hidden />
+      <section className="card validator-card" aria-labelledby="validator-title">
+        <div className="validator-head">
+          <span className="validator-icon" aria-hidden="true">
+            <Icon name="file-csv" size={20} weight="duotone" />
+          </span>
+          <div className="validator-title">
+            <h2 id="validator-title">
+              {t('console.import.validator.title')}
+              <span className="validator-state">
+                {' · '}
+                {t(
+                  phase.name === 'applied'
+                    ? 'console.import.validator.state.done'
+                    : report?.canApply
+                      ? 'console.import.validator.state.passed'
+                      : report
+                        ? 'console.import.validator.state.blocked'
+                        : busy
+                          ? 'console.import.validator.state.checking'
+                          : 'console.import.validator.state.waiting',
+                )}
+              </span>
+            </h2>
+            <p className="table-card-sub">{t('console.import.validator.sub')}</p>
+          </div>
+          <span className="file-pill" dir="ltr">
+            {fileName || t('console.import.validator.noFile')}
+          </span>
+          {report ? (
+            <span className="validator-chips">
+              <span className="chip-count chip-count-ok">
+                <Icon name="check" size={11} weight="bold" />
+                {tp('console.import.validator.valid', report.counts.valid)}
+              </span>
+              <span className="chip-count chip-count-warn">
+                {tp('console.import.validator.duplicates', report.counts.duplicate)}
+              </span>
+              <span className="chip-count">
+                {tp('console.import.validator.errors', report.counts.invalid)}
+              </span>
+            </span>
+          ) : null}
+          {report && phase.name !== 'applied' ? (
+            <Button
+              variant="primary"
+              className="btn-small validator-commit"
+              disabled={!report.canApply || phase.name === 'applying'}
+              busy={phase.name === 'applying'}
+              onClick={() => setConfirming(true)}
+            >
+              {tp('console.import.apply', report.counts.valid)}
+            </Button>
+          ) : null}
         </div>
-      </div>
-
-      <Section title={t('console.import.step.upload')}>
-        <div className="form">
+        <StepIndicator
+          label={t('console.import.steps.label')}
+          steps={[
+            t('console.import.step.upload'),
+            t('console.import.step.check'),
+            t('console.import.step.import'),
+          ]}
+          current={
+            phase.name === 'applied' ? 3 : phase.name === 'applying' ? 2 : report || busy ? 1 : 0
+          }
+        />
+        <div className="validator-controls">
+          <SelectField
+            id="import-kind"
+            label={t('console.import.kind.label')}
+            hint={t(KIND_HINT_KEYS[kind])}
+            value={kind}
+            disabled={busy}
+            onChange={(e) => {
+              setKind(e.target.value as ImportKind);
+              reset();
+            }}
+            options={kinds.map((k) => ({ value: k, label: t(KIND_KEYS[k]) }))}
+          />
           <div className="field field-file">
             <label className="field-label" htmlFor="import-file">
               {t('console.import.file.choose')}
             </label>
-            <p id="import-file-hint" className="field-hint">
-              {t('console.import.file.hint', { max: number(DEFAULT_MAX_ROWS) })}
-            </p>
             <input
               ref={fileInput}
               id="import-file"
@@ -294,201 +344,178 @@ export default function ImportPage() {
               disabled={busy}
               onChange={(e) => void onFile(e)}
             />
+            <p id="import-file-hint" className="field-hint">
+              {t('console.import.file.hint', { max: number(DEFAULT_MAX_ROWS) })}
+            </p>
           </div>
+          <Button
+            className="btn-small btn-outline"
+            onClick={() => saveTextFile(`import-template-${kind}.csv`, templateCsv(kind))}
+          >
+            <Icon name="download-simple" size={13} />
+            <span>{t('console.import.template.download')}</span>
+          </Button>
         </div>
-      </Section>
 
-      {phase.name === 'choose' ? <p className="field-hint">{t('console.import.empty')}</p> : null}
-      {phase.name === 'checking' ? <Loading label={t('console.import.dryRun.running')} /> : null}
-      {phase.name === 'failed' && failedFile ? (
-        <Banner tone="danger" title={t('console.import.refused.title')}>
-          {t(failedFile.key, failedFile.params)}
-        </Banner>
-      ) : phase.name === 'failed' ? (
-        <ErrorState
-          error={phase.error}
-          onRetry={fileText !== null ? () => void check(fileText, kind) : undefined}
-        />
-      ) : null}
-
-      {report && phase.name !== 'applied' ? (
-        <Section title={t('console.import.step.check')}>
-          <Banner tone="warning">{t('console.import.nothingSaved')}</Banner>
-          {phase.name === 'reviewed' && phase.refused ? (
-            <Banner tone="danger" title={t('console.import.refused.title')}>
-              {t('console.import.refused.body')}
-            </Banner>
-          ) : null}
-          {phase.name === 'reviewed' && phase.failure !== undefined ? (
-            <Banner tone="danger" title={t('console.import.refused.title')}>
-              <p>
-                {failedFile
-                  ? t(failedFile.key, failedFile.params)
-                  : t(errorMessageKeyOf(phase.failure))}
-              </p>
-              <p>{t('console.import.failed.nothingSaved')}</p>
-            </Banner>
-          ) : null}
-          {report.serverChecked ? (
-            <p className="field-hint">{t('console.import.serverChecked')}</p>
-          ) : null}
-          <StatRow
-            label={t('console.import.summary')}
-            stats={[
-              {
-                id: 'valid',
-                label: t('console.import.count.valid'),
-                value: report.counts.valid,
-                icon: 'check',
-              },
-              {
-                id: 'invalid',
-                label: t('console.import.count.invalid'),
-                value: report.counts.invalid,
-                tone: 'notice',
-                icon: 'warning-circle',
-              },
-              {
-                id: 'duplicate',
-                label: t('console.import.count.duplicate'),
-                value: report.counts.duplicate,
-                icon: 'shield-check',
-              },
-              {
-                id: 'total',
-                label: t('console.import.count.total'),
-                value: report.counts.total,
-                icon: 'file-csv',
-              },
-            ]}
-          />
-
-          {report.fileIssues.length > 0 ? (
-            <ul className="issue-list" aria-label={t('console.import.fileProblems')}>
-              {report.fileIssues.map((i, n) => (
-                <li key={n}>
-                  <Badge tone={i.severity === 'error' ? 'danger' : 'warning'}>
-                    {t(
-                      i.severity === 'error'
-                        ? 'console.import.severity.error'
-                        : 'console.import.severity.warning',
-                    )}
-                  </Badge>{' '}
-                  {i.line > 0 ? `${t('console.import.atLine', { line: number(i.line) })} ` : ''}
-                  {message(i)}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          {report.counts.total === 0 && report.fileIssues.every((i) => i.severity !== 'error') ? (
-            <EmptyState
-              title={t('console.import.noRows.title')}
-              body={t('console.import.noRows.body')}
-            />
-          ) : null}
-
-          {report.canApply ? (
-            <Banner tone="success">{tp('console.import.result.ready', report.counts.valid)}</Banner>
-          ) : report.counts.total > 0 || report.fileIssues.length > 0 ? (
-            <Banner tone="danger" title={t('console.import.blocked.title')}>
-              {report.counts.valid === 0 &&
-              report.counts.invalid === 0 &&
-              report.fileIssues.every((i) => i.severity !== 'error') ? (
-                t('console.import.blocked.nothingNew')
-              ) : (
-                <>
-                  {report.counts.invalid > 0 ? (
-                    <p>{tp('console.import.result.errors', report.counts.invalid)}</p>
-                  ) : null}
-                  <p>{t('console.import.blocked.body')}</p>
-                </>
-              )}
-            </Banner>
-          ) : null}
-
-          {report.counts.total > 0 ? (
-            <TableCard
-              title={t('console.import.problems.title')}
-              filters={
-                <CheckboxField
-                  label={t('console.import.showAll')}
-                  checked={showAll}
-                  onChange={(e) => {
-                    setShowAll(e.target.checked);
-                    setLimit(SHOWN_AT_FIRST);
-                  }}
-                />
-              }
-              action={
-                hasProblems ? (
-                  <Button onClick={downloadReport}>
-                    <Icon name="download-simple" size="sm" />
-                    {t('console.import.errors.download')}
-                  </Button>
-                ) : null
-              }
-            >
-              {issueRows.length > 0 ? (
-                <>
-                  <DataTable
-                    caption={t('console.import.table.caption')}
-                    columns={columns}
-                    rows={issueRows.slice(0, limit)}
-                    rowKey={(r) => String(r.line)}
-                  />
-                  {issueRows.length > limit ? (
-                    <div className="load-more">
-                      <Button onClick={() => setLimit((n) => n + SHOWN_AT_FIRST)}>
-                        {t('console.import.showMore', { count: number(issueRows.length - limit) })}
-                      </Button>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <p className="loading">{t('console.import.noProblems')}</p>
-              )}
-            </TableCard>
-          ) : null}
-
-          <div className="form-actions">
-            <Button
-              variant="primary"
-              disabled={!report.canApply || phase.name === 'applying'}
-              busy={phase.name === 'applying'}
-              onClick={() => setConfirming(true)}
-            >
-              {tp('console.import.apply', report.counts.valid)}
-            </Button>
-            <Button
-              disabled={phase.name === 'applying' || fileText === null}
-              onClick={() => fileText !== null && void check(fileText, kind)}
-            >
-              {t('console.import.checkAgain')}
-            </Button>
-            {hasProblems && report.counts.total === 0 ? (
-              <Button onClick={downloadReport}>{t('console.import.errors.download')}</Button>
-            ) : null}
-            <Button variant="ghost" disabled={phase.name === 'applying'} onClick={reset}>
-              {t('console.import.startAgain')}
-            </Button>
-          </div>
-          {phase.name === 'applying' ? <p role="status">{t('console.import.importing')}</p> : null}
-          <p className="field-hint">{fileName}</p>
-        </Section>
-      ) : null}
-
-      {phase.name === 'applied' ? (
-        <Section title={t('console.import.result')}>
-          <Banner tone="success">
-            {t('console.import.done', { count: number(phase.created) })}
-            {phase.skipped > 0 ? ` ${tp('console.import.skippedExisting', phase.skipped)}` : ''}
+        {phase.name === 'choose' ? <p className="field-hint">{t('console.import.empty')}</p> : null}
+        {phase.name === 'checking' ? <Loading label={t('console.import.dryRun.running')} /> : null}
+        {phase.name === 'failed' && failedFile ? (
+          <Banner tone="danger" title={t('console.import.refused.title')}>
+            {t(failedFile.key, failedFile.params)}
           </Banner>
-          <div className="form-actions">
-            <Button onClick={reset}>{t('console.import.another')}</Button>
-          </div>
-        </Section>
-      ) : null}
+        ) : phase.name === 'failed' ? (
+          <ErrorState
+            error={phase.error}
+            onRetry={fileText !== null ? () => void check(fileText, kind) : undefined}
+          />
+        ) : null}
+
+        {report && phase.name !== 'applied' ? (
+          <Section title={t('console.import.step.check')}>
+            <Banner tone="warning">{t('console.import.nothingSaved')}</Banner>
+            {phase.name === 'reviewed' && phase.refused ? (
+              <Banner tone="danger" title={t('console.import.refused.title')}>
+                {t('console.import.refused.body')}
+              </Banner>
+            ) : null}
+            {phase.name === 'reviewed' && phase.failure !== undefined ? (
+              <Banner tone="danger" title={t('console.import.refused.title')}>
+                <p>
+                  {failedFile
+                    ? t(failedFile.key, failedFile.params)
+                    : t(errorMessageKeyOf(phase.failure))}
+                </p>
+                <p>{t('console.import.failed.nothingSaved')}</p>
+              </Banner>
+            ) : null}
+            {report.serverChecked ? (
+              <p className="field-hint">{t('console.import.serverChecked')}</p>
+            ) : null}
+
+            {report.fileIssues.length > 0 ? (
+              <ul className="issue-list" aria-label={t('console.import.fileProblems')}>
+                {report.fileIssues.map((i, n) => (
+                  <li key={n}>
+                    <Badge tone={i.severity === 'error' ? 'danger' : 'warning'}>
+                      {t(
+                        i.severity === 'error'
+                          ? 'console.import.severity.error'
+                          : 'console.import.severity.warning',
+                      )}
+                    </Badge>{' '}
+                    {i.line > 0 ? `${t('console.import.atLine', { line: number(i.line) })} ` : ''}
+                    {message(i)}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {report.counts.total === 0 && report.fileIssues.every((i) => i.severity !== 'error') ? (
+              <EmptyState
+                title={t('console.import.noRows.title')}
+                body={t('console.import.noRows.body')}
+              />
+            ) : null}
+
+            {report.canApply ? (
+              <Banner tone="success">
+                {tp('console.import.result.ready', report.counts.valid)}
+              </Banner>
+            ) : report.counts.total > 0 || report.fileIssues.length > 0 ? (
+              <Banner tone="danger" title={t('console.import.blocked.title')}>
+                {report.counts.valid === 0 &&
+                report.counts.invalid === 0 &&
+                report.fileIssues.every((i) => i.severity !== 'error') ? (
+                  t('console.import.blocked.nothingNew')
+                ) : (
+                  <>
+                    {report.counts.invalid > 0 ? (
+                      <p>{tp('console.import.result.errors', report.counts.invalid)}</p>
+                    ) : null}
+                    <p>{t('console.import.blocked.body')}</p>
+                  </>
+                )}
+              </Banner>
+            ) : null}
+
+            {report.counts.total > 0 ? (
+              <TableCard
+                title={t('console.import.problems.title')}
+                filters={
+                  <CheckboxField
+                    label={t('console.import.showAll')}
+                    checked={showAll}
+                    onChange={(e) => {
+                      setShowAll(e.target.checked);
+                      setLimit(SHOWN_AT_FIRST);
+                    }}
+                  />
+                }
+                action={
+                  hasProblems ? (
+                    <Button onClick={downloadReport}>
+                      <Icon name="download-simple" size="sm" />
+                      {t('console.import.errors.download')}
+                    </Button>
+                  ) : null
+                }
+              >
+                {issueRows.length > 0 ? (
+                  <>
+                    <DataTable
+                      caption={t('console.import.table.caption')}
+                      columns={columns}
+                      rows={issueRows.slice(0, limit)}
+                      rowKey={(r) => String(r.line)}
+                    />
+                    {issueRows.length > limit ? (
+                      <div className="load-more">
+                        <Button onClick={() => setLimit((n) => n + SHOWN_AT_FIRST)}>
+                          {t('console.import.showMore', {
+                            count: number(issueRows.length - limit),
+                          })}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="loading">{t('console.import.noProblems')}</p>
+                )}
+              </TableCard>
+            ) : null}
+
+            <div className="form-actions">
+              <Button
+                disabled={phase.name === 'applying' || fileText === null}
+                onClick={() => fileText !== null && void check(fileText, kind)}
+              >
+                {t('console.import.checkAgain')}
+              </Button>
+              {hasProblems && report.counts.total === 0 ? (
+                <Button onClick={downloadReport}>{t('console.import.errors.download')}</Button>
+              ) : null}
+              <Button variant="ghost" disabled={phase.name === 'applying'} onClick={reset}>
+                {t('console.import.startAgain')}
+              </Button>
+            </div>
+            {phase.name === 'applying' ? (
+              <p role="status">{t('console.import.importing')}</p>
+            ) : null}
+          </Section>
+        ) : null}
+
+        {phase.name === 'applied' ? (
+          <Section title={t('console.import.result')}>
+            <Banner tone="success">
+              {t('console.import.done', { count: number(phase.created) })}
+              {phase.skipped > 0 ? ` ${tp('console.import.skippedExisting', phase.skipped)}` : ''}
+            </Banner>
+            <div className="form-actions">
+              <Button onClick={reset}>{t('console.import.another')}</Button>
+            </div>
+          </Section>
+        ) : null}
+      </section>
 
       {confirming && report ? (
         <Modal

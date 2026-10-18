@@ -717,16 +717,19 @@ export function DataTable<T>({
   rows,
   rowKey,
   rowClassName,
+  className,
 }: {
   caption: string;
   columns: readonly Column<T>[];
   rows: readonly T[];
   rowKey: (row: T) => string;
   rowClassName?: (row: T) => string | undefined;
+  /** A look of its own, such as the audit log's list rows. */
+  className?: string;
 }) {
   return (
     <div className="table-wrap" role="region" aria-label={caption} tabIndex={0}>
-      <table className="table">
+      <table className={className ? `table ${className}` : 'table'}>
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr>

@@ -134,7 +134,13 @@ describe('searching a table', () => {
       },
     });
     await screen.findByText('Test Registrant A');
-    expect(statValue(text('console.exports.totals.registrations'))).toBe('2');
+    expect(
+      document
+        .querySelector('.table-card-sub')
+        ?.textContent?.includes(
+          text('console.registrations.sub').split(' · ')[0]!.replace('{registrations}', '2'),
+        ),
+    ).toBe(true);
     await user.type(
       screen.getByRole('searchbox', { name: text('console.exports.registrations.search') }),
       '0300 0000092',
@@ -306,9 +312,10 @@ describe.each<Locale>(['en', 'ur'])('admin pages for a national admin (%s)', (lo
     });
     const table = await screen.findByRole('table', { name: text('console.audit.title', locale) });
     expect(within(table).getAllByRole('row')).toHaveLength(4);
-    expect(statValue(text('console.audit.kpi.entries', locale))).toBe('3');
-    expect(statValue(text('console.audit.kpi.people', locale))).toBe('2');
-    expect(statValue(text('console.audit.kpi.exports', locale))).toBe('1');
+    // The counts are on the card's grey line, as drawn.
+    expect(table.closest('.table-card')?.querySelector('.table-card-sub')?.textContent).toBe(
+      fill(text('console.audit.card.sub', locale), { entries: 3, people: 2, exports: 1 }),
+    );
     await user.type(
       screen.getByRole('searchbox', { name: text('console.audit.search', locale) }),
       'export',

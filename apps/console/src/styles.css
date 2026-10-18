@@ -2436,3 +2436,397 @@ html[dir='rtl'] .card-foot-hint::after {
   min-block-size: 2.25rem;
   font-size: 0.75rem;
 }
+
+/* Registrations artboard: quiet section text, the green WhatsApp choice and the lock note. */
+.cell-soft {
+  color: var(--c-text-secondary);
+}
+.cell-ok {
+  color: var(--c-text-accent);
+  font-weight: 600;
+}
+.privacy-note {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.65625rem;
+  color: var(--c-text-muted);
+}
+.back-link {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.table-action .btn-primary .icon {
+  color: var(--c-tag-mint);
+}
+
+/* Daily ayah artboard: the curation card with its mint preview box and dark source pill. */
+.curation-card {
+  display: grid;
+  gap: 0.625rem;
+}
+.curation-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.curation-head h2 {
+  font-size: 0.84375rem;
+  font-weight: 800;
+}
+.curation-preview {
+  padding: 0.75rem 0.875rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--c-accent-subtle);
+  background: linear-gradient(180deg, var(--c-accent-subtle), var(--c-surface));
+}
+.curation-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-sidebar-from);
+}
+html[data-theme='dark'] .curation-preview-head {
+  color: var(--c-text-on-accent-subtle);
+}
+.curation-source {
+  padding: 0.125rem 0.4375rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-sidebar-from);
+  color: var(--c-sidebar-text);
+  font-size: 0.625rem;
+}
+.curation-ayah {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--c-text-secondary);
+}
+.ayah-medallion {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--c-accent);
+  color: var(--c-accent);
+  font-size: 0.625rem;
+  font-weight: 800;
+}
+.curation-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  color: var(--c-text-muted);
+}
+
+/* Import artboard: one validator card. Its head has the CSV tile, title with the dry-run state,
+   the file pill, the count chips and the charcoal commit button; the report sits inside. */
+.validator-card {
+  display: grid;
+  gap: 0.875rem;
+}
+.validator-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+.validator-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 0.625rem;
+  background: var(--c-accent-subtle);
+  color: var(--c-accent);
+}
+.validator-title {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+.validator-title h2 {
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+.validator-state {
+  color: var(--c-text-secondary);
+}
+.file-pill {
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-surface-muted);
+  color: var(--c-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.65625rem;
+  font-weight: 600;
+}
+.validator-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.chip-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5625rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-surface-muted);
+  color: var(--c-text-secondary);
+  font-size: 0.65625rem;
+  font-weight: 700;
+}
+.chip-count-ok {
+  background: var(--c-accent-subtle);
+  color: var(--c-text-on-accent-subtle);
+}
+.chip-count-warn {
+  background: var(--c-warning-subtle);
+  color: var(--c-text-on-warning-subtle);
+}
+.validator-commit::after {
+  content: ' →';
+}
+html[dir='rtl'] .validator-commit::after {
+  content: ' ←';
+}
+.validator-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  background: var(--c-page);
+}
+.validator-controls > .btn {
+  align-self: center;
+  justify-self: start;
+}
+.validator-card .table-card {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.line-cell {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+}
+.line-cell::before {
+  content: attr(data-prefix);
+}
+.dry-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-text-warning);
+}
+.dry-status-success {
+  color: var(--c-text-accent);
+}
+.dry-status-danger {
+  color: var(--c-text-danger);
+}
+.validator-card .section-head h2 {
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+.validator-card .banner {
+  padding-block: 0.5rem;
+  font-size: 0.75rem;
+}
+.validator-card .btn:not(.btn-small) {
+  min-block-size: 2.25rem;
+  padding-inline: 0.875rem;
+  font-size: 0.75rem;
+}
+.validator-card .field-hint {
+  font-size: 0.6875rem;
+}
+
+/* Audit artboard: the log reads as rows on a soft panel, the time at the end edge. */
+.tag-slate {
+  background: var(--c-tag-slate-subtle);
+  color: var(--c-tag-slate);
+}
+.audit-table thead {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.audit-table tbody tr > * {
+  background: var(--c-page);
+  border-block-end: 0.375rem solid var(--c-surface);
+}
+.audit-table tbody tr > :first-child {
+  border-start-start-radius: 0.75rem;
+  border-end-start-radius: 0.75rem;
+}
+.audit-table tbody tr > :last-child {
+  border-start-end-radius: 0.75rem;
+  border-end-end-radius: 0.75rem;
+  text-align: end;
+  white-space: nowrap;
+}
+.audit-entry {
+  display: grid;
+  gap: 0.125rem;
+}
+.audit-who {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--c-text);
+}
+.audit-code {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--c-text-muted);
+}
+.audit-code .code {
+  font-size: inherit;
+  background: none;
+  padding: 0;
+}
+.audit-time {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+}
+
+/* Posters artboard: the batch generator card with poster thumbnails in a row of three. */
+.poster-column.card {
+  gap: 0.75rem;
+}
+.generator-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.generator-head h2 {
+  font-size: 0.84375rem;
+  font-weight: 800;
+}
+.btn-emerald {
+  background: var(--c-sidebar-from);
+  color: var(--c-sidebar-text);
+}
+.btn-emerald:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+.poster-column .poster-source {
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  background: var(--c-page);
+  gap: 0.25rem;
+}
+.poster-source h3 {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  color: var(--c-text-secondary);
+}
+.poster-column .poster-source-list,
+.poster-column .poster-note {
+  font-size: 0.6875rem;
+}
+.poster-column .poster-list {
+  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
+  gap: 0.625rem;
+}
+.poster-column .poster-card {
+  align-content: start;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  box-shadow: none;
+  font-size: 0.6875rem;
+}
+.poster-column .poster-card > :not(.poster-thumb) {
+  margin-inline: 0.625rem;
+}
+.poster-column .poster-card > :last-child {
+  margin-block-end: 0.625rem;
+}
+.poster-thumb {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.375rem;
+  min-block-size: 3rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--c-sidebar-from);
+  color: var(--c-sidebar-text);
+}
+.poster-thumb-story,
+.poster-thumb-link_preview {
+  background: var(--c-text-warning);
+  color: var(--c-sidebar-text);
+}
+.poster-thumb-print_a3 {
+  background: var(--c-sidebar-to);
+}
+.poster-thumb-title {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.poster-column .poster-card-head h3 {
+  font-size: 0.6875rem;
+}
+.poster-column .poster-title {
+  font-size: 0.75rem;
+}
+.poster-column .poster-actions .btn {
+  min-block-size: 2rem;
+  padding-inline: 0.625rem;
+  font-size: 0.6875rem;
+}
+.generator-foot {
+  margin: 0;
+  font-size: 0.65625rem;
+  color: var(--c-text-muted);
+}
+.poster-form-card .field-box {
+  --field-h: 2.25rem;
+}
+.poster-form-card .field-label,
+.poster-form-card .field-legend {
+  font-size: 0.75rem;
+}
+.poster-form-card .input {
+  font-size: 0.75rem;
+}
+.poster-form-card :is(.field-hint, .check-hint) {
+  font-size: 0.6875rem;
+}
+.poster-form-card h2 {
+  font-size: 0.84375rem;
+  font-weight: 800;
+}
+@media (min-width: 64rem) {
+  .split-posters {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    gap: 0.875rem;
+  }
+}

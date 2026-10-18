@@ -12,13 +12,12 @@ import {
   Loading,
   NoMatch,
   PageHeader,
-  SearchField,
   SelectField,
-  StatRow,
   TableCard,
   TextField,
   type Column,
 } from '../components/ui';
+import { useShellCity, useShellSearch } from '../components/ShellFilters';
 import { useI18n } from '../i18n';
 import { auditStats } from '../lib/kpis';
 import { filterBySearch } from '../lib/search';
@@ -41,15 +40,15 @@ export function dayEndUtc(date: string): string | undefined {
 
 /** Who did what, within the person's scope. Rows name actions and records, not personal data. */
 export default function AuditPage() {
-  const { t, localized, dateTime } = useI18n();
+  const { t, localized, dateTime, number } = useI18n();
   const { api } = useSignedIn();
   const dir = useDirectory();
-  const [cityId, setCityId] = useState('');
+  const [cityId] = useShellCity();
   const [venueId, setVenueId] = useState('');
   const [entityType, setEntityType] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [query, setQuery] = useState('');
+  const [query] = useShellSearch(t('console.audit.search'));
 
   const fromUtc = dayStartUtc(from);
   const toUtc = dayEndUtc(to);
@@ -88,98 +87,65 @@ export default function AuditPage() {
     [loaded, query, dir],
   );
 
+  const placeOf = (e: AuditEntry) =>
+    e.venueId
+      ? dir.venueName(e.venueId)
+      : e.cityId
+        ? localized(dir.cities.find((c) => c.id === e.cityId)?.name)
+        : t('console.scope.national');
+
+  // The artboard draws the log as rows: who did it in bold, then the action, record and place in
+  // code type, and the time at the end edge.
   const columns: Column<AuditEntry>[] = [
     {
-      id: 'when',
-      header: t('console.audit.col.when'),
+      id: 'entry',
+      header: t('console.audit.col.entry'),
       rowHeader: true,
-      cell: (e) => dateTime(e.createdAt),
-    },
-    {
-      id: 'who',
-      header: t('console.audit.col.who'),
-      cell: (e) => e.actorName ?? t('console.audit.system'),
-    },
-    { id: 'action', header: t('console.audit.col.action'), cell: (e) => <Code>{e.action}</Code> },
-    {
-      id: 'record',
-      header: t('console.audit.col.record'),
       cell: (e) => (
-        <>
-          <Code>{e.entityType}</Code>
-          {e.entityId ? (
-            <>
-              {' '}
-              <Code>{e.entityId}</Code>
-            </>
-          ) : null}
-        </>
+        <div className="audit-entry">
+          <span className="audit-who">{e.actorName ?? t('console.audit.system')}</span>
+          <span className="audit-code" dir="ltr">
+            <Code>{e.action}</Code>
+            {' · '}
+            <Code>{e.entityType}</Code>
+            {e.entityId ? (
+              <>
+                {' '}
+                <Code>{e.entityId}</Code>
+              </>
+            ) : null}
+            {' · '}
+            <bdi>{placeOf(e)}</bdi>
+          </span>
+        </div>
       ),
     },
     {
-      id: 'scope',
-      header: t('console.audit.col.scope'),
-      cell: (e) =>
-        e.venueId
-          ? dir.venueName(e.venueId)
-          : e.cityId
-            ? localized(dir.cities.find((c) => c.id === e.cityId)?.name)
-            : t('console.scope.national'),
+      id: 'when',
+      header: t('console.audit.col.when'),
+      cell: (e) => <span className="audit-time">{dateTime(e.createdAt)}</span>,
     },
   ];
 
   return (
     <div className="page">
-      <PageHeader title={t('console.audit.title')} intro={t('console.audit.intro')} />
-      {list.status === 'ready' ? (
-        <StatRow
-          label={t('console.kpi.label')}
-          partial={list.hasMore}
-          stats={[
-            {
-              id: 'entries',
-              label: t('console.audit.kpi.entries'),
-              value: stats.entries,
-              icon: 'shield-check',
-            },
-            {
-              id: 'people',
-              label: t('console.audit.kpi.people'),
-              value: stats.people,
-              icon: 'users-three',
-            },
-            {
-              id: 'exports',
-              label: t('console.audit.kpi.exports'),
-              value: stats.exports,
-              icon: 'download-simple',
-            },
-          ]}
-        />
-      ) : null}
+      <PageHeader title={t('console.audit.title')} intro={t('console.audit.intro')} hidden />
       <TableCard
-        search={
-          <SearchField
-            id="audit-search"
-            label={t('console.audit.search')}
-            value={query}
-            onChange={setQuery}
-          />
+        title={t('console.audit.card.title')}
+        subtitle={
+          list.status === 'ready'
+            ? t('console.audit.card.sub', {
+                entries: number(stats.entries),
+                people: number(stats.people),
+                exports: number(stats.exports),
+              })
+            : undefined
         }
+        tag={<span className="tag tag-slate">{t('console.audit.card.tz')}</span>}
+        footer={<span>{t('console.audit.card.foot')}</span>}
         filtersLabel={t('console.shell.filters')}
         filters={
           <>
-            <SelectField
-              id="filter-city"
-              label={t('console.shell.filter.city')}
-              value={cityId}
-              placeholder={t('console.shell.filter.all')}
-              onChange={(e) => {
-                setCityId(e.target.value);
-                setVenueId('');
-              }}
-              options={dir.cities.map((c) => ({ value: c.id, label: localized(c.name) }))}
-            />
             <SelectField
               id="filter-venue"
               label={t('console.shell.filter.venue')}
@@ -224,6 +190,7 @@ export default function AuditPage() {
         {list.status === 'ready' && rows.length > 0 ? (
           <DataTable
             caption={t('console.audit.title')}
+            className="audit-table"
             columns={columns}
             rows={rows}
             rowKey={(e) => e.id}

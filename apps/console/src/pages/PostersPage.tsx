@@ -96,8 +96,9 @@ export default function PostersPage() {
             : t('console.posters.title')
         }
         intro={t('console.posters.intro')}
+        hidden
       />
-      <p>
+      <p className="back-link">
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>
       </p>
       <SessionTabs sessionId={sessionId} place={place} />
@@ -194,9 +195,25 @@ function PostersWorkspace({ session, canCreate }: { session: AdminSession; canCr
 
   return (
     <div className="split split-posters">
-      <div className="poster-column">
-        <section className="card poster-source" aria-labelledby="poster-source-title">
-          <h2 id="poster-source-title">{t('console.posters.source.title')}</h2>
+      <section className="card poster-column" aria-labelledby="poster-list-title">
+        <div className="generator-head">
+          <div>
+            <h2 id="poster-list-title">{t('console.posters.list.title')}</h2>
+            <p className="table-card-sub">{t('console.posters.generator.sub')}</p>
+          </div>
+          {/* Drawn on the artboard; there is no bulk download yet, so it stays off. */}
+          <button
+            type="button"
+            className="btn btn-small btn-emerald"
+            disabled
+            title={t('console.posters.generator.bulkSoon')}
+          >
+            <Icon name="file-pdf" size={13} weight="fill" />
+            <span>{t('console.posters.generator.bulk')}</span>
+          </button>
+        </div>
+        <section className="poster-source" aria-labelledby="poster-source-title">
+          <h3 id="poster-source-title">{t('console.posters.source.title')}</h3>
           <dl className="poster-source-list">
             <div>
               <dt>{t('console.posters.source.when')}</dt>
@@ -209,41 +226,40 @@ function PostersWorkspace({ session, canCreate }: { session: AdminSession; canCr
           </dl>
           <p className="poster-note">{t('console.posters.source.note')}</p>
         </section>
-
-        <section className="poster-list-section" aria-labelledby="poster-list-title">
-          <h2 id="poster-list-title">{t('console.posters.list.title')}</h2>
-          {list.status === 'loading' ? <Loading /> : null}
-          {list.status === 'error' ? (
-            errorKind(list.error) === 'forbidden' ? (
-              <EmptyState
-                title={t('console.posters.forbidden.title')}
-                body={t('console.posters.forbidden.body')}
-              />
-            ) : (
-              <ErrorState error={list.error} onRetry={reload} />
-            )
-          ) : null}
-          {list.status === 'ready' && posters.length === 0 ? (
+        {list.status === 'loading' ? <Loading /> : null}
+        {list.status === 'error' ? (
+          errorKind(list.error) === 'forbidden' ? (
             <EmptyState
-              title={t('console.posters.empty.title')}
-              body={
-                canCreate ? t('console.posters.empty.body') : t('console.posters.empty.readOnly')
-              }
+              title={t('console.posters.forbidden.title')}
+              body={t('console.posters.forbidden.body')}
             />
-          ) : null}
-          {list.status === 'ready' && posters.length > 0 ? (
-            <PosterList
-              posters={posters}
-              templateName={templateName}
-              canCreate={canCreate}
-              onRegenerated={(p) => added([p])}
-              onEdit={(p) =>
-                setEditRequest((prev) => ({ form: formFromPoster(p), n: (prev?.n ?? 0) + 1 }))
-              }
-            />
-          ) : null}
-        </section>
-      </div>
+          ) : (
+            <ErrorState error={list.error} onRetry={reload} />
+          )
+        ) : null}
+        {list.status === 'ready' && posters.length === 0 ? (
+          <EmptyState
+            title={t('console.posters.empty.title')}
+            body={canCreate ? t('console.posters.empty.body') : t('console.posters.empty.readOnly')}
+          />
+        ) : null}
+        {list.status === 'ready' && posters.length > 0 ? (
+          <PosterList
+            posters={posters}
+            templateName={templateName}
+            canCreate={canCreate}
+            onRegenerated={(p) => added([p])}
+            onEdit={(p) =>
+              setEditRequest((prev) => ({ form: formFromPoster(p), n: (prev?.n ?? 0) + 1 }))
+            }
+          />
+        ) : null}
+        <p className="generator-foot">
+          {t('console.posters.generator.foot', {
+            templates: templateList.map((x) => localized(x.name)).join(' & ') || '—',
+          })}
+        </p>
+      </section>
       {canCreate ? (
         <PosterFormCard
           session={session}
@@ -369,6 +385,10 @@ function PosterCard({
 
   return (
     <article className="card poster-card" aria-labelledby={headingId}>
+      <div className={`poster-thumb poster-thumb-${p.format}`} aria-hidden="true">
+        <span className="poster-thumb-title">{title}</span>
+        <Icon name="qr-code" size={16} weight="bold" />
+      </div>
       <div className="poster-card-head">
         <h3 id={headingId}>
           {t('console.posters.card.title', {

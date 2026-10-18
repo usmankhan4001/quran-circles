@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSignedIn } from '../api/auth';
 import { Banner, Button } from './ui';
+import { Icon } from './icons';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf } from '../lib/errors';
 import { saveTextFile, todayStamp } from '../lib/download';
@@ -12,9 +13,12 @@ import { saveTextFile, todayStamp } from '../lib/download';
 export function SessionExportButton({
   sessionId,
   disabled = false,
+  label,
 }: {
   sessionId: string;
   disabled?: boolean;
+  /** The words on the button; the exports page's own wording by default. */
+  label?: string;
 }) {
   const { t } = useI18n();
   const { api } = useSignedIn();
@@ -40,7 +44,10 @@ export function SessionExportButton({
   return (
     <div className="export-action">
       <Button variant="primary" busy={busy} disabled={disabled} onClick={() => void run()}>
-        {busy ? t('console.exports.generating') : t('console.exports.generate')}
+        {label ? <Icon name="download-simple" size={13} weight="bold" /> : null}
+        <span>
+          {busy ? t('console.exports.generating') : (label ?? t('console.exports.generate'))}
+        </span>
       </Button>
       {failure ? (
         <Banner tone="danger" title={t('console.exports.failed')}>

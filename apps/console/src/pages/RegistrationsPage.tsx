@@ -11,9 +11,10 @@ import { useSignedIn } from '../api/auth';
 import { usePaged, useAsync } from '../api/hooks';
 import { SessionExportButton } from '../components/ExportButton';
 import { SessionTabs } from '../components/SessionTabs';
+import { Icon } from '../components/icons';
+import { useShellSearch } from '../components/ShellFilters';
 import {
   Badge,
-  Banner,
   DataTable,
   EmptyState,
   ErrorState,
@@ -22,9 +23,7 @@ import {
   NoMatch,
   PageHeader,
   Phone,
-  SearchField,
   SelectField,
-  StatRow,
   TableCard,
   type BadgeTone,
   type Column,
@@ -54,7 +53,7 @@ export default function RegistrationsPage() {
   const { api, principal } = useSignedIn();
   const [occurrenceId, setOccurrenceId] = useState('');
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
-  const [query, setQuery] = useState('');
+  const [query] = useShellSearch(t('console.exports.registrations.search'));
 
   // The public endpoint knows published sessions; a draft may be missing, and the table still works.
   const session = useAsync(
@@ -102,37 +101,48 @@ export default function RegistrationsPage() {
       })
     : true; // The API still checks; without the session we cannot know the scope here.
 
+  // The artboard's five columns: who, their number, section with party size, the WhatsApp
+  // choice and the status.
   const columns: Column<StaffRegistration>[] = [
     {
       id: 'name',
-      header: t('console.exports.col.name'),
+      header: t('console.registrations.col.attendee'),
       rowHeader: true,
       cell: (r) => r.name ?? t('console.exports.noName'),
     },
-    { id: 'phone', header: t('console.exports.col.phone'), cell: (r) => <Phone value={r.phone} /> },
+    {
+      id: 'phone',
+      header: t('console.registrations.col.phone'),
+      cell: (r) => <Phone value={r.phone} />,
+    },
     {
       id: 'section',
-      header: t('console.exports.col.section'),
-      cell: (r) => t(SECTION_KEYS[r.section]),
+      header: t('console.registrations.col.sectionParty'),
+      cell: (r) => (
+        <span className="cell-soft">
+          {t('console.registrations.sectionParty', {
+            section: t(SECTION_KEYS[r.section]),
+            count: number(r.partySize),
+          })}
+        </span>
+      ),
     },
-    { id: 'party', header: t('console.exports.col.partySize'), cell: (r) => number(r.partySize) },
+    {
+      id: 'whatsapp',
+      header: t('console.registrations.col.whatsapp'),
+      cell: (r) =>
+        r.allowsWhatsapp ? (
+          <span className="cell-ok">{t('console.registrations.whatsapp.on')}</span>
+        ) : (
+          <span className="cell-muted">{t('console.registrations.whatsapp.off')}</span>
+        ),
+    },
     {
       id: 'status',
       header: t('console.exports.col.status'),
       cell: (r) => (
         <Badge tone={STATUS_TONE[r.status]}>{t(REGISTRATION_STATUS_KEYS[r.status])}</Badge>
       ),
-    },
-    {
-      id: 'whatsapp',
-      header: t('console.exports.col.whatsapp'),
-      cell: (r) =>
-        r.allowsWhatsapp ? <Badge tone="accent">{t('ui.on')}</Badge> : <Badge>{t('ui.off')}</Badge>,
-    },
-    {
-      id: 'created',
-      header: t('console.exports.col.registered'),
-      cell: (r) => dateTime(r.createdAt),
     },
   ];
 
@@ -145,52 +155,44 @@ export default function RegistrationsPage() {
             : t('console.exports.registrations.title')
         }
         intro={`${t('console.exports.privacy')} ${t('console.exports.audited')}`}
-        actions={<SessionExportButton sessionId={sessionId} disabled={!canExport} />}
+        hidden
       />
-      <p>
+      <p className="back-link">
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>
       </p>
       <SessionTabs
         sessionId={sessionId}
         place={sessionData ? { cityId: sessionData.cityId, venueId: sessionData.venueId } : null}
       />
-      {totals && list.status === 'ready' ? (
-        <StatRow
-          label={t('console.exports.totals.label')}
-          stats={[
-            {
-              id: 'registrations',
-              label: t('console.exports.totals.registrations'),
-              value: totals.registrations,
-              icon: 'ticket',
-            },
-            {
-              id: 'people',
-              label: t('console.exports.totals.people'),
-              value: totals.people,
-              icon: 'users-three',
-            },
-            {
-              id: 'waitlisted',
-              label: t('console.exports.totals.waitlisted'),
-              value: totals.waitlisted,
-              tone: 'notice',
-              icon: 'clock',
-            },
-          ]}
-        />
-      ) : null}
-      {list.status === 'ready' && list.items.length > 0 ? (
-        <Banner tone="notice">{t('console.exports.registrations.sensitive')}</Banner>
-      ) : null}
       <TableCard
-        search={
-          <SearchField
-            id="registrations-search"
-            label={t('console.exports.registrations.search')}
-            value={query}
-            onChange={setQuery}
+        title={t('console.registrations.cardTitle')}
+        subtitle={
+          totals && list.status === 'ready'
+            ? [
+                sessionData ? localized(sessionData.venue.name) : null,
+                t('console.registrations.sub', {
+                  registrations: number(totals.registrations),
+                  people: number(totals.people),
+                  waitlisted: number(totals.waitlisted),
+                }),
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            : undefined
+        }
+        action={
+          <SessionExportButton
+            sessionId={sessionId}
+            disabled={!canExport}
+            label={t('console.registrations.export')}
           />
+        }
+        footer={
+          <span className="privacy-note">
+            <Icon name="lock-simple" size={12} weight="fill" />
+            <span>{t('console.exports.registrations.sensitive')}</span>{' '}
+            <span>{t('console.exports.audited')}</span>
+          </span>
         }
         filtersLabel={t('console.shell.filters')}
         filters={

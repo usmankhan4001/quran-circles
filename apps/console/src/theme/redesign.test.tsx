@@ -311,7 +311,8 @@ describe.each<Locale>(['en', 'ur'])('restyled pages in %s', (locale) => {
     expect(await screen.findByRole('heading', { level: 1 })).toBeTruthy();
     expect(document.documentElement.dir).toBe(dir);
     expect(await screen.findByRole('table')).toBeTruthy();
-    expect(document.querySelector('.banner-notice')).toBeTruthy();
+    // The notice is the lock line at the card's foot, as drawn.
+    expect(document.querySelector('.table-card-foot .privacy-note')).toBeTruthy();
   });
 
   it('draws the sign-in page as one card with an emerald top and the display settings above it', async () => {

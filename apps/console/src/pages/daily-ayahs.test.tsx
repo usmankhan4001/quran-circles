@@ -130,10 +130,10 @@ describe.each<Locale>(['en', 'ur'])('ayah of the day list (%s)', (locale) => {
       text('console.dailyAyahs.fallback.source.builtIn', locale),
     );
     // The numbers: three place picks, two national, and 29 of 31 days on the built-in list.
-    const stats = screen.getByRole('region', { name: text('console.kpi.label', locale) });
+    // They sit on the curation card's gold tag, as drawn.
     expect(
-      within(stats).getByText(text('console.dailyAyahs.kpi.gaps', locale)).nextSibling?.textContent,
-    ).toBe('29');
+      screen.getByText(text('console.dailyAyahs.curation.gaps', locale).replace('{count}', '29')),
+    ).toBeTruthy();
   });
 
   it.each<TestRole>(['national', 'city', 'venue'])(
