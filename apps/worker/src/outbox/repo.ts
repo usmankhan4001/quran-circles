@@ -327,6 +327,123 @@ export async function applyDeliveryReport(
   return rows.length > 0;
 }
 
+/** What the poll loop's wake probe found. Any of them true means a full pass has work to do. */
+export interface PendingWork {
+  /** An update posted with `notify` whose push rows are still to be written. */
+  fanOut: boolean;
+  /** A `queued` row that is due. */
+  due: boolean;
+  /** A `sending` row whose lease has run out (`reclaimStale` would recover it). */
+  stale: boolean;
+}
+
+/**
+ * The poll loop's cheap check between full passes: one read-only statement of three `EXISTS`
+ * index probes (`updates_push_pending_idx`, `message_outbox_status_next_idx`), no transaction and
+ * no write. It answers whether a full pass (fan-out, reclaim, claim) would find anything, so an idle
+ * worker can look every second without the full pass's dozen statements and two transactions.
+ * Uses the worker's clock, as the claim does, so the two agree on what is due.
+ */
+export async function findPendingWork(db: Db, now: Date): Promise<PendingWork> {
+  const t = tables.messageOutbox;
+  const u = tables.updates;
+  const at = now.toISOString();
+  const [row] = await db
+    .select({
+      fanOut: sql<boolean>`EXISTS (SELECT 1 FROM ${u} WHERE ${u.pushPendingSince} IS NOT NULL)`,
+      due: sql<boolean>`EXISTS (SELECT 1 FROM ${t} WHERE ${t.status} = 'queued' AND ${t.nextAttemptAt} <= ${at}::timestamptz)`,
+      stale: sql<boolean>`EXISTS (SELECT 1 FROM ${t} WHERE ${t.status} = 'sending' AND ${t.nextAttemptAt} <= ${at}::timestamptz)`,
+    })
+    .from(sql`(SELECT 1) AS probe`);
+  return { fanOut: row?.fanOut === true, due: row?.due === true, stale: row?.stale === true };
+}
+
+/** One update's push rows, for `/healthz?update=<id>` (the load test's per-update drain probe). */
+export interface UpdatePushProgress {
+  /** The worker has still to write this update's push rows. */
+  pushPending: boolean;
+  /** When the update was posted (database clock), and the first row written, sent and last sent. */
+  postedAt: string;
+  writtenAt: string | null;
+  firstSentAt: string | null;
+  lastSentAt: string | null;
+  rows: number;
+  queued: number;
+  sending: number;
+  sent: number;
+  /** Failed, dead, skipped or delivered. */
+  other: number;
+  /** Rows whose lease ran out before they were sent (`worker_lost`). */
+  workerLost: number;
+  maxAttempts: number;
+}
+
+const iso = (v: unknown): string | null =>
+  v === null || v === undefined ? null : new Date(v as string | Date).toISOString();
+
+/**
+ * Counts and times of one update's push rows, or null for an unknown update. Counts only, no
+ * recipients or payloads. The mark is read before the rows: the fan-out writes the rows and clears
+ * the mark in one transaction, so once the mark reads cleared, the later rows read sees them all.
+ * `message_outbox` has no index on `update_id`, so this scans the table: it is for the load test
+ * and diagnosis, never the container health check (which does not pass `update`).
+ */
+export async function updatePushProgress(
+  db: Db,
+  updateId: string,
+): Promise<UpdatePushProgress | null> {
+  const t = tables.messageOutbox;
+  const u = tables.updates;
+  const [mark] = await db
+    .select({ pending: sql<boolean>`${u.pushPendingSince} IS NOT NULL`, postedAt: u.createdAt })
+    .from(u)
+    .where(eq(u.id, updateId));
+  if (!mark) return null;
+  const rows = await db
+    .select({
+      status: t.status,
+      n: sql<number>`count(*)::int`,
+      lost: sql<number>`(count(*) FILTER (WHERE ${t.lastErrorCode} = 'worker_lost'))::int`,
+      attempts: sql<number>`max(${t.attempts})::int`,
+      writtenAt: sql<string | null>`min(${t.createdAt})`,
+      firstSentAt: sql<string | null>`min(${t.sentAt})`,
+      lastSentAt: sql<string | null>`max(${t.sentAt})`,
+    })
+    .from(t)
+    .where(eq(t.updateId, updateId))
+    .groupBy(t.status);
+  const out: UpdatePushProgress = {
+    pushPending: mark.pending === true,
+    postedAt: iso(mark.postedAt) ?? '',
+    writtenAt: null,
+    firstSentAt: null,
+    lastSentAt: null,
+    rows: 0,
+    queued: 0,
+    sending: 0,
+    sent: 0,
+    other: 0,
+    workerLost: 0,
+    maxAttempts: 0,
+  };
+  const earliest = (a: string | null, b: string | null): string | null =>
+    a === null ? b : b === null ? a : a < b ? a : b;
+  const latest = (a: string | null, b: string | null): string | null =>
+    a === null ? b : b === null ? a : a > b ? a : b;
+  for (const r of rows) {
+    const n = Number(r.n);
+    out.rows += n;
+    if (r.status === 'queued' || r.status === 'sending' || r.status === 'sent') out[r.status] += n;
+    else out.other += n;
+    out.workerLost += Number(r.lost);
+    out.maxAttempts = Math.max(out.maxAttempts, Number(r.attempts));
+    out.writtenAt = earliest(out.writtenAt, iso(r.writtenAt));
+    out.firstSentAt = earliest(out.firstSentAt, iso(r.firstSentAt));
+    out.lastSentAt = latest(out.lastSentAt, iso(r.lastSentAt));
+  }
+  return out;
+}
+
 /** Counts by status, for the health endpoint and the console. */
 export async function countByStatus(db: Db): Promise<Record<string, number>> {
   const t = tables.messageOutbox;

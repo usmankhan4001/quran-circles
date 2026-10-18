@@ -411,6 +411,32 @@ describe('HTTP handler', () => {
     expect(down.status).toBe(503);
   });
 
+  it('passes a valid ?update= id to the health check and refuses anything else', async () => {
+    const asked: Array<{ update?: string }> = [];
+    const h = createWebhookHandler({
+      appSecret: SECRET,
+      verifyToken: VERIFY,
+      logger: memory,
+      onEvents: async () => {},
+      health: async (query) => {
+        asked.push(query);
+        return { ok: true, update: query.update ? { rows: 3 } : undefined };
+      },
+    });
+    const get = (query: Record<string, string>) =>
+      h({ method: 'GET', path: '/healthz', query, headers: {}, rawBody: new Uint8Array() });
+    const id = '00000000-0000-4000-8000-0000000000aa';
+    const ok = await get({ update: id });
+    expect(ok.status).toBe(200);
+    expect(JSON.parse(ok.body)).toMatchObject({ ok: true, update: { rows: 3 } });
+    expect((await get({})).status).toBe(200);
+    for (const bad of ['', 'abc', `${id}' OR 1=1`, `${id}x`]) {
+      expect(await get({ update: bad })).toMatchObject({ status: 400, body: 'invalid update id' });
+    }
+    // Only the two good requests reached the health check, the first with the id.
+    expect(asked).toEqual([{ update: id }, {}]);
+  });
+
   it('runs end to end over a loopback socket and applies STOP to the database', async () => {
     const user = await seedUser(test.db);
     await seedConsent(test.db, user.id, { purpose: 'session_reminders' });

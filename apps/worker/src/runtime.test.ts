@@ -29,6 +29,7 @@ import { createTestDb, type TestDb } from './test/db';
 import { FAKE_RENDERER_TOKEN, FakeRenderer } from './test/fake-renderer';
 import { createHarness, pushDraft, whatsappDraft, type Harness } from './test/harness';
 import type { SendJob as SendJobData } from './outbox/dispatcher';
+import { findPendingWork, updatePushProgress } from './outbox/repo';
 import {
   seedAuthSession,
   seedConsent,
@@ -600,6 +601,175 @@ describe('push and message lanes', () => {
         'ALTER TABLE updates RENAME COLUMN push_pending_gone TO push_pending_since',
       );
     }
+  });
+});
+
+/** An update posted with `notify`, its pushes still to be written, reaching `people`. */
+async function pendingUpdate(people: number): Promise<{ id: string }> {
+  const author = await seedUser(test.db);
+  for (let i = 0; i < people; i++) await seedDevice(test.db, (await seedUser(test.db)).id);
+  const [update] = await test.db
+    .insert(tables.updates)
+    .values({
+      scopeType: 'national',
+      authorId: author.id,
+      kind: 'announcement',
+      titleEn: 'Taraweeh tonight',
+      bodyEn: 'Synthetic announcement.',
+      publishAt: h.clock.now(),
+      pushPendingSince: h.clock.now(),
+    })
+    .returning({ id: tables.updates.id });
+  return update!;
+}
+
+describe('wake probe (findPendingWork)', () => {
+  it('finds nothing in an idle outbox, nor rows due later or finished', async () => {
+    expect(await findPendingWork(test.db, h.clock.now())).toEqual({
+      fanOut: false,
+      due: false,
+      stale: false,
+    });
+    const user = await seedUser(test.db);
+    const later = await h.queue_(
+      pushDraft('wake-later', user.id, new Date(h.clock.now().getTime() + 60_000)),
+    );
+    const done = await h.queue_(pushDraft('wake-done', user.id, h.clock.now()));
+    await test.db
+      .update(tables.messageOutbox)
+      .set({ status: 'sent' })
+      .where(eq(tables.messageOutbox.id, done.id));
+    // A row being sent whose lease has not run out is not work either.
+    await test.db
+      .update(tables.messageOutbox)
+      .set({ status: 'sending', nextAttemptAt: new Date(h.clock.now().getTime() + 60_000) })
+      .where(eq(tables.messageOutbox.id, later.id));
+    expect(await findPendingWork(test.db, h.clock.now())).toEqual({
+      fanOut: false,
+      due: false,
+      stale: false,
+    });
+  });
+
+  it('sees a pending fan-out, a due row and a lost lease, each on its own', async () => {
+    const update = await pendingUpdate(0);
+    expect(await findPendingWork(test.db, h.clock.now())).toEqual({
+      fanOut: true,
+      due: false,
+      stale: false,
+    });
+    await test.db
+      .update(tables.updates)
+      .set({ pushPendingSince: null })
+      .where(eq(tables.updates.id, update.id));
+
+    const user = await seedUser(test.db);
+    const row = await h.queue_(pushDraft('wake-due', user.id, h.clock.now()));
+    expect(await findPendingWork(test.db, h.clock.now())).toEqual({
+      fanOut: false,
+      due: true,
+      stale: false,
+    });
+    // Claimed with a lease that has since run out.
+    await test.db
+      .update(tables.messageOutbox)
+      .set({ status: 'sending', nextAttemptAt: new Date(h.clock.now().getTime() - 1) })
+      .where(eq(tables.messageOutbox.id, row.id));
+    expect(await findPendingWork(test.db, h.clock.now())).toEqual({
+      fanOut: false,
+      due: false,
+      stale: true,
+    });
+  });
+});
+
+describe('poll loop with the wake probe', () => {
+  // The safety-net interval is a minute here, so anything sent within seconds was started by the
+  // probe, not by the interval.
+  const probeOnly = { dispatchIntervalMs: 60_000, wakeIntervalMs: 100, busyIntervalMs: 100 };
+
+  it("writes and sends a posted update's pushes within a few probe intervals", async () => {
+    const update = await pendingUpdate(3);
+    const startedAt = Date.now();
+    const rt = await start(probeOnly);
+    await until(sentCount, (n) => n === 3, 10_000);
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
+    expect(rt.stats()).toMatchObject({ updatePushes: 1, updatePushRows: 3, sent: 3 });
+    const progress = await updatePushProgress(test.db, update.id);
+    expect(progress).toMatchObject({
+      pushPending: false,
+      rows: 3,
+      queued: 0,
+      sending: 0,
+      sent: 3,
+      other: 0,
+      workerLost: 0,
+      maxAttempts: 1,
+    });
+    expect(progress!.writtenAt).not.toBeNull();
+    expect(progress!.firstSentAt! <= progress!.lastSentAt!).toBe(true);
+  });
+
+  it('wakes for a row queued while idle, and passes no more than once while nothing is due', async () => {
+    const rt = await start(probeOnly);
+    // The start-up pass, then only probes.
+    await until(
+      async () => rt.stats().passes,
+      (n) => n >= 1,
+    );
+    await new Promise((r) => setTimeout(r, 600));
+    expect(rt.stats()).toMatchObject({ passes: 1, wakeups: 0 });
+
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    const row = await h.queue_(pushDraft('wake-idle', user.id, h.clock.now()));
+    await until(
+      () => h.row(row.id),
+      (r) => r.status === 'sent',
+      10_000,
+    );
+    expect(rt.stats().wakeups).toBeGreaterThanOrEqual(1);
+    expect(h.push.sent).toHaveLength(1);
+  });
+
+  it('falls back to a full pass when the probe fails, and logs it', async () => {
+    const rt = await start(probeOnly);
+    await test.pg.exec('ALTER TABLE updates RENAME COLUMN push_pending_since TO push_pending_gone');
+    try {
+      const user = await seedUser(test.db);
+      await seedDevice(test.db, user.id);
+      const row = await h.queue_(pushDraft('wake-broken', user.id, h.clock.now()));
+      await until(
+        () => h.row(row.id),
+        (r) => r.status === 'sent',
+        10_000,
+      );
+      expect(h.logger.lines.some((l) => l.event === 'outbox.wake_probe_failed')).toBe(true);
+    } finally {
+      await rt.stop({ timeoutMs: 5_000 });
+      runtime = undefined;
+      await test.pg.exec(
+        'ALTER TABLE updates RENAME COLUMN push_pending_gone TO push_pending_since',
+      );
+    }
+  });
+
+  it('passes on the interval alone when the probe is off', async () => {
+    const rt = await start({ dispatchIntervalMs: 100, wakeIntervalMs: 0 });
+    const user = await seedUser(test.db);
+    await seedDevice(test.db, user.id);
+    const row = await h.queue_(pushDraft('wake-off', user.id, h.clock.now()));
+    await until(
+      () => h.row(row.id),
+      (r) => r.status === 'sent',
+      10_000,
+    );
+    expect(rt.stats().wakeups).toBe(0);
+    expect(rt.stats().passes).toBeGreaterThan(1);
+  });
+
+  it('reports no progress for an unknown update', async () => {
+    expect(await updatePushProgress(test.db, '00000000-0000-4000-8000-0000000000ff')).toBeNull();
   });
 });
 

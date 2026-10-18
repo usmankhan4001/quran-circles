@@ -7,6 +7,7 @@ import {
   DEFAULT_WHATSAPP_CITY_MONTHLY_BUDGET,
   DEFAULT_WHATSAPP_DAILY_CAP,
 } from './outbox/limits';
+import { DEFAULT_DISPATCH_INTERVAL_MS, DEFAULT_WAKE_INTERVAL_MS } from './outbox/dispatcher';
 
 const optional = z.string().trim().min(1).optional();
 
@@ -15,8 +16,25 @@ export const WorkerEnv = MessagingEnv.extend({
   DATABASE_URL: z.string().trim().min(1),
   /** The port for the WhatsApp webhook and `/healthz`. */
   WORKER_HTTP_PORT: z.coerce.number().int().min(0).max(65535).default(8081),
-  /** How often the dispatcher looks for due outbox rows. */
-  WORKER_POLL_MS: z.coerce.number().int().min(250).max(60_000).default(5_000),
+  /**
+   * The longest the dispatcher goes without a full pass (fan-out, reclaim, claim) whatever the wake
+   * probe says. A safety net: passes normally start from the probe (`WORKER_WAKE_MS`).
+   */
+  WORKER_POLL_MS: z.coerce
+    .number()
+    .int()
+    .min(250)
+    .max(60_000)
+    .default(DEFAULT_DISPATCH_INTERVAL_MS),
+  /**
+   * How often the dispatcher's one-statement wake probe looks for work (a pending update fan-out, a
+   * due row, a lost lease) and starts a pass at once. 0 turns it off: a pass every WORKER_POLL_MS.
+   */
+  WORKER_WAKE_MS: z.coerce
+    .number()
+    .int()
+    .refine((v) => v === 0 || (v >= 100 && v <= 60_000))
+    .default(DEFAULT_WAKE_INTERVAL_MS),
   /** WhatsApp and SMS batches sent at once on this node (one message at a time per batch). */
   WORKER_SEND_CONCURRENCY: z.coerce.number().int().min(1).max(32).default(4),
   /** Push batches sent at once on this node. */

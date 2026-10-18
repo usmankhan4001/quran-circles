@@ -11,6 +11,8 @@ import type { Logger, RetryPolicy } from '@qc/messaging';
 import { POSTER_ENV_NAMES } from './config';
 import type { Clock, Db } from './db';
 import {
+  DEFAULT_DISPATCH_INTERVAL_MS,
+  DEFAULT_WAKE_INTERVAL_MS,
   createDispatcher,
   type SendJob,
   type SendLane,
@@ -18,7 +20,7 @@ import {
   type TickResult,
 } from './outbox/dispatcher';
 import { processJobs, type BatchResult, type ProcessorDeps } from './outbox/processor';
-import { DEFAULT_LEASE_MS, redactFinishedPayloads } from './outbox/repo';
+import { DEFAULT_LEASE_MS, findPendingWork, redactFinishedPayloads } from './outbox/repo';
 import { runOccurrenceTopUp } from './occurrences/top-up';
 import { runMorningAyah, type AyahJobSummary } from './ayah/morning';
 import { runAuthPurge } from './auth/purge';
@@ -64,8 +66,18 @@ export interface RuntimeOptions {
   logger: Logger;
   now: Clock;
   retry?: RetryPolicy;
-  /** How often to look for due outbox rows. Default 5 seconds. 0 turns the loop off (tests drive it). */
+  /**
+   * The longest the poll loop goes without a full pass (fan-out, reclaim, claim), whatever the wake
+   * probe says; with the probe off, how often it passes. Default 30 seconds. 0 turns the loop off
+   * (tests drive it).
+   */
   dispatchIntervalMs?: number;
+  /**
+   * How often the loop runs its one-statement wake probe between passes, starting a pass at once
+   * when an update's pushes are pending, a row is due or a lease ran out. Default 1 second, at
+   * least 100 ms, at most `dispatchIntervalMs`. 0 turns the probe off (a pass every interval).
+   */
+  wakeIntervalMs?: number;
   /** How often idle queue workers poll, in seconds (pg-boss minimum 0.5). Default 2. */
   workPollingSeconds?: number;
   /** WhatsApp and SMS batches handled at once on this node (one message at a time each). Default 4. */
@@ -129,6 +141,9 @@ export interface RuntimeStats {
   /** Updates whose push rows this node wrote, and how many rows. */
   updatePushes: number;
   updatePushRows: number;
+  /** Full passes of the poll loop, and how many of them the wake probe started. */
+  passes: number;
+  wakeups: number;
 }
 
 export interface Runtime {
@@ -163,7 +178,9 @@ export interface Runtime {
  *   one job per row on `outbox-send-push` (push) or `outbox-send` (WhatsApp, SMS). It claims no
  *   more than each lane's in-flight limit (`maxInFlight`), so a burst waits as `queued` rows rather
  *   than as claims whose leases run out on the queue; while a lane is full it looks again every
- *   `busyIntervalMs` instead of every `dispatchIntervalMs`;
+ *   `busyIntervalMs`. Between passes a one-statement wake probe (`findPendingWork`, every
+ *   `wakeIntervalMs`) starts the next pass as soon as there is work, so a posted update's pushes
+ *   are written and sent within about a second without a full pass every second when idle;
  * - exactly-once sending does not rest on the queue: the claim is a compare-and-set, and senders
  *   take a batch's rows in one compare-and-set on the attempt and the claim's lease
  *   (`takeForSending`), renewing the lease. A duplicate or stale job is dropped there and costs no
@@ -269,6 +286,8 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     dead: 0,
     updatePushes: 0,
     updatePushRows: 0,
+    passes: 0,
+    wakeups: 0,
   };
   const count = (result: BatchResult): void => {
     stats.staleJobs += result.skipped;
@@ -513,12 +532,26 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
 
   // The poll loop. One pass at a time; a slow pass delays the next instead of overlapping it.
   // A pass first writes the pushes of at most one posted update, then claims what is due.
-  const intervalMs = options.dispatchIntervalMs ?? 5_000;
+  //
+  // Between passes the loop does not run the full pass (a dozen statements, two transactions) on
+  // a fixed timer. Every `wakeIntervalMs` it runs one read-only probe (`findPendingWork`) and
+  // starts a pass at once when an update's pushes are pending, a row is due or a lease ran out.
+  // So a burst is picked up within about a second while an idle worker costs one cheap statement a
+  // second. `dispatchIntervalMs` is the longest the loop goes without a full pass whatever the
+  // probe says (a safety net), and the interval itself when the probe is off (`wakeIntervalMs` 0).
+  const intervalMs = options.dispatchIntervalMs ?? DEFAULT_DISPATCH_INTERVAL_MS;
+  const wakeMs =
+    (options.wakeIntervalMs ?? DEFAULT_WAKE_INTERVAL_MS) > 0
+      ? Math.min(intervalMs, Math.max(100, options.wakeIntervalMs ?? DEFAULT_WAKE_INTERVAL_MS))
+      : 0;
   const busyMs = Math.min(intervalMs, Math.max(100, options.busyIntervalMs ?? 1_000));
   let stopped = false;
   let timer: NodeJS.Timeout | undefined;
   let inFlight: Promise<unknown> = Promise.resolve();
+  let lastPassAt = Date.now();
   const pass = async (): Promise<boolean> => {
+    lastPassAt = Date.now();
+    stats.passes++;
     let busy = false;
     try {
       busy = (await fanOut()).updates > 0;
@@ -536,16 +569,46 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     }
     return busy;
   };
-  const loop = (delayMs: number): void => {
+  /** True when a full pass should run now: the probe found work, or the safety net is due. */
+  const wanted = async (): Promise<boolean> => {
+    if (Date.now() - lastPassAt >= intervalMs) return true;
+    try {
+      const found = await findPendingWork(options.db, options.now());
+      if (found.fanOut || found.due || found.stale) {
+        stats.wakeups++;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // The pass logs its own failures; a failed probe falls back to the pass rather than waiting.
+      logger.error('outbox.wake_probe_failed', {
+        error: error instanceof Error ? error.name : 'unknown',
+      });
+      return true;
+    }
+  };
+  /** One turn of the loop; resolves with the delay before the next. */
+  const turn = async (afterBusy: boolean): Promise<{ busy: boolean }> => {
+    if (wakeMs === 0 || afterBusy || (await wanted())) return { busy: await pass() };
+    return { busy: false };
+  };
+  const loop = (delayMs: number, afterBusy: boolean): void => {
     if (stopped || intervalMs <= 0) return;
     timer = setTimeout(() => {
-      const run = pass();
+      const run = turn(afterBusy);
       inFlight = run;
-      void run.then((busy) => loop(busy ? busyMs : intervalMs));
+      void run.then(({ busy }) => {
+        // After a pass with more to do, look again soon (and pass without probing); otherwise
+        // probe every `wakeMs`, or pass every `intervalMs` when the probe is off.
+        if (busy) loop(busyMs, true);
+        else loop(wakeMs > 0 ? wakeMs : intervalMs, false);
+      });
     }, delayMs);
     timer.unref();
   };
-  loop(intervalMs);
+  // The first pass on start, after one wake interval (or the interval when the probe is off).
+  lastPassAt = Date.now() - intervalMs;
+  loop(wakeMs > 0 ? wakeMs : intervalMs, false);
 
   return {
     dispatchNow: dispatch,

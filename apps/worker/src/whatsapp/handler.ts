@@ -9,6 +9,7 @@ import {
 
 export const WEBHOOK_PATH = '/webhooks/whatsapp';
 export const MAX_WEBHOOK_BODY_BYTES = 1_000_000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface WebhookRequest {
   method: string;
@@ -33,11 +34,15 @@ export interface WebhookHandlerDeps {
   logger: Logger;
   /** Applies the events. Awaited before answering, so Meta retries when we could not store them. */
   onEvents(events: WhatsAppWebhookEvent[]): Promise<unknown>;
-  /** Answers `/healthz`. */
-  health?: () => Promise<{
+  /**
+   * Answers `/healthz`. `update` is a valid update id from `/healthz?update=<id>` (the load test's
+   * per-update push drain probe); without it the answer stays the plain health check.
+   */
+  health?: (query: { update?: string }) => Promise<{
     ok: boolean;
     details?: Record<string, unknown>;
     metrics?: Record<string, number>;
+    update?: object | null;
   }>;
 }
 
@@ -52,7 +57,12 @@ export function createWebhookHandler(deps: WebhookHandlerDeps) {
   return async function handle(req: WebhookRequest): Promise<WebhookResponse> {
     if (req.path === '/healthz') {
       if (req.method !== 'GET') return text(405, 'method not allowed');
-      const health = deps.health ? await deps.health().catch(() => ({ ok: false })) : { ok: true };
+      const update = req.query.update;
+      // Never reaches the database unless it is an id: anything else is refused here.
+      if (update !== undefined && !UUID.test(update)) return text(400, 'invalid update id');
+      const health = deps.health
+        ? await deps.health(update ? { update } : {}).catch(() => ({ ok: false }))
+        : { ok: true };
       return {
         status: health.ok ? 200 : 503,
         body: JSON.stringify(health),

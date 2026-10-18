@@ -9,7 +9,7 @@ import { startRuntime } from './runtime';
 import { applyWhatsAppEvents } from './whatsapp/apply';
 import { createWebhookHandler, createWebhookServer } from './whatsapp/handler';
 import { createWhatsAppLimits } from './outbox/limits';
-import { countByStatus } from './outbox/repo';
+import { countByStatus, updatePushProgress } from './outbox/repo';
 
 /**
  * The worker process: sends the outbox through pg-boss, keeps reminders in step with the schedule,
@@ -79,6 +79,7 @@ export async function main(env: Record<string, string | undefined> = process.env
     logger,
     now: () => new Date(),
     dispatchIntervalMs: config.WORKER_POLL_MS,
+    wakeIntervalMs: config.WORKER_WAKE_MS,
     sendConcurrency: config.WORKER_SEND_CONCURRENCY,
     pushConcurrency: config.WORKER_PUSH_CONCURRENCY,
     pushBatchSize: config.WORKER_PUSH_BATCH_SIZE,
@@ -103,10 +104,13 @@ export async function main(env: Record<string, string | undefined> = process.env
     onEvents: (events) => applyWhatsAppEvents({ db, logger }, events),
     // `details` stays the outbox counts by status (the load test reads it); `metrics` holds the
     // counters since start, `workerLost` above 0 meaning leases ran out (see `outbox.worker_lost`).
-    health: async () => ({
+    // `/healthz?update=<id>` adds that update's push rows (counts and times only), so the load test
+    // measures its burst alone rather than every message the worker sends meanwhile.
+    health: async (query) => ({
       ok: true,
       details: await countByStatus(db),
       metrics: { ...runtime.stats(), updatePushesPending: await countPendingUpdatePushes(db) },
+      ...(query.update ? { update: await updatePushProgress(db, query.update) } : {}),
     }),
   });
   const server = createWebhookServer(handler, logger);

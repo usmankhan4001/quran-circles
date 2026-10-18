@@ -9,9 +9,19 @@ describe('worker configuration', () => {
     expect(config).toMatchObject({
       MESSAGING_MODE: 'fake',
       WORKER_HTTP_PORT: 8081,
-      WORKER_POLL_MS: 5000,
+      WORKER_POLL_MS: 30_000,
+      WORKER_WAKE_MS: 1000,
       WORKER_SEND_CONCURRENCY: 4,
     });
+  });
+
+  it('reads the wake probe interval: 0 turns it off, otherwise 100 ms to 60 s', () => {
+    expect(parseWorkerEnv({ ...base, WORKER_WAKE_MS: '0' }).WORKER_WAKE_MS).toBe(0);
+    expect(parseWorkerEnv({ ...base, WORKER_WAKE_MS: '100' }).WORKER_WAKE_MS).toBe(100);
+    expect(parseWorkerEnv({ ...base, WORKER_WAKE_MS: '60000' }).WORKER_WAKE_MS).toBe(60_000);
+    for (const bad of ['50', '99', '60001', '-1', '1.5', 'often']) {
+      expect(() => parseWorkerEnv({ ...base, WORKER_WAKE_MS: bad })).toThrow(/WORKER_WAKE_MS/);
+    }
   });
 
   it('reads the occurrence horizon, defaulting to the API value of 90 days', () => {

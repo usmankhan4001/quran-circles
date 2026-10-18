@@ -35,6 +35,18 @@ export const DEFAULT_MAX_IN_FLIGHT: Readonly<Record<SendLane, number>> = {
   message: 100,
 };
 
+/**
+ * The longest the runtime's poll loop goes without a full pass, whatever its wake probe says
+ * (`WORKER_POLL_MS`). A safety net: passes normally start from the probe.
+ */
+export const DEFAULT_DISPATCH_INTERVAL_MS = 30_000;
+
+/**
+ * How often the poll loop's one-statement wake probe (`findPendingWork`) looks for work between
+ * full passes (`WORKER_WAKE_MS`): the most a posted update's pushes wait before being written.
+ */
+export const DEFAULT_WAKE_INTERVAL_MS = 1_000;
+
 /** Rows claimed per statement. A tick claims several batches while there is room. */
 export const DEFAULT_CLAIM_BATCH = 500;
 
