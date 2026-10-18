@@ -8,6 +8,21 @@ import type { CpuSampler, CpuStats } from './procstats';
  * start of each step), pg_stat_database deltas, and pg_stat_activity samples once a second. The
  * statements are normalised by Postgres ($1 placeholders), so no values appear in the report.
  */
+/**
+ * The earliest (`Math.min`) or latest (`Math.max`) of the non-null timestamps, as ISO text, or null
+ * when there are none. The reducer is wrapped so it only ever sees two arguments: passing
+ * `Math.min` straight to `reduce` also hands it the index and the array, which gives NaN.
+ */
+export function pickTime(
+  values: readonly (Date | null)[],
+  f: (a: number, b: number) => number,
+): string | null {
+  const ms = values.flatMap((v) => (v ? [v.getTime()] : []));
+  const first = ms[0];
+  if (first === undefined) return null;
+  return new Date(ms.slice(1).reduce((a, b) => f(a, b), first)).toISOString();
+}
+
 export interface StatementRow {
   query: string;
   calls: number;
@@ -218,13 +233,6 @@ export function databaseProbe(databaseUrl: string): DrainProbe & { close(): Prom
            FROM message_outbox WHERE update_id = $1 GROUP BY status`,
         [updateId],
       );
-      const pick = (
-        values: (Date | null)[],
-        f: (a: number, b: number) => number,
-      ): string | null => {
-        const ms = values.flatMap((v) => (v ? [v.getTime()] : []));
-        return ms.length ? new Date(ms.reduce(f)).toISOString() : null;
-      };
       const posted = mark.rows[0]?.posted;
       const out: OutboxCounts = {
         queued: 0,
@@ -239,15 +247,15 @@ export function databaseProbe(databaseUrl: string): DrainProbe & { close(): Prom
           ? {
               times: {
                 postedAt: posted.toISOString(),
-                writtenAt: pick(
+                writtenAt: pickTime(
                   res.rows.map((r) => r.written),
                   Math.min,
                 ),
-                firstSentAt: pick(
+                firstSentAt: pickTime(
                   res.rows.map((r) => r.first),
                   Math.min,
                 ),
-                lastSentAt: pick(
+                lastSentAt: pickTime(
                   res.rows.map((r) => r.last),
                   Math.max,
                 ),
