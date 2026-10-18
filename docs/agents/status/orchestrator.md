@@ -2,15 +2,15 @@
 
 ## Gate sign-offs
 
-| Gate | Wave                      | Signed off by | Date       | Notes                                                                                                                                       |
-| ---- | ------------------------- | ------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Wave 0, scaffold          | pending       |            | Scaffold, CI and briefs are written. VPS and Meta need you                                                                                  |
-| 1    | Wave 1, contracts         | Muhammad      | 2026-10-16 | Scope matrix reviewed and approved; contracts, db, mock server and message formats built                                                    |
-| 2    | Wave 2, parallel build    | pending       |            | All lanes built and pushed, `pnpm check` passes. Open: UI catalog review (paused for the UI redesign), backups and restore on staging, seed |
-| 3    | Wave 3, integration       |               |            |                                                                                                                                             |
-| 4    | Wave 4, features          |               |            |                                                                                                                                             |
-| 5    | Wave 5, hardening         |               |            |                                                                                                                                             |
-| 6    | Wave 6, pilot and release |               |            |                                                                                                                                             |
+| Gate | Wave                      | Signed off by | Date       | Notes                                                                                                                                                                                                                        |
+| ---- | ------------------------- | ------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Wave 0, scaffold          | pending       |            | Scaffold, CI and briefs are written. VPS and Meta need you                                                                                                                                                                   |
+| 1    | Wave 1, contracts         | Muhammad      | 2026-10-16 | Scope matrix reviewed and approved; contracts, db, mock server and message formats built                                                                                                                                     |
+| 2    | Wave 2, parallel build    | pending       |            | All lanes built and pushed, `pnpm check` passes. Open: UI catalog review (paused for the UI redesign), backups and restore on staging, seed                                                                                  |
+| 3    | Wave 3, integration       |               |            |                                                                                                                                                                                                                              |
+| 4    | Wave 4, features          |               |            |                                                                                                                                                                                                                              |
+| 5    | Wave 5, hardening         | pending       |            | Staging at 4469c21: scope 0 mismatches, load passes every step (268 req/s, p95 119 ms at 100 VUs, API 2 CPUs), in-stack restore check passes. Open: real low-end phone run, full host restore drill on the production server |
+| 6    | Wave 6, pilot and release |               |            |                                                                                                                                                                                                                              |
 
 ## Lanes
 
