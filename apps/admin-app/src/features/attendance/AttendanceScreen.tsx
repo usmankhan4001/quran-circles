@@ -1,17 +1,19 @@
 import { useReducer, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import type { AdminOccurrence, Attendance } from '@qc/contracts';
 import { ApiClientError } from '@qc/contracts';
 import {
   Button,
   Card,
-  Checkbox,
   EmptyState,
+  Icon,
   SeatMeter,
   Text,
   TextField,
   Toast,
   isolate,
+  minTouchTarget,
+  radii,
   spacing,
   useTheme,
 } from '@qc/ui';
@@ -24,7 +26,7 @@ import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import { Stepper } from '../../components/Stepper';
-import { formatInstantDate, formatInstantTime } from '../../lib/time';
+import { formatInstantDate, formatInstantTime, isToday } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -74,9 +76,17 @@ export function AttendanceScreen({
 
   const allowed = session.data ? sessionAbilities(principal, session.data).markAttendance : true;
 
+  const live = occurrence.data ? isToday(occurrence.data.startsAt, now) : false;
   return (
     <Screen
-      title={t('admin.attendance.title')}
+      title={live ? t('admin.attendance.tonightTitle') : t('admin.attendance.title')}
+      actions={
+        live ? (
+          <Text testID="attendance-live" variant="caption" color="textAccent" strong>
+            {t('admin.attendance.live')}
+          </Text>
+        ) : undefined
+      }
       subtitle={
         occurrence.data
           ? `${formatInstantDate(occurrence.data.startsAt, locale)} · ${formatInstantTime(occurrence.data.startsAt, locale)}`
@@ -168,28 +178,116 @@ function AttendanceForm({
 
   return (
     <View style={{ gap: spacing.lg }} testID="attendance-form">
-      <Card>
+      <Card testID="attendance-headcount-card">
         <View style={{ gap: spacing.md }}>
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="title3" heading={2}>
-              {t('admin.attendance.headcount.help')}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+            }}
+          >
+            <Text variant="label" strong heading={2}>
+              {t('admin.attendance.presentCount', { count: n(state.headcount) })}
             </Text>
             <Text variant="caption" color="textSecondary">
-              {t('admin.attendance.tick.help')}
+              {t('admin.attendance.includesDropIns')}
             </Text>
           </View>
-          <Stepper
+          <View
             testID="attendance-headcount"
-            large
-            label={t('admin.attendance.headcount.label')}
-            value={state.headcount}
-            min={0}
-            max={MAX_HEADCOUNT}
-            onChange={(value) => {
-              setTyped(null);
-              dispatch({ type: 'setHeadcount', value });
+            role="group"
+            aria-label={t('admin.attendance.headcount.label')}
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: spacing.md,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.hairline,
+              backgroundColor: colors.surfaceMuted,
             }}
-          />
+          >
+            <View
+              style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, flexGrow: 1 }}
+            >
+              <Text testID="attendance-headcount-value" variant="display" lang="en">
+                {n(state.headcount)}
+              </Text>
+              <Text variant="caption" color="textSecondary">
+                {t('admin.attendance.inHall')}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <CountButton
+                testID="attendance-headcount-decrease"
+                label="−1"
+                accessibilityLabel={t('admin.common.decrease', {
+                  label: t('admin.attendance.headcount.label'),
+                })}
+                disabled={state.headcount <= 0}
+                onPress={() => {
+                  setTyped(null);
+                  dispatch({ type: 'setHeadcount', value: Math.max(0, state.headcount - 1) });
+                }}
+              />
+              <CountButton
+                testID="attendance-headcount-increase"
+                label="+1"
+                tone="emerald"
+                accessibilityLabel={t('admin.common.increase', {
+                  label: t('admin.attendance.headcount.label'),
+                })}
+                disabled={state.headcount >= MAX_HEADCOUNT}
+                onPress={() => {
+                  setTyped(null);
+                  dispatch({
+                    type: 'setHeadcount',
+                    value: Math.min(MAX_HEADCOUNT, state.headcount + 1),
+                  });
+                }}
+              />
+              <CountButton
+                testID="attendance-headcount-plus-five"
+                label="+5"
+                tone="tint"
+                wide
+                accessibilityLabel={t('admin.attendance.plusFive')}
+                disabled={state.headcount >= MAX_HEADCOUNT}
+                onPress={() => {
+                  setTyped(null);
+                  dispatch({
+                    type: 'setHeadcount',
+                    value: Math.min(MAX_HEADCOUNT, state.headcount + 5),
+                  });
+                }}
+              />
+            </View>
+          </View>
+          {capacity !== null && capacity !== undefined ? (
+            <View style={{ gap: spacing.xs }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  justifyContent: 'space-between',
+                  gap: spacing.sm,
+                }}
+              >
+                <Text variant="caption" color="textSecondary">
+                  {t('admin.attendance.hallCapacity')}
+                </Text>
+                <Text variant="caption" strong>
+                  {t('admin.home.seats', { taken: n(state.headcount), capacity: n(capacity) })}
+                </Text>
+              </View>
+              <SeatMeter taken={state.headcount} capacity={capacity} />
+            </View>
+          ) : null}
           <TextField
             testID="attendance-headcount-input"
             label={t('admin.attendance.typeNumber')}
@@ -208,113 +306,88 @@ function AttendanceForm({
               {t('admin.attendance.tickedTotal', { count: n(total) })}
             </Text>
           ) : null}
-          {capacity !== null && capacity !== undefined ? (
-            <View style={{ gap: spacing.xs, paddingTop: spacing.xs }}>
-              <SeatMeter taken={state.headcount} capacity={capacity} />
-              <Text variant="caption" color="textSecondary">
-                {t('admin.home.seats', { taken: n(state.headcount), capacity: n(capacity) })}
-              </Text>
-            </View>
-          ) : null}
         </View>
       </Card>
 
-      <Card padding="none" testID="attendance-tick-list">
-        {/* As drawn: the title and "N of M ticked" on the start side, "Mark everyone" on the end. */}
-        <View style={{ padding: spacing.lg, gap: spacing.xs }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: spacing.sm,
-            }}
-          >
-            <View style={{ flexGrow: 1, flexShrink: 1, flexBasis: 160, gap: spacing.xxs }}>
-              <Text variant="title3" heading={2}>
-                {t('admin.attendance.registeredTitle')}
-              </Text>
-              {registrants.items.length > 0 ? (
-                <Text variant="label" color="textAccent" testID="attendance-ticked-count">
-                  {t('admin.attendance.ticked', {
-                    present: n(tickedPeople),
-                    total: n(registrants.items.length),
-                  })}
-                </Text>
-              ) : null}
-            </View>
-            {registrants.items.length > 0 ? (
-              <Button
-                testID="attendance-tick-all"
-                label={t('admin.attendance.markAll')}
-                variant="secondary"
-                icon="check"
-                onPress={() =>
-                  dispatch({
-                    type: 'tickAll',
-                    people: registrants.items.map((r) => ({
-                      registrationId: r.id,
-                      count: r.partySize,
-                    })),
-                  })
-                }
-              />
-            ) : null}
-          </View>
-          <Text variant="caption" color="textSecondary">
-            {t('admin.attendance.registeredHelper')}
+      <View testID="attendance-tick-list" style={{ gap: spacing.sm }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: spacing.sm,
+          }}
+        >
+          <Text variant="title3" heading={2}>
+            {t('admin.attendance.registeredTitle')}
           </Text>
-          {tickedPeople > 0 ? (
-            <View style={{ flexDirection: 'row' }}>
+          {registrants.items.length > 0 ? (
+            <Text variant="caption" color="textAccent" strong testID="attendance-ticked-count">
+              {t('admin.attendance.ticked', {
+                present: n(tickedPeople),
+                total: n(registrants.items.length),
+              })}
+            </Text>
+          ) : null}
+        </View>
+        {registrants.items.length > 0 ? (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <Button
+              testID="attendance-tick-all"
+              label={t('admin.attendance.markAll')}
+              variant="secondary"
+              icon="check"
+              onPress={() =>
+                dispatch({
+                  type: 'tickAll',
+                  people: registrants.items.map((r) => ({
+                    registrationId: r.id,
+                    count: r.partySize,
+                  })),
+                })
+              }
+            />
+            {tickedPeople > 0 ? (
               <Button
                 testID="attendance-clear"
                 label={t('admin.attendance.clear')}
                 variant="tertiary"
                 onPress={() => dispatch({ type: 'clearTicks' })}
               />
-            </View>
-          ) : null}
-        </View>
+            ) : null}
+          </View>
+        ) : null}
         <QueryBoundary query={registrants.query} testID="attendance-registrants">
           {() =>
             registrants.items.length === 0 ? (
-              <View style={{ paddingBottom: spacing.lg }}>
-                <EmptyState
-                  title={t('admin.attendance.noRegistrantsTitle')}
-                  description={t('admin.attendance.noRegistrantsBody')}
-                />
-              </View>
+              <EmptyState
+                title={t('admin.attendance.noRegistrantsTitle')}
+                description={t('admin.attendance.noRegistrantsBody')}
+              />
             ) : (
-              <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-                {registrants.items.map((r, i) => (
-                  <View
+              <View style={{ gap: spacing.sm }}>
+                {registrants.items.map((r) => (
+                  <CheckInRow
                     key={r.id}
-                    style={{
-                      paddingVertical: spacing.sm,
-                      borderTopWidth: i === 0 ? 0 : 1,
-                      borderTopColor: colors.border,
-                    }}
-                  >
-                    <Checkbox
-                      testID={`attendance-tick-${r.id}`}
-                      label={r.name ? isolate(r.name) : t('admin.registrants.noName')}
-                      description={t('admin.registrants.party', { count: n(r.partySize) })}
-                      checked={r.id in state.ticked}
-                      onChange={(on) =>
-                        dispatch(
-                          on
-                            ? { type: 'tick', registrationId: r.id, count: r.partySize }
-                            : { type: 'untick', registrationId: r.id },
-                        )
-                      }
-                    />
-                  </View>
+                    testID={`attendance-tick-${r.id}`}
+                    name={r.name ? isolate(r.name) : t('admin.registrants.noName')}
+                    sub={t('admin.registrants.party', { count: n(r.partySize) })}
+                    checked={r.id in state.ticked}
+                    onToggle={(on) =>
+                      dispatch(
+                        on
+                          ? { type: 'tick', registrationId: r.id, count: r.partySize }
+                          : { type: 'untick', registrationId: r.id },
+                      )
+                    }
+                  />
                 ))}
                 {registrants.hasMore ? (
                   <Button
                     testID="attendance-more"
                     label={t('admin.registrants.more')}
-                    variant="secondary"
+                    variant="outline"
                     fullWidth
                     loading={registrants.loadingMore}
                     onPress={() => void registrants.loadMore()}
@@ -324,7 +397,7 @@ function AttendanceForm({
             )
           }
         </QueryBoundary>
-      </Card>
+      </View>
 
       <Card>
         <View style={{ gap: spacing.md }}>
@@ -412,7 +485,8 @@ function AttendanceForm({
       <ScreenFooter>
         <Button
           testID="attendance-save"
-          label={t('admin.attendance.save')}
+          label={t('admin.attendance.saveCount', { count: n(state.headcount) })}
+          icon="check"
           size="large"
           fullWidth
           loading={save.status === 'running'}
@@ -420,5 +494,158 @@ function AttendanceForm({
         />
       </ScreenFooter>
     </View>
+  );
+}
+
+/** −1, +1 and +5 by the headcount, as drawn: white, emerald and emerald tint rounds. */
+function CountButton({
+  label,
+  accessibilityLabel,
+  onPress,
+  disabled,
+  tone = 'plain',
+  wide,
+  testID,
+}: {
+  label: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+  disabled?: boolean;
+  tone?: 'plain' | 'emerald' | 'tint';
+  wide?: boolean;
+  testID?: string;
+}) {
+  const { colors, mode } = useTheme();
+  const bg = disabled
+    ? colors.disabledBackground
+    : tone === 'emerald'
+      ? colors.accent
+      : tone === 'tint'
+        ? colors.accentSubtle
+        : colors.surface;
+  const fg = disabled
+    ? 'disabledText'
+    : tone === 'emerald'
+      ? 'textOnAccent'
+      : tone === 'tint'
+        ? 'textOnAccentSubtle'
+        : 'text';
+  return (
+    <Pressable
+      testID={testID}
+      role="button"
+      accessibilityLabel={accessibilityLabel}
+      aria-disabled={disabled || undefined}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minWidth: minTouchTarget,
+        height: minTouchTarget,
+        paddingHorizontal: wide ? spacing.md : 0,
+        borderRadius: radii.pill,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor:
+          tone === 'plain' ? (mode === 'highContrast' ? colors.borderStrong : colors.border) : bg,
+        backgroundColor: pressed && !disabled ? colors.surfaceMuted : bg,
+        opacity: pressed && !disabled ? 0.85 : 1,
+      })}
+    >
+      <Text variant="label" strong color={fg} lang="en" decorative>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * One registered person on the check-in list, as drawn: a white card with an icon tile, the name
+ * and party, and a "Check in" pill that turns into "Checked in" in emerald tint. The whole row is
+ * one checkbox for a screen reader.
+ */
+function CheckInRow({
+  name,
+  sub,
+  checked,
+  onToggle,
+  testID,
+}: {
+  name: string;
+  sub: string;
+  checked: boolean;
+  onToggle: (on: boolean) => void;
+  testID?: string;
+}) {
+  const { t } = useT();
+  const { colors, mode } = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      role="checkbox"
+      aria-checked={checked}
+      accessibilityLabel={`${name}, ${sub}`}
+      onPress={() => onToggle(!checked)}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        minHeight: minTouchTarget + spacing.lg,
+        padding: spacing.md,
+        borderRadius: radii.lg,
+        borderWidth: 1,
+        borderColor: mode === 'highContrast' ? colors.borderStrong : colors.hairline,
+        backgroundColor: pressed ? colors.surfaceMuted : colors.surface,
+      })}
+    >
+      <View
+        aria-hidden
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: radii.md,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: checked ? colors.accentSubtle : colors.surfaceMuted,
+        }}
+      >
+        <Icon
+          name={checked ? 'check-circle' : 'ticket'}
+          size={20}
+          color={checked ? colors.textOnAccentSubtle : colors.textSecondary}
+        />
+      </View>
+      <View style={{ flex: 1, gap: spacing.xxs }}>
+        <Text variant="label" strong decorative>
+          {name}
+        </Text>
+        <Text variant="caption" color="textSecondary" decorative>
+          {sub}
+        </Text>
+      </View>
+      <View
+        aria-hidden
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xxs,
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.xs,
+          borderRadius: radii.pill,
+          borderWidth: 1,
+          borderColor: checked
+            ? colors.accent
+            : mode === 'highContrast'
+              ? colors.borderStrong
+              : colors.border,
+          backgroundColor: checked ? colors.accentSubtle : colors.surface,
+        }}
+      >
+        {checked ? <Icon name="check" size={14} color={colors.textOnAccentSubtle} /> : null}
+        <Text variant="caption" strong color={checked ? 'textOnAccentSubtle' : 'text'} decorative>
+          {checked ? t('admin.attendance.checkedIn') : t('admin.attendance.checkIn')}
+        </Text>
+      </View>
+    </Pressable>
   );
 }

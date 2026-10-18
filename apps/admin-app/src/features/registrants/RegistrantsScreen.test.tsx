@@ -133,7 +133,7 @@ describe('RegistrantsScreen behaviour', () => {
       backend,
     });
     await screen.findByTestId(`registrant-${idOf(ids.sessionDora, 0)}`);
-    fireEvent.click(screen.getByRole('radio', { name: 'Waiting list' }));
+    fireEvent.click(screen.getByRole('radio', { name: /^Waiting list/ }));
     await waitFor(() =>
       expect(backend.callsTo('registrations.forSession').at(-1)?.query.status).toBe('waitlisted'),
     );

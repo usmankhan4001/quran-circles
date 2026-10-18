@@ -1,23 +1,24 @@
 import { Icon, TabBar, type IconName, type TabItem } from '@qc/ui';
 import { useT } from '../appearance/AppearanceProvider';
 
-export type MainTabKey = 'index' | 'updates' | 'places' | 'account';
+export type MainTabKey = 'index' | 'registrants' | 'updates' | 'places';
 
-export const mainTabOrder: readonly MainTabKey[] = ['index', 'places', 'updates', 'account'];
+/** As drawn (D17): Today, tonight's registrants, updates, the masjid. Account opens from Places. */
+export const mainTabOrder: readonly MainTabKey[] = ['index', 'registrants', 'updates', 'places'];
 
-/** The drawings' line icons from the kit (Today is the calendar, Places the map pin). */
+/** The drawings' line icons from the kit (Today is the calendar, the masjid its dome). */
 const iconOf: Record<MainTabKey, IconName> = {
   index: 'calendar',
-  places: 'pin',
+  registrants: 'people',
   updates: 'bell',
-  account: 'user',
+  places: 'masjid',
 };
 
 const labelKey = {
   index: 'admin.tabs.today',
+  registrants: 'admin.tabs.registrants',
   updates: 'admin.tabs.updates',
   places: 'admin.tabs.places',
-  account: 'admin.tabs.account',
 } as const;
 
 /** The bottom menu: the kit's TabBar with this app's four destinations. */

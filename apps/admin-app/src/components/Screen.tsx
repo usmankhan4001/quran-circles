@@ -1,9 +1,10 @@
 import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { HeroHeader, screenGutter, spacing, useTheme } from '@qc/ui';
+import { HeroHeader, IconButton, Text, screenGutter, spacing, useTheme } from '@qc/ui';
 
 export interface ScreenProps {
-  title: string;
+  /** The screen title. A hero screen may leave it out when its content carries the heading. */
+  title?: string;
   subtitle?: string;
   /** A short line above the title, inside the green header. */
   eyebrow?: string;
@@ -11,6 +12,14 @@ export interface ScreenProps {
   backLabel?: string;
   /** `IconButton`s with `variant="onHero"`, or a `Tag`, at the end of the header's top row. */
   actions?: ReactNode;
+  /** At the start of the green header's top row, such as the scope pill (D17). */
+  leading?: ReactNode;
+  /**
+   * `hero` (tabs): the green header that fades into the page. `plain` (D17, every screen with a
+   * back button): a white bar with the back button, the title centred and `actions` at the end.
+   * Defaults to `plain` when there is a back button.
+   */
+  variant?: 'hero' | 'plain';
   /** Extra content inside the green header, under the title. */
   hero?: ReactNode;
   children: ReactNode;
@@ -23,7 +32,55 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   content: { padding: screenGutter, gap: spacing.lg, paddingBottom: spacing.xxl },
   footer: { padding: screenGutter, gap: spacing.sm },
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.xs,
+  },
+  side: { flexGrow: 1, flexBasis: 0, minWidth: 48, flexDirection: 'row', alignItems: 'center' },
+  end: { justifyContent: 'flex-end' },
+  titles: { flexShrink: 1, alignItems: 'center', paddingHorizontal: spacing.xs },
 });
+
+/** D17: the white bar of a screen opened from another: back, the title centred, a status at the end. */
+function PlainHeader({
+  title,
+  subtitle,
+  onBack,
+  backLabel,
+  actions,
+  testID,
+}: Pick<ScreenProps, 'title' | 'subtitle' | 'onBack' | 'backLabel' | 'actions' | 'testID'>) {
+  const { colors, t } = useTheme();
+  return (
+    <View testID={testID} style={[styles.bar, { backgroundColor: colors.background }]}>
+      <View style={styles.side}>
+        {onBack ? (
+          <IconButton
+            icon="chevron-back"
+            accessibilityLabel={backLabel ?? t('ui.back')}
+            onPress={onBack}
+          />
+        ) : null}
+      </View>
+      <View style={styles.titles}>
+        {title ? (
+          <Text variant="title3" heading={1} align="center" numberOfLines={2}>
+            {title}
+          </Text>
+        ) : null}
+        {subtitle ? (
+          <Text variant="caption" color="textSecondary" align="center" numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      <View style={[styles.side, styles.end]}>{actions}</View>
+    </View>
+  );
+}
 
 /** Lets a form deep inside a screen put its main action in the pinned bar at the bottom. */
 const FooterSlot = createContext<((node: ReactNode) => void) | null>(null);
@@ -43,8 +100,9 @@ export function ScreenFooter({ children }: { children: ReactNode }) {
 }
 
 /**
- * The frame of every screen (layout A): the kit's green header, a scrolling body with the
- * standard gutter, and a pinned bar for the main action.
+ * The frame of every screen: the kit's green header on the tabs (or the white bar with a back
+ * button on the screens opened from them, D17), a scrolling body with the standard gutter, and a
+ * pinned bar for the main action.
  */
 export function Screen({
   title,
@@ -53,11 +111,14 @@ export function Screen({
   onBack,
   backLabel,
   actions,
+  leading,
+  variant,
   hero,
   children,
   footer,
   testID,
 }: ScreenProps) {
+  const plain = (variant ?? (onBack ? 'plain' : 'hero')) === 'plain';
   const { colors, mode } = useTheme();
   const [slotted, setSlotted] = useState<ReactNode>(null);
   const bar = footer ?? slotted;
@@ -66,17 +127,30 @@ export function Screen({
   // menu is the `navigation` landmark (the kit's TabBar).
   return (
     <View testID={testID} role="main" style={[styles.fill, { backgroundColor: colors.background }]}>
-      <HeroHeader
-        testID={testID ? `${testID}-hero` : undefined}
-        title={title}
-        subtitle={subtitle}
-        eyebrow={eyebrow}
-        onBack={onBack}
-        backLabel={backLabel}
-        actions={actions}
-      >
-        {hero}
-      </HeroHeader>
+      {plain ? (
+        <PlainHeader
+          testID={testID ? `${testID}-hero` : undefined}
+          title={title}
+          subtitle={subtitle}
+          onBack={onBack}
+          backLabel={backLabel}
+          actions={actions}
+        />
+      ) : (
+        <HeroHeader
+          testID={testID ? `${testID}-hero` : undefined}
+          title={title}
+          subtitle={subtitle}
+          eyebrow={eyebrow}
+          onBack={onBack}
+          backLabel={backLabel}
+          actions={actions}
+          leading={leading}
+        >
+          {hero}
+        </HeroHeader>
+      )}
+      {plain && hero ? <View style={{ paddingHorizontal: screenGutter }}>{hero}</View> : null}
       <ScrollView
         style={styles.fill}
         contentContainerStyle={styles.content}

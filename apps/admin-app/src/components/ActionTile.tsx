@@ -5,47 +5,65 @@ import { AppIcon, type AppIconName } from './glyphs';
 export interface ActionTileProps {
   icon: AppIconName;
   label: string;
+  /** A short line under the label: what the action is about now, never a made-up number. */
+  sub?: string;
   onPress: () => void;
-  /** Two tiles to a row instead of four, for the largest text sizes. */
-  half?: boolean;
+  /** One tile to a row instead of two, for the largest text sizes. */
+  wide?: boolean;
   testID?: string;
 }
 
 /**
- * One of the quick actions under the next session on Today, as drawn: a tinted tile with the
- * icon above a short label. Tiles share a row; at the two largest text sizes they wrap two by two.
+ * D17 quick action: a white tile with an emerald-tint icon square, the label and a short line
+ * under it. Two to a row; one to a row at the two largest text sizes.
  * TODO(kit): replace with a kit quick-action tile when one exists.
  */
-export function ActionTile({ icon, label, onPress, half, testID }: ActionTileProps) {
-  const { colors } = useTheme();
+export function ActionTile({ icon, label, sub, onPress, wide, testID }: ActionTileProps) {
+  const { colors, mode } = useTheme();
   return (
     <Pressable
       testID={testID}
       role="button"
-      accessibilityLabel={label}
+      accessibilityLabel={sub ? `${label}, ${sub}` : label}
       onPress={onPress}
       style={({ pressed }) => ({
         flexGrow: 1,
-        flexBasis: half ? '40%' : 0,
-        minWidth: minTouchTarget + spacing.lg,
-        minHeight: minTouchTarget + spacing.xl,
+        flexBasis: wide ? '100%' : '40%',
+        minHeight: minTouchTarget + spacing.lg,
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: spacing.xs,
+        gap: spacing.sm,
         paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.xs,
+        paddingHorizontal: spacing.md,
         borderRadius: radii.lg,
         borderWidth: 1,
-        borderColor: pressed ? colors.accent : colors.border,
-        backgroundColor: pressed ? colors.accentSubtle : colors.surfaceMuted,
+        borderColor: mode === 'highContrast' ? colors.borderStrong : colors.hairline,
+        backgroundColor: pressed ? colors.surfaceMuted : colors.surface,
       })}
     >
-      <View aria-hidden>
-        <AppIcon name={icon} color={colors.accent} size={22} />
+      <View
+        aria-hidden
+        style={{
+          width: 36,
+          height: 36,
+          borderRadius: radii.md,
+          backgroundColor: colors.accentSubtle,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <AppIcon name={icon} color={colors.textOnAccentSubtle} size={20} />
       </View>
-      <Text variant="caption" color="textSecondary" align="center" decorative>
-        {label}
-      </Text>
+      <View style={{ flex: 1, gap: spacing.xxs }}>
+        <Text variant="label" decorative strong>
+          {label}
+        </Text>
+        {sub ? (
+          <Text variant="caption" color="textSecondary" numberOfLines={1} decorative>
+            {sub}
+          </Text>
+        ) : null}
+      </View>
     </Pressable>
   );
 }

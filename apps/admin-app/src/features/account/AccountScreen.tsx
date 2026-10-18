@@ -19,6 +19,7 @@ import {
   type ColorChoice,
 } from '../../appearance/AppearanceProvider';
 import { useAuth } from '../../auth/AuthProvider';
+import { useNavigation } from '../../navigation/NavigationContext';
 import { Screen } from '../../components/Screen';
 import { ScopeSwitcher } from '../../components/ScopeSwitcher';
 import { isolate } from '@qc/ui';
@@ -28,12 +29,13 @@ export function AccountScreen() {
   const { t } = useT();
   const { colors } = useTheme();
   const { me, signOut } = useAuth();
+  const nav = useNavigation();
   const { locale, setLocale, textSize, setTextSize, colorChoice, setColorChoice } = useAppearance();
   const sizes: TextSizeStep[] = [0, 1, 2, 3];
   // The web downloads the other language's words on a switch; offline, nothing changes.
   const [languageFailed, setLanguageFailed] = useState(false);
   return (
-    <Screen title={t('admin.account.title')} testID="account">
+    <Screen title={t('admin.account.title')} onBack={nav.back} testID="account">
       <Card>
         <View
           style={{

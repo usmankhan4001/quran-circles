@@ -4,13 +4,13 @@ import { MainTabs, type MainTabKey } from '../../shell/MainTabs';
 
 const hrefOf: Record<MainTabKey, string> = {
   index: routes.today(),
+  registrants: routes.tonight(),
   updates: routes.updates(),
   places: routes.places(),
-  account: routes.account(),
 };
 
 function isTab(name: string | undefined): name is MainTabKey {
-  return name === 'index' || name === 'updates' || name === 'places' || name === 'account';
+  return name === 'index' || name === 'registrants' || name === 'updates' || name === 'places';
 }
 
 export default function TabsLayout() {
@@ -29,9 +29,9 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="places" />
+      <Tabs.Screen name="registrants" />
       <Tabs.Screen name="updates" />
-      <Tabs.Screen name="account" />
+      <Tabs.Screen name="places" />
     </Tabs>
   );
 }

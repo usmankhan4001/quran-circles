@@ -1,12 +1,12 @@
 import { View } from 'react-native';
 import type { Session } from '@qc/contracts';
-import { EmptyState, IconButton, SessionCard, Text, isolate, spacing } from '@qc/ui';
+import { EmptyState, IconButton, SessionCard, Text, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi, useAuth } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
-import { ScopeSwitcher } from '../../components/ScopeSwitcher';
+import { ScopePill } from '../../components/ScopePill';
 import { pickLocalized } from '../../lib/localized';
 import {
   formatInstantDate,
@@ -21,8 +21,17 @@ import { routes } from '../../navigation/routes';
 import { canPostAnywhere } from '../post-update/scopes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { TODAY_LIMIT, takeEarlyToday } from './earlyToday';
-import { NextSessionCard } from './NextSessionCard';
+import { AttendanceTrend } from './AttendanceTrend';
+import { NextSessionCard, QuickActions } from './NextSessionCard';
 import { whenSummary } from './sessionText';
+
+const hidden = {
+  position: 'absolute' as const,
+  width: 1,
+  height: 1,
+  overflow: 'hidden' as const,
+  opacity: 0,
+};
 
 export interface TodayScreenProps {
   /** The moment "today" is taken from. Tests pass a fixed one. */
@@ -30,8 +39,9 @@ export interface TodayScreenProps {
 }
 
 /**
- * The first tab (layout A): the next session as a big card with four quick actions, then the
- * other sessions in the working scope, today's first.
+ * The first tab (D17): the scope pill and the bell on the green header, the next session as a
+ * white card half on it, quick actions two by two, then the other sessions in the working scope,
+ * today's first.
  */
 export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const { t, locale } = useT();
@@ -80,15 +90,13 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
     );
   };
 
+  const sessions = query.data;
+  const next = sessions ? nextOf(sessions) : null;
+  const heading = `${t('admin.home.title')} · ${formatLocalDate(pkDateOf(now), locale)}`;
+
   return (
     <Screen
-      eyebrow={
-        me?.displayName
-          ? t('admin.home.greeting', { name: isolate(me.displayName) })
-          : t('admin.home.greetingPlain')
-      }
-      title={t('admin.home.title')}
-      subtitle={formatLocalDate(pkDateOf(now), locale)}
+      leading={<ScopePill />}
       actions={
         canPostAnywhere(principal) ? (
           <IconButton
@@ -100,9 +108,19 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
           />
         ) : undefined
       }
+      hero={
+        <View>
+          {/* The page heading for screen readers; the artboard draws none (D17). */}
+          <View style={hidden}>
+            <Text variant="caption" color="textOnHero" heading={1}>
+              {heading}
+            </Text>
+          </View>
+          {next ? <NextSessionCard session={next} now={now} /> : null}
+        </View>
+      }
       testID="today"
     >
-      <ScopeSwitcher />
       <QueryBoundary query={query} testID="today-data">
         {(sessions) => {
           if (sessions.length === 0) {
@@ -119,19 +137,11 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
             (s) => s.nextOccurrence && isToday(s.nextOccurrence.startsAt, now),
           );
           const others = rest.filter((s) => !todays.includes(s));
-          const nextIsToday = !!next?.nextOccurrence && isToday(next.nextOccurrence.startsAt, now);
           return (
             <View style={{ gap: spacing.lg }}>
-              {next ? (
-                <View style={{ gap: spacing.md }}>
-                  <Text variant="title3" heading={2}>
-                    {nextIsToday ? t('admin.home.todaySection') : t('admin.home.nextSection')}
-                  </Text>
-                  <NextSessionCard session={next} now={now} />
-                  {nextIsToday ? todays.map((s) => row(s, false)) : null}
-                </View>
-              ) : null}
-              {!nextIsToday && todays.length > 0 ? (
+              {next ? <QuickActions session={next} /> : null}
+              {next ? <AttendanceTrend session={next} now={now} /> : null}
+              {todays.length > 0 ? (
                 <View style={{ gap: spacing.md }}>
                   <Text variant="title3" heading={2}>
                     {t('admin.home.todaySection')}

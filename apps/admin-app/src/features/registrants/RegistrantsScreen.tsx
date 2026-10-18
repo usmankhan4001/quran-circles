@@ -1,26 +1,14 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { AdminOccurrence, StaffRegistration } from '@qc/contracts';
-import {
-  Avatar,
-  Button,
-  Card,
-  EmptyState,
-  Select,
-  SegmentedControl,
-  SearchField,
-  Text,
-  isolate,
-  spacing,
-  useTheme,
-} from '@qc/ui';
+import { Button, Card, EmptyState, Select, SearchField, Text, isolate, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
-import { RoundButton } from '../../components/RoundButton';
+import { FilterPills } from '../../components/FilterPills';
 import { Screen } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { type ContactKind } from '../../lib/phone';
@@ -40,13 +28,19 @@ export interface RegistrantsScreenProps {
   /** Seconds between reloads of the live list. Tests pass 0. */
   pollMs?: number;
   onContact?: ContactOpener;
+  /** Shown as the Registrants tab: no back button. */
+  asTab?: boolean;
 }
 
 const LIVE_POLL_MS = 30_000;
 
+type Filter = 'all' | 'checked' | 'pending' | 'waitlisted';
+
 /**
- * Who is coming to a session, with one tap to call or message. The list is the coordinator's
- * working tool, so there is no export here: bulk export lives in the web console.
+ * D17: who is coming to a session, with one tap to message or call. The white bar with the people
+ * count, a search pill, filter pills (all, checked in, pending, waiting list) and a white card for
+ * each person. Checked in comes from the attendance saved for the date. The list is the
+ * coordinator's working tool, so there is no export here: bulk export lives in the web console.
  */
 export function RegistrantsScreen({
   sessionId,
@@ -54,14 +48,16 @@ export function RegistrantsScreen({
   now = new Date(),
   pollMs = LIVE_POLL_MS,
   onContact = openContact,
+  asTab,
 }: RegistrantsScreenProps) {
-  const { t, locale } = useT();
+  const { t, locale, n } = useT();
   const api = useApi();
   const nav = useNavigation();
   const { principal } = useWorkingScope();
   const session = useSession(sessionId);
   const [occurrenceId, setOccurrenceId] = useState<string | undefined>(occurrenceParam);
-  const [status, setStatus] = useState<'confirmed' | 'waitlisted'>('confirmed');
+  const [filter, setFilter] = useState<Filter>('all');
+  const status = filter === 'waitlisted' ? 'waitlisted' : 'confirmed';
   const [search, setSearch] = useState('');
 
   const dates = useQuery<AdminOccurrence[]>(async () => {
@@ -82,9 +78,8 @@ export function RegistrantsScreen({
   const datesSettledEmpty =
     dates.status === 'error' || (dates.status === 'success' && (dates.data?.length ?? 0) === 0);
   const notAvailable = sessionNotAvailable(session);
-  const allowed =
-    !notAvailable &&
-    (session.data ? sessionAbilities(principal, session.data).seeRegistrants : true);
+  const can = session.data ? sessionAbilities(principal, session.data) : null;
+  const allowed = !notAvailable && (can ? can.seeRegistrants : true);
   const list = useRegistrants({
     sessionId,
     occurrenceId,
@@ -93,21 +88,47 @@ export function RegistrantsScreen({
     // Wait for the date to be chosen, so the first request is already for one date.
     enabled: allowed && (Boolean(occurrenceId) || datesSettledEmpty),
   });
+  // Who was ticked as present on this date. Only for people who may see attendance; the list
+  // works without it.
+  const attendance = useQuery(
+    () => api.adminAttendance.get({ params: { occurrenceId: occurrenceId! } }),
+    [occurrenceId],
+    { enabled: allowed && Boolean(occurrenceId) && Boolean(can?.markAttendance) },
+  );
+  const present = new Set(
+    (attendance.data?.entries ?? [])
+      .map((e) => e.registrationId)
+      .filter((id): id is string => Boolean(id)),
+  );
+  const hasChecks = attendance.status === 'success';
 
   // Search narrows the people already loaded; it never asks the server for another list.
   const needle = search.trim().toLocaleLowerCase();
-  const shown = needle
-    ? list.items.filter((r) => (r.name ?? '').toLocaleLowerCase().includes(needle))
-    : list.items;
+  const shown = list.items.filter(
+    (r) =>
+      (!needle || (r.name ?? '').toLocaleLowerCase().includes(needle)) &&
+      (filter === 'checked' ? present.has(r.id) : filter === 'pending' ? !present.has(r.id) : true),
+  );
+  const chosen = dates.data?.find((o) => o.id === occurrenceId);
+  const chosenIsToday = chosen ? isToday(chosen.startsAt, now) : false;
+  const checkedCount = list.items.filter((r) => present.has(r.id)).length;
 
   return (
     <Screen
       title={t('admin.registrants.title')}
       subtitle={session.data ? pickLocalized(session.data.title, locale) : undefined}
-      onBack={nav.back}
+      onBack={asTab ? undefined : nav.back}
+      variant="plain"
+      actions={
+        list.totals ? (
+          <Text testID="registrants-total-people" variant="caption" color="textAccent" strong>
+            {t('admin.registrants.peopleCount', { count: n(list.totals.people) })}
+          </Text>
+        ) : undefined
+      }
       testID="registrants"
       footer={
-        allowed && occurrenceId ? (
+        allowed && occurrenceId && can?.markAttendance !== false ? (
           <Button
             testID="registrants-take-attendance"
             label={t('admin.registrants.takeAttendance')}
@@ -126,8 +147,49 @@ export function RegistrantsScreen({
           <Text>{t('errors.forbidden')}</Text>
         </Card>
       ) : (
-        <View style={{ gap: spacing.lg }}>
-          {dates.data && dates.data.length > 0 ? (
+        <View style={{ gap: spacing.md }}>
+          <SearchField
+            testID="registrants-search"
+            accessibilityLabel={t('admin.registrants.search')}
+            placeholder={t('admin.registrants.search')}
+            value={search}
+            onChangeText={setSearch}
+          />
+          <FilterPills
+            testID="registrants-filter"
+            accessibilityLabel={t('admin.registrants.status.label')}
+            value={filter}
+            onChange={setFilter}
+            options={[
+              {
+                value: 'all',
+                label: t('admin.registrants.filter.all'),
+                count:
+                  list.totals && status === 'confirmed' ? n(list.totals.registrations) : undefined,
+              },
+              ...(hasChecks
+                ? ([
+                    {
+                      value: 'checked',
+                      label: t('admin.registrants.filter.checked'),
+                      count: n(checkedCount),
+                    },
+                    {
+                      value: 'pending',
+                      label: t('admin.registrants.filter.pending'),
+                      count: n(list.items.length - checkedCount),
+                    },
+                  ] as const)
+                : []),
+              {
+                value: 'waitlisted',
+                label: t('admin.registrants.filter.waitlist'),
+                count: list.totals ? n(list.totals.waitlisted) : undefined,
+              },
+            ]}
+          />
+          {/* Tonight's list needs no date picker (as drawn); another date can be chosen. */}
+          {dates.data && dates.data.length > 1 && !chosenIsToday ? (
             <Select
               testID="registrants-date"
               label={t('admin.registrants.date')}
@@ -139,28 +201,9 @@ export function RegistrantsScreen({
               }))}
             />
           ) : null}
-          <SegmentedControl
-            accessibilityLabel={t('admin.registrants.status.label')}
-            value={status}
-            onChange={setStatus}
-            options={[
-              { value: 'confirmed', label: t('admin.registrants.confirmed') },
-              { value: 'waitlisted', label: t('admin.registrants.waitlisted') },
-            ]}
-          />
           <QueryBoundary query={list.query} testID="registrants-list">
             {() => (
               <View style={{ gap: spacing.md }}>
-                {list.totals ? <Totals totals={list.totals} /> : null}
-                {list.items.length > 0 ? (
-                  <SearchField
-                    testID="registrants-search"
-                    accessibilityLabel={t('admin.registrants.search')}
-                    placeholder={t('admin.registrants.search')}
-                    value={search}
-                    onChangeText={setSearch}
-                  />
-                ) : null}
                 {list.items.length === 0 ? (
                   <EmptyState
                     title={t('admin.registrants.empty.title')}
@@ -180,7 +223,7 @@ export function RegistrantsScreen({
                   <Button
                     testID="registrants-more"
                     label={t('admin.registrants.more')}
-                    variant="secondary"
+                    variant="outline"
                     fullWidth
                     loading={list.loadingMore}
                     onPress={() => void list.loadMore()}
@@ -192,54 +235,6 @@ export function RegistrantsScreen({
         </View>
       )}
     </Screen>
-  );
-}
-
-function Totals({
-  totals,
-}: {
-  totals: { registrations: number; people: number; waitlisted: number };
-}) {
-  const { t, n } = useT();
-  const { colors } = useTheme();
-  const stat = (label: string, value: number, id: string, isLast: boolean, isPrimary: boolean) => (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        borderEndWidth: isLast ? 0 : 1,
-        borderEndColor: colors.border,
-        paddingHorizontal: spacing.xs,
-      }}
-      key={id}
-    >
-      <Text
-        variant="title2"
-        align="center"
-        testID={`registrants-total-${id}`}
-        color={isPrimary ? 'textAccent' : undefined}
-      >
-        {n(value)}
-      </Text>
-      <Text variant="caption" color="textSecondary" align="center">
-        {label}
-      </Text>
-    </View>
-  );
-  return (
-    <Card variant="flat">
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        {stat(t('admin.registrants.stat.people'), totals.people, 'people', false, true)}
-        {stat(
-          t('admin.registrants.stat.registrations'),
-          totals.registrations,
-          'registrations',
-          false,
-          false,
-        )}
-        {stat(t('admin.registrants.stat.waitlisted'), totals.waitlisted, 'waitlisted', true, false)}
-      </View>
-    </Card>
   );
 }
 
@@ -256,11 +251,12 @@ function RegistrantCard({
     if (r.phone) onContact(kind, contactUrl(kind, r.phone));
   };
   return (
-    <Card testID={`registrant-${r.id}`}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-        <Avatar name={name} />
-        <View style={{ flex: 1, gap: spacing.xs }}>
-          <Text variant="label">{r.name ? isolate(r.name) : name}</Text>
+    <Card testID={`registrant-${r.id}`} padding="md">
+      <View style={{ gap: spacing.sm }}>
+        <View style={{ gap: spacing.xxs }}>
+          <Text variant="label" strong>
+            {r.name ? isolate(r.name) : name}
+          </Text>
           <Text variant="caption" color="textSecondary">
             {t('admin.registrants.party', { count: n(r.partySize) })} ·{' '}
             {t(`admin.registrants.section.${r.section}`)}
@@ -275,20 +271,29 @@ function RegistrantCard({
         {/* Owner decision 2026-10-17: the number is never shown. The buttons carry the name. */}
         {r.phone ? (
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <RoundButton
-              testID={`registrant-${r.id}-call`}
-              icon="call"
-              accessibilityLabel={t('admin.registrants.callName', { name })}
-              onPress={() => contact('call')}
-            />
             {r.allowsWhatsapp ? (
-              <RoundButton
-                testID={`registrant-${r.id}-whatsapp`}
-                icon="chat"
-                accessibilityLabel={t('admin.registrants.whatsappName', { name })}
-                onPress={() => contact('whatsapp')}
-              />
+              <View style={{ flex: 1 }}>
+                <Button
+                  testID={`registrant-${r.id}-whatsapp`}
+                  label={t('admin.registrants.whatsappShort')}
+                  variant="secondary"
+                  fullWidth
+                  accessibilityLabel={t('admin.registrants.whatsappName', { name })}
+                  onPress={() => contact('whatsapp')}
+                />
+              </View>
             ) : null}
+            <View style={{ flex: 1 }}>
+              <Button
+                testID={`registrant-${r.id}-call`}
+                label={t('admin.registrants.call')}
+                variant="outline"
+                icon="phone"
+                fullWidth
+                accessibilityLabel={t('admin.registrants.callName', { name })}
+                onPress={() => contact('call')}
+              />
+            </View>
           </View>
         ) : null}
       </View>

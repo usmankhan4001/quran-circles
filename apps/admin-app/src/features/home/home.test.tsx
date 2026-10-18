@@ -234,7 +234,7 @@ describe('nextOf', () => {
 });
 
 describe('TodayScreen next session card', () => {
-  it('puts the next session in the big card with its time, people coming and four actions', async () => {
+  it('puts the next session in the big card with its time, people coming, its two buttons and the tiles', async () => {
     const backend = createBackend({ me: meFor('venue') });
     const next = expectedNext(backend, ids.venueAlNoor);
     const { nav } = renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
@@ -250,16 +250,22 @@ describe('TodayScreen next session card', () => {
     // The big card is not repeated in the list below it.
     expect(screen.getAllByTestId(`session-${next.id}`)).toHaveLength(1);
 
+    // D17: "Log attendance" and "Registrants" on the card; attendance, portion, post and the QR
+    // poster as tiles under it.
     fireEvent.click(screen.getByTestId('today-action-registrants'));
     fireEvent.click(screen.getByTestId('today-action-attendance'));
+    fireEvent.click(screen.getByTestId('today-tile-attendance'));
+    fireEvent.click(screen.getByTestId('today-action-portion'));
     fireEvent.click(screen.getByTestId('today-action-post'));
-    fireEvent.click(screen.getByTestId('today-action-time'));
+    fireEvent.click(screen.getByTestId('today-action-posters'));
     const occ = next.nextOccurrence!;
     expect(nav.pushed).toEqual([
       routes.registrants(next.id, isToday(occ.startsAt, FIXTURE_NOW) ? occ.id : undefined),
-      routes.attendance(next.id, next.nextOccurrence!.id),
+      routes.attendance(next.id, occ.id),
+      routes.attendance(next.id, occ.id),
+      routes.occurrence(next.id, occ.id),
       routes.postUpdate(next.id),
-      routes.schedule(next.id),
+      routes.posters(next.id),
     ]);
   });
 
@@ -319,7 +325,7 @@ describe('TodayScreen next session card', () => {
       const backend = createBackend({ me: meFor(kind) });
       renderScreen(<TodayScreen now={FIXTURE_NOW} />, { backend });
       await screen.findByTestId('today-next');
-      for (const id of ['registrants', 'attendance', 'post', 'time']) {
+      for (const id of ['registrants', 'attendance', 'portion', 'post', 'posters']) {
         expect(screen.getByTestId(`today-action-${id}`)).toBeTruthy();
       }
     },

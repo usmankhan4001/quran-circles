@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 describe('Glyph in forced colours (A-07)', () => {
-  it.each(['call', 'chat', 'minus'] as const)(
+  it.each(['chat'] as const)(
     'keeps the %s drawing and drops the theme colour when forced colours are on',
     (name) => {
       emulateForcedColors(true);
@@ -35,8 +35,8 @@ describe('Glyph in forced colours (A-07)', () => {
 
   it('draws in the theme colour when forced colours are off', () => {
     emulateForcedColors(false);
-    render(<Glyph name="minus" color="#ffffff" />);
-    const glyph = screen.getByTestId('glyph-minus');
+    render(<Glyph name="chat" color="#ffffff" />);
+    const glyph = screen.getByTestId('glyph-chat');
     expect(glyph.style.getPropertyValue('forced-color-adjust')).toBe('');
     expect(glyph.outerHTML).toContain('rgb(255, 255, 255)');
   });

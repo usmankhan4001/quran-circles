@@ -1,6 +1,8 @@
 /** Every address in the app, in one place, so screens never build paths by hand. */
 export const routes = {
   today: () => '/',
+  /** The registrants of the next session in the working scope (the second tab). */
+  tonight: () => '/registrants',
   updates: () => '/updates',
   places: () => '/places',
   account: () => '/account',

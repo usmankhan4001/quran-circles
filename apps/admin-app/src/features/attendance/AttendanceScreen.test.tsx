@@ -77,7 +77,7 @@ describe('AttendanceScreen', () => {
       screen.getByTestId(`attendance-tick-${registrant(0).id}`).getAttribute('aria-checked'),
     ).toBe('true');
     expect(screen.getByTestId('attendance-ticked-count').textContent).toMatch(
-      /^([1-9]\d*) of \1 ticked$/,
+      /^([1-9]\d*) \/ \1 checked in$/,
     );
     const total = backend.state.registrants
       .get(ids.sessionDora)!
@@ -88,7 +88,7 @@ describe('AttendanceScreen', () => {
     );
     fireEvent.click(screen.getByTestId('attendance-clear'));
     expect(screen.getByTestId('attendance-ticked-count').textContent).toMatch(
-      /^0 of [1-9]\d* ticked$/,
+      /^0 \/ [1-9]\d* checked in$/,
     );
     expect((screen.getByTestId('attendance-headcount-input') as HTMLInputElement).value).toBe('0');
   });
@@ -195,13 +195,13 @@ describe('AttendanceScreen tick list', () => {
     const list = screen.getByTestId('attendance-tick-list');
     const confirmed = registrantsFor(ids.sessionDora, 4).filter((r) => r.status === 'confirmed');
     expect(within(list).getByTestId('attendance-ticked-count').textContent).toBe(
-      `0 of ${confirmed.length} ticked`,
+      `0 / ${confirmed.length} checked in`,
     );
     expect(within(list).getByTestId('attendance-tick-all')).toBeTruthy();
     expect(within(list).queryByTestId('attendance-clear')).toBeNull();
     fireEvent.click(screen.getByTestId(`attendance-tick-${registrant(0).id}`));
     expect(within(list).getByTestId('attendance-ticked-count').textContent).toBe(
-      `1 of ${confirmed.length} ticked`,
+      `1 / ${confirmed.length} checked in`,
     );
     expect(within(list).getAllByRole('checkbox')).toHaveLength(confirmed.length);
     fireEvent.click(within(list).getByTestId('attendance-clear'));

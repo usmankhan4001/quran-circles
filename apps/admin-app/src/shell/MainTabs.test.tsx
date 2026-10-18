@@ -6,7 +6,7 @@ import { MainTabs, mainTabOrder } from './MainTabs';
 
 function renderTabs(
   locale: 'en' | 'ur',
-  active: 'index' | 'updates' | 'places' | 'account' = 'index',
+  active: 'index' | 'registrants' | 'updates' | 'places' = 'index',
 ) {
   const onChange = vi.fn();
   render(
@@ -23,19 +23,19 @@ function renderTabs(
 
 describe('MainTabs', () => {
   it('has the four destinations in order', () => {
-    expect(mainTabOrder).toEqual(['index', 'places', 'updates', 'account']);
+    expect(mainTabOrder).toEqual(['index', 'registrants', 'updates', 'places']);
   });
 
   it('labels each tab in English and marks the active one', () => {
     renderTabs('en', 'places');
     // Each tab keeps its name for a screen reader; the dock shows icons only (D17), with a dot
     // under the chosen one.
-    for (const name of ['Today', 'Updates', 'Places', 'Account']) {
+    for (const name of ['Today', 'Registrants', 'Updates', 'Places']) {
       expect(screen.getByLabelText(name)).toBeTruthy();
     }
     expect(screen.queryByText('Places')).toBeNull();
     expect(screen.getByTestId('tab-dot-places')).toBeTruthy();
-    for (const g of ['calendar', 'pin', 'bell', 'user']) {
+    for (const g of ['calendar', 'people', 'bell', 'masjid']) {
       expect(screen.getAllByTestId(`icon-${g}`).length).toBeGreaterThan(0);
     }
     expect(screen.getByTestId('tab-places').getAttribute('aria-selected')).toBe('true');

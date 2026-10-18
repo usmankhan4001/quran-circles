@@ -5,7 +5,7 @@ import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen } from '../../components/Screen';
-import { ScopeSwitcher } from '../../components/ScopeSwitcher';
+import { ScopePill } from '../../components/ScopePill';
 import { pickLocalized } from '../../lib/localized';
 import { formatInstantDate, formatInstantTime } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
@@ -25,8 +25,7 @@ export function UpdatesScreen() {
     [filter.cityId, filter.venueId, active?.id],
   );
   return (
-    <Screen title={t('admin.updates.title')} testID="updates">
-      <ScopeSwitcher />
+    <Screen title={t('admin.updates.title')} leading={<ScopePill />} testID="updates">
       {canPostAnywhere(principal) ? (
         <Button
           testID="updates-new"

@@ -2,19 +2,19 @@ import { View } from 'react-native';
 import { Icon, keepColorsInForcedMode, systemColors, useForcedColors, type IconName } from '@qc/ui';
 
 /**
- * The three line icons the kit does not have yet (phone, chat and minus), drawn with views so the
+ * The line icon the kit does not have yet (chat), drawn with views so the
  * app needs no icon font or SVG library. Everything else comes from the kit's `Icon` line set
  * through `AppIcon`. They are decoration: every button that uses
  * one carries its own name for a screen reader. None of them points anywhere, so none flips in
  * right-to-left.
  * TODO(kit): replace with the kit's icon set once it has these names.
  */
-export type GlyphName = 'call' | 'chat' | 'minus';
+export type GlyphName = 'chat';
 
-/** Any icon the app draws: the kit's line set, or one of the three the kit does not have yet. */
+/** Any icon the app draws: the kit's line set, or the one the kit does not have yet. */
 export type AppIconName = IconName | GlyphName;
 
-const glyphNames: ReadonlySet<string> = new Set<GlyphName>(['call', 'chat', 'minus']);
+const glyphNames: ReadonlySet<string> = new Set<GlyphName>(['chat']);
 
 export const isGlyphName = (name: AppIconName): name is GlyphName => glyphNames.has(name);
 
@@ -42,25 +42,6 @@ export function Glyph({ name, color: themed, size = 24 }: GlyphProps) {
   const stroke = Math.max(2, Math.round(size / 12));
   let art;
   switch (name) {
-    case 'call':
-      // A phone held upright: a rounded body with a bar for the home button.
-      art = (
-        <View
-          style={{
-            width: size * 0.54,
-            height: size * 0.88,
-            borderRadius: size * 0.14,
-            borderWidth: stroke,
-            borderColor: color,
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            paddingBottom: size * 0.07,
-          }}
-        >
-          <Bar w={size * 0.2} h={stroke} color={color} />
-        </View>
-      );
-      break;
     case 'chat':
       art = (
         <View
@@ -84,9 +65,6 @@ export function Glyph({ name, color: themed, size = 24 }: GlyphProps) {
           />
         </View>
       );
-      break;
-    case 'minus':
-      art = <Bar w={size * 0.6} h={Math.max(2, Math.round(size / 10))} color={color} />;
       break;
   }
   return (

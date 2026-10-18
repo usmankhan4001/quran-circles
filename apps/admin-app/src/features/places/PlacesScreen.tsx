@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   Icon,
+  IconButton,
   SearchField,
   SegmentedControl,
   Tag,
@@ -20,7 +21,7 @@ import { useApi } from '../../auth/AuthProvider';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { VenueArt } from '../../components/VenueArt';
 import { Screen } from '../../components/Screen';
-import { ScopeSwitcher } from '../../components/ScopeSwitcher';
+import { ScopePill } from '../../components/ScopePill';
 import { pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
@@ -31,10 +32,23 @@ type Tab = 'venues' | 'circles';
 /** Venues and circles in the working scope, with the way into each editor. */
 export function PlacesScreen() {
   const { t } = useT();
+  const nav = useNavigation();
   const [tab, setTab] = useState<Tab>('venues');
   return (
-    <Screen title={t('admin.places.title')} testID="places">
-      <ScopeSwitcher />
+    <Screen
+      title={t('admin.places.title')}
+      leading={<ScopePill />}
+      actions={
+        <IconButton
+          testID="places-account"
+          icon="user"
+          variant="onHero"
+          accessibilityLabel={t('admin.tabs.account')}
+          onPress={() => nav.push(routes.account())}
+        />
+      }
+      testID="places"
+    >
       <SegmentedControl
         accessibilityLabel={t('admin.places.title')}
         value={tab}
