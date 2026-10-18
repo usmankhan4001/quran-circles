@@ -39,7 +39,6 @@ import { formatInstantDate } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { useSession } from '../home/useSession';
-import { whenSummary } from '../home/sessionText';
 import {
   OUT_OF_DATE_KEYS,
   POSTER_ACCENT_KEYS,
@@ -69,6 +68,7 @@ import {
   type PosterForm,
   type PosterFormErrors,
 } from './posters';
+import { PosterPreview } from './PosterPreview';
 import { openLink, saveInBrowser, saveRouteFor } from './saveFile';
 
 /** While a poster is being made, the list asks again this often. */
@@ -94,22 +94,36 @@ export function PostersScreen({ sessionId }: PostersScreenProps) {
   const { t, locale } = useT();
   const nav = useNavigation();
   const session = useSession(sessionId);
+  const [ready, setReady] = useState(false);
   return (
     <Screen
       title={t('admin.posters.title')}
       subtitle={session.data ? pickLocalized(session.data.title, locale) : undefined}
       onBack={nav.back}
+      actions={
+        ready ? (
+          <Text testID="posters-ready" variant="caption" color="textAccent" strong>
+            {t('admin.posters.readyMark')}
+          </Text>
+        ) : undefined
+      }
       testID="posters"
     >
       <QueryBoundary query={session} testID="posters-session" notFoundIsNotAvailable>
-        {(s) => <PostersGate session={s} />}
+        {(s) => <PostersGate session={s} onReady={setReady} />}
       </QueryBoundary>
     </Screen>
   );
 }
 
 /** Checks the right before anything poster-related is asked of the server. */
-function PostersGate({ session }: { session: AdminSession }) {
+function PostersGate({
+  session,
+  onReady,
+}: {
+  session: AdminSession;
+  onReady: (ready: boolean) => void;
+}) {
   const { t } = useT();
   const { principal } = useWorkingScope();
   const can = posterAbilities(principal, session);
@@ -120,15 +134,22 @@ function PostersGate({ session }: { session: AdminSession }) {
       </Card>
     );
   }
-  return <PostersBody session={session} canCreate={can.create} />;
+  return <PostersBody session={session} canCreate={can.create} onReady={onReady} />;
 }
 
 type EditRequest = { form: PosterForm; n: number };
 
-function PostersBody({ session, canCreate }: { session: AdminSession; canCreate: boolean }) {
+function PostersBody({
+  session,
+  canCreate,
+  onReady,
+}: {
+  session: AdminSession;
+  canCreate: boolean;
+  onReady: (ready: boolean) => void;
+}) {
   const { t, locale } = useT();
   const api = useApi();
-  const { colors } = useTheme();
   const [recent, setRecent] = useState<Poster[]>([]);
   const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
   const [poll, setPoll] = useState(false);
@@ -145,6 +166,7 @@ function PostersBody({ session, canCreate }: { session: AdminSession; canCreate:
   const posters = useMemo(() => mergePosters(list.data ?? [], recent), [list.data, recent]);
   // Ask again while something is being made, so a finished poster appears on its own.
   useEffect(() => setPoll(hasQueued(posters)), [posters]);
+  useEffect(() => onReady(posters.some((p) => p.status === 'ready')), [posters, onReady]);
 
   const templateName = (key: string) => {
     const found = templates.data?.find((x) => x.key === key);
@@ -158,25 +180,9 @@ function PostersBody({ session, canCreate }: { session: AdminSession; canCreate:
 
   return (
     <View style={{ gap: spacing.lg }} testID="posters-body">
-      <Card variant="flat" testID="posters-source">
-        <View
-          style={{
-            gap: spacing.xs,
-            borderStartWidth: 3,
-            borderStartColor: colors.accent,
-            paddingStart: spacing.sm,
-          }}
-        >
-          <Text variant="title3" heading={2}>
-            {t('admin.posters.source.title')}
-          </Text>
-          <Text variant="label">{whenSummary(session, t, locale)}</Text>
-          <Text>{pickLocalized(session.venue.name, locale)}</Text>
-          <Text variant="caption" color="textSecondary">
-            {t('admin.posters.source.note')}
-          </Text>
-        </View>
-      </Card>
+      <View testID="posters-source">
+        <PosterPreview session={session} />
+      </View>
 
       <Text variant="title3" heading={2}>
         {t('admin.posters.list.title')}

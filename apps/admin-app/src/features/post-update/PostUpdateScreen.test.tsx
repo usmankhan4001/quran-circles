@@ -104,10 +104,9 @@ describe('PostUpdateScreen flow', () => {
       backend,
     });
     await screen.findByTestId('post-update-compose');
-    fireEvent.click(screen.getByTestId('post-update-template'));
-    fireEvent.click(await screen.findByTestId('post-update-template-option-time_change'));
+    fireEvent.click(await screen.findByTestId('post-update-template-time_change'));
     // Draft-only templates are never offered.
-    expect(screen.queryByTestId('post-update-template-option-draft_only')).toBeNull();
+    expect(screen.queryByTestId('post-update-template-draft_only')).toBeNull();
     typeInto('post-update-var-time', '8 pm');
     expect((screen.getByTestId('post-update-body-en') as HTMLInputElement).value).toBe(
       'The session now starts at 8 pm.',
@@ -127,8 +126,7 @@ describe('PostUpdateScreen flow', () => {
       backend: createBackend({ me: meFor('venue') }),
     });
     await screen.findByTestId('post-update-compose');
-    fireEvent.click(screen.getByTestId('post-update-template'));
-    fireEvent.click(await screen.findByTestId('post-update-template-option-time_change'));
+    fireEvent.click(await screen.findByTestId('post-update-template-time_change'));
     typeInto('post-update-title-en', 'Time change');
     fireEvent.click(screen.getByTestId('post-update-preview'));
     expect(await screen.findByText('Fill in all the blanks of the template.')).toBeTruthy();

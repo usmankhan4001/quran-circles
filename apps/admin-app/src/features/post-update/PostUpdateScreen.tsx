@@ -4,14 +4,15 @@ import type { AdminSession, Locale } from '@qc/contracts';
 import {
   Button,
   Card,
-  Chip,
   ConfirmSheet,
   Select,
   SegmentedControl,
   Switch,
   Text,
   TextField,
+  radii,
   spacing,
+  useTheme,
 } from '@qc/ui';
 import { rejectedFields, serverFieldErrors } from '../../api/errors';
 import { useMutation, useQuery } from '../../api/query';
@@ -20,6 +21,8 @@ import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
 import { BilingualField } from '../../components/BilingualField';
 import { ErrorNotice } from '../../components/ErrorNotice';
+import { FilterPills } from '../../components/FilterPills';
+import { AppIcon } from '../../components/glyphs';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
@@ -45,6 +48,9 @@ import {
   useRecipientPreview,
   type RecipientPreview,
 } from './useRecipientPreview';
+
+/** The pill for writing without a template. */
+const NO_TEMPLATE = 'none';
 
 /** Where the server's validation paths land on this form. */
 const POST_FIELDS = {
@@ -140,6 +146,7 @@ function PostUpdateFlow({
   const nav = useNavigation();
   const { principal, active } = useWorkingScope();
   const { options, venues, templates, session } = loaded;
+  const { colors } = useTheme();
 
   const [form, setForm] = useState<PostUpdateForm>(() => {
     const choice = defaultScopeChoice(active, options);
@@ -321,165 +328,174 @@ function PostUpdateFlow({
     venue: t('admin.postUpdate.level.venue'),
   };
 
+  const scopeName = session
+    ? [
+        options.venues.find((v) => v.id === session.venueId)?.label,
+        pickLocalized(session.title, locale),
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : scopeText;
+
   return (
     <View style={{ gap: spacing.lg }} testID="post-update-compose">
-      {session ? (
-        <Card variant="flat">
-          <Text variant="caption" color="textSecondary">
-            {t('admin.postUpdate.about')}
-          </Text>
-          <Text variant="label">{pickLocalized(session.title, locale)}</Text>
-          <ReachCount reach={reach} />
-        </Card>
-      ) : (
+      {/* D17 "Broadcast scope": where it goes, and who it reaches once the server has counted. */}
+      <Card padding="md">
         <View style={{ gap: spacing.sm }}>
-          <Text variant="label" color="textSecondary" heading={2}>
-            {t('admin.postUpdate.whoFor')}
+          <Text variant="eyebrow" color="textSecondary" heading={2}>
+            {session ? t('admin.postUpdate.about') : t('admin.postUpdate.whoFor')}
           </Text>
-          <Card>
-            <View style={{ gap: spacing.md }}>
-              {options.levels.length > 1 ? (
-                <SegmentedControl
-                  accessibilityLabel={t('admin.postUpdate.whoFor')}
-                  value={form.level}
-                  onChange={(level) =>
-                    patch({
-                      level,
-                      cityId: level === 'city' ? (options.cities[0]?.id ?? null) : null,
-                      venueId: level === 'venue' ? (options.venues[0]?.id ?? null) : null,
-                    })
-                  }
-                  options={options.levels.map((l) => ({ value: l, label: levelLabels[l] }))}
-                />
-              ) : null}
-              {form.level === 'city' ? (
-                <Select
-                  testID="post-update-city"
-                  label={levelLabels.city}
-                  required
-                  value={form.cityId ?? undefined}
-                  onChange={(cityId) => patch({ cityId })}
-                  options={options.cities.map((c) => ({ value: c.id, label: c.label }))}
-                  error={shown.scope ? t(shown.scope) : undefined}
-                />
-              ) : null}
-              {form.level === 'venue' ? (
-                <Select
-                  testID="post-update-venue"
-                  label={levelLabels.venue}
-                  required
-                  value={form.venueId ?? undefined}
-                  onChange={(venueId) => patch({ venueId })}
-                  options={options.venues.map((v) => ({ value: v.id, label: v.label }))}
-                  error={shown.scope ? t(shown.scope) : undefined}
-                />
-              ) : null}
-              <Text variant="caption" color="textSecondary">
-                {scopeText}
-              </Text>
-              <ReachCount reach={reach} />
-            </View>
-          </Card>
-        </View>
-      )}
-
-      {templates.length > 0 ? (
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <Select
-              testID="post-update-template"
-              label={t('admin.postUpdate.template.label')}
-              helper={t('admin.postUpdate.template.help')}
-              value={form.templateKey ?? ''}
-              onChange={(key) => {
-                const next = templates.find((x) => x.key === key) ?? null;
-                const values = next
-                  ? suggestedValues(next, session, locale, form.templateValues)
-                  : {};
-                setForm((f) => applyTemplate({ ...f, templateValues: values }, next));
-              }}
-              options={[
-                { value: '', label: t('admin.postUpdate.template.none') },
-                ...templates.map((x) => ({ value: x.key, label: templateLabel(t, x.key) })),
-              ]}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <AppIcon name="mosque" color={colors.accent} size={20} weight="duotone" />
+            <Text variant="label" strong style={{ flex: 1 }}>
+              {scopeName}
+            </Text>
+          </View>
+          {!session && options.levels.length > 1 ? (
+            <SegmentedControl
+              accessibilityLabel={t('admin.postUpdate.whoFor')}
+              value={form.level}
+              onChange={(level) =>
+                patch({
+                  level,
+                  cityId: level === 'city' ? (options.cities[0]?.id ?? null) : null,
+                  venueId: level === 'venue' ? (options.venues[0]?.id ?? null) : null,
+                })
+              }
+              options={options.levels.map((l) => ({ value: l, label: levelLabels[l] }))}
             />
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs }}>
-              <Chip
-                label={t('admin.postUpdate.template.none')}
-                selected={!form.templateKey}
-                onPress={() => setForm((f) => applyTemplate({ ...f, templateValues: {} }, null))}
-              />
-              {templates.map((x) => (
-                <Chip
-                  key={x.key}
-                  label={templateLabel(t, x.key)}
-                  selected={form.templateKey === x.key}
-                  onPress={() => {
-                    const values = suggestedValues(x, session, locale, form.templateValues);
-                    setForm((f) => applyTemplate({ ...f, templateValues: values }, x));
-                  }}
+          ) : null}
+          {!session && form.level === 'city' ? (
+            <Select
+              testID="post-update-city"
+              label={levelLabels.city}
+              required
+              value={form.cityId ?? undefined}
+              onChange={(cityId) => patch({ cityId })}
+              options={options.cities.map((c) => ({ value: c.id, label: c.label }))}
+              error={shown.scope ? t(shown.scope) : undefined}
+            />
+          ) : null}
+          {!session && form.level === 'venue' ? (
+            <Select
+              testID="post-update-venue"
+              label={levelLabels.venue}
+              required
+              value={form.venueId ?? undefined}
+              onChange={(venueId) => patch({ venueId })}
+              options={options.venues.map((v) => ({ value: v.id, label: v.label }))}
+              error={shown.scope ? t(shown.scope) : undefined}
+            />
+          ) : null}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.sm,
+              padding: spacing.sm,
+              borderRadius: radii.md,
+              backgroundColor: colors.accentSubtle,
+            }}
+          >
+            <AppIcon name="users-three" color={colors.textOnAccentSubtle} size={16} weight="fill" />
+            <View style={{ flex: 1 }}>
+              <ReachCount reach={reach} fallback={t('admin.postUpdate.reachLater')} />
+            </View>
+          </View>
+        </View>
+      </Card>
+
+      {/* D17 "Quick announcement templates": the approved templates as pills. */}
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="label" color="textSecondary" heading={2}>
+          {t('admin.postUpdate.template.label')}
+        </Text>
+        {templates.length > 0 ? (
+          <FilterPills
+            testID="post-update-template"
+            accessibilityLabel={t('admin.postUpdate.template.label')}
+            value={form.templateKey ?? NO_TEMPLATE}
+            onChange={(key) => {
+              const next = templates.find((x) => x.key === key) ?? null;
+              const values = next
+                ? suggestedValues(next, session, locale, form.templateValues)
+                : {};
+              setForm((f) => applyTemplate({ ...f, templateValues: values }, next));
+            }}
+            options={[
+              ...templates.map((x) => ({ value: x.key, label: templateLabel(t, x.key) })),
+              { value: NO_TEMPLATE, label: t('admin.postUpdate.template.none') },
+            ]}
+          />
+        ) : (
+          <Text variant="caption" color="textSecondary" testID="post-update-no-templates">
+            {t('admin.postUpdate.template.noneYet')}
+          </Text>
+        )}
+        {template ? (
+          <Card padding="md">
+            <View style={{ gap: spacing.md }}>
+              {template.variables.map((name) => (
+                <TextField
+                  key={name}
+                  testID={`post-update-var-${name}`}
+                  label={variableLabel(t, name)}
+                  required
+                  value={form.templateValues[name] ?? ''}
+                  onChangeText={(value) =>
+                    setForm((f) =>
+                      applyTemplate(
+                        { ...f, templateValues: { ...f.templateValues, [name]: value } },
+                        template,
+                      ),
+                    )
+                  }
+                  error={shown.template ? t(shown.template) : undefined}
                 />
               ))}
             </View>
-            {template
-              ? template.variables.map((name) => (
-                  <TextField
-                    key={name}
-                    testID={`post-update-var-${name}`}
-                    label={variableLabel(t, name)}
-                    required
-                    value={form.templateValues[name] ?? ''}
-                    onChangeText={(value) =>
-                      setForm((f) =>
-                        applyTemplate(
-                          { ...f, templateValues: { ...f.templateValues, [name]: value } },
-                          template,
-                        ),
-                      )
-                    }
-                    error={shown.template ? t(shown.template) : undefined}
-                  />
-                ))
-              : null}
-          </View>
-        </Card>
-      ) : null}
-
-      <View style={{ gap: spacing.sm }}>
-        <Text variant="label" color="textSecondary" heading={2}>
-          {t('admin.postUpdate.message')}
-        </Text>
-        <Card>
-          <View style={{ gap: spacing.md }}>
-            <BilingualField
-              testID="post-update-title"
-              label={t('admin.postUpdate.title.label')}
-              value={form.title}
-              onChange={(title) => patch({ title })}
-              required
-              error={shown.title ? t(shown.title) : undefined}
-            />
-            <BilingualField
-              testID="post-update-body"
-              label={t('admin.postUpdate.body.label')}
-              value={form.body}
-              onChange={(body) => patch({ body })}
-              multiline
-              required
-              error={shown.body ? t(shown.body) : undefined}
-            />
-            <Text variant="caption" color="textSecondary">
-              {t('admin.postUpdate.language.help')}
-            </Text>
-          </View>
-        </Card>
+          </Card>
+        ) : null}
       </View>
 
-      <View style={{ gap: spacing.sm }}>
-        <Text variant="label" color="textSecondary" heading={2}>
-          {t('admin.postUpdate.sendBy')}
-        </Text>
-        <Card>
+      <Card padding="md">
+        <View style={{ gap: spacing.md }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+            }}
+          >
+            <Text variant="label" strong heading={2}>
+              {t('admin.postUpdate.message')}
+            </Text>
+            <Text variant="caption" color="textAccent" strong>
+              {t('admin.postUpdate.bothLanguages')}
+            </Text>
+          </View>
+          <BilingualField
+            testID="post-update-title"
+            label={t('admin.postUpdate.title.label')}
+            value={form.title}
+            onChange={(title) => patch({ title })}
+            required
+            error={shown.title ? t(shown.title) : undefined}
+          />
+          <BilingualField
+            testID="post-update-body"
+            label={t('admin.postUpdate.body.label')}
+            value={form.body}
+            onChange={(body) => patch({ body })}
+            multiline
+            required
+            error={shown.body ? t(shown.body) : undefined}
+          />
+          <Text variant="caption" color="textSecondary">
+            {t('admin.postUpdate.language.help')}
+          </Text>
+          <View style={{ height: 1, backgroundColor: colors.hairline }} />
           <Switch
             testID="post-update-notify"
             label={t('admin.postUpdate.notify.label')}
@@ -487,15 +503,16 @@ function PostUpdateFlow({
             value={form.notify}
             onValueChange={(notify) => patch({ notify })}
           />
-        </Card>
-      </View>
+        </View>
+      </Card>
       <ErrorNotice error={post.error} onDismiss={post.reset} />
       <ScreenFooter>
         <Button
           testID="post-update-preview"
-          label={t('admin.postUpdate.preview')}
+          label={t('admin.postUpdate.reviewPost')}
           size="large"
           fullWidth
+          trailingIcon="arrow-forward"
           onPress={toPreview}
         />
       </ScreenFooter>
@@ -504,7 +521,7 @@ function PostUpdateFlow({
 }
 
 /** "This will reach 37 people", once the server has counted. Nothing while there is no full draft. */
-function ReachCount({ reach }: { reach: RecipientPreview }) {
+function ReachCount({ reach, fallback }: { reach: RecipientPreview; fallback?: string }) {
   const { t } = useT();
   if (reach.status === 'counting') {
     return (
@@ -513,7 +530,13 @@ function ReachCount({ reach }: { reach: RecipientPreview }) {
       </Text>
     );
   }
-  if (reach.status !== 'ready' || reach.recipients === null) return null;
+  if (reach.status !== 'ready' || reach.recipients === null) {
+    return fallback ? (
+      <Text variant="caption" color="textOnAccentSubtle">
+        {fallback}
+      </Text>
+    ) : null;
+  }
   return (
     <Text variant="label" color="textAccent" testID="post-update-count">
       {t.plural('admin.postUpdate.willReach', reach.recipients)}
