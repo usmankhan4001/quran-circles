@@ -138,8 +138,9 @@ services:
       - sh
       - -c
       - >-
+        if [ "$$QC_GATE5_ONLY" != load ]; then
         pnpm --filter @qc/load scope --base-url http://qc-staging-api:3000
-        --admin-phone "$$QC_SCOPE_ADMIN"; echo "gate5: scope exit $$?";
+        --admin-phone "$$QC_SCOPE_ADMIN"; echo "gate5: scope exit $$?"; fi;
         pnpm --filter @qc/load load --base-url http://qc-staging-api:3000
         --worker-url http://qc-staging-worker:8081 --admin-phone "$$QC_LOAD_ADMIN";
         echo "gate5: load exit $$?";
@@ -150,6 +151,8 @@ services:
       QC_FIXED_CODE: ${AUTH_FIXED_CODE:?set AUTH_FIXED_CODE in the env file}
       QC_SCOPE_ADMIN: ${QC_GATE5_SCOPE_ADMIN:-+923189990001}
       QC_LOAD_ADMIN: ${QC_GATE5_LOAD_ADMIN:-+923189990002}
+      # `load` skips the scope run (saves its sign-ins for the hourly budget).
+      QC_GATE5_ONLY: ${QC_GATE5_ONLY:-all}
     networks:
       - edge
     tmpfs:
