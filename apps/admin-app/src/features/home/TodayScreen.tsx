@@ -20,6 +20,7 @@ import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { canPostAnywhere } from '../post-update/scopes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
+import { TODAY_LIMIT, takeEarlyToday } from './earlyToday';
 import { NextSessionCard } from './NextSessionCard';
 import { whenSummary } from './sessionText';
 
@@ -40,7 +41,16 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const { active, filter, principal } = useWorkingScope();
 
   const query = useQuery(async () => {
-    const page = await api.adminSessions.list({ query: { ...filter, limit: 50 } });
+    // Asked while the app was starting, for this person and this scope (earlyToday.ts)?
+    const early = me ? takeEarlyToday(me.id, filter) : null;
+    if (early) {
+      try {
+        return await early;
+      } catch {
+        // It failed: ask again here, which can refresh the sign-in.
+      }
+    }
+    const page = await api.adminSessions.list({ query: { ...filter, limit: TODAY_LIMIT } });
     return page.items;
   }, [filter.cityId, filter.venueId, active?.id]);
 

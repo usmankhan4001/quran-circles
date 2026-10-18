@@ -128,14 +128,16 @@ function record(
 
 async function lowEndContext(
   browser: Browser,
-  options: { serviceWorkers?: 'allow' | 'block'; network?: NetworkProfile | null } = {},
+  options: { serviceWorkers?: 'allow' | 'block' } = {},
 ): Promise<BrowserContext> {
   const context = await browser.newContext({
     ...LOW_END_DEVICE,
     serviceWorkers: options.serviceWorkers ?? 'block',
+    // The local Quran text service has a self-signed certificate (quran-stub.ts).
+    ignoreHTTPSErrors: true,
   });
   await localOnly(context);
-  await stubQuranSource(context, options.network === undefined ? SLOW_4G : options.network);
+  await stubQuranSource();
   return context;
 }
 
@@ -274,7 +276,7 @@ test.describe('low-end Android budgets (emulated)', () => {
 
   async function coldStart(browser: Browser, network: NetworkProfile) {
     const person = await attendee();
-    const context = await lowEndContext(browser, { network });
+    const context = await lowEndContext(browser);
     try {
       const page = await userPage(context, person, {
         homeShell: '[data-testid="home-screen"]',

@@ -1,10 +1,11 @@
 # Status: integration
 
-Updated: 2026-10-17
+Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (nothing committed by this lane; owner's process: no pull requests, no GitHub Actions)
 
 ## Done
 
+- 2026-10-18 (performance pass, at the orchestrator's request; `tests/e2e` only): **browser tests no longer route requests.** Playwright routing (`localOnly` and the Quran stub) sent every request through the test process, which delayed requests made while the page's main thread was busy and skewed the low-end timings. Now `src/support/network.ts` gives every browser project Chromium launch arguments: `--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1` (IP literals included) plus `--no-proxy-server --proxy-server=direct://` (the headless shell ignores `--no-proxy-server` alone and would use a proxy from the environment, which resolves outside names itself). `localOnly(context)` keeps its signature: it checks once per browser that the block is in place (a non-allowed loopback address must be unresolvable, and an `https://….invalid` address must fail in Chromium's resolver and not at a proxy; neither probe can leave the machine) and records refused hosts from `requestfailed`. The Quran stub (`src/quality/quran-stub.ts`) is now a local HTTPS server (self-signed certificate made with openssl into `node_modules/.cache/qc-e2e/quran-stub/`, gzip, CORS) on a loopback port (`QC_QURAN_STUB_PORT`, else derived from the runner's pid); the quality project maps `api.alquran.cloud` to it and its contexts use `ignoreHTTPSErrors`. Chromium's own throttling now applies to it, so the manual delay is gone.
 - `@qc/e2e` (`tests/e2e`) set up with Playwright 1.56.1 (matches the pre-installed Chromium build 1194). One `pnpm --filter @qc/e2e test` starts the real stack, runs every flow and stops it:
   - Postgres: private throwaway cluster from the local server binaries, or a fresh database on `E2E_DATABASE_URL` (the dev compose database works). Real migrations and the synthetic `@qc/db` seed.
   - Real API (`APP_ENV=test`, random secret per run, test-mode fixed code) and real worker, both `MESSAGING_MODE=fake`. Browser tests refuse every non-loopback host.

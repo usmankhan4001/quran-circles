@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { CACHE_DIR } from './src/stack/paths';
+import { localOnlyLaunchArgs, QURAN_SOURCE_HOST, quranStubPort } from './src/support/network';
 
 /**
  * Chromium comes from PLAYWRIGHT_BROWSERS_PATH (this Playwright version expects build 1194).
@@ -13,10 +14,20 @@ const chromium = process.env.E2E_CHROMIUM
     ? '/opt/pw-browsers/chromium'
     : undefined;
 
-const browser = {
+/**
+ * Browser projects never reach the internet: Chromium resolves nothing but loopback and uses no
+ * proxy (src/support/network.ts). This replaces request routing, which delayed requests made
+ * while a page's main thread was busy. The quality project also points the Quran text service at
+ * its local stand-in (src/quality/quran-stub.ts).
+ */
+const browserWith = (maps: Record<string, string> = {}) => ({
   ...devices['Desktop Chrome'],
-  ...(chromium ? { launchOptions: { executablePath: chromium } } : {}),
-};
+  launchOptions: {
+    args: localOnlyLaunchArgs(maps),
+    ...(chromium ? { executablePath: chromium } : {}),
+  },
+});
+const browser = browserWith();
 
 export default defineConfig({
   testDir: './src/flows',
@@ -49,7 +60,14 @@ export default defineConfig({
     // Long-running and report-producing, so not part of the default run. See docs/quality/.
     //   QC_QUALITY=1 pnpm --filter @qc/e2e exec playwright test --project=quality
     ...(process.env.QC_QUALITY === '1'
-      ? [{ name: 'quality', testDir: './src/quality', timeout: 60 * 60_000, use: browser }]
+      ? [
+          {
+            name: 'quality',
+            testDir: './src/quality',
+            timeout: 60 * 60_000,
+            use: browserWith({ [QURAN_SOURCE_HOST]: `127.0.0.1:${quranStubPort()}` }),
+          },
+        ]
       : []),
   ],
 });

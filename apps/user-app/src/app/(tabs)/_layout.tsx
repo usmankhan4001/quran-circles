@@ -8,20 +8,30 @@ import { useInsets } from '../../providers/insets';
 import { TAB_ROUTES, type TabRoute } from '../../nav/routes';
 import { tabIcon } from '../../ui/tabIcons';
 import { prefetchTabLater } from '../../boot/routeChunks';
+import { prefetchNearbyList } from '../../boot/startQueries';
+import { useServices } from '../../providers/services';
 import { usePrefetchOtherLanguage } from '../../i18n/useLanguage';
 
 /** How long after the tabs appear the web build fetches Nearby's code, the likeliest next tab. */
 const NEARBY_PREFETCH_DELAY_MS = 1500;
 
 /**
- * The web build loads each tab's code when it is first opened. Nearby's is fetched once the
- * first screen has had time to settle, so the first tap on Nearby does not wait for it.
+ * The web build loads each tab's code when it is first opened. Nearby's code and its first list
+ * are fetched once the first screen has had time to settle, so the first tap on Nearby waits
+ * for neither.
  */
 function usePrefetchNearby() {
+  const app = useServices();
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    return prefetchTabLater('nearby', NEARBY_PREFETCH_DELAY_MS);
-  }, []);
+    const cancelChunk = prefetchTabLater('nearby', NEARBY_PREFETCH_DELAY_MS);
+    // Its list too, into the cache, so the first tap draws it without a round trip.
+    const timer = setTimeout(() => void prefetchNearbyList(app), NEARBY_PREFETCH_DELAY_MS);
+    return () => {
+      cancelChunk();
+      clearTimeout(timer);
+    };
+  }, [app]);
 }
 
 const LABELS: Record<

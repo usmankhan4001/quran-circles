@@ -47,7 +47,7 @@ A three-step flow with a step indicator (text and numbers: "1 Upload", "2 Check"
 
 ## Translation keys
 
-English below; Urdu drafts are in `packages/i18n/src/ur.json` under the same keys and carry the draft marker.
+English below; Urdu drafts are in `packages/i18n/src/ur/<part>.json` (the part `partOf(key)` names; see `docs/engineering/i18n-keys.md`) under the same keys and carry the draft marker.
 
 | Key                                  | English                                   | Used for                 |
 | ------------------------------------ | ----------------------------------------- | ------------------------ |

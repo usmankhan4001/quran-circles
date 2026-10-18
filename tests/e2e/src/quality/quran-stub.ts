@@ -1,5 +1,10 @@
-import type { BrowserContext } from '@playwright/test';
-import type { NetworkProfile } from './lowend';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { createServer, type Server } from 'node:https';
+import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
+import { CACHE_DIR } from '../stack/paths';
+import { QURAN_SOURCE_HOST, quranStubPort } from '../support/network';
 
 /** Ayahs per surah (public metadata, 6236 in all). */
 const AYAH_COUNTS = [
@@ -41,44 +46,126 @@ function edition(id: string, ayahs: { surah: number; ayah: number }[]): unknown 
   };
 }
 
+/** The JSON the service answers for one path, or null for a path it does not know. */
+function answer(pathname: string): unknown {
+  const parts = pathname.split('/').filter(Boolean);
+  // v1/surah/{n}/editions/{a,b,c} | v1/ayah/{s}:{a}/editions/{a,b,c} | v1/juz/{n}/{edition}
+  if (parts[1] === 'surah' && parts[3] === 'editions') {
+    const surah = Number(parts[2]);
+    const count = AYAH_COUNTS[surah - 1] ?? 0;
+    const ayahs = Array.from({ length: count }, (_x, i) => ({ surah, ayah: i + 1 }));
+    return (parts[4] ?? '').split(',').map((id) => edition(id, ayahs));
+  }
+  if (parts[1] === 'ayah' && parts[3] === 'editions') {
+    const [s, a] = (parts[2] ?? '').split(':').map(Number);
+    return (parts[4] ?? '').split(',').map((id) => edition(id, [{ surah: s ?? 1, ayah: a ?? 1 }]));
+  }
+  if (parts[1] === 'juz') return edition(parts[3] ?? 'quran-uthmani', [{ surah: 2, ayah: 1 }]);
+  return null;
+}
+
 /**
- * Answers the Quran text service (api.alquran.cloud) from this machine with placeholder text, so
- * the reader opens without the internet and its timing reflects only our app. When a network
- * profile is given the answer is delayed by its latency and transfer time, because a request
- * answered here does not go through Chromium's network throttling.
+ * A throwaway self-signed certificate for the service's name, made once with openssl and kept
+ * under node_modules/.cache (never committed). The browser contexts that use the stub accept it
+ * with `ignoreHTTPSErrors`; every other outside host is unresolvable, so nothing else can use it.
  */
-export async function stubQuranSource(
-  context: BrowserContext,
-  network: NetworkProfile | null = null,
-): Promise<void> {
-  await context.route('https://api.alquran.cloud/**', async (route) => {
-    const url = new URL(route.request().url());
-    const parts = url.pathname.split('/').filter(Boolean);
-    // v1/surah/{n}/editions/{a,b,c} | v1/ayah/{s}:{a}/editions/{a,b,c} | v1/juz/{n}/{edition}
-    let data: unknown = null;
-    if (parts[1] === 'surah' && parts[3] === 'editions') {
-      const surah = Number(parts[2]);
-      const count = AYAH_COUNTS[surah - 1] ?? 0;
-      const ayahs = Array.from({ length: count }, (_x, i) => ({ surah, ayah: i + 1 }));
-      data = (parts[4] ?? '').split(',').map((id) => edition(id, ayahs));
-    } else if (parts[1] === 'ayah' && parts[3] === 'editions') {
-      const [s, a] = (parts[2] ?? '').split(':').map(Number);
-      data = (parts[4] ?? '')
-        .split(',')
-        .map((id) => edition(id, [{ surah: s ?? 1, ayah: a ?? 1 }]));
-    } else if (parts[1] === 'juz') {
-      data = edition(parts[3] ?? 'quran-uthmani', [{ surah: 2, ayah: 1 }]);
-    }
-    if (data === null) {
-      await route.fulfill({ status: 404, json: { code: 404, status: 'NOT FOUND', data: null } });
+function certificate(): { key: Buffer; cert: Buffer } {
+  const dir = join(CACHE_DIR, 'quran-stub');
+  const key = join(dir, 'key.pem');
+  const cert = join(dir, 'cert.pem');
+  if (!existsSync(key) || !existsSync(cert)) {
+    mkdirSync(dir, { recursive: true });
+    execFileSync(
+      'openssl',
+      [
+        'req',
+        '-x509',
+        '-newkey',
+        'ec',
+        '-pkeyopt',
+        'ec_paramgen_curve:prime256v1',
+        '-nodes',
+        '-keyout',
+        key,
+        '-out',
+        cert,
+        '-days',
+        '3650',
+        '-subj',
+        `/CN=${QURAN_SOURCE_HOST}`,
+        '-addext',
+        `subjectAltName=DNS:${QURAN_SOURCE_HOST}`,
+      ],
+      { stdio: 'ignore' },
+    );
+  }
+  return { key: readFileSync(key), cert: readFileSync(cert) };
+}
+
+let running: Promise<Server> | null = null;
+
+function start(port: number): Promise<Server> {
+  const bodies = new Map<string, { status: number; gzipped: Buffer }>();
+  const server = createServer(certificate(), (request, response) => {
+    const headers = {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET',
+      'access-control-allow-headers': '*',
+    };
+    if (request.method === 'OPTIONS') {
+      response.writeHead(204, headers).end();
       return;
     }
-    const body = JSON.stringify({ code: 200, status: 'OK', data });
-    if (network) {
-      // The real service answers gzipped; about a third of the raw size goes over the air.
-      const ms = network.latencyMs + (Buffer.byteLength(body) / 3 / network.downloadBps) * 1000;
-      await new Promise((done) => setTimeout(done, ms));
+    const pathname = new URL(request.url ?? '/', `https://${QURAN_SOURCE_HOST}`).pathname;
+    let body = bodies.get(pathname);
+    if (!body) {
+      const data = answer(pathname);
+      const json =
+        data === null
+          ? { code: 404, status: 'NOT FOUND', data: null }
+          : { code: 200, status: 'OK', data };
+      // Gzipped like the real service, so a throttled browser spends the time it would there.
+      body = { status: data === null ? 404 : 200, gzipped: gzipSync(JSON.stringify(json)) };
+      bodies.set(pathname, body);
     }
-    await route.fulfill({ status: 200, contentType: 'application/json', body });
+    response
+      .writeHead(body.status, {
+        ...headers,
+        'content-type': 'application/json',
+        'content-encoding': 'gzip',
+        'content-length': body.gzipped.length,
+      })
+      .end(body.gzipped);
   });
+  return new Promise((resolve, reject) => {
+    server.once('error', (error: NodeJS.ErrnoException) => {
+      reject(
+        error.code === 'EADDRINUSE'
+          ? new Error(
+              `Port ${port} for the Quran stub is taken; set QC_QURAN_STUB_PORT to a free port.`,
+            )
+          : error,
+      );
+    });
+    server.listen(port, '127.0.0.1', () => {
+      server.unref(); // never keeps a worker alive
+      resolve(server);
+    });
+  });
+}
+
+/**
+ * Answers the Quran text service (api.alquran.cloud) from this machine with placeholder text, so
+ * the reader opens without the internet and its timing reflects only our app. The quality
+ * project's browser resolves the service's name to this server (playwright.config.ts), so its
+ * requests take Chromium's ordinary path, throttling included; nothing is intercepted. The
+ * context must be created with `ignoreHTTPSErrors: true` (the certificate is self-signed).
+ * Starts the server once per worker; later calls return at once.
+ */
+export async function stubQuranSource(): Promise<void> {
+  running ??= start(quranStubPort()).catch((error: unknown) => {
+    running = null;
+    throw error;
+  });
+  await running;
 }

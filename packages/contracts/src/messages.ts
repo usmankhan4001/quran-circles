@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { InstantUtc, Uuid } from './common';
 import { CostCategory, Locale, MessageChannel } from './enums';
+import { lazy } from './lazy';
 
 /**
  * Message formats: outbox payloads, template ids and their variables, push payloads and deep links.
@@ -15,23 +16,25 @@ import { CostCategory, Locale, MessageChannel } from './enums';
 
 export const APP_SCHEME = 'qurancircles';
 
-export const DeepLink = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('session'), sessionId: Uuid }),
-  z.object({ type: z.literal('occurrence'), occurrenceId: Uuid }),
-  /** Opens straight to registration, used by "invite friends and family" share cards. */
-  z.object({ type: z.literal('register'), sessionId: Uuid }),
-  z.object({ type: z.literal('venue'), venueId: Uuid }),
-  z.object({ type: z.literal('circle'), circleId: Uuid }),
-  z.object({ type: z.literal('update'), updateId: Uuid }),
-  z.object({ type: z.literal('updates') }),
-  z.object({ type: z.literal('journey') }),
-  /** Opens the reader at an ayah (rc.4: ayah of the day, read along). Same path as the app's route. */
-  z.object({
-    type: z.literal('quran'),
-    surah: z.number().int().min(1).max(114),
-    ayah: z.number().int().min(1).max(286),
-  }),
-]);
+export const DeepLink = lazy(() =>
+  z.discriminatedUnion('type', [
+    z.object({ type: z.literal('session'), sessionId: Uuid }),
+    z.object({ type: z.literal('occurrence'), occurrenceId: Uuid }),
+    /** Opens straight to registration, used by "invite friends and family" share cards. */
+    z.object({ type: z.literal('register'), sessionId: Uuid }),
+    z.object({ type: z.literal('venue'), venueId: Uuid }),
+    z.object({ type: z.literal('circle'), circleId: Uuid }),
+    z.object({ type: z.literal('update'), updateId: Uuid }),
+    z.object({ type: z.literal('updates') }),
+    z.object({ type: z.literal('journey') }),
+    /** Opens the reader at an ayah (rc.4: ayah of the day, read along). Same path as the app's route. */
+    z.object({
+      type: z.literal('quran'),
+      surah: z.number().int().min(1).max(114),
+      ayah: z.number().int().min(1).max(286),
+    }),
+  ]),
+);
 export type DeepLink = z.infer<typeof DeepLink>;
 
 const linkPath = (link: DeepLink): string => {
@@ -96,29 +99,37 @@ export function parseDeepLink(url: string): DeepLink | null {
 // Templates
 // ---------------------------------------------------------------------------------------------
 
-const str = z.string().min(1).max(200);
+const str = lazy(() => z.string().min(1).max(200));
 
 /** Variables per template. Values are plain strings, already formatted for the recipient's locale. */
 export const TEMPLATE_VARIABLES = {
-  auth_code: z.object({ code: z.string().regex(/^[0-9]{6}$/), minutes: z.string() }),
-  registration_confirmation: z.object({
-    name: str,
-    sessionTitle: str,
-    venueName: str,
-    when: str,
-    link: z.string(),
-  }),
-  session_reminder: z.object({ sessionTitle: str, venueName: str, when: str, link: z.string() }),
-  session_changed: z.object({ sessionTitle: str, venueName: str, newWhen: str, link: z.string() }),
-  session_cancelled: z.object({ sessionTitle: str, when: str, link: z.string() }),
-  waitlist_promoted: z.object({ sessionTitle: str, when: str, link: z.string() }),
-  coordinator_invite: z.object({ inviterName: str, scopeName: str, link: z.string() }),
-  circle_opened: z.object({ areaName: str, circleName: str, link: z.string() }),
+  auth_code: lazy(() => z.object({ code: z.string().regex(/^[0-9]{6}$/), minutes: z.string() })),
+  registration_confirmation: lazy(() =>
+    z.object({
+      name: str,
+      sessionTitle: str,
+      venueName: str,
+      when: str,
+      link: z.string(),
+    }),
+  ),
+  session_reminder: lazy(() =>
+    z.object({ sessionTitle: str, venueName: str, when: str, link: z.string() }),
+  ),
+  session_changed: lazy(() =>
+    z.object({ sessionTitle: str, venueName: str, newWhen: str, link: z.string() }),
+  ),
+  session_cancelled: lazy(() => z.object({ sessionTitle: str, when: str, link: z.string() })),
+  waitlist_promoted: lazy(() => z.object({ sessionTitle: str, when: str, link: z.string() })),
+  coordinator_invite: lazy(() => z.object({ inviterName: str, scopeName: str, link: z.string() })),
+  circle_opened: lazy(() => z.object({ areaName: str, circleName: str, link: z.string() })),
 } as const;
 
 export type TemplateKey = keyof typeof TEMPLATE_VARIABLES;
 export const TEMPLATE_KEYS = Object.keys(TEMPLATE_VARIABLES) as TemplateKey[];
-export const TemplateKeySchema = z.enum(TEMPLATE_KEYS as [TemplateKey, ...TemplateKey[]]);
+export const TemplateKeySchema = lazy(() =>
+  z.enum(TEMPLATE_KEYS as [TemplateKey, ...TemplateKey[]]),
+);
 export type TemplateVariables<K extends TemplateKey> = z.infer<(typeof TEMPLATE_VARIABLES)[K]>;
 
 export interface TemplateDef {
@@ -259,38 +270,42 @@ export function templatePlaceholders(body: string): string[] {
 // Push and outbox
 // ---------------------------------------------------------------------------------------------
 
-export const PushData = z.object({
-  type: z.enum([
-    'update',
-    'reminder',
-    'session_changed',
-    'session_cancelled',
-    'waitlist_promoted',
-    'circle_opened',
-    /** rc.4: the morning ayah push. Its deep link is a `quran` link to the day's ayah. */
-    'ayah_of_the_day',
-  ]),
-  /** A deep link built by `buildDeepLink`. */
-  deepLink: z.string(),
-  updateId: Uuid.optional(),
-  sessionId: Uuid.optional(),
-  occurrenceId: Uuid.optional(),
-});
+export const PushData = lazy(() =>
+  z.object({
+    type: z.enum([
+      'update',
+      'reminder',
+      'session_changed',
+      'session_cancelled',
+      'waitlist_promoted',
+      'circle_opened',
+      /** rc.4: the morning ayah push. Its deep link is a `quran` link to the day's ayah. */
+      'ayah_of_the_day',
+    ]),
+    /** A deep link built by `buildDeepLink`. */
+    deepLink: z.string(),
+    updateId: Uuid.optional(),
+    sessionId: Uuid.optional(),
+    occurrenceId: Uuid.optional(),
+  }),
+);
 
 /** What a device receives. Title and body are already in the device's language. */
-export const PushPayload = z.object({
-  title: z.string().min(1).max(120),
-  body: z.string().min(1).max(500),
-  data: PushData,
-  /** Replaces an earlier notification with the same key, for example a reminder for one occurrence. */
-  collapseKey: z.string().max(100).optional(),
-  ttlSeconds: z
-    .number()
-    .int()
-    .min(60)
-    .max(7 * 24 * 3600)
-    .default(6 * 3600),
-});
+export const PushPayload = lazy(() =>
+  z.object({
+    title: z.string().min(1).max(120),
+    body: z.string().min(1).max(500),
+    data: PushData,
+    /** Replaces an earlier notification with the same key, for example a reminder for one occurrence. */
+    collapseKey: z.string().max(100).optional(),
+    ttlSeconds: z
+      .number()
+      .int()
+      .min(60)
+      .max(7 * 24 * 3600)
+      .default(6 * 3600),
+  }),
+);
 export type PushPayload = z.infer<typeof PushPayload>;
 
 const templatePayload = <K extends TemplateKey>(key: K, channel: 'whatsapp' | 'sms') =>
@@ -302,12 +317,14 @@ const templatePayload = <K extends TemplateKey>(key: K, channel: 'whatsapp' | 's
   });
 
 /** The `payload` column of `message_outbox`. The worker validates it before every send. */
-export const OutboxPayload = z.union([
-  z.object({ channel: z.literal('push'), push: PushPayload }),
-  ...TEMPLATE_KEYS.map((k) => templatePayload(k, 'whatsapp')),
-  templatePayload('auth_code', 'sms'),
-  templatePayload('coordinator_invite', 'sms'),
-] as unknown as [z.ZodType, z.ZodType, ...z.ZodType[]]);
+export const OutboxPayload = lazy(() =>
+  z.union([
+    z.object({ channel: z.literal('push'), push: PushPayload }),
+    ...TEMPLATE_KEYS.map((k) => templatePayload(k, 'whatsapp')),
+    templatePayload('auth_code', 'sms'),
+    templatePayload('coordinator_invite', 'sms'),
+  ] as unknown as [z.ZodType, z.ZodType, ...z.ZodType[]]),
+);
 export type OutboxPayload =
   | { channel: 'push'; push: PushPayload }
   | {
@@ -325,8 +342,10 @@ export type OutboxPayload =
  */
 export const outboxKey = (kind: string, ...parts: string[]): string => [kind, ...parts].join(':');
 
-export const OutboxStatusInfo = z.object({
-  status: z.enum(['queued', 'sending', 'sent', 'delivered', 'failed', 'dead']),
-  attempts: z.number().int().min(0),
-  updatedAt: InstantUtc,
-});
+export const OutboxStatusInfo = lazy(() =>
+  z.object({
+    status: z.enum(['queued', 'sending', 'sent', 'delivered', 'failed', 'dead']),
+    attempts: z.number().int().min(0),
+    updatedAt: InstantUtc,
+  }),
+);

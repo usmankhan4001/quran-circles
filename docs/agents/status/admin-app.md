@@ -3,6 +3,12 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Low-end budgets, third pass (2026-10-18): Today's sessions with the early `me`
+
+- **Early Today.** `boot/earlyToday.web.ts` (imported by `entry.ts` after the Today route; native is an empty module) runs on the Today path only and calls `startEarlyToday` (`features/home/earlyToday.ts`) with `peekEarlyMe()` (new in `auth/earlyMe.ts`: the early answer's token and body without consuming it; the body is read once and shared with `takeEarlyMe`), the saved working scope and the page language. It asks only for a signed-in staff member and only when `me` checks out against the contract's `Me` schema; the scope is chosen exactly as `WorkingScopeProvider` will (`pickWorkingScope(workingScopesOf(me), saved)`), and the request is Today's own (`adminSessions.list`, the scope filter, `TODAY_LIMIT` 50) through the contract client. `TodayScreen` takes it with `takeEarlyToday(me.id, filter)`: once, only for the same person and filter and under 60 s old; any mismatch or failure drops it and Today asks as before. Nothing is stored, refreshed or written.
+- Tests: `features/home/earlyToday.test.tsx` (14: the filter for venue, city, admin and multi-scope staff and for a saved scope; no request without an answer, with a failed or invalid `me`, or without a staff role; hand-over once; dropped for another person, scope or age; Today uses it without a second call, and asks again when the scope changed or the early request failed), `auth/earlyMe.test.tsx` (+3 for `peekEarlyMe`). `pnpm --filter @qc/admin-app test`: 836 passing in 50 files.
+- Results (medians of 3, `docs/quality/low-end-budgets.md`): Today content 7.28 s to **6.11 s** (with the contracts lane's lazy schemas and the harness change): **still about 0.1 s over 6 s**, one run of three under (5.86 s).
+
 ## Low-end budgets, second pass (2026-10-18)
 
 - **Words: one language, this app's words only.** On the web `@qc/i18n` is the live catalogue `@qc/i18n/client` (`metro.redirects.cjs`). `src/i18n/languages.web.ts` downloads `@qc/i18n/tables/admin-app/<lang>` (shared and admin parts, about 9 KB gzip) as its own chunk; `boot/earlyStart.web.ts` starts the page language's download with the early `me` (and first imports `expo`, which installs the chunk loader). Phones and tests keep both languages in the bundle (`languages.ts`). `i18n/translate.ts` types keys as `AdminAppKey`.

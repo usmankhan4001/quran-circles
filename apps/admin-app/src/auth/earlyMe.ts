@@ -10,6 +10,16 @@ export const ME_PATH = '/v1/me';
 interface Early {
   accessToken: string;
   response: Promise<Response | null>;
+  /** The answer's JSON, read once and shared (`peekEarlyMe` and `takeEarlyMe`). */
+  body?: Promise<unknown>;
+}
+
+/** The answer's JSON, or null when the request failed, was refused or was not JSON. */
+function bodyOf(pending: Early): Promise<unknown> {
+  pending.body ??= pending.response
+    .then((response) => (response?.ok ? (response.json() as Promise<unknown>) : null))
+    .catch(() => null);
+  return pending.body;
 }
 
 let early: Early | null = null;
@@ -79,11 +89,28 @@ export async function takeEarlyMe(
   const pending = early;
   early = null;
   if (!pending || pending.accessToken !== accessToken) return null;
-  const response = await pending.response;
-  if (!response?.ok) return null;
+  const body = await bodyOf(pending);
+  if (body === null) return null;
   try {
-    return parse((await response.json()) as unknown);
+    return parse(body);
   } catch {
     return null;
   }
+}
+
+/** The early answer, unchecked, without taking it. */
+export interface EarlyMeAnswer {
+  /** The access token it was asked with. */
+  accessToken: string;
+  /** Its JSON, or null when it failed or was refused. Not yet checked against `Me`. */
+  body: Promise<unknown>;
+}
+
+/**
+ * Lets the first screen start its own request off the early answer (`startEarlyToday`) while it
+ * stays available to `takeEarlyMe`. Null when none was started or it was already taken.
+ */
+export function peekEarlyMe(): EarlyMeAnswer | null {
+  if (!early) return null;
+  return { accessToken: early.accessToken, body: bodyOf(early) };
 }

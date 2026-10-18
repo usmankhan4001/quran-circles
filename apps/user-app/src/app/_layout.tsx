@@ -6,7 +6,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import Constants from 'expo-constants';
 import { createDeviceServices } from '../bootstrap';
 import { prefetchStartRoute, startTab } from '../boot/routeChunks';
-import { prefetchStartQueries } from '../boot/startQueries';
+import { needsStartData, prefetchStartQueries } from '../boot/startQueries';
 import { hideStartScreen } from '../boot/startScreen';
 import { loadServices } from '../providers/createServices';
 import { AppProviders } from '../providers/AppProviders';
@@ -20,6 +20,7 @@ import { ReadingSync } from '../providers/ReadingSync';
 import { registerServiceWorker } from '../platform/serviceWorker';
 import { loadFirstFonts, startFonts } from '../fonts/loadFonts';
 import { languages } from '../i18n/languages';
+import { armStartFrameDeferral } from '../ui/startFrame';
 
 // One set of services for the life of the page or the app process.
 let services: AppServices | null = null;
@@ -36,6 +37,17 @@ function loadOnce(app: AppServices): Promise<void> {
   return loaded;
 }
 
+// The first screen's start requests (web), settled or not. Null on a phone.
+let startData: Promise<void> | null = null;
+
+/**
+ * How long the start screen may stay up, once the font and the words are in, for the first
+ * screen's data, so that Home draws once with its content instead of a skeleton and then the
+ * content. On a slow connection the data lands a few dozen milliseconds after the font; the cap
+ * keeps a slow or offline API from holding the page, and Home then shows its skeleton as before.
+ */
+export const START_DATA_WAIT_MS = 800;
+
 if (Platform.OS === 'web' && typeof window !== 'undefined') {
   // The start route's code downloads while the saved choices load. Once they are read, the
   // first screen's data is asked for while the page is still drawing, and then its fonts, so
@@ -43,9 +55,32 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
   const pathname = window.location.pathname;
   prefetchStartRoute(pathname);
   const app = getServices();
-  void loadOnce(app)
-    .then(() => prefetchStartQueries(app, startTab(pathname)))
-    .then(() => startFonts(app.preferences.get().locale));
+  const tab = startTab(pathname);
+  // Home's first frame leaves what is below the fold for the frame after it.
+  if (tab === 'home') armStartFrameDeferral();
+  const asked = loadOnce(app).then(() => {
+    // Only worth waiting for when the first screen has nothing saved to show yet.
+    const needed = needsStartData(app, tab);
+    const requests = prefetchStartQueries(app, tab);
+    return { needed, requests };
+  });
+  startData = asked.then(({ needed, requests }) => (needed ? requests : undefined));
+  void asked.then(({ requests }) => requests).then(() => startFonts(app.preferences.get().locale));
+}
+
+/** Waits for the start data, at most `START_DATA_WAIT_MS`. Never rejects. */
+function startDataOrTimeout(): Promise<void> {
+  if (!startData) return Promise.resolve();
+  const data = startData;
+  return new Promise<void>((done) => {
+    const timer = setTimeout(done, START_DATA_WAIT_MS);
+    void data
+      .catch(() => undefined)
+      .then(() => {
+        clearTimeout(timer);
+        done();
+      });
+  });
 }
 
 if (Platform.OS !== 'web') {
@@ -124,12 +159,14 @@ export default function RootLayout() {
     // language in the binary). Font loading never rejects and stops waiting after a few seconds,
     // so a missing font only means a fallback font. The words were asked for before the bundle
     // ran (boot/earlyLanguage.web.ts); if they cannot be had, the screens fall back to the keys
-    // rather than never starting.
+    // rather than never starting. On the web it then gives the first screen's data a moment
+    // (`startDataOrTimeout`), so Home's first frame has its content.
     void loadOnce(app)
       .then(() => {
         const locale = app.preferences.get().locale;
         return Promise.all([loadFirstFonts(locale), languages.load(locale).catch(() => undefined)]);
       })
+      .then(startDataOrTimeout)
       .then(() => {
         if (active) setReady(true);
       });

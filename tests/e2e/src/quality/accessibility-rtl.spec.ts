@@ -193,10 +193,12 @@ test.describe('accessibility and right-to-left on the real screens', () => {
         hasTouch: screen.app !== 'console',
         reducedMotion: 'reduce',
         timezoneId: 'Asia/Karachi',
+        // The local Quran text service has a self-signed certificate (quran-stub.ts).
+        ignoreHTTPSErrors: true,
       });
       try {
         await localOnly(context);
-        await stubQuranSource(context);
+        await stubQuranSource();
         await giveSession(context, screen.app, account);
         const page: Page = await context.newPage();
         await page.goto(`${base}${path}`);

@@ -47,6 +47,7 @@ import { MapPreviewCard } from '../ui/MapPreviewCard';
 import { PictureCard } from '../ui/PictureCard';
 import { SearchButton } from '../ui/SearchButton';
 import { Shortcut } from '../ui/Shortcut';
+import { useStartFrameDeferral } from '../ui/startFrame';
 import { venueMapUrl } from '../features/session/links';
 
 const styles = StyleSheet.create({
@@ -179,6 +180,9 @@ export function HomeScreen() {
   const { PrayerStrip } = content;
   // Stable, so the memoised strip does not draw again each time Home does.
   const openPrayer = useCallback(() => nav.tab({ name: 'quran' }), [nav]);
+  // The map, the ayah, the reading cards and the shortcuts sit below the fold on a phone: on the
+  // web start they mount a frame after the first one, so Home's first frame draws sooner.
+  const belowFold = useStartFrameDeferral();
 
   const mine = registrations.data ? nextRegisteredOccurrence(registrations.data, now()) : undefined;
   const leadingProgram = config.seasonMode === 'dora' ? 'dora' : 'circles';
@@ -380,7 +384,7 @@ export function HomeScreen() {
           </QueryBoundary>
         </Section>
 
-        {items && items.length > 0 ? (
+        {belowFold && items && items.length > 0 ? (
           <MapPreviewCard
             pins={items.length}
             title={mapTitle(items.length)}
@@ -390,16 +394,16 @@ export function HomeScreen() {
           />
         ) : null}
 
-        <AyahOfTheDayCard />
+        {belowFold ? <AyahOfTheDayCard /> : null}
 
-        {daysRead.on || community.on ? (
+        {belowFold && (daysRead.on || community.on) ? (
           <View style={styles.list} testID="home-reading">
             {daysRead.on ? <DaysReadCard /> : null}
             <CommunityTodayCard />
           </View>
         ) : null}
 
-        <HomeShortcuts />
+        {belowFold ? <HomeShortcuts /> : null}
       </View>
     </ScreenFrame>
   );

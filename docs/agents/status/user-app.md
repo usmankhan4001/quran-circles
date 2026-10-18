@@ -3,6 +3,14 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Low-end budgets, third pass (2026-10-18): one Home render, start frame, Nearby prefetch
+
+- **Home renders once.** On a web start at Home, `app/_layout.tsx` asks `needsStartData(app, 'home')` (`boot/startQueries.ts`: config or next occurrences missing from the cache) and, only then, waits up to 0.8 s (`START_DATA_WAIT_MS`, never rejects) for the start queries before the first render, so Home draws with its data instead of a skeleton then content. With the data cached (warm start) nothing waits.
+- **Start frame.** `ui/startFrame.ts`: the web root layout arms `armStartFrameDeferral()`; `useStartFrameDeferral()` holds Home's below-the-fold cards (map preview, ayah of the day, reading block, shortcuts) for one frame (rAF then a zero timeout) on that first render only. Not armed in tests or on phones, so existing tests are unchanged.
+- **First tap to Nearby.** `prefetchNearbyList(app)` warms the Nearby list's first page with exactly the query Nearby will make (city, saved area origin); skipped when fresh (30 s) or when an area is chosen but its areas are not cached. The tabs layout schedules it with the route chunk prefetch 1.5 s after the tabs appear (web only, cancelled on unmount).
+- Tests: `ui/startFrame.test.tsx` (3), `boot/startQueries.test.ts` (+6: `needsStartData`, `prefetchNearbyList`), `screens/HomeScreen.test.tsx` (+1: web start shows the below-fold cards a frame later). `pnpm --filter @qc/user-app test`: 1032 passing in 68 files.
+- Results (low-end emulation, Slow 4G, medians of 3; full table in `docs/quality/low-end-budgets.md`, "After the third pass"): first tap to Nearby 1.48 s to **0.83 s**; Home content 6.91 s to 6.73 s (**still over 6 s**); warm start 3.42 s to 3.18 s (**still over 3 s**); Home interactive 7.60 s to 7.83 s (within budget and within noise, closer to 8 s). The run also drops Playwright request routing (integration), so part of the gain may be the harness.
+
 ## Low-end budgets, second pass (2026-10-18): i18n per language, content subpaths, zod, Home renders
 
 Lanes touched: user-app, admin-app, `packages/i18n`, `packages/content` (see `i18n.md`, `content.md`, `admin-app.md`).

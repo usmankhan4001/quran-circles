@@ -34,13 +34,14 @@ import {
 import { issuesFromZod, ValidationIssue } from '../errors';
 import { Portion, Occurrence, AdminOccurrence, Session } from './sessions';
 import { VenueFacilities } from './places';
+import { lazy } from '../lazy';
 
 // Roles and invites
 
 const roleTargetShapes = {
-  national_admin: z.object({ role: z.literal('national_admin') }),
-  city_coordinator: z.object({ role: z.literal('city_coordinator'), cityId: Uuid }),
-  venue_coordinator: z.object({ role: z.literal('venue_coordinator'), venueId: Uuid }),
+  national_admin: lazy(() => z.object({ role: z.literal('national_admin') })),
+  city_coordinator: lazy(() => z.object({ role: z.literal('city_coordinator'), cityId: Uuid })),
+  venue_coordinator: lazy(() => z.object({ role: z.literal('venue_coordinator'), venueId: Uuid })),
 };
 
 /**
@@ -54,315 +55,377 @@ const roleTargetShapes = {
  * Resend: there is no separate "resend" call. Sending a new invite for the same number, role
  * and place replaces the pending one (new expiry) and sends the message again.
  */
-export const InviteBody = z.discriminatedUnion('role', [
-  roleTargetShapes.national_admin.extend({ phone: PhoneE164, displayName: PersonName.optional() }),
-  roleTargetShapes.city_coordinator.extend({
-    phone: PhoneE164,
-    displayName: PersonName.optional(),
-    replacesAssignmentId: Uuid.optional(),
-  }),
-  roleTargetShapes.venue_coordinator.extend({
-    phone: PhoneE164,
-    displayName: PersonName.optional(),
-    replacesAssignmentId: Uuid.optional(),
-  }),
-]);
+export const InviteBody = lazy(() =>
+  z.discriminatedUnion('role', [
+    roleTargetShapes.national_admin.extend({
+      phone: PhoneE164,
+      displayName: PersonName.optional(),
+    }),
+    roleTargetShapes.city_coordinator.extend({
+      phone: PhoneE164,
+      displayName: PersonName.optional(),
+      replacesAssignmentId: Uuid.optional(),
+    }),
+    roleTargetShapes.venue_coordinator.extend({
+      phone: PhoneE164,
+      displayName: PersonName.optional(),
+      replacesAssignmentId: Uuid.optional(),
+    }),
+  ]),
+);
 export type InviteBody = z.infer<typeof InviteBody>;
 
-export const Invite = z.object({
-  id: Uuid,
-  phone: PhoneE164,
-  displayName: z.string().nullable(),
-  role: Role,
-  scopeType: ScopeType,
-  cityId: Uuid.nullable(),
-  venueId: Uuid.nullable(),
-  status: InviteStatus,
-  createdAt: InstantUtc,
-  expiresAt: InstantUtc,
-  /**
-   * Handover: the assignment this invite replaces when it is accepted, or null for a plain invite.
-   * Servers from 1.0.0-rc.3 always send it. To resend a handover invite, copy it into the new
-   * `InviteBody`; a resend of a still-pending handover invite keeps it even when it is left out.
-   * Optional in the type only so that payloads and test data written for rc.2 still parse.
-   */
-  replacesAssignmentId: Uuid.nullable().optional(),
-});
+export const Invite = lazy(() =>
+  z.object({
+    id: Uuid,
+    phone: PhoneE164,
+    displayName: z.string().nullable(),
+    role: Role,
+    scopeType: ScopeType,
+    cityId: Uuid.nullable(),
+    venueId: Uuid.nullable(),
+    status: InviteStatus,
+    createdAt: InstantUtc,
+    expiresAt: InstantUtc,
+    /**
+     * Handover: the assignment this invite replaces when it is accepted, or null for a plain invite.
+     * Servers from 1.0.0-rc.3 always send it. To resend a handover invite, copy it into the new
+     * `InviteBody`; a resend of a still-pending handover invite keeps it even when it is left out.
+     * Optional in the type only so that payloads and test data written for rc.2 still parse.
+     */
+    replacesAssignmentId: Uuid.nullable().optional(),
+  }),
+);
 export type Invite = z.infer<typeof Invite>;
 
 /**
  * Give an existing person a role. For a handover, pass `replacesAssignmentId`: the previous
  * coordinator loses access in the same transaction and the history stays.
  */
-export const AssignRoleBody = z.discriminatedUnion('role', [
-  roleTargetShapes.national_admin.extend({ userId: Uuid }),
-  roleTargetShapes.city_coordinator.extend({ userId: Uuid, replacesAssignmentId: Uuid.optional() }),
-  roleTargetShapes.venue_coordinator.extend({
-    userId: Uuid,
-    replacesAssignmentId: Uuid.optional(),
-  }),
-]);
+export const AssignRoleBody = lazy(() =>
+  z.discriminatedUnion('role', [
+    roleTargetShapes.national_admin.extend({ userId: Uuid }),
+    roleTargetShapes.city_coordinator.extend({
+      userId: Uuid,
+      replacesAssignmentId: Uuid.optional(),
+    }),
+    roleTargetShapes.venue_coordinator.extend({
+      userId: Uuid,
+      replacesAssignmentId: Uuid.optional(),
+    }),
+  ]),
+);
 export type AssignRoleBody = z.infer<typeof AssignRoleBody>;
 
-export const StaffRoleAssignment = z.object({
-  id: Uuid,
-  userId: Uuid,
-  userName: z.string().nullable(),
-  phone: PhoneE164,
-  role: Role,
-  scopeType: ScopeType,
-  cityId: Uuid.nullable(),
-  venueId: Uuid.nullable(),
-  scopeName: Localized.nullable(),
-  createdAt: InstantUtc,
-  revokedAt: InstantUtc.nullable(),
-});
+export const StaffRoleAssignment = lazy(() =>
+  z.object({
+    id: Uuid,
+    userId: Uuid,
+    userName: z.string().nullable(),
+    phone: PhoneE164,
+    role: Role,
+    scopeType: ScopeType,
+    cityId: Uuid.nullable(),
+    venueId: Uuid.nullable(),
+    scopeName: Localized.nullable(),
+    createdAt: InstantUtc,
+    revokedAt: InstantUtc.nullable(),
+  }),
+);
 export type StaffRoleAssignment = z.infer<typeof StaffRoleAssignment>;
-export const RoleAssignmentsQuery = PageQuery.extend({
-  cityId: Uuid.optional(),
-  venueId: Uuid.optional(),
-  includeRevoked: z.stringbool().optional(),
-});
-export const RoleAssignmentsResponse = pageOf(StaffRoleAssignment);
-export const InvitesResponse = z.object({ items: z.array(Invite) });
+export const RoleAssignmentsQuery = lazy(() =>
+  PageQuery.extend({
+    cityId: Uuid.optional(),
+    venueId: Uuid.optional(),
+    includeRevoked: z.stringbool().optional(),
+  }),
+);
+export const RoleAssignmentsResponse = lazy(() => pageOf(StaffRoleAssignment));
+export const InvitesResponse = lazy(() => z.object({ items: z.array(Invite) }));
 
 // Venues
 
-export const VenueCreate = z.object({
-  cityId: Uuid,
-  areaId: Uuid,
-  name: LocalizedInput,
-  address: LocalizedAddressInput,
-  lat: Latitude,
-  lng: Longitude,
-  contactPhone: PhoneE164.nullable().default(null),
-  facilities: VenueFacilities.partial().default({}),
-});
+export const VenueCreate = lazy(() =>
+  z.object({
+    cityId: Uuid,
+    areaId: Uuid,
+    name: LocalizedInput,
+    address: LocalizedAddressInput,
+    lat: Latitude,
+    lng: Longitude,
+    contactPhone: PhoneE164.nullable().default(null),
+    facilities: VenueFacilities.partial().default({}),
+  }),
+);
 export type VenueCreate = z.infer<typeof VenueCreate>;
 
-export const VenueUpdate = z.object({
-  areaId: Uuid.optional(),
-  name: LocalizedInput.optional(),
-  address: LocalizedAddressInput.optional(),
-  lat: Latitude.optional(),
-  lng: Longitude.optional(),
-  contactPhone: PhoneE164.nullable().optional(),
-  facilities: VenueFacilities.partial().optional(),
-});
-export const AdminVenuesQuery = PageQuery.extend({
-  cityId: Uuid.optional(),
-  includeArchived: z.stringbool().optional(),
-});
+export const VenueUpdate = lazy(() =>
+  z.object({
+    areaId: Uuid.optional(),
+    name: LocalizedInput.optional(),
+    address: LocalizedAddressInput.optional(),
+    lat: Latitude.optional(),
+    lng: Longitude.optional(),
+    contactPhone: PhoneE164.nullable().optional(),
+    facilities: VenueFacilities.partial().optional(),
+  }),
+);
+export const AdminVenuesQuery = lazy(() =>
+  PageQuery.extend({
+    cityId: Uuid.optional(),
+    includeArchived: z.stringbool().optional(),
+  }),
+);
 
 // Circles
 
-export const AdminCircle = z.object({
-  id: Uuid,
-  venueId: Uuid,
-  cityId: Uuid,
-  name: Localized,
-  teacherName: z.string().nullable(),
-  description: Localized.nullable(),
-  language: Locale,
-  section: Section,
-  onlineLink: HttpsUrl.nullable(),
-  status: CircleStatus,
-  createdAt: InstantUtc,
-  approvedAt: InstantUtc.nullable(),
-});
+export const AdminCircle = lazy(() =>
+  z.object({
+    id: Uuid,
+    venueId: Uuid,
+    cityId: Uuid,
+    name: Localized,
+    teacherName: z.string().nullable(),
+    description: Localized.nullable(),
+    language: Locale,
+    section: Section,
+    onlineLink: HttpsUrl.nullable(),
+    status: CircleStatus,
+    createdAt: InstantUtc,
+    approvedAt: InstantUtc.nullable(),
+  }),
+);
 export type AdminCircle = z.infer<typeof AdminCircle>;
 
 /** Venue coordinators create circles pending approval; a city coordinator or admin publishes them. */
-export const CircleCreate = z.object({
-  venueId: Uuid,
-  name: LocalizedInput,
-  /** The teacher is an optional name, not an account. */
-  teacherName: SafeText(2, 80).nullable().default(null),
-  description: LocalizedLongInput.nullable().default(null),
-  language: Locale,
-  section: Section.default('family'),
-  onlineLink: HttpsUrl.nullable().default(null),
-});
-export const CircleUpdate = z.object({
-  name: LocalizedInput.optional(),
-  teacherName: SafeText(2, 80).nullable().optional(),
-  description: LocalizedLongInput.nullable().optional(),
-  language: Locale.optional(),
-  section: Section.optional(),
-  onlineLink: HttpsUrl.nullable().optional(),
-  /**
-   * Archive a published circle, or publish an archived one again. Approving a pending circle
-   * stays `adminCircles.decide`; this cannot move a circle in or out of pending, rejected or draft.
-   */
-  status: z.enum(['published', 'archived']).optional(),
-});
+export const CircleCreate = lazy(() =>
+  z.object({
+    venueId: Uuid,
+    name: LocalizedInput,
+    /** The teacher is an optional name, not an account. */
+    teacherName: SafeText(2, 80).nullable().default(null),
+    description: LocalizedLongInput.nullable().default(null),
+    language: Locale,
+    section: Section.default('family'),
+    onlineLink: HttpsUrl.nullable().default(null),
+  }),
+);
+export const CircleUpdate = lazy(() =>
+  z.object({
+    name: LocalizedInput.optional(),
+    teacherName: SafeText(2, 80).nullable().optional(),
+    description: LocalizedLongInput.nullable().optional(),
+    language: Locale.optional(),
+    section: Section.optional(),
+    onlineLink: HttpsUrl.nullable().optional(),
+    /**
+     * Archive a published circle, or publish an archived one again. Approving a pending circle
+     * stays `adminCircles.decide`; this cannot move a circle in or out of pending, rejected or draft.
+     */
+    status: z.enum(['published', 'archived']).optional(),
+  }),
+);
 /**
  * Approve or reject a pending circle. There is deliberately no free-text note: personal text
  * must not reach the audit log, and there is no column for it. An old client that still sends
  * `note` is not refused; the field is dropped.
  */
-export const CircleDecisionBody = z.object({
-  decision: z.enum(['approve', 'reject']),
-});
-export const AdminCirclesQuery = PageQuery.extend({
-  cityId: Uuid.optional(),
-  venueId: Uuid.optional(),
-  status: CircleStatus.optional(),
-});
-export const AdminCirclesResponse = pageOf(AdminCircle);
+export const CircleDecisionBody = lazy(() =>
+  z.object({
+    decision: z.enum(['approve', 'reject']),
+  }),
+);
+export const AdminCirclesQuery = lazy(() =>
+  PageQuery.extend({
+    cityId: Uuid.optional(),
+    venueId: Uuid.optional(),
+    status: CircleStatus.optional(),
+  }),
+);
+export const AdminCirclesResponse = lazy(() => pageOf(AdminCircle));
 
 // Sessions
 
 const sessionBase = {
   venueId: Uuid,
-  circleId: Uuid.nullable().default(null),
+  circleId: lazy(() => Uuid.nullable().default(null)),
   program: Program,
-  seasonId: Uuid.nullable().default(null),
+  seasonId: lazy(() => Uuid.nullable().default(null)),
   title: LocalizedInput,
-  description: LocalizedLongInput.nullable().default(null),
+  description: lazy(() => LocalizedLongInput.nullable().default(null)),
   section: Section,
   language: Locale,
   localStartTime: LocalTime,
-  durationMinutes: z.number().int().min(5).max(600),
-  registrationEnabled: z.boolean().default(true),
+  durationMinutes: lazy(() => z.number().int().min(5).max(600)),
+  registrationEnabled: lazy(() => z.boolean().default(true)),
   /** Null keeps capacity off, which is the default. */
-  capacity: z.number().int().positive().nullable().default(null),
-  status: z.enum(['draft', 'published']).default('published'),
+  capacity: lazy(() => z.number().int().positive().nullable().default(null)),
+  status: lazy(() => z.enum(['draft', 'published']).default('published')),
 };
 
-export const SessionCreate = z.discriminatedUnion('kind', [
-  z.object({
-    ...sessionBase,
-    kind: z.literal('recurring'),
-    daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).max(7),
-    startsOn: LocalDate,
-    endsOn: LocalDate.nullable().default(null),
-  }),
-  z.object({ ...sessionBase, kind: z.literal('one_off'), date: LocalDate }),
-]);
+export const SessionCreate = lazy(() =>
+  z.discriminatedUnion('kind', [
+    z.object({
+      ...sessionBase,
+      kind: z.literal('recurring'),
+      daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).max(7),
+      startsOn: LocalDate,
+      endsOn: LocalDate.nullable().default(null),
+    }),
+    z.object({ ...sessionBase, kind: z.literal('one_off'), date: LocalDate }),
+  ]),
+);
 export type SessionCreate = z.infer<typeof SessionCreate>;
 
-export const SessionUpdate = z.object({
-  title: LocalizedInput.optional(),
-  description: LocalizedLongInput.nullable().optional(),
-  section: Section.optional(),
-  language: Locale.optional(),
-  registrationEnabled: z.boolean().optional(),
-  capacity: z.number().int().positive().nullable().optional(),
-  status: SessionStatus.optional(),
-});
+export const SessionUpdate = lazy(() =>
+  z.object({
+    title: LocalizedInput.optional(),
+    description: LocalizedLongInput.nullable().optional(),
+    section: Section.optional(),
+    language: Locale.optional(),
+    registrationEnabled: z.boolean().optional(),
+    capacity: z.number().int().positive().nullable().optional(),
+    status: SessionStatus.optional(),
+  }),
+);
 
 /** A time or day change. It reschedules reminders and, with notify, posts an update to the feed. */
-export const ScheduleChangeBody = z.object({
-  localStartTime: LocalTime.optional(),
-  durationMinutes: z.number().int().min(5).max(600).optional(),
-  daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional(),
-  endsOn: LocalDate.nullable().optional(),
-  /** First local date the change applies to. Earlier occurrences stay as they were. */
-  effectiveFrom: LocalDate,
-  notify: z.boolean().default(true),
-});
-export const ScheduleChangeResponse = z.object({
-  session: Session,
-  occurrencesChanged: z.number().int().min(0),
-  updatePostedId: Uuid.nullable(),
-});
+export const ScheduleChangeBody = lazy(() =>
+  z.object({
+    localStartTime: LocalTime.optional(),
+    durationMinutes: z.number().int().min(5).max(600).optional(),
+    daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).max(7).optional(),
+    endsOn: LocalDate.nullable().optional(),
+    /** First local date the change applies to. Earlier occurrences stay as they were. */
+    effectiveFrom: LocalDate,
+    notify: z.boolean().default(true),
+  }),
+);
+export const ScheduleChangeResponse = lazy(() =>
+  z.object({
+    session: Session,
+    occurrencesChanged: z.number().int().min(0),
+    updatePostedId: Uuid.nullable(),
+  }),
+);
 
-export const OccurrenceUpdate = z.object({
-  portion: Portion.nullable().optional(),
-  portionLabel: z.string().trim().max(200).nullable().optional(),
-  recapNote: z.string().trim().max(2000).nullable().optional(),
-  recapLocale: Locale.nullable().optional(),
-  status: z.enum(['scheduled', 'cancelled']).optional(),
-  startsAt: InstantUtc.optional(),
-  endsAt: InstantUtc.optional(),
-  notify: z.boolean().default(false),
-});
-export const OccurrenceView = z.object({ occurrence: AdminOccurrence });
+export const OccurrenceUpdate = lazy(() =>
+  z.object({
+    portion: Portion.nullable().optional(),
+    portionLabel: z.string().trim().max(200).nullable().optional(),
+    recapNote: z.string().trim().max(2000).nullable().optional(),
+    recapLocale: Locale.nullable().optional(),
+    status: z.enum(['scheduled', 'cancelled']).optional(),
+    startsAt: InstantUtc.optional(),
+    endsAt: InstantUtc.optional(),
+    notify: z.boolean().default(false),
+  }),
+);
+export const OccurrenceView = lazy(() => z.object({ occurrence: AdminOccurrence }));
 
 // Attendance
 
-export const AttendanceEntry = z.object({
-  registrationId: Uuid.nullable().default(null),
-  /** Optional name for drop-ins the coordinator knows. */
-  name: SafeText(1, 80).nullable().default(null),
-  count: z.number().int().min(1).max(50).default(1),
-});
-export const AttendancePut = z.object({
-  headcount: z.number().int().min(0).max(5000),
-  entries: z.array(AttendanceEntry).max(500).default([]),
-});
-export const Attendance = z.object({
-  occurrenceId: Uuid,
-  headcount: z.number().int().min(0).nullable(),
-  entries: z.array(AttendanceEntry),
-  markedAt: InstantUtc.nullable(),
-});
+export const AttendanceEntry = lazy(() =>
+  z.object({
+    registrationId: Uuid.nullable().default(null),
+    /** Optional name for drop-ins the coordinator knows. */
+    name: SafeText(1, 80).nullable().default(null),
+    count: z.number().int().min(1).max(50).default(1),
+  }),
+);
+export const AttendancePut = lazy(() =>
+  z.object({
+    headcount: z.number().int().min(0).max(5000),
+    entries: z.array(AttendanceEntry).max(500).default([]),
+  }),
+);
+export const Attendance = lazy(() =>
+  z.object({
+    occurrenceId: Uuid,
+    headcount: z.number().int().min(0).nullable(),
+    entries: z.array(AttendanceEntry),
+    markedAt: InstantUtc.nullable(),
+  }),
+);
 export type Attendance = z.infer<typeof Attendance>;
 
 // Audit, templates, settings
 
-export const AuditEntry = z.object({
-  id: z.string(),
-  actorName: z.string().nullable(),
-  action: z.string(),
-  entityType: z.string(),
-  entityId: z.string().nullable(),
-  scopeType: ScopeType,
-  cityId: Uuid.nullable(),
-  venueId: Uuid.nullable(),
-  createdAt: InstantUtc,
-});
+export const AuditEntry = lazy(() =>
+  z.object({
+    id: z.string(),
+    actorName: z.string().nullable(),
+    action: z.string(),
+    entityType: z.string(),
+    entityId: z.string().nullable(),
+    scopeType: ScopeType,
+    cityId: Uuid.nullable(),
+    venueId: Uuid.nullable(),
+    createdAt: InstantUtc,
+  }),
+);
 export type AuditEntry = z.infer<typeof AuditEntry>;
-export const AuditQuery = PageQuery.extend({
-  cityId: Uuid.optional(),
-  venueId: Uuid.optional(),
-  entityType: z.string().max(60).optional(),
-  from: InstantUtc.optional(),
-  to: InstantUtc.optional(),
-});
-export const AuditResponse = pageOf(AuditEntry);
+export const AuditQuery = lazy(() =>
+  PageQuery.extend({
+    cityId: Uuid.optional(),
+    venueId: Uuid.optional(),
+    entityType: z.string().max(60).optional(),
+    from: InstantUtc.optional(),
+    to: InstantUtc.optional(),
+  }),
+);
+export const AuditResponse = lazy(() => pageOf(AuditEntry));
 
-export const MessageTemplateView = z.object({
-  key: z.string(),
-  channel: MessageChannel,
-  locale: Locale,
-  body: z.string(),
-  variables: z.array(z.string()),
-  costCategory: CostCategory,
-  status: TemplateStatus,
-});
-export const MessageTemplatesResponse = z.object({ items: z.array(MessageTemplateView) });
+export const MessageTemplateView = lazy(() =>
+  z.object({
+    key: z.string(),
+    channel: MessageChannel,
+    locale: Locale,
+    body: z.string(),
+    variables: z.array(z.string()),
+    costCategory: CostCategory,
+    status: TemplateStatus,
+  }),
+);
+export const MessageTemplatesResponse = lazy(() =>
+  z.object({ items: z.array(MessageTemplateView) }),
+);
 
 /** Whole minutes before a session's start that its reminder is sent. */
-const ReminderLead = z.number().int().min(5).max(1440);
+const ReminderLead = lazy(() => z.number().int().min(5).max(1440));
 export const REMINDER_LEAD_DEFAULT_MINUTES = 60;
 
 /** Reminder lead time per program. Stored under the settings key `reminder_lead_minutes`. */
-export const ReminderLeadMinutes = z.object({ dora: ReminderLead, circles: ReminderLead });
+export const ReminderLeadMinutes = lazy(() =>
+  z.object({ dora: ReminderLead, circles: ReminderLead }),
+);
 export type ReminderLeadMinutes = z.infer<typeof ReminderLeadMinutes>;
 
-export const Settings = z.object({
-  /** Days to add to the calculated Hijri date. Pakistan starts months by moon sighting. */
-  hijriOffsetDays: z.number().int().min(-2).max(2),
-  seasonMode: SeasonMode,
-  /** Most WhatsApp messages one person gets in a day. Settings key `whatsapp_daily_cap_per_person`. */
-  whatsappDailyCapPerPerson: z.number().int().min(0).max(5),
-  circleRequestAlertThreshold: z.number().int().min(1).max(1000),
-  /**
-   * How long before a session its reminder goes out, per program (5 to 1440 minutes, 60 each by
-   * default). A response from a server that predates this field reads as the default.
-   */
-  reminderLeadMinutes: ReminderLeadMinutes.prefault({
-    dora: REMINDER_LEAD_DEFAULT_MINUTES,
-    circles: REMINDER_LEAD_DEFAULT_MINUTES,
+export const Settings = lazy(() =>
+  z.object({
+    /** Days to add to the calculated Hijri date. Pakistan starts months by moon sighting. */
+    hijriOffsetDays: z.number().int().min(-2).max(2),
+    seasonMode: SeasonMode,
+    /** Most WhatsApp messages one person gets in a day. Settings key `whatsapp_daily_cap_per_person`. */
+    whatsappDailyCapPerPerson: z.number().int().min(0).max(5),
+    circleRequestAlertThreshold: z.number().int().min(1).max(1000),
+    /**
+     * How long before a session its reminder goes out, per program (5 to 1440 minutes, 60 each by
+     * default). A response from a server that predates this field reads as the default.
+     */
+    reminderLeadMinutes: ReminderLeadMinutes.prefault({
+      dora: REMINDER_LEAD_DEFAULT_MINUTES,
+      circles: REMINDER_LEAD_DEFAULT_MINUTES,
+    }),
   }),
-});
+);
 export type Settings = z.infer<typeof Settings>;
 /** Send only what changes. `reminderLeadMinutes` may carry just one program. */
-export const SettingsUpdate = Settings.omit({ reminderLeadMinutes: true })
-  .extend({ reminderLeadMinutes: ReminderLeadMinutes.partial() })
-  .partial();
+export const SettingsUpdate = lazy(() =>
+  Settings.omit({ reminderLeadMinutes: true })
+    .extend({ reminderLeadMinutes: ReminderLeadMinutes.partial() })
+    .partial(),
+);
 export type SettingsUpdate = z.infer<typeof SettingsUpdate>;
 
 // Bulk import
@@ -387,7 +450,7 @@ export const COORDINATOR_IMPORT_MAX_ROWS = 100;
 export const INVITE_DAILY_LIMIT = 'invite_daily_limit';
 
 export const IMPORT_KINDS = ['venues', 'coordinators', 'sessions'] as const;
-export const ImportKind = z.enum(IMPORT_KINDS);
+export const ImportKind = lazy(() => z.enum(IMPORT_KINDS));
 export type ImportKind = z.infer<typeof ImportKind>;
 
 /** The schema each row of an import is checked against: the same one as the single create call. */
@@ -453,43 +516,47 @@ const importBody = <S extends z.ZodType>(kind: ImportKind) =>
     rows: importRows<S>(kind),
   });
 
-export const VenueImportBody = importBody<typeof VenueCreate>('venues');
-export const CoordinatorImportBody = importBody<typeof InviteBody>('coordinators');
-export const SessionImportBody = importBody<typeof SessionCreate>('sessions');
+export const VenueImportBody = lazy(() => importBody<typeof VenueCreate>('venues'));
+export const CoordinatorImportBody = lazy(() => importBody<typeof InviteBody>('coordinators'));
+export const SessionImportBody = lazy(() => importBody<typeof SessionCreate>('sessions'));
 export type VenueImportBody = z.infer<typeof VenueImportBody>;
 export type CoordinatorImportBody = z.infer<typeof CoordinatorImportBody>;
 export type SessionImportBody = z.infer<typeof SessionImportBody>;
 
 export const IMPORT_ROW_STATUSES = ['created', 'duplicate', 'invalid'] as const;
-export const ImportRowStatus = z.enum(IMPORT_ROW_STATUSES);
+export const ImportRowStatus = lazy(() => z.enum(IMPORT_ROW_STATUSES));
 
-export const ImportRowResult = z.object({
-  /** Position in the request's `rows`, from 0. */
-  index: z.number().int().min(0),
-  /**
-   * created: added (or would be added, on a dry run). duplicate: already there or repeated
-   * earlier in the same request; skipped, not an error. invalid: see `issues`.
-   */
-  status: ImportRowStatus,
-  /** Empty unless the row is invalid. Never contains the cell values. */
-  issues: z.array(ValidationIssue),
-});
+export const ImportRowResult = lazy(() =>
+  z.object({
+    /** Position in the request's `rows`, from 0. */
+    index: z.number().int().min(0),
+    /**
+     * created: added (or would be added, on a dry run). duplicate: already there or repeated
+     * earlier in the same request; skipped, not an error. invalid: see `issues`.
+     */
+    status: ImportRowStatus,
+    /** Empty unless the row is invalid. Never contains the cell values. */
+    issues: z.array(ValidationIssue),
+  }),
+);
 export type ImportRowResult = z.infer<typeof ImportRowResult>;
 
-export const ImportResult = z.object({
-  dryRun: z.boolean(),
-  /**
-   * True only when the rows were written: not a dry run, and no row invalid. One invalid row
-   * means nothing is written (all or nothing); fix the file and send it again.
-   */
-  applied: z.boolean(),
-  counts: z.object({
-    created: z.number().int().min(0),
-    duplicate: z.number().int().min(0),
-    invalid: z.number().int().min(0),
+export const ImportResult = lazy(() =>
+  z.object({
+    dryRun: z.boolean(),
+    /**
+     * True only when the rows were written: not a dry run, and no row invalid. One invalid row
+     * means nothing is written (all or nothing); fix the file and send it again.
+     */
+    applied: z.boolean(),
+    counts: z.object({
+      created: z.number().int().min(0),
+      duplicate: z.number().int().min(0),
+      invalid: z.number().int().min(0),
+    }),
+    rows: z.array(ImportRowResult),
   }),
-  rows: z.array(ImportRowResult),
-});
+);
 export type ImportResult = z.infer<typeof ImportResult>;
 
 export type ImportRowCheck<K extends ImportKind> =
@@ -518,14 +585,16 @@ export function checkImportRows<K extends ImportKind>(
 /** Most registration rows one scoped export may return. Over this the call is refused. */
 export const REGISTRATION_EXPORT_MAX_ROWS = 50_000;
 
-export const AdminRegistrationsExportQuery = z.object({
-  cityId: Uuid.optional(),
-  venueId: Uuid.optional(),
-  /** First day to include, a local date (Pakistan time) of the registration. */
-  from: LocalDate.optional(),
-  /** Last day to include, inclusive. */
-  to: LocalDate.optional(),
-});
+export const AdminRegistrationsExportQuery = lazy(() =>
+  z.object({
+    cityId: Uuid.optional(),
+    venueId: Uuid.optional(),
+    /** First day to include, a local date (Pakistan time) of the registration. */
+    from: LocalDate.optional(),
+    /** Last day to include, inclusive. */
+    to: LocalDate.optional(),
+  }),
+);
 export type AdminRegistrationsExportQuery = z.infer<typeof AdminRegistrationsExportQuery>;
 
 /** The header row of the scoped export, in order. */

@@ -1,9 +1,10 @@
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
-import { CITY_RAWALPINDI } from '../test/factories';
+import { AREA_SADDAR, CITY_RAWALPINDI } from '../test/factories';
 import { createWorld, renderScreen, type TestWorld } from '../test/harness';
 import { HomeScreen } from '../screens/HomeScreen';
-import { prefetchStartQueries } from './startQueries';
+import { NearbyScreen } from '../screens/NearbyScreen';
+import { needsStartData, prefetchNearbyList, prefetchStartQueries } from './startQueries';
 
 const OCCURRENCES = 'GET /v1/occurrences';
 const MINE = 'GET /v1/registrations/mine';
@@ -99,5 +100,70 @@ describe('prefetchStartQueries', () => {
     const view = await renderScreen(createElement(HomeScreen), { world });
     await view.findAllByTestId('home-lead-card');
     expect(world.http.callsTo(OCCURRENCES).length).toBeGreaterThan(1);
+  });
+});
+
+describe('needsStartData', () => {
+  it('is true on a Home start with nothing saved, and false once the data is in', async () => {
+    const world = await createWorld({ signedIn: true, cityId: CITY_RAWALPINDI.id });
+    expect(needsStartData(world.services, 'home')).toBe(true);
+    await prefetchStartQueries(world.services, 'home');
+    expect(needsStartData(world.services, 'home')).toBe(false);
+  });
+
+  it('is false outside Home', async () => {
+    const world = await createWorld({ signedIn: true });
+    expect(needsStartData(world.services, 'nearby')).toBe(false);
+    expect(needsStartData(world.services, null)).toBe(false);
+  });
+
+  it('is true again for another city', async () => {
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
+    await prefetchStartQueries(world.services, 'home');
+    await world.services.preferences.update({ cityId: null });
+    expect(needsStartData(world.services, 'home')).toBe(true);
+  });
+});
+
+const SESSIONS_LIST = 'GET /v1/sessions';
+
+async function nearbyListRequests(world: TestWorld): Promise<number> {
+  const view = await renderScreen(createElement(NearbyScreen), { world });
+  await view.findByTestId('nearby-list');
+  await settle(world);
+  return world.http.callsTo(SESSIONS_LIST).length;
+}
+
+describe('prefetchNearbyList', () => {
+  it('asks for the list Nearby opens on, under its key, so Nearby asks nothing more', async () => {
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
+    await prefetchNearbyList(world.services);
+    expect(world.http.callsTo(SESSIONS_LIST)).toHaveLength(1);
+    expect(world.http.callsTo(SESSIONS_LIST)[0]!.search).toContain(`cityId=${CITY_RAWALPINDI.id}`);
+    expect(await nearbyListRequests(world)).toBe(1);
+  });
+
+  it('measures from the chosen area once its list is in the cache', async () => {
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id, areaId: AREA_SADDAR.id });
+    await prefetchNearbyList(world.services);
+    expect(world.http.callsTo(SESSIONS_LIST)).toHaveLength(0); // no area list yet: no guess
+    const areas = await world.services.api.places.areas({ query: { cityId: CITY_RAWALPINDI.id } });
+    world.services.cache.set(`places:areas:${CITY_RAWALPINDI.id}`, areas.items, true);
+    await prefetchNearbyList(world.services);
+    expect(world.http.callsTo(SESSIONS_LIST)).toHaveLength(1);
+    expect(world.http.callsTo(SESSIONS_LIST)[0]!.search).toContain('lat=');
+    expect(await nearbyListRequests(world)).toBe(1);
+  });
+
+  it('asks nothing while the list is fresh, and never throws', async () => {
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
+    await prefetchNearbyList(world.services);
+    await prefetchNearbyList(world.services);
+    expect(world.http.callsTo(SESSIONS_LIST)).toHaveLength(1);
+
+    const failing = await createWorld({ cityId: CITY_RAWALPINDI.id });
+    failing.http.failNext(SESSIONS_LIST, 'internal_error');
+    await expect(prefetchNearbyList(failing.services)).resolves.toBeUndefined();
+    expect(await nearbyListRequests(failing)).toBe(2);
   });
 });

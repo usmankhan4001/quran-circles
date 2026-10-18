@@ -138,8 +138,10 @@ import {
   VenueImportBody,
   VenueUpdate,
 } from './schemas/admin';
+import { lazy } from './lazy';
 
-const id = <K extends string>(name: K) => z.object({ [name]: Uuid } as { [P in K]: typeof Uuid });
+const id = <K extends string>(name: K) =>
+  lazy(() => z.object({ [name]: Uuid } as { [P in K]: typeof Uuid }));
 const json = <T extends z.ZodType>(status: 200 | 201 | 202, schema: T) =>
   ({ status, schema }) as const;
 const noContent = { status: 204 } as const;
@@ -190,7 +192,7 @@ export const endpoints = {
     tag: 'System',
     auth: 'public',
     actions: ['content.read'],
-    params: z.object({ slug: z.string().min(1).max(80) }),
+    params: lazy(() => z.object({ slug: z.string().min(1).max(80) })),
     success: json(200, ContentPage),
   }),
 
@@ -619,18 +621,23 @@ export const endpoints = {
     tag: 'Discover',
     auth: 'public',
     actions: ['venues.read'],
-    query: z.object({
-      cursor: z.string().min(1).max(200).optional(),
-      limit: z.coerce.number().int().min(1).max(100).default(20),
-      cityId: Uuid.optional(),
-      areaId: Uuid.optional(),
-      q: z.string().trim().min(1).max(100).optional(),
-      womenSection: z.stringbool().optional(),
-      wheelchairAccess: z.stringbool().optional(),
-      lat: z.coerce.number().min(-90).max(90).optional(),
-      lng: z.coerce.number().min(-180).max(180).optional(),
-    }),
-    success: json(200, pageOf(Venue)),
+    query: lazy(() =>
+      z.object({
+        cursor: z.string().min(1).max(200).optional(),
+        limit: z.coerce.number().int().min(1).max(100).default(20),
+        cityId: Uuid.optional(),
+        areaId: Uuid.optional(),
+        q: z.string().trim().min(1).max(100).optional(),
+        womenSection: z.stringbool().optional(),
+        wheelchairAccess: z.stringbool().optional(),
+        lat: z.coerce.number().min(-90).max(90).optional(),
+        lng: z.coerce.number().min(-180).max(180).optional(),
+      }),
+    ),
+    success: json(
+      200,
+      lazy(() => pageOf(Venue)),
+    ),
   }),
   'venues.get': endpoint({
     id: 'venues.get',
@@ -766,7 +773,7 @@ export const endpoints = {
     auth: 'staff',
     actions: ['registration.export'],
     params: id('sessionId'),
-    success: { status: 200, schema: z.string(), contentType: 'text/csv' },
+    success: { status: 200, schema: lazy(() => z.string()), contentType: 'text/csv' },
   }),
   'adminRegistrations.export': endpoint({
     id: 'adminRegistrations.export',
@@ -785,7 +792,7 @@ export const endpoints = {
     auth: 'staff',
     actions: ['registration.export'],
     query: AdminRegistrationsExportQuery,
-    success: { status: 200, schema: z.string(), contentType: 'text/csv' },
+    success: { status: 200, schema: lazy(() => z.string()), contentType: 'text/csv' },
     errors: ['not_found'],
   }),
 
@@ -1105,7 +1112,10 @@ export const endpoints = {
     auth: 'staff',
     actions: ['venue.list_admin'],
     query: AdminVenuesQuery,
-    success: json(200, pageOf(Venue)),
+    success: json(
+      200,
+      lazy(() => pageOf(Venue)),
+    ),
   }),
   'adminVenues.create': endpoint({
     id: 'adminVenues.create',

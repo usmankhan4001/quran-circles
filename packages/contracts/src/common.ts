@@ -1,17 +1,22 @@
 import { z } from 'zod';
+import { lazy } from './lazy';
 
 /** Primitives shared by every schema. Instants are UTC ISO strings; dates and times are local. */
 
 export const E164_PATTERN = /^\+[1-9][0-9]{7,14}$/;
 
-export const Uuid = z.uuid().meta({ examples: ['00000000-0000-4000-8000-000000000001'] });
+export const Uuid = lazy(() =>
+  z.uuid().meta({ examples: ['00000000-0000-4000-8000-000000000001'] }),
+);
 export type Uuid = z.infer<typeof Uuid>;
 
 /** A phone number in E.164 form, for example +923001234567. Pakistan is +92. */
-export const PhoneE164 = z
-  .string()
-  .regex(E164_PATTERN)
-  .meta({ examples: ['+923001234567'], description: 'E.164, for example +923001234567' });
+export const PhoneE164 = lazy(() =>
+  z
+    .string()
+    .regex(E164_PATTERN)
+    .meta({ examples: ['+923001234567'], description: 'E.164, for example +923001234567' }),
+);
 export type PhoneE164 = z.infer<typeof PhoneE164>;
 
 /** A Pakistani mobile number in E.164: +92, then 3, then nine digits (+92 3xx xxxxxxx). */
@@ -26,43 +31,49 @@ export const PHONE_NOT_PAKISTAN_MOBILE = 'phone_not_pakistan_mobile';
  * or a Pakistani landline, gets the issue code `PHONE_NOT_PAKISTAN_MOBILE` (through
  * `issuesFromZod`). Only `RequestCodeBody.phone` uses it; every other phone field stays `PhoneE164`.
  */
-export const PakistaniMobilePhone = z
-  .string()
-  .regex(E164_PATTERN)
-  .refine((value) => !E164_PATTERN.test(value) || PAKISTAN_MOBILE_PATTERN.test(value), {
-    message: 'only Pakistani mobile numbers (+92 3xx xxxxxxx) can sign in',
-    params: { code: PHONE_NOT_PAKISTAN_MOBILE },
-  })
-  .meta({
-    examples: ['+923001234567'],
-    description: 'A Pakistani mobile number in E.164: +923 followed by nine digits',
-  });
+export const PakistaniMobilePhone = lazy(() =>
+  z
+    .string()
+    .regex(E164_PATTERN)
+    .refine((value) => !E164_PATTERN.test(value) || PAKISTAN_MOBILE_PATTERN.test(value), {
+      message: 'only Pakistani mobile numbers (+92 3xx xxxxxxx) can sign in',
+      params: { code: PHONE_NOT_PAKISTAN_MOBILE },
+    })
+    .meta({
+      examples: ['+923001234567'],
+      description: 'A Pakistani mobile number in E.164: +923 followed by nine digits',
+    }),
+);
 export type PakistaniMobilePhone = z.infer<typeof PakistaniMobilePhone>;
 
 /** An instant in UTC, for example 2027-02-18T01:15:00Z. Show it in Pakistan time (UTC+5). */
-export const InstantUtc = z.iso.datetime().meta({ examples: ['2027-02-18T01:15:00Z'] });
+export const InstantUtc = lazy(() => z.iso.datetime().meta({ examples: ['2027-02-18T01:15:00Z'] }));
 export type InstantUtc = z.infer<typeof InstantUtc>;
 
-export const LocalDate = z.iso.date().meta({ examples: ['2027-02-18'] });
+export const LocalDate = lazy(() => z.iso.date().meta({ examples: ['2027-02-18'] }));
 export type LocalDate = z.infer<typeof LocalDate>;
 
 /** Wall-clock time in the session's timezone, 24 hour clock. */
-export const LocalTime = z
-  .string()
-  .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)
-  .meta({ examples: ['19:30'], description: 'HH:MM, 24 hour clock' });
+export const LocalTime = lazy(() =>
+  z
+    .string()
+    .regex(/^([01][0-9]|2[0-3]):[0-5][0-9]$/)
+    .meta({ examples: ['19:30'], description: 'HH:MM, 24 hour clock' }),
+);
 export type LocalTime = z.infer<typeof LocalTime>;
 
 /** A day of the week: 0 is Sunday, 6 is Saturday. */
-export const DayOfWeek = z.number().int().min(0).max(6);
+export const DayOfWeek = lazy(() => z.number().int().min(0).max(6));
 
 /** English is always present. Urdu is null until someone writes it; clients fall back to English. */
-export const Localized = z
-  .object({
-    en: z.string().min(1),
-    ur: z.string().min(1).nullable(),
-  })
-  .meta({ id: 'Localized' });
+export const Localized = lazy(() =>
+  z
+    .object({
+      en: z.string().min(1),
+      ur: z.string().min(1).nullable(),
+    })
+    .meta({ id: 'Localized' }),
+);
 export type Localized = z.infer<typeof Localized>;
 
 /**
@@ -127,50 +138,62 @@ export const SafeText = (min: number, max: number, options: SafeTextOptions = {}
  * characters, and no user name or password in it. `http:`, `javascript:`, `data:`, `file:` and
  * every other scheme are refused, and so are IP addresses and `localhost`.
  */
-export const HttpsUrl = z
-  .url({ protocol: /^https$/, hostname: z.regexes.domain })
-  .max(2048)
-  .refine(
-    // Another scheme or a malformed link is already reported by the url check above. This one asks
-    // for the `//` and refuses user info (`user:pass@`), with no URL getters (React Native has few).
-    (value) => !/^https:/i.test(value) || /^https:\/\/[^/?#@\\]+(?:[/?#]|$)/i.test(value),
-    { message: 'must be an https link' },
-  )
-  .meta({ examples: ['https://meet.example.org/circle'], description: 'An https link' });
+export const HttpsUrl = lazy(() =>
+  z
+    .url({ protocol: /^https$/, hostname: z.regexes.domain })
+    .max(2048)
+    .refine(
+      // Another scheme or a malformed link is already reported by the url check above. This one asks
+      // for the `//` and refuses user info (`user:pass@`), with no URL getters (React Native has few).
+      (value) => !/^https:/i.test(value) || /^https:\/\/[^/?#@\\]+(?:[/?#]|$)/i.test(value),
+      { message: 'must be an https link' },
+    )
+    .meta({ examples: ['https://meet.example.org/circle'], description: 'An https link' }),
+);
 export type HttpsUrl = z.infer<typeof HttpsUrl>;
 
 /** Line text: names and titles. */
-export const LocalizedInput = z.object({
-  en: SafeText(1, 500),
-  ur: SafeText(1, 500).nullable().optional(),
-});
+export const LocalizedInput = lazy(() =>
+  z.object({
+    en: SafeText(1, 500),
+    ur: SafeText(1, 500).nullable().optional(),
+  }),
+);
 export type LocalizedInput = z.infer<typeof LocalizedInput>;
 
-export const LocalizedLong = z.object({
-  en: z.string().min(1),
-  ur: z.string().min(1).nullable(),
-});
+export const LocalizedLong = lazy(() =>
+  z.object({
+    en: z.string().min(1),
+    ur: z.string().min(1).nullable(),
+  }),
+);
 
 /** Long text (descriptions, update bodies, addresses): line breaks allowed. */
-export const LocalizedLongInput = z.object({
-  en: SafeText(1, 4000, { multiline: true }),
-  ur: SafeText(1, 4000, { multiline: true }).nullable().optional(),
-});
+export const LocalizedLongInput = lazy(() =>
+  z.object({
+    en: SafeText(1, 4000, { multiline: true }),
+    ur: SafeText(1, 4000, { multiline: true }).nullable().optional(),
+  }),
+);
 
 /** An address: up to 500 characters like `LocalizedInput`, but on several lines. */
-export const LocalizedAddressInput = z.object({
-  en: SafeText(1, 500, { multiline: true }),
-  ur: SafeText(1, 500, { multiline: true }).nullable().optional(),
-});
+export const LocalizedAddressInput = lazy(() =>
+  z.object({
+    en: SafeText(1, 500, { multiline: true }),
+    ur: SafeText(1, 500, { multiline: true }).nullable().optional(),
+  }),
+);
 
-export const Latitude = z.number().min(-90).max(90);
-export const Longitude = z.number().min(-180).max(180);
+export const Latitude = lazy(() => z.number().min(-90).max(90));
+export const Longitude = lazy(() => z.number().min(-180).max(180));
 
 /** Pagination: opaque cursors, never offsets. Pass nextCursor back to get the next page. */
-export const PageQuery = z.object({
-  cursor: z.string().min(1).max(200).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
+export const PageQuery = lazy(() =>
+  z.object({
+    cursor: z.string().min(1).max(200).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  }),
+);
 export type PageQuery = z.infer<typeof PageQuery>;
 
 export const pageOf = <T extends z.ZodType>(item: T) =>
@@ -185,12 +208,12 @@ export const pageOf = <T extends z.ZodType>(item: T) =>
  * `'false'`; the typed client types these parameters as strings, so pass `'true'`, not `true`.
  * Every `z.stringbool()` query parameter in the registry follows this rule.
  */
-export const QueryBool = z.stringbool();
+export const QueryBool = lazy(() => z.stringbool());
 
-export const Empty = z.object({});
+export const Empty = lazy(() => z.object({}));
 
-export const OkResponse = z.object({ ok: z.literal(true) });
+export const OkResponse = lazy(() => z.object({ ok: z.literal(true) }));
 export type OkResponse = z.infer<typeof OkResponse>;
 
 /** Person's chosen display name. Never logged. */
-export const PersonName = SafeText(2, 80);
+export const PersonName = lazy(() => SafeText(2, 80));

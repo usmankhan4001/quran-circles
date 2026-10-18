@@ -1,6 +1,19 @@
 # Translation key rules
 
-Owned by the contracts lane. Keys live in `packages/i18n/src/en.json` and `ur.json`. Any lane adds its own keys, English and Urdu together, in the same pull request as the screen that uses them. Urdu values are drafts until a native speaker reviews them, and the `_meta.status` marker in `ur.json` stays.
+Owned by the contracts lane. Keys live in `packages/i18n/src/en/<part>.json` and `packages/i18n/src/ur/<part>.json` (see "Where a key goes" below). Any lane adds its own keys, English and Urdu together, in the same pull request as the screen that uses them. Urdu values are drafts until a native speaker reviews them, and the `_meta.status` marker in every `src/ur/*.json` file stays.
+
+## Where a key goes
+
+The catalogue is split into four parts so each app downloads only its own words, one language at a time. A key goes in the part for its namespace (the text before the first dot), in the same file name under both `src/en/` and `src/ur/`:
+
+| Part        | Files                                            | Namespaces                                                                                                                                |
+| ----------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `shared`    | `src/en/shared.json`, `src/ur/shared.json`       | `app`, `ui`, `errors`, `issues`, `time` (used by `@qc/ui` and every app)                                                                  |
+| `admin-app` | `src/en/admin-app.json`, `src/ur/admin-app.json` | `admin.*`                                                                                                                                 |
+| `console`   | `src/en/console.json`, `src/ur/console.json`     | `console.*`                                                                                                                               |
+| `user-app`  | `src/en/user-app.json`, `src/ur/user-app.json`   | everything else, including the server's own wording (`notifications`, `reminders`, `poster`) and `tabs`, `facilities`, `sections`, `days` |
+
+`partOf(key)` in `packages/i18n/src/catalogue.ts` is the rule; this table only restates it. `packages/i18n/src/parts.test.ts` fails when a key sits in the wrong part. There is no `src/en.json` or `src/ur.json` any more: a branch that adds keys there must move them to the right part.
 
 ## Structure
 
@@ -33,4 +46,4 @@ Owned by the contracts lane. Keys live in `packages/i18n/src/en.json` and `ur.js
 
 ## Parity
 
-`packages/i18n` tests fail when a key exists in one language and not the other, or when a value is empty.
+`packages/i18n` tests fail when a key exists in one language and not the other, when a value is empty, or when a key is not in the part `partOf` names (`src/parts.test.ts`).

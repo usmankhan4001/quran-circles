@@ -35,7 +35,7 @@ At the largest text size the cards stack with the same order; the prayer and rea
 
 ## Translation keys
 
-English below; Urdu drafts are in `packages/i18n/src/ur.json` under the same keys and carry the draft marker.
+English below; Urdu drafts are in `packages/i18n/src/ur/<part>.json` (the part `partOf(key)` names; see `docs/engineering/i18n-keys.md`) under the same keys and carry the draft marker.
 
 | Key                            | English                                         | Used for                                    |
 | ------------------------------ | ----------------------------------------------- | ------------------------------------------- |

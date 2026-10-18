@@ -1,6 +1,6 @@
 # Microcopy: rules and review
 
-The ui lane reviews the wording of English text and Urdu drafts in `packages/i18n/` (`docs/agents/briefs/ui.md`, item 10). Urdu stays marked as a draft (`_meta.status` in `ur.json`) until a native speaker reviews it.
+The ui lane reviews the wording of English text and Urdu drafts in `packages/i18n/` (`docs/agents/briefs/ui.md`, item 10). Urdu stays marked as a draft (`_meta.status` in each `src/ur/*.json` part) until a native speaker reviews it.
 
 ## Rules
 

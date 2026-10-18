@@ -1,6 +1,24 @@
+import type { Area } from '@qc/contracts';
 import type { TabRoute } from '../nav/routes';
+import { emptyFilters, filtersToQuery, queryKey } from '../features/nearby/filters';
 import { toInstant } from '../features/home/useHome';
 import type { AppServices } from '../providers/services';
+
+const configKey = (cityId: string | null | undefined) => `config:${cityId ?? 'default'}`;
+const nextKey = (cityId: string | null | undefined) => `occurrences:next:${cityId ?? 'any'}`;
+
+/**
+ * True when the first screen has nothing saved to draw its content from, so it would open on
+ * its skeleton: a start on Home with no config or next sessions in the cache (a first visit, or
+ * a change of city). An installed app that saved them draws them at once and need not wait.
+ */
+export function needsStartData(app: AppServices, tab: TabRoute | null): boolean {
+  if (tab !== 'home') return false;
+  const { cityId } = app.preferences.get();
+  return (
+    app.cache.get(configKey(cityId)) === undefined || app.cache.get(nextKey(cityId)) === undefined
+  );
+}
 
 /** Runs one request into the cache, the way `useQuery` would; failures are left to the screen. */
 function warm<T>(app: AppServices, key: string, persist: boolean, fetcher: () => Promise<T>) {
@@ -29,15 +47,13 @@ export function prefetchStartQueries(app: AppServices, tab: TabRoute | null): Pr
   const { api, now } = app;
   const { cityId } = app.preferences.get();
   const runs: Promise<void>[] = [
-    warm(app, `config:${cityId ?? 'default'}`, true, () =>
-      api.config.get({ query: cityId ? { cityId } : {} }),
-    ),
+    warm(app, configKey(cityId), true, () => api.config.get({ query: cityId ? { cityId } : {} })),
   ];
   if (tab === 'home') {
     runs.push(
       warm(
         app,
-        `occurrences:next:${cityId ?? 'any'}`,
+        nextKey(cityId),
         true,
         async () =>
           (
@@ -63,4 +79,30 @@ export function prefetchStartQueries(app: AppServices, tab: TabRoute | null): Pr
     }
   }
   return Promise.all(runs).then(() => undefined);
+}
+
+/** How long Nearby treats its list as fresh (`useSessionList`). */
+const NEARBY_STALE_MS = 30_000;
+
+/**
+ * Asks for the list Nearby opens on (no filters, the chosen city, measured from the chosen
+ * area's centre), under the key `useSessionList` uses, so the first tap on Nearby draws the
+ * list from the cache instead of waiting for a round trip. Run once Home has settled, next to
+ * the download of Nearby's code. When an area is chosen but the area list is not in the cache
+ * yet, it asks nothing: Nearby works out its starting point from that list, and a guess could
+ * land under another key. Resolves when done; it never rejects.
+ */
+export function prefetchNearbyList(app: AppServices): Promise<void> {
+  const { cityId, areaId } = app.preferences.get();
+  let origin: { lat: number; lng: number } | null = null;
+  if (cityId && areaId) {
+    const areas = app.cache.get<Area[]>(`places:areas:${cityId}`)?.data;
+    if (!areas) return Promise.resolve();
+    const area = areas.find((a) => a.id === areaId);
+    if (area && area.lat !== null && area.lng !== null) origin = { lat: area.lat, lng: area.lng };
+  }
+  const query = filtersToQuery({ ...emptyFilters, cityId }, { origin });
+  const key = queryKey('sessions:list', query);
+  if (app.cache.isFresh(key, NEARBY_STALE_MS)) return Promise.resolve();
+  return warm(app, key, true, () => app.api.sessions.list({ query }));
 }

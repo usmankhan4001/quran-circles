@@ -6,7 +6,7 @@ import { createMemoryStore } from '../storage/storage';
 import { FIXTURE_NOW, createBackend, meFor, type Backend } from '../test/backend';
 import { BASE_URL, tokens } from '../test/render';
 import { AuthProvider, TOKENS_KEY, useAuth } from './AuthProvider';
-import { ME_PATH, startEarlyMe, takeEarlyMe } from './earlyMe';
+import { ME_PATH, peekEarlyMe, startEarlyMe, takeEarlyMe } from './earlyMe';
 
 const NOW = () => FIXTURE_NOW.getTime();
 const parseMe = (data: unknown) => {
@@ -122,6 +122,36 @@ describe('startEarlyMe and takeEarlyMe', () => {
       }),
     ).not.toThrow();
     expect(await takeEarlyMe(tokens.accessToken, parseMe)).toBeNull();
+  });
+});
+
+describe('peekEarlyMe', () => {
+  afterEach(async () => {
+    await takeEarlyMe('clear', parseMe);
+  });
+
+  it('shows the unchecked answer without taking it, and the body is read once', async () => {
+    const backend = createBackend({ me: meFor('city') });
+    start(backend);
+    const peeked = peekEarlyMe();
+    expect(peeked?.accessToken).toBe(tokens.accessToken);
+    expect(await peeked!.body).toEqual(JSON.parse(JSON.stringify(backend.me)));
+    expect(peekEarlyMe()?.body).toBe(peeked!.body);
+    expect(await takeEarlyMe(tokens.accessToken, parseMe)).toEqual(backend.me);
+    expect(peekEarlyMe()).toBeNull();
+    expect(backend.callsTo('me.get')).toHaveLength(1);
+  });
+
+  it('gives a null body when the early answer was refused', async () => {
+    const backend = createBackend();
+    backend.failWith('me.get', 'unauthenticated');
+    start(backend);
+    expect(await peekEarlyMe()!.body).toBeNull();
+    expect(await takeEarlyMe(tokens.accessToken, parseMe)).toBeNull();
+  });
+
+  it('is null when nothing was started', () => {
+    expect(peekEarlyMe()).toBeNull();
   });
 });
 

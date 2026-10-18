@@ -40,7 +40,7 @@ Caddy also offers zstd. The run used gzip only, so transfer sizes and download t
 
 ### Data
 
-All data is the synthetic seed plus 100 extra sessions ("Quality circle NNN (synthetic)") for the scroll test, signed in with fresh synthetic accounts. The Quran text API (`api.alquran.cloud`) is stubbed with placeholder text of the real length per surah, delivered at the emulated network speed. Google Maps cannot load without a key and the internet, so the map test measures the web's list-only fallback.
+All data is the synthetic seed plus 100 extra sessions ("Quality circle NNN (synthetic)") for the scroll test, signed in with fresh synthetic accounts. The Quran text API (`api.alquran.cloud`) is stubbed with placeholder text of the real length per surah: a local HTTPS server the browser resolves the name to, throttled like every other request (since the third pass; before, a routed reply with a computed delay). Google Maps cannot load without a key and the internet, so the map test measures the web's list-only fallback.
 
 ### Runs
 
@@ -128,6 +128,34 @@ What already works well:
 | platform                   | Keep `encode zstd gzip` in Caddy. Check in staging that Chrome on Android receives zstd. Brotli would give 429 KiB against gzip's 544 KiB for the first-screen JavaScript, and zstd should land between the two.                                | About 10 to 20% fewer JavaScript bytes, for free.                                 |
 
 Recommendations only: the quality lane did not change any application code. With the first two items done, the cold-start budgets look reachable without changing the stack.
+
+## After the third pass (2026-10-18)
+
+The same command with `QC_QUALITY_RUNS=3`, one stack per run, medians of 3 (worst in brackets). "Before" is this morning's tree at the start of the pass; "after" includes every change below. The two runs differ in one more way: the harness no longer routes requests through Playwright (see "Harness change"), so part of each gain may come from the harness rather than the apps. Run-to-run noise on this shared machine is about ±0.3 s.
+
+| Measure                               | Budget  | Before        | After         | Status |
+| ------------------------------------- | ------- | ------------- | ------------- | ------ |
+| User app cold start: first paint      | 3.0 s   | 0.84 s (0.89) | 0.78 s (0.81) | ✓      |
+| User app cold start: Home content     | 6.0 s   | 6.91 s (7.26) | 6.73 s (6.96) | ✗      |
+| User app cold start: Home interactive | 8.0 s   | 7.60 s (7.81) | 7.83 s (8.13) | ✓      |
+| User app cold start: transfer         | 900 KiB | 548 KiB       | 574 KiB       | ✓      |
+| First tap to Nearby                   | 1.5 s   | 1.48 s (1.60) | 0.83 s (0.94) | ✓      |
+| User app warm start: Home content     | 3.0 s   | 3.42 s (4.01) | 3.18 s (3.26) | ✗      |
+| Coordinator cold start: Today content | 6.0 s   | 7.28 s (7.43) | 6.11 s (6.46) | ✗      |
+| Quran reader: tap to first verse      | 3.0 s   | 2.30 s (2.69) | 1.51 s (1.58) | ✓      |
+| Quran reader: reopen                  | 1.0 s   | 0.52 s (0.81) | 0.65 s (0.76) | ✓      |
+| Map (web fallback)                    | 1.5 s   | 0.40 s (0.44) | 0.44 s (0.51) | ✓      |
+| Nearby scroll: dropped frames         | 10%     | 0% (0.3%)     | 0.3% (0.6%)   | ✓      |
+| First-screen JS, user app (gzip)      | 450 KiB | 445 KiB       | 446 KiB       | ✓      |
+| First-screen JS, admin app (gzip)     | 450 KiB | 406 KiB       | 407 KiB       | ✓      |
+
+What changed:
+
+- **Contracts.** `@qc/contracts` builds each zod schema on first use instead of at import (`packages/contracts/src/lazy.ts`): 0 schemas built at import instead of 1869, with identical parsing, refusals and OpenAPI output (`lazy-equivalence.test.ts`).
+- **Coordinator app.** Today's `admin/sessions` request goes out as soon as the early `me` answer is in and checks out (`features/home/earlyToday.ts`), for a signed-in staff member only, with the working scope chosen as the app will choose it. Today uses the answer only when the person and the scope filter still match and it is under a minute old; otherwise it asks again. Today content 7.28 s to 6.11 s: **still about 0.1 s over**, within run-to-run noise of the budget (one run of three was under).
+- **User app.** Home renders once: when the start data is not cached, the root layout waits up to 0.8 s for it, so Home no longer draws a skeleton and then the content (Home shell and Home content are now the same moment). The below-the-fold cards (map preview, ayah of the day, reading, shortcuts) mount one frame after the first frame on a web start. The Nearby list's first page is fetched 1.5 s after the tabs appear, next to the route chunk, so the first tap finds it cached: 1.48 s to 0.83 s. API bytes in the cold start rise from 20 KiB to 44 KiB because of that prefetch. Home content improved by about 0.2 s and is **still over 6 s**; the warm start improved by about 0.2 s and is **still over 3 s** (its spread fell from 2.7 to 4.0 s to 3.0 to 3.3 s). Home interactive moved from 7.60 s to 7.83 s, within noise but closer to its budget (one run of three at 8.13 s).
+
+Harness change: browser tests no longer use Playwright request routing, which sent every request through the test process and delayed requests made while the page's main thread was busy. Chromium is launched with `--host-resolver-rules` (nothing but `localhost` and `127.0.0.1` resolves, IP addresses included) and `--proxy-server=direct://` (`tests/e2e/src/support/network.ts`), and `localOnly` checks this is in place. The Quran text service is now a local HTTPS server that the quality project's browser resolves `api.alquran.cloud` to (`quran-stub.ts`). It answers gzipped, through Chromium's normal network throttling, so the reader timings now include real transfer and decompression instead of a computed delay.
 
 ## Limits of these numbers
 

@@ -21,6 +21,7 @@ import {
   waitFor,
 } from '../test/harness';
 import { ayahOfTheDay } from '../features/home/ayah';
+import { armStartFrameDeferral } from '../ui/startFrame';
 import { HomeScreen } from './HomeScreen';
 
 const en = messages.en;
@@ -418,5 +419,17 @@ describe('HomeScreen', () => {
       expect(view.getByText(words['home.ayah.title'])).toBeTruthy();
       expect(view.getByTestId('home-search')).toBeTruthy();
     });
+  });
+});
+
+describe('Home on the web start', () => {
+  it('draws the lead with the start data first and what is below the fold a frame later', async () => {
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
+    armStartFrameDeferral();
+    const view = await renderScreen(<HomeScreen />, { world });
+    expect(view.queryByTestId('home-also')).toBeNull();
+    expect(await view.findByTestId('home-also')).toBeTruthy();
+    expect(await view.findByTestId('home-ayah')).toBeTruthy();
+    expect(view.getAllByTestId('home-lead-card').length).toBeGreaterThan(0);
   });
 });

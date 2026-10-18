@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { lazy } from './lazy';
 
 /**
  * Stable error codes. Handlers return a code, never free text. The client shows the message for
@@ -38,7 +39,7 @@ export const ERROR_CODES = {
 
 export type ErrorCode = keyof typeof ERROR_CODES;
 export const ERROR_CODE_LIST = Object.keys(ERROR_CODES) as ErrorCode[];
-export const ErrorCodeSchema = z.enum(ERROR_CODE_LIST as [ErrorCode, ...ErrorCode[]]);
+export const ErrorCodeSchema = lazy(() => z.enum(ERROR_CODE_LIST as [ErrorCode, ...ErrorCode[]]));
 
 export const errorStatus = (code: ErrorCode): number => ERROR_CODES[code];
 
@@ -46,21 +47,23 @@ export const errorStatus = (code: ErrorCode): number => ERROR_CODES[code];
 export const errorMessageKey = (code: ErrorCode): `errors.${ErrorCode}` => `errors.${code}`;
 
 /** One thing wrong with input: where, and a short machine code. Never the input itself. */
-export const ValidationIssue = z.object({ path: z.string(), code: z.string() });
+export const ValidationIssue = lazy(() => z.object({ path: z.string(), code: z.string() }));
 export type ValidationIssue = z.infer<typeof ValidationIssue>;
 
 /** Every error response has this shape. `requestId` is for support; it carries no personal data. */
-export const ApiError = z.object({
-  error: z.object({
-    code: ErrorCodeSchema,
-    messageKey: z.string(),
-    requestId: z.string(),
-    /** Present for validation_failed: where the input was wrong, never the input itself. */
-    issues: z.array(ValidationIssue).optional(),
-    /** Present for rate_limited and otp_too_many_attempts. */
-    retryAfterSeconds: z.number().int().positive().optional(),
+export const ApiError = lazy(() =>
+  z.object({
+    error: z.object({
+      code: ErrorCodeSchema,
+      messageKey: z.string(),
+      requestId: z.string(),
+      /** Present for validation_failed: where the input was wrong, never the input itself. */
+      issues: z.array(ValidationIssue).optional(),
+      /** Present for rate_limited and otp_too_many_attempts. */
+      retryAfterSeconds: z.number().int().positive().optional(),
+    }),
   }),
-});
+);
 export type ApiError = z.infer<typeof ApiError>;
 
 export const makeApiError = (
