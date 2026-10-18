@@ -414,7 +414,7 @@ function PosterCard({
       ) : null}
       {p.status === 'failed' ? (
         <p className="poster-failure">
-          <Icon name="alert" size="sm" />
+          <Icon name="warning-circle" size="sm" />
           {t(POSTER_FAILURE_KEYS[p.failureCode ?? 'render_failed'])}
         </p>
       ) : null}
@@ -435,7 +435,7 @@ function PosterCard({
             onClick={() => void download()}
             aria-describedby={headingId}
           >
-            <Icon name="download" size="sm" />
+            <Icon name="download-simple" size="sm" />
             {fileKind === 'pdf'
               ? t('console.posters.download.pdf')
               : t('console.posters.download.png')}
@@ -506,7 +506,7 @@ function FieldsetError({ id, message }: { id: string; message: string | null }) 
   if (!message) return null;
   return (
     <p id={id} className="field-error">
-      <Icon name="alert" size="sm" />
+      <Icon name="warning-circle" size="sm" />
       {message}
     </p>
   );

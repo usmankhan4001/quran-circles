@@ -136,9 +136,24 @@ export default function AuditPage() {
           label={t('console.kpi.label')}
           partial={list.hasMore}
           stats={[
-            { id: 'entries', label: t('console.audit.kpi.entries'), value: stats.entries },
-            { id: 'people', label: t('console.audit.kpi.people'), value: stats.people },
-            { id: 'exports', label: t('console.audit.kpi.exports'), value: stats.exports },
+            {
+              id: 'entries',
+              label: t('console.audit.kpi.entries'),
+              value: stats.entries,
+              icon: 'shield-check',
+            },
+            {
+              id: 'people',
+              label: t('console.audit.kpi.people'),
+              value: stats.people,
+              icon: 'users-three',
+            },
+            {
+              id: 'exports',
+              label: t('console.audit.kpi.exports'),
+              value: stats.exports,
+              icon: 'download-simple',
+            },
           ]}
         />
       ) : null}

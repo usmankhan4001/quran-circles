@@ -335,19 +335,31 @@ export default function ImportPage() {
           <StatRow
             label={t('console.import.summary')}
             stats={[
-              { id: 'valid', label: t('console.import.count.valid'), value: report.counts.valid },
+              {
+                id: 'valid',
+                label: t('console.import.count.valid'),
+                value: report.counts.valid,
+                icon: 'check',
+              },
               {
                 id: 'invalid',
                 label: t('console.import.count.invalid'),
                 value: report.counts.invalid,
                 tone: 'notice',
+                icon: 'warning-circle',
               },
               {
                 id: 'duplicate',
                 label: t('console.import.count.duplicate'),
                 value: report.counts.duplicate,
+                icon: 'shield-check',
               },
-              { id: 'total', label: t('console.import.count.total'), value: report.counts.total },
+              {
+                id: 'total',
+                label: t('console.import.count.total'),
+                value: report.counts.total,
+                icon: 'file-csv',
+              },
             ]}
           />
 
@@ -411,7 +423,7 @@ export default function ImportPage() {
               action={
                 hasProblems ? (
                   <Button onClick={downloadReport}>
-                    <Icon name="download" size="sm" />
+                    <Icon name="download-simple" size="sm" />
                     {t('console.import.errors.download')}
                   </Button>
                 ) : null

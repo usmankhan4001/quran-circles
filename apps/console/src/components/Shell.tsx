@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router';
-import type { Role } from '@qc/contracts';
+import type { Role, SeasonMode } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useFeatures } from '../api/features';
@@ -7,8 +7,10 @@ import { useI18n, type Locale } from '../i18n';
 import { visibleNav, type NavId } from '../lib/permissions';
 import { useTheme, type ThemeChoice } from '../theme';
 import type { TextSizeStep } from '../lib/ui-tokens';
-import { Icon, PatternLayer, type IconName } from './icons';
-import { Button, SelectField } from './ui';
+import { useDirectory } from '../api/directory';
+import { Icon, type IconName } from './icons';
+import { ShellFiltersProvider, useShellCity, useShellFilters } from './ShellFilters';
+import { Button, SearchField, SelectField } from './ui';
 import { CreditsFooter } from './Credits';
 
 const ROLE_KEYS = {
@@ -63,15 +65,38 @@ export function DisplayControls() {
 }
 
 const NAV_ICONS = {
-  sessions: 'halaqa',
-  venues: 'masjid',
-  exports: 'download',
-  coordinators: 'users',
-  import: 'upload',
-  audit: 'log',
-  dailyAyahs: 'book',
-  settings: 'gear',
+  sessions: 'calendar-blank',
+  venues: 'mosque',
+  exports: 'download-simple',
+  coordinators: 'users-three',
+  import: 'file-csv',
+  audit: 'shield-check',
+  dailyAyahs: 'book-open-text',
+  settings: 'sliders-horizontal',
 } as const satisfies Record<NavId, IconName>;
+
+/** The menu order of the console artboard; the routes keep their own order. */
+const NAV_ORDER: readonly NavId[] = [
+  'venues',
+  'sessions',
+  'coordinators',
+  'dailyAyahs',
+  'import',
+  'exports',
+  'audit',
+  'settings',
+];
+
+const SCOPE_KEYS = {
+  national_admin: 'console.shell.scope.national',
+  city_coordinator: 'console.shell.scope.city',
+  venue_coordinator: 'console.shell.scope.venue',
+} as const satisfies Record<Role, MessageKey>;
+
+const SEASON_KEYS = {
+  dora: 'console.settings.season.dora',
+  circles: 'console.settings.season.circles',
+} as const satisfies Record<SeasonMode, MessageKey>;
 
 /** Up to two initials for the avatar, whatever the script. */
 export function initialsOf(name: string): string {
@@ -84,18 +109,87 @@ export function initialsOf(name: string): string {
     .join('');
 }
 
+/** The widest role the person holds names their scope. */
+function widestRole(roles: readonly Role[]): Role | null {
+  for (const r of ['national_admin', 'city_coordinator', 'venue_coordinator'] as const)
+    if (roles.includes(r)) return r;
+  return null;
+}
+
+/** The top bar's city pills: every city that has a venue in the person's scope. */
+function CityPills() {
+  const { t, localized } = useI18n();
+  const dir = useDirectory();
+  const [cityId, setCityId] = useShellCity();
+  const inScope = new Set(dir.venues.map((v) => v.cityId));
+  const cities = dir.cities.filter((c) => inScope.has(c.id));
+  if (cities.length < 2) return null;
+  const options = [
+    { id: '', label: t('console.shell.allCities') },
+    ...cities.map((c) => ({ id: c.id, label: localized(c.name) })),
+  ];
+  return (
+    <div className="city-filter">
+      <span className="city-prefix" aria-hidden="true">
+        <Icon name="map-pin" size={14} weight="duotone" />
+        <span>{t('console.shell.cityPrefix')}</span>
+      </span>
+      <div className="city-pills" role="group" aria-label={t('console.shell.cityPills')}>
+        {options.map((o) => (
+          <button
+            key={o.id || 'all'}
+            type="button"
+            className="city-pill"
+            aria-pressed={o.id === cityId}
+            onClick={() => setCityId(o.id)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The top bar's search pill, shown while the page on screen has a search. */
+function TopSearch() {
+  const filters = useShellFilters();
+  if (!filters?.searchLabel) return <span className="top-search-space" />;
+  return (
+    <SearchField
+      id="top-search"
+      label={filters.searchLabel}
+      value={filters.query}
+      onChange={filters.setQuery}
+      className="top-search"
+    />
+  );
+}
+
 /**
- * The signed-in frame (C2): a green sidebar with the eight-point pattern holds the brand, the menu
- * with only the pages the person may use, and who is signed in. The light content area has the
- * display settings on top and the page below. The sidebar sits at the start edge, so it moves to
- * the right in Urdu without any separate rules.
+ * The signed-in frame, as on the console artboard: a white 220 px sidebar topped by the deep
+ * emerald brand block, the season pill, the menu with only the pages the person may use, and at its
+ * foot the scope they work in, the display settings and sign out. The white top bar has the city
+ * pills, the page's search and who is signed in; the page sits below on the slate cloud. The
+ * sidebar sits at the start edge, so it moves to the right in Urdu by itself.
  */
 export function Shell() {
-  const { t, tx } = useI18n();
+  return (
+    <ShellFiltersProvider>
+      <ShellFrame />
+    </ShellFiltersProvider>
+  );
+}
+
+function ShellFrame() {
+  const { t, tx, number } = useI18n();
   const { me, principal, signOut } = useSignedIn();
   const features = useFeatures();
-  const items = visibleNav(principal, features.flags);
+  const visible = visibleNav(principal, features.flags);
+  const items = NAV_ORDER.flatMap((id) => visible.filter((i) => i.id === id));
   const roles = [...new Set(me.roles.map((r) => r.role))];
+  const roleText = roles.map((r) => tx(ROLE_KEYS[r])).join(', ');
+  const widest = widestRole(roles);
   const name = me.displayName ?? t('console.shell.unnamed');
 
   return (
@@ -103,51 +197,89 @@ export function Shell() {
       <a className="skip-link" href="#main">
         {t('console.shell.skipToContent')}
       </a>
-      {/* Landmarks (A-08): the sidebar is the page's banner (brand, menu, who is signed in), the
-          display settings are a named region, the page is main and the credits the content info,
-          so nothing on the screen sits outside a landmark. */}
+      {/* Landmarks (A-08): the sidebar is the page's banner (brand, menu, scope, display settings
+          and sign out), the top bar's filters and who is signed in are named regions, the page is
+          main and the credits the content info, so nothing sits outside a landmark. */}
       <header className="sidebar">
-        <PatternLayer />
-        <div className="brand">
-          <span className="brand-mark">
-            <Icon name="halaqa" />
-          </span>
-          <span className="brand-text">
-            <span className="brand-name">{t('app.name')}</span>
-            <span className="brand-sub">{t('console.shell.brandSub')}</span>
-          </span>
-        </div>
-        <nav className="shell-nav" aria-label={t('console.shell.navLabel')}>
-          <ul>
-            {items.map((item) => (
-              <li key={item.id}>
-                <NavLink className="nav-link" to={item.path}>
-                  <Icon name={NAV_ICONS[item.id]} />
-                  <span>{t(item.labelKey)}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="shell-user">
-          <div className="shell-user-id">
-            <span className="avatar" aria-hidden="true">
-              {initialsOf(name)}
+        <div className="sidebar-top">
+          <div className="brand">
+            <span className="brand-mark">
+              <Icon name="mosque" size={19} weight="duotone" />
             </span>
-            <div className="shell-user-text">
-              <div className="shell-user-name">{name}</div>
-              <div className="shell-user-role">{roles.map((r) => tx(ROLE_KEYS[r])).join(', ')}</div>
-            </div>
+            <span className="brand-text">
+              <span className="brand-name">{t('app.name')}</span>
+              <span className="brand-sub">{t('console.shell.brandSub')}</span>
+            </span>
           </div>
-          <Button variant="onHero" onClick={() => void signOut()}>
+          {features.seasonMode ? (
+            <p className="season-pill">
+              <span className="season-name">
+                <Icon name="moon-stars" size={13} weight="fill" />
+                <span>
+                  {t('console.shell.season', { season: t(SEASON_KEYS[features.seasonMode]) })}
+                </span>
+              </span>
+              {features.hijriOffsetDays !== null ? (
+                <span className="season-hijri">
+                  {t('console.shell.hijri', { days: number(features.hijriOffsetDays) })}
+                </span>
+              ) : null}
+            </p>
+          ) : null}
+          <nav className="shell-nav" aria-label={t('console.shell.navLabel')}>
+            <ul>
+              {items.map((item) => (
+                <li key={item.id}>
+                  <NavLink className="nav-link" to={item.path}>
+                    {({ isActive }) => (
+                      <>
+                        <Icon
+                          name={NAV_ICONS[item.id]}
+                          size={16}
+                          weight={isActive ? 'fill' : 'duotone'}
+                        />
+                        <span>{t(item.labelKey)}</span>
+                      </>
+                    )}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+        <div className="shell-user">
+          <div className="shell-scope">
+            <span className="scope-dot" aria-hidden="true" />
+            <span className="scope-text">
+              <span className="scope-name">{widest ? t(SCOPE_KEYS[widest]) : roleText}</span>
+              <span className="scope-sub">{t('console.shell.scope.locales')}</span>
+            </span>
+            <Icon name="translate" size={14} weight="bold" />
+          </div>
+          <section className="shell-bar" aria-label={t('console.shell.toolsLabel')}>
+            <DisplayControls />
+          </section>
+          <Button variant="outline" className="btn-small" onClick={() => void signOut()}>
             {t('console.shell.signOut')}
           </Button>
         </div>
       </header>
       <div className="shell-body">
-        <section className="shell-bar" aria-label={t('console.shell.toolsLabel')}>
-          <DisplayControls />
-        </section>
+        <div className="shell-top">
+          <section className="top-filters" aria-label={t('console.shell.filters')}>
+            <CityPills />
+            <TopSearch />
+          </section>
+          <section className="operator" aria-label={t('console.shell.signedInLabel')}>
+            <span className="avatar" aria-hidden="true">
+              {initialsOf(name)}
+            </span>
+            <span className="operator-text">
+              <span className="shell-user-name">{name}</span>
+              <span className="operator-role">{roleText}</span>
+            </span>
+          </section>
+        </div>
         <main id="main" className="shell-main" tabIndex={-1}>
           <Outlet />
         </main>

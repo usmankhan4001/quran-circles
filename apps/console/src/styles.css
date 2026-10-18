@@ -1,6 +1,7 @@
 /*
- * Console styles (redesign C2: a green sidebar with the eight-point pattern, a light content area;
- * docs/design/redesign-decisions.md, D3 to D13 and D15).
+ * Console styles (Iqraa redesign D17, docs/design/redesign-decisions.md): a white sidebar with
+ * the deep emerald brand block, a white top bar, white hairline cards on a slate page, charcoal
+ * pill buttons for the main action, pill fields with the label above and pill chips.
  *
  * Every colour, space, corner, type size and shadow is a CSS custom property that ThemeProvider
  * generates from the shared design tokens (src/theme, src/lib/ui-tokens.ts). This file holds no
@@ -98,19 +99,6 @@ a {
 
 .icon {
   flex: none;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.icon-md {
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
-}
-.icon-sm {
-  inline-size: 1rem;
-  block-size: 1rem;
 }
 
 .sr-only {
@@ -139,24 +127,15 @@ a {
   inset-block-start: var(--space-sm);
 }
 
-/* The eight-point pattern, drawn in the colour of text on green at a whisper of opacity. */
-.pattern {
-  position: absolute;
-  inset: 0;
-  inline-size: 100%;
-  block-size: 100%;
-  color: var(--c-text-on-hero);
-  opacity: 0.055;
-  pointer-events: none;
-}
-
-/* Shell: the green sidebar and the light content area ------------------------------------------ */
+/* Shell, as on the console artboard: a white 220 px sidebar with the emerald brand block, a white
+   60 px top bar, the page on the slate cloud. Sizes are the artboard's pixels written in rem. */
 
 .shell {
-  --sidebar-size: clamp(13rem, 18vw, 16rem);
+  --sidebar-size: 13.75rem;
   display: grid;
   grid-template-columns: var(--sidebar-size) minmax(0, 1fr);
   min-block-size: 100vh;
+  background: var(--c-page);
 }
 
 .sidebar {
@@ -165,42 +144,37 @@ a {
   align-self: start;
   block-size: 100vh;
   overflow-y: auto;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
-  padding: var(--space-lg) var(--space-md);
-  background: linear-gradient(180deg, var(--c-sidebar-from), var(--c-sidebar-to));
-  color: var(--c-sidebar-text);
-  border-inline-end: 1px solid color-mix(in srgb, var(--c-sidebar-text) 14%, transparent);
-}
-.sidebar > :not(.pattern) {
-  position: relative;
-}
-.sidebar :focus-visible,
-.auth-hero :focus-visible {
-  outline-color: var(--c-sidebar-text);
+  justify-content: space-between;
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-inline-end: 1px solid var(--c-border);
 }
 
+/* The deep emerald brand block on top of the white rail. */
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  background: color-mix(in srgb, var(--c-sidebar-text) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--c-sidebar-text) 16%, transparent);
-  border-radius: var(--radius-lg);
+  gap: 0.625rem;
+  padding: 1.125rem 1rem;
+  background: linear-gradient(135deg, var(--c-sidebar-from), var(--c-sidebar-to));
+  color: var(--c-sidebar-text);
+}
+.brand :focus-visible,
+.auth-hero :focus-visible {
+  outline-color: var(--c-sidebar-text);
 }
 .brand-mark {
   flex: none;
   display: grid;
   place-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
-  border-radius: var(--radius-md);
-  background: var(--c-sidebar-text);
-  color: var(--c-on-sidebar-logo);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--c-sidebar-to) 40%, transparent);
+  inline-size: 2.125rem;
+  block-size: 2.125rem;
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--c-sidebar-text) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-sidebar-text) 22%, transparent);
+  color: var(--c-sidebar-soft);
 }
 .brand-mark-large {
   inline-size: 3.5rem;
@@ -215,91 +189,159 @@ a {
   display: grid;
 }
 .brand-name {
-  font-size: var(--type-label-size);
+  font-size: 0.84375rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   line-height: 1.25;
 }
 .brand-sub {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--c-sidebar-text) 75%, transparent);
+  margin-block-start: 0.0625rem;
+  font-size: 0.65625rem;
+  font-weight: 600;
+  color: var(--c-sidebar-soft);
 }
 
+/* The season pill under the brand block: amber, from the server's season mode. */
+.season-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: 0.75rem 0.75rem 0.375rem;
+  padding: 0.4375rem 0.625rem;
+  border-radius: 0.625rem;
+  background: var(--c-warning-subtle);
+  border: 1px solid color-mix(in srgb, var(--c-decoration) 40%, transparent);
+  color: var(--c-text-on-warning-subtle);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.season-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+}
+.season-name .icon {
+  color: var(--c-decoration);
+}
+.season-hijri {
+  font-size: 0.625rem;
+  font-weight: 600;
+  color: var(--c-text-warning);
+}
+
+.shell-nav {
+  padding: 0.375rem 0.625rem;
+}
 .shell-nav ul {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-xxs);
+  gap: 0.125rem;
 }
 .nav-link {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  min-block-size: var(--touch-min);
-  padding-inline: var(--space-md);
-  border-radius: var(--radius-md);
-  color: color-mix(in srgb, var(--c-sidebar-text) 82%, transparent);
+  gap: 0.5625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.625rem;
+  color: var(--c-text-secondary);
   text-decoration: none;
-  font-size: var(--type-label-size);
+  font-size: 0.75rem;
   font-weight: 600;
-  border-inline-start: 3px solid transparent;
   transition:
     background-color 120ms ease,
-    color 120ms ease,
-    border-color 120ms ease;
+    color 120ms ease;
+}
+.nav-link .icon {
+  color: var(--c-text-muted);
 }
 .nav-link:hover {
-  background: color-mix(in srgb, var(--c-sidebar-text) 12%, transparent);
-  color: var(--c-sidebar-text);
+  background: var(--c-surface-muted);
+  color: var(--c-text);
 }
+/* The chosen page: the emerald tint, a filled icon and bolder words, never colour alone. */
 .nav-link[aria-current='page'] {
-  background: color-mix(in srgb, var(--c-sidebar-text) 20%, transparent);
-  color: var(--c-sidebar-text);
-  border-inline-start-color: var(--c-sidebar-text);
+  background: var(--c-accent-subtle);
+  color: var(--c-sidebar-from);
   font-weight: 700;
+}
+.nav-link[aria-current='page'] .icon {
+  color: var(--c-accent);
+}
+html[data-theme='dark'] .nav-link[aria-current='page'] {
+  color: var(--c-text-on-accent-subtle);
 }
 
+/* The foot of the rail: the scope, the display settings and sign out. */
 .shell-user {
-  margin-block-start: auto;
   display: grid;
-  gap: var(--space-md);
-  padding-block-start: var(--space-md);
-  border-block-start: 1px solid color-mix(in srgb, var(--c-sidebar-text) 14%, transparent);
+  gap: 0.5rem;
+  padding: 0.75rem 0.875rem;
+  background: var(--c-page);
+  border-block-start: 1px solid var(--c-hairline);
 }
-.shell-user-id {
+.shell-scope {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
-  padding-inline: var(--space-sm);
+  gap: 0.5rem;
   min-inline-size: 0;
 }
-.avatar {
+.shell-scope > .icon {
+  margin-inline-start: auto;
+  color: var(--c-text-muted);
+}
+.scope-dot {
   flex: none;
-  display: grid;
-  place-items: center;
-  inline-size: 2.25rem;
-  block-size: 2.25rem;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--c-sidebar-text) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--c-sidebar-text) 28%, transparent);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  background: var(--c-progress);
+}
+.scope-text {
+  display: grid;
+}
+.scope-name {
+  font-size: 0.6875rem;
   font-weight: 700;
+  color: var(--c-text);
 }
-.shell-user-text {
-  min-inline-size: 0;
+.scope-sub {
+  font-size: 0.625rem;
+  color: var(--c-text-muted);
 }
-.shell-user-name {
-  font-size: 0.875rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
+.shell-bar {
+  display: grid;
+  gap: 0.375rem;
 }
-.shell-user-role {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: color-mix(in srgb, var(--c-sidebar-text) 75%, transparent);
+.shell-bar .field-box {
+  --field-h: 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+}
+.shell-bar .field-label {
+  padding: 0;
+  font-size: 0.625rem;
+  white-space: nowrap;
+}
+.shell-bar .field-box-select::after,
+.table-filters .field-box-select::after {
+  inset-inline-end: 0.625rem;
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+}
+.shell-bar .field-box-select .input,
+.table-filters .field-box-select .input {
+  padding-inline: 0.625rem 1.5rem;
+}
+.shell-bar .field-box .input {
+  inline-size: auto;
+  max-inline-size: 8rem;
+  padding-block: 0.125rem;
+  font-size: 0.6875rem;
 }
 
 .shell-body {
@@ -307,43 +349,148 @@ a {
   display: flex;
   flex-direction: column;
 }
-.shell-bar {
+/* The white top bar: the city pills, the page's search and who is signed in. */
+.shell-top {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
   align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-xl);
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  min-block-size: 3.75rem;
+  padding: 0.5rem 1.375rem;
   background: var(--c-surface);
   border-block-end: 1px solid var(--c-border);
 }
-.shell-bar .field,
-.auth-tools .field {
-  min-inline-size: min(9rem, 100%);
-}
-.auth-tools .field {
+.top-filters {
+  display: flex;
   flex: 1;
-  min-inline-size: min(7rem, 100%);
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  min-inline-size: 0;
 }
-.shell-bar .field-box,
-.auth-tools .field-box {
-  min-block-size: 3.25rem;
+.city-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-inline-size: 0;
+  flex: 0 1 auto;
+}
+.city-prefix {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-inline-end: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+}
+.city-prefix .icon {
+  color: var(--c-accent);
+}
+.city-pills {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  max-inline-size: 100%;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-hairline);
+}
+.city-pill {
+  flex: none;
+  white-space: nowrap;
+  padding: 0.25rem 0.6875rem;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--c-text-muted);
+  font: inherit;
+  font-size: 0.71875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.city-pill[aria-pressed='true'] {
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-weight: 700;
+  box-shadow: var(--shadow-low);
+}
+.top-search-space {
+  flex: 1;
+}
+.search.top-search {
+  flex: 0 1 15rem;
+  min-inline-size: min(15rem, 100%);
+  min-block-size: 2.125rem;
+  margin-inline-start: auto;
+  padding-inline: 0.75rem;
+  gap: 0.4375rem;
+  background: var(--c-page);
+  font-size: 0.71875rem;
+}
+.top-search .search-input {
+  min-block-size: 2rem;
+}
+.operator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 2.125rem;
+  padding-block: 0.125rem;
+  padding-inline: 0.375rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-accent-subtle);
+  border: 1px solid color-mix(in srgb, var(--c-progress) 45%, transparent);
+  color: var(--c-text-on-accent-subtle);
+  min-inline-size: 0;
+}
+.operator-text {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.25rem;
+  min-inline-size: 0;
+  font-size: 0.71875rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.operator-role::before {
+  content: '· ';
+}
+.shell-user-name {
+  overflow-wrap: anywhere;
+}
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-accent);
+  color: var(--c-text-on-accent);
+  font-family: var(--font-sans);
+  font-size: 0.65625rem;
+  font-weight: 800;
 }
 
 .shell-main {
   flex: 1;
   min-inline-size: 0;
-  padding: var(--space-xl) var(--space-xl) var(--space-xxxl);
-  background: var(--c-background);
+  padding: 1.125rem 1.375rem 2.5rem;
+  background: var(--c-page);
 }
 .shell-main:focus {
   outline: none;
 }
 
 .credits {
-  padding: 0 var(--space-xl) var(--space-xl);
-  color: var(--c-text-secondary);
-  font-size: var(--type-caption-size);
+  padding: 0 1.375rem 1.25rem;
+  color: var(--c-text-muted);
+  font-size: 0.6875rem;
 }
 .credits summary {
   cursor: pointer;
@@ -393,7 +540,14 @@ a {
     position: static;
     block-size: auto;
     overflow-y: visible;
-    gap: var(--space-md);
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--c-border);
+  }
+  .brand {
+    padding: var(--space-md) var(--space-lg);
+  }
+  .shell-nav {
+    padding-block: var(--space-sm);
   }
   .shell-nav ul {
     grid-auto-flow: column;
@@ -407,9 +561,9 @@ a {
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    padding-inline: var(--space-lg);
   }
-  .shell-bar {
-    justify-content: flex-start;
+  .shell-top {
     padding-inline: var(--space-lg);
   }
   .shell-main,
@@ -425,8 +579,8 @@ a {
   /* One column no wider than the window: a wide table scrolls inside its own box instead of
      widening the page past the window at large text or on a narrow screen (A-03, A-04). */
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-xl);
-  max-inline-size: 80rem;
+  gap: 1rem;
+  max-inline-size: 90rem;
 }
 .page-header {
   display: flex;
@@ -435,10 +589,22 @@ a {
   align-items: flex-start;
   gap: var(--space-lg);
 }
+.page-header h1 {
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
 .page-intro {
-  margin: var(--space-xs) 0 0;
-  color: var(--c-text-secondary);
+  margin: 0.125rem 0 0;
+  color: var(--c-text-muted);
+  font-size: 0.75rem;
   max-inline-size: 48rem;
+}
+.auth-hero .page-header h1 {
+  font-size: 1.5rem;
+}
+.auth-hero .page-intro {
+  font-size: 0.875rem;
 }
 .page-actions {
   display: flex;
@@ -458,31 +624,25 @@ a {
   gap: var(--space-md);
 }
 
-/* Raised cards (D11): white, big corners, no border, a soft shadow; a hairline at night. */
+/* White cards (D17): a hairline edge, big corners and a whisper of shadow by day. */
 .card {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-card);
+  border-radius: 1.125rem;
   box-shadow: var(--shadow-low);
-  padding: var(--space-lg);
-}
-html[data-theme='dark'] .card {
-  border-color: var(--card-edge);
+  padding: 0.875rem 1rem;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: end;
   gap: var(--space-md);
-  padding: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-section);
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-low);
-}
-html[data-theme='dark'] .filters {
-  border-color: var(--card-edge);
 }
 .filters .field {
   min-inline-size: min(12rem, 100%);
@@ -495,50 +655,57 @@ html[data-theme='dark'] .filters {
   justify-items: center;
   gap: var(--space-lg);
   padding: var(--space-lg);
+  background: var(--c-page);
+}
+.auth-tools .field-box {
+  --field-h: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.auth-tools .field-box .input {
+  inline-size: auto;
+  font-size: 0.75rem;
 }
 .auth-tools {
   inline-size: min(28rem, 100%);
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
+  gap: var(--space-sm) var(--space-lg);
   justify-content: flex-end;
 }
 .auth-card {
   inline-size: min(28rem, 100%);
   padding: 0;
   overflow: hidden;
-  border-radius: var(--radius-dialog);
-  border: 1px solid var(--c-border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-high);
 }
-html[data-theme='dark'] .auth-card {
-  border-color: var(--card-edge);
-}
+/* The emerald brand block fading through the mid green, as on the console's own rail. */
 .auth-hero {
-  position: relative;
-  isolation: isolate;
   display: grid;
   justify-items: start;
   gap: var(--space-md);
   padding: var(--space-xl);
-  background: var(--c-hero);
-  color: var(--c-text-on-hero);
-}
-.auth-hero > :not(.pattern) {
-  position: relative;
+  background: linear-gradient(135deg, var(--c-sidebar-from), var(--c-sidebar-to));
+  color: var(--c-sidebar-text);
 }
 .auth-hero .page-intro {
-  color: color-mix(in srgb, var(--c-text-on-hero) 88%, transparent);
+  color: var(--c-sidebar-soft);
 }
 .auth-body {
   display: grid;
   gap: var(--space-lg);
   padding: var(--space-xl);
 }
+.auth-body .form-actions .btn-primary {
+  flex: 1 1 100%;
+}
 
 /* Controls --------------------------------------------------------------------------------- */
 
-/* Soft rounded buttons (D8): corner 16, solid green with a soft shadow for the main action. */
+/* Pill buttons (D17): charcoal for the one main action, the emerald tint, a white outline, a
+   soft red for careful actions and plain text. */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -546,11 +713,11 @@ html[data-theme='dark'] .auth-card {
   gap: var(--space-sm);
   min-block-size: var(--touch-min);
   padding-inline: var(--space-xl);
-  border-radius: var(--radius-lg);
-  border: 1.5px solid transparent;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
   font: inherit;
   font-size: var(--type-label-size);
-  font-weight: var(--type-label-weight);
+  font-weight: 700;
   cursor: pointer;
   transition:
     background-color 120ms ease,
@@ -588,41 +755,37 @@ a.btn {
   }
 }
 .btn-primary {
-  background: var(--c-accent);
-  color: var(--c-text-on-accent);
+  background: var(--c-cta);
+  color: var(--c-text-on-cta);
   box-shadow: var(--shadow-button);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--c-accent-pressed);
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--c-accent) 30%, transparent);
+  background: var(--c-cta-pressed);
 }
 .btn-secondary {
   background: var(--c-accent-subtle);
   color: var(--c-text-on-accent-subtle);
-  border-color: color-mix(in srgb, var(--c-accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--c-accent) 18%, transparent);
 }
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--c-accent);
-  background: color-mix(in srgb, var(--c-accent-subtle) 85%, var(--c-accent));
 }
 .btn-outline {
-  background: transparent;
-  color: var(--c-text-accent);
-  border-color: var(--c-accent);
+  background: var(--c-surface);
+  color: var(--c-text);
+  border-color: var(--c-border-strong);
 }
 .btn-outline:hover:not(:disabled) {
-  background: var(--c-accent-subtle);
-  color: var(--c-text-on-accent-subtle);
+  background: var(--c-surface-muted);
 }
-/* A careful action is the terracotta outline, never a solid red block (D8, D13). */
+/* A careful action is the soft red pill, never a solid red block (D17). */
 .btn-danger {
-  background: transparent;
-  color: var(--c-text-danger);
-  border-color: var(--c-danger);
-}
-.btn-danger:hover:not(:disabled) {
   background: var(--c-danger-subtle);
   color: var(--c-text-on-danger-subtle);
+  border-color: color-mix(in srgb, var(--c-danger) 35%, transparent);
+}
+.btn-danger:hover:not(:disabled) {
+  border-color: var(--c-danger);
 }
 .btn-ghost {
   background: transparent;
@@ -639,62 +802,36 @@ a.btn {
 }
 .btn-onHero:hover:not(:disabled) {
   background: var(--c-hero-glass-pressed);
-  border-color: color-mix(in srgb, var(--c-text-on-hero) 35%, transparent);
 }
 .btn-small {
-  min-block-size: var(--touch-min);
-  padding-inline: var(--space-md);
-  border-radius: var(--radius-md);
+  min-block-size: 2.25rem;
+  padding-inline: 0.875rem;
+  font-size: 0.75rem;
 }
 
-/* Outlined fields with the label small inside the border (D9). */
+/* Pill fields with the label above (D17). The label and the pill share the field box; the pill
+   is the control itself, at least 48 dp tall (checklist O1, A-05). */
 .field {
   display: grid;
   gap: var(--space-xs);
   align-content: start;
 }
 .field-box {
-  /* Height of the small label's line, for the room the control leaves above its value. */
-  --field-label-line: calc(0.8125rem * 1.3);
   position: relative;
-  /* The label and the control share one cell: the control fills the whole outlined box under
-     the label, so the box is the target (48 dp, checklist O1), not a 28 px line inside it (A-05). */
   display: grid;
-  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
-  min-block-size: 3.75rem;
-  background: var(--c-surface);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-xs);
   color: var(--c-text);
-  border: 1px solid var(--c-border-strong);
-  border-radius: var(--radius-field);
-}
-html[lang='ur'] .field-box {
-  --field-label-line: calc(0.875rem * 1.8);
-  min-block-size: 4.125rem;
-}
-.field-box > * {
-  grid-area: 1 / 1;
 }
 .field-box > .field-label {
-  position: relative;
-  z-index: 1;
-  align-self: start;
-  padding: var(--space-sm) var(--space-md) 0;
-  pointer-events: none;
+  padding-inline: var(--space-sm);
 }
-.field-box:focus-within {
-  border-color: var(--c-focus);
-  box-shadow: 0 0 0 1px var(--c-focus);
-}
-.field-box:focus-within .field-label {
+.field-box:focus-within > .field-label {
   color: var(--c-text-accent);
-}
-.field-box:has(:disabled) {
-  background: var(--c-disabled-background);
-  border-color: transparent;
 }
 .field-label {
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.3;
   color: var(--c-text-secondary);
 }
@@ -707,7 +844,7 @@ html[lang='ur'] .field-label {
 }
 .field-hint {
   margin: 0;
-  padding-inline: var(--space-xs);
+  padding-inline: var(--space-sm);
   color: var(--c-text-secondary);
   font-size: 0.875rem;
 }
@@ -716,7 +853,7 @@ html[lang='ur'] .field-label {
   align-items: flex-start;
   gap: var(--space-xs);
   margin: 0;
-  padding-inline: var(--space-xs);
+  padding-inline: var(--space-sm);
   color: var(--c-text-danger);
   font-size: 0.9375rem;
   font-weight: 500;
@@ -727,7 +864,7 @@ html[lang='ur'] .field-label {
 .input {
   min-block-size: var(--touch-min);
   inline-size: 100%;
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
   background: var(--c-surface);
   color: var(--c-text);
   border: 1px solid var(--c-border-strong);
@@ -735,49 +872,50 @@ html[lang='ur'] .field-label {
   font: inherit;
 }
 .field-box .input {
-  align-self: stretch;
-  min-block-size: var(--touch-min);
-  padding: calc(var(--space-sm) + var(--field-label-line) + var(--space-xxs)) var(--space-md)
-    var(--space-sm);
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-field);
+  min-block-size: var(--field-h, var(--touch-min));
   outline: none;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+.field-box .input:focus {
+  border-color: var(--c-focus);
+  box-shadow: 0 0 0 1px var(--c-focus);
 }
 .field-box .input:disabled {
+  background: var(--c-disabled-background);
+  border-color: transparent;
   color: var(--c-disabled-text);
   cursor: not-allowed;
 }
 textarea.input,
 .field-box textarea.input {
   min-block-size: 6rem;
+  border-radius: var(--radius-lg);
 }
 .field-box-select .input {
   appearance: none;
-  padding-inline-end: var(--space-xl);
+  padding-inline-end: calc(var(--space-xl) + var(--space-sm));
   cursor: pointer;
 }
-/* The select's chevron, drawn from borders in the text colour. */
+/* The select's chevron, drawn from borders in the text colour, in the middle of the pill. */
 .field-box-select::after {
   content: '';
   position: absolute;
   inset-inline-end: var(--space-lg);
-  inset-block-start: 50%;
+  inset-block-end: calc(var(--field-h, var(--touch-min)) / 2);
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-inline-end: 1.75px solid var(--c-text-secondary);
   border-block-end: 1.75px solid var(--c-text-secondary);
-  transform: translateY(-65%) rotate(45deg);
+  transform: translateY(25%) rotate(45deg);
   pointer-events: none;
 }
 html[dir='rtl'] .field-box-select::after {
-  transform: translateY(-65%) rotate(-45deg);
+  transform: translateY(25%) rotate(-45deg);
 }
-.field-invalid .field-box {
-  border-color: var(--c-danger);
-  box-shadow: 0 0 0 1px var(--c-danger);
-}
-.field-invalid .field-box:focus-within {
+.field-invalid .field-box .input,
+.field-invalid .field-box .input:focus {
   border-color: var(--c-danger);
   box-shadow: 0 0 0 1px var(--c-danger);
 }
@@ -982,32 +1120,28 @@ html[dir='rtl'] .field-box-select::after {
 .badge {
   display: inline-flex;
   align-items: center;
-  min-block-size: 1.5rem;
-  padding-block: 0.125rem;
-  padding-inline: var(--space-sm);
+  inline-size: fit-content;
+  padding: 0.125rem 0.5rem;
   border-radius: var(--radius-pill);
-  font-size: 0.75rem;
+  font-size: 0.65625rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  background: var(--c-surface-muted);
-  color: var(--c-text-secondary);
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  line-height: 1.4;
+  white-space: nowrap;
+  background: var(--c-tag-slate-subtle);
+  color: var(--c-tag-slate);
 }
 .badge-success,
 .badge-accent {
-  background: var(--c-accent-subtle);
+  background: var(--c-tag-mint-subtle);
   color: var(--c-text-on-accent-subtle);
-  border-color: color-mix(in srgb, var(--c-accent) 25%, transparent);
 }
 .badge-warning {
   background: var(--c-warning-subtle);
   color: var(--c-text-on-warning-subtle);
-  border-color: color-mix(in srgb, var(--c-warning) 30%, transparent);
 }
 .badge-danger {
   background: var(--c-danger-subtle);
   color: var(--c-text-on-danger-subtle);
-  border-color: color-mix(in srgb, var(--c-danger) 30%, transparent);
 }
 
 .phone,
@@ -1082,31 +1216,39 @@ html[dir='rtl'] .field-box-select::after {
   border-collapse: collapse;
   min-inline-size: 36rem;
 }
+.table :is(th, td):first-child {
+  padding-inline-start: 0.875rem;
+}
 .table th,
 .table td {
-  padding: var(--space-md) var(--space-lg);
+  padding: 0.6875rem 0.625rem;
+  font-size: 0.75rem;
   text-align: start;
   vertical-align: middle;
-  border-block-end: 1px solid var(--c-border);
+  border-block-end: 1px solid var(--c-hairline);
+}
+.table thead tr > th {
+  border-block-end-color: var(--c-border);
 }
 .table thead th {
-  background: var(--c-surface-muted);
-  color: var(--c-text-secondary);
-  font-size: 0.75rem;
+  padding-block: 0.5625rem;
+  background: var(--c-page);
+  color: var(--c-text-muted);
+  font-size: 0.65625rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   white-space: nowrap;
 }
 .table tbody th {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--c-text);
 }
 .table tbody tr {
   transition: background-color 100ms ease;
 }
 .table tbody tr:hover > * {
-  background: color-mix(in srgb, var(--c-accent-subtle) 45%, transparent);
+  background: color-mix(in srgb, var(--c-accent-subtle) 55%, transparent);
 }
 .table tbody tr:last-child > * {
   border-block-end: 0;
@@ -1128,57 +1270,80 @@ html[dir='rtl'] .field-box-select::after {
   background: var(--c-danger-subtle);
 }
 
-/* Number cards. */
+/* Number cards, as on the artboard: white hairline cards (radius 16), the label over the number,
+   a 34 px tinted icon tile at the end edge. A number that asks for attention turns amber. */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
-  gap: var(--space-md);
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+  gap: 0.75rem;
   margin: 0;
 }
 .stat {
-  display: flex;
-  flex-direction: column-reverse;
-  justify-content: space-between;
+  position: relative;
+  display: grid;
+  align-content: start;
   margin: 0;
-  padding: var(--space-md) var(--space-lg);
+  padding: 0.8125rem 0.9375rem;
+  padding-inline-end: 3.5rem;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-lg);
+  border-radius: 1rem;
   box-shadow: var(--shadow-low);
-  transition:
-    transform 120ms ease,
-    box-shadow 120ms ease;
 }
-html[data-theme='dark'] .stat {
-  border-color: var(--card-edge);
-}
-.stat:hover {
-  transform: translateY(-1px);
+.stat-label {
+  color: var(--c-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
 }
 .stat-value {
-  margin: 0;
-  margin-block-start: var(--space-xs);
+  margin: 0.25rem 0 0;
   font-family: var(--font-sans);
-  font-size: clamp(1.5rem, 2vw, 1.875rem);
+  font-size: 0.96875rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
   color: var(--c-text);
 }
-.stat-label {
-  color: var(--c-text-secondary);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+.stat-sub {
+  margin: 0.1875rem 0 0;
+  font-size: 0.65625rem;
+  color: var(--c-text-muted);
+}
+.stat-icon {
+  position: absolute;
+  inset-block-start: 0.8125rem;
+  inset-inline-end: 0.9375rem;
+  display: grid;
+  place-items: center;
+  inline-size: 2.125rem;
+  block-size: 2.125rem;
+  border-radius: 0.625rem;
+  background: var(--c-accent-subtle);
+  color: var(--c-accent);
+}
+.stat-icon-sky {
+  background: var(--c-tag-sky-subtle);
+  color: var(--c-tag-sky);
+}
+.stat-icon-amber {
+  background: var(--c-warning-subtle);
+  color: var(--c-text-warning);
+}
+.stat-icon-mint {
+  background: var(--c-tag-mint-subtle);
+  color: var(--c-tag-mint);
 }
 .stat-warn {
   background: var(--c-warning-subtle);
   border-color: color-mix(in srgb, var(--c-warning) 35%, transparent);
 }
-.stat-warn .stat-value,
-.stat-warn .stat-label {
+.stat-warn :is(.stat-value, .stat-label, .stat-sub) {
   color: var(--c-text-on-warning-subtle);
+}
+.stat-warn .stat-icon {
+  background: var(--c-surface);
+  color: var(--c-text-warning);
 }
 
 .stat-row {
@@ -1196,32 +1361,36 @@ html[data-theme='dark'] .stat {
 .table-card {
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius-section);
+  border-radius: 1.125rem;
   box-shadow: var(--shadow-low);
   overflow: hidden;
-}
-html[data-theme='dark'] .table-card {
-  border-color: var(--card-edge);
 }
 .table-tools {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm) var(--space-md);
-  padding: var(--space-md) var(--space-lg);
-  border-block-end: 1px solid var(--c-border);
+  gap: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
+  border-block-end: 1px solid var(--c-hairline);
   background: var(--c-surface);
 }
-.table-card-title {
+.table-card-heading {
   margin-inline-end: auto;
-  font-size: var(--type-title3-size);
-  font-weight: 700;
+}
+.table-card-sub {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--c-text-muted);
+}
+.table-card-title {
+  font-size: 0.875rem;
+  font-weight: 800;
   color: var(--c-text);
 }
 .table-filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: end;
   gap: var(--space-sm);
 }
 .table-filters .field {
@@ -1284,7 +1453,7 @@ html[data-theme='dark'] .table-card {
   display: block;
   block-size: 0.375rem;
   border-radius: var(--radius-pill);
-  background: var(--c-surface-muted);
+  background: var(--c-border);
   overflow: hidden;
 }
 .seat-fill {
@@ -1294,7 +1463,7 @@ html[data-theme='dark'] .table-card {
   background: var(--c-accent);
 }
 .seat-fill-warn {
-  background: var(--c-warning);
+  background: var(--c-progress-warn);
 }
 .search-input {
   flex: 1;
@@ -1313,15 +1482,14 @@ html[data-theme='dark'] .table-card {
   opacity: 1;
 }
 
-/* Segmented filter: joined pills, the chosen one filled green. */
+/* Segmented filter: pills on a grey track. */
 .segmented {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 0.125rem;
   padding: 0.25rem;
   border-radius: var(--radius-pill);
-  background: var(--c-surface-muted);
-  border: 1px solid var(--c-border);
+  background: var(--c-border);
 }
 .segment {
   min-block-size: var(--touch-min);
@@ -1340,10 +1508,13 @@ html[data-theme='dark'] .table-card {
 .segment:hover {
   color: var(--c-text);
 }
+/* The chosen segment is a white pill on the grey track, in bolder words (D17). */
 .segment[aria-pressed='true'] {
-  background: var(--c-accent);
-  color: var(--c-text-on-accent);
-  box-shadow: var(--shadow-button);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-weight: 800;
+  box-shadow: var(--shadow-low);
+  outline: 1px solid var(--c-border);
 }
 
 /* Table with a side card (invites): two columns on wide screens, one below. */
@@ -1362,7 +1533,7 @@ html[data-theme='dark'] .table-card {
   gap: var(--space-md);
 }
 
-/* Dialog: green-topped, big corners (D13) ---------------------------------------------------- */
+/* Dialog: a white sheet with big corners (D17) ---------------------------------------------------- */
 
 .modal-backdrop {
   position: fixed;
@@ -1384,13 +1555,15 @@ html[data-theme='dark'] .table-card {
   border-radius: var(--radius-dialog);
   box-shadow: var(--shadow-high);
 }
+/* White sheets (D17): the title on white with a hairline under it. */
 .modal-head {
   display: grid;
   justify-items: start;
   gap: var(--space-sm);
   padding: var(--space-lg) var(--space-xl);
-  background: var(--c-hero);
-  color: var(--c-text-on-hero);
+  background: var(--c-surface-raised);
+  color: var(--c-text);
+  border-block-end: 1px solid var(--c-border);
 }
 .modal-title {
   margin: 0;
@@ -1407,7 +1580,7 @@ html[data-theme='dark'] .table-card {
   justify-content: flex-end;
   padding: var(--space-lg) var(--space-xl) var(--space-xl);
 }
-/* A careful dialog: the icon on a white eight-point star, the safe action as the main button
+/* A careful dialog: the icon on a soft red eight-point star, the safe action as the main button
    with the careful (outline) action stacked under it. */
 .modal-careful .modal-head {
   justify-items: center;
@@ -1431,7 +1604,7 @@ html[data-theme='dark'] .table-card {
   inset: 0;
   inline-size: 100%;
   block-size: 100%;
-  fill: var(--c-surface);
+  fill: var(--c-danger-subtle);
 }
 .star-badge-icon {
   position: relative;
@@ -1611,9 +1784,6 @@ html[lang='ur'] .ayah-preview-ref {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-low);
 }
-html[data-theme='dark'] .poster-card {
-  border-color: var(--card-edge);
-}
 .poster-card-head {
   display: flex;
   flex-wrap: wrap;
@@ -1679,4 +1849,372 @@ html[lang='ur'] .poster-card-head h3,
   display: block;
   color: var(--c-text-secondary);
   font-size: 0.875rem;
+}
+
+/* Console artboard parts: pill tabs, tags, cells, the seat meter, the inspector ------------- */
+
+.workspace {
+  display: grid;
+  gap: 0.875rem;
+  align-items: start;
+}
+@media (min-width: 64rem) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 18.4375rem;
+  }
+}
+@media (max-width: 83.2rem) {
+  html[data-text-step='2'] .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 96rem) {
+  html[data-text-step='3'] .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.card-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-end: auto;
+}
+.tab-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3125rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-hairline);
+  color: var(--c-text-secondary);
+  font-size: 0.71875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+a.tab-pill:hover {
+  background: var(--c-border);
+  color: var(--c-text);
+}
+.tab-pill-on {
+  background: var(--c-cta);
+  color: var(--c-text-on-cta);
+  font-weight: 700;
+}
+
+.tag,
+.tag-square {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  inline-size: fit-content;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  background: var(--c-tag-slate-subtle);
+  color: var(--c-tag-slate);
+}
+.tag-square {
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.65625rem;
+}
+.tag-emerald,
+.tag-section-men {
+  background: var(--c-accent-subtle);
+  color: var(--c-text-on-accent-subtle);
+}
+.tag-section-men {
+  background: var(--c-tag-slate-subtle);
+  color: var(--c-tag-slate);
+}
+.tag-amber {
+  background: var(--c-warning-subtle);
+  color: var(--c-text-on-warning-subtle);
+}
+.tag-section-women {
+  background: var(--c-tag-rose-subtle);
+  color: var(--c-tag-rose);
+}
+.tag-section-family,
+.tag-cobalt {
+  background: var(--c-tag-cobalt-subtle);
+  color: var(--c-tag-cobalt);
+}
+.tag-mint {
+  background: var(--c-tag-mint-subtle);
+  color: var(--c-text-on-accent-subtle);
+}
+
+.portion-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.25rem 0.5625rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-warning-subtle);
+  border: 1px solid color-mix(in srgb, var(--c-decoration) 45%, transparent);
+  color: var(--c-text-on-warning-subtle);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.portion-pill .icon {
+  color: var(--c-text-warning);
+}
+
+.cell-stack {
+  display: grid;
+  gap: 0.1875rem;
+  justify-items: start;
+}
+.cell-strong {
+  display: block;
+  font-size: 0.78125rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.cell-title {
+  font-size: 0.71875rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.cell-sub,
+.cell-muted {
+  display: block;
+  margin-block-start: 0.125rem;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--c-text-muted);
+}
+.cell-meta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--c-tag-slate);
+}
+.row-select {
+  display: block;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.table tbody tr.row-selected > * {
+  background: var(--c-accent-subtle);
+}
+
+.seat-meter {
+  min-inline-size: min(5.75rem, 100%);
+  display: grid;
+  gap: 0.25rem;
+}
+.seat-meter-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.seat-meter-near .seat-meter-row {
+  color: var(--c-text-warning);
+}
+.seat-meter-pct {
+  font-weight: 600;
+  color: var(--c-text-muted);
+}
+.seat-meter .seat-bar {
+  block-size: 0.375rem;
+}
+.seat-meter .seat-fill {
+  background: var(--c-accent);
+}
+.seat-meter-near .seat-fill {
+  background: var(--c-progress-warn);
+}
+
+.table-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.625rem 1rem;
+  background: var(--c-page);
+  border-block-start: 1px solid var(--c-hairline);
+  font-size: 0.6875rem;
+  color: var(--c-text-muted);
+}
+.card-foot-hint {
+  font-weight: 700;
+  color: var(--c-text-accent);
+}
+.card-foot-hint::after {
+  content: ' →';
+}
+html[dir='rtl'] .card-foot-hint::after {
+  content: ' ←';
+}
+
+.btn-tool {
+  min-block-size: 1.875rem;
+  padding-inline: 0.6875rem;
+  gap: 0.3125rem;
+  font-size: 0.6875rem;
+  border-color: var(--c-border);
+}
+.btn-tool .icon {
+  color: var(--c-accent);
+}
+.table-filters .field-box {
+  --field-h: 1.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.table-filters .field-label {
+  padding: 0;
+  font-size: 0.65625rem;
+  white-space: nowrap;
+}
+.table-filters .field-box .input {
+  inline-size: auto;
+  padding-block: 0.125rem;
+  font-size: 0.6875rem;
+}
+.table-filters .field {
+  min-inline-size: 0;
+}
+
+/* The inspector beside the sessions table. */
+.inspector {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.875rem;
+  padding: 1rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 1.125rem;
+  box-shadow: var(--shadow-low);
+}
+.inspector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-block-end: 0.625rem;
+}
+.eyebrow {
+  font-size: 0.65625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-accent);
+}
+.inspector-title {
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+.inspector-sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.71875rem;
+  color: var(--c-text-muted);
+}
+.inspector-box {
+  display: grid;
+  gap: 0.5rem;
+  margin-block-start: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  background: var(--c-page);
+  border: 1px solid var(--c-border);
+}
+.mini-label {
+  font-size: 0.65625rem;
+  font-weight: 700;
+  color: var(--c-text-muted);
+}
+.mini-heading {
+  margin-block-end: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--c-text-secondary);
+}
+.mini-field {
+  margin-block-start: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--c-text);
+}
+.mini-field-sm {
+  padding: 0.3125rem 0.5rem;
+  border-color: var(--c-border);
+  font-size: 0.71875rem;
+}
+.mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.inspector-facilities {
+  margin-block-start: 0.75rem;
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1875rem 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--c-hairline);
+  color: var(--c-tag-slate);
+  font-size: 0.65625rem;
+  font-weight: 600;
+}
+.inspector-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(7rem, 100%), 1fr));
+  gap: 0.375rem;
+}
+.inspector-actions .btn {
+  min-block-size: 2rem;
+  padding-inline: 0.5rem;
+  font-size: 0.6875rem;
+  border-color: var(--c-border);
+}
+
+/* Per-row shortcuts on the sessions table: the session's registrations and its QR poster. */
+.row-icons {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+.icon-link {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 1.875rem;
+  block-size: 1.875rem;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text-secondary);
+}
+.icon-link:hover {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
 }

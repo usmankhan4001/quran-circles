@@ -2,13 +2,14 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { AppProviders, AppRoutes } from './App';
-// Fonts (D4): Figtree in the weights the type roles use (SIL OFL 1.1), and the kit's bundled
-// Mehr Nastaliq Web and KFGQPC Uthmanic Script HAFS. Licences: packages/ui/assets/fonts.
-import '@fontsource/figtree/400.css';
-import '@fontsource/figtree/500.css';
-import '@fontsource/figtree/600.css';
-import '@fontsource/figtree/700.css';
-import '@fontsource/figtree/800.css';
+// Fonts: Plus Jakarta Sans for Latin text, as on the showcase (owner override of D17,
+// 2026-10-18; SIL OFL 1.1, from Fontsource), and the kit's own Mehr Nastaliq Web for Urdu and
+// KFGQPC Uthmanic Script HAFS for Quran text. Licences: packages/ui/assets/fonts.
+import '@fontsource/plus-jakarta-sans/400.css';
+import '@fontsource/plus-jakarta-sans/500.css';
+import '@fontsource/plus-jakarta-sans/600.css';
+import '@fontsource/plus-jakarta-sans/700.css';
+import '@fontsource/plus-jakarta-sans/800.css';
 import './fonts.css';
 import './styles.css';
 

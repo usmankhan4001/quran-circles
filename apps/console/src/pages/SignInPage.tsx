@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router';
 import { PHONE_NOT_PAKISTAN_MOBILE, PakistaniMobilePhone, issueMessageKey } from '@qc/contracts';
 import { useAuth } from '../api/auth';
 import { DisplayControls } from '../components/Shell';
-import { Icon, PatternLayer } from '../components/icons';
+import { Icon } from '../components/icons';
 import { Banner, Button, PageHeader, TextField } from '../components/ui';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf, issuesOf } from '../lib/errors';
@@ -115,9 +115,8 @@ export default function SignInPage() {
       </div>
       <div className="card auth-card">
         <div className="auth-hero">
-          <PatternLayer />
           <span className="brand-mark brand-mark-large">
-            <Icon name="halaqa" />
+            <Icon name="mosque" />
           </span>
           <PageHeader title={t('console.signIn.title')} intro={t('console.signIn.intro')} />
         </div>

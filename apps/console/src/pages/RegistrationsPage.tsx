@@ -162,13 +162,20 @@ export default function RegistrationsPage() {
               id: 'registrations',
               label: t('console.exports.totals.registrations'),
               value: totals.registrations,
+              icon: 'ticket',
             },
-            { id: 'people', label: t('console.exports.totals.people'), value: totals.people },
+            {
+              id: 'people',
+              label: t('console.exports.totals.people'),
+              value: totals.people,
+              icon: 'users-three',
+            },
             {
               id: 'waitlisted',
               label: t('console.exports.totals.waitlisted'),
               value: totals.waitlisted,
               tone: 'notice',
+              icon: 'clock',
             },
           ]}
         />

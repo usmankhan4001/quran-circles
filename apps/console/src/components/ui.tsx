@@ -107,7 +107,7 @@ export function FieldShell({
       ) : null}
       {error ? (
         <p id={errorId} className="field-error">
-          <Icon name="alert" size="sm" />
+          <Icon name="warning-circle" size="sm" />
           {error}
         </p>
       ) : null}
@@ -237,8 +237,8 @@ export type BannerTone = 'info' | 'success' | 'warning' | 'danger' | 'notice';
 const BANNER_ICONS: Record<BannerTone, IconName> = {
   info: 'info',
   success: 'check',
-  warning: 'alert',
-  danger: 'alert',
+  warning: 'warning-circle',
+  danger: 'warning-circle',
   notice: 'info',
 };
 
@@ -495,10 +495,17 @@ export interface Stat {
   value: number;
   /** `notice` is the gold card for numbers that ask for attention, such as approvals waiting. */
   tone?: 'default' | 'notice';
+  /** The small tinted tile at the card's end edge. Decoration: the label says it all. */
+  icon?: IconName;
+  /** The tile's tint, as on the artboard's four cards. */
+  iconTone?: 'emerald' | 'sky' | 'amber' | 'mint';
+  /** A short line under the number, only when the data gives one. */
+  sub?: string;
 }
 
 /**
- * The row of number cards above a table, as drawn (C2): a labelled region holding a description
+ * The row of number cards above a table, as drawn (D17: white hairline cards, the label over the
+ * number and a tinted icon tile at the end edge): a labelled region holding a description
  * list, so a screen reader hears each label with its number. `partial` says the numbers only
  * count the rows loaded so far, when the list has more pages: the API returns no totals.
  */
@@ -521,7 +528,15 @@ export function StatRow({
             className={`stat${s.tone === 'notice' && s.value > 0 ? ' stat-warn' : ''}`}
           >
             <dt className="stat-label">{s.label}</dt>
-            <dd className="stat-value">{number(s.value)}</dd>
+            <dd className="stat-value">
+              {number(s.value)}
+              {s.icon ? (
+                <span className={`stat-icon stat-icon-${s.iconTone ?? 'emerald'}`}>
+                  <Icon name={s.icon} size={18} weight="duotone" />
+                </span>
+              ) : null}
+            </dd>
+            {s.sub ? <dd className="stat-sub">{s.sub}</dd> : null}
           </div>
         ))}
       </dl>
@@ -541,15 +556,17 @@ export function SearchField({
   label,
   value,
   onChange,
+  className,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
+  className?: string;
 }) {
   return (
-    <div className="search">
-      <Icon name="search" size="sm" />
+    <div className={`search${className ? ` ${className}` : ''}`}>
+      <Icon name="magnifying-glass" size="sm" />
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
@@ -592,14 +609,26 @@ export function AddLink({ to, children }: { to: string; children: ReactNode }) {
  */
 export function TableCard({
   title,
+  subtitle,
+  tag,
+  tabs,
   search,
   filters,
   filtersLabel,
   action,
+  footer,
   children,
 }: {
   /** A heading for the card when the page has more than one table. */
   title?: string;
+  /** The small grey line under the heading. */
+  subtitle?: string;
+  /** A pill at the end of the heading row, such as "RBAC scoped". */
+  tag?: ReactNode;
+  /** Pill tabs at the start of the top row, as on the sessions card. */
+  tabs?: ReactNode;
+  /** The grey strip under the table: counts and a hint. */
+  footer?: ReactNode;
   search?: ReactNode;
   filters?: ReactNode;
   /** Names the group of filters for screen readers. */
@@ -612,10 +641,15 @@ export function TableCard({
     <section className="table-card" aria-labelledby={title ? headingId : undefined}>
       <div className="table-tools">
         {title ? (
-          <h2 id={headingId} className="table-card-title">
-            {title}
-          </h2>
+          <div className="table-card-heading">
+            <h2 id={headingId} className="table-card-title">
+              {title}
+            </h2>
+            {subtitle ? <p className="table-card-sub">{subtitle}</p> : null}
+          </div>
         ) : null}
+        {tabs ? <div className="card-tabs">{tabs}</div> : null}
+        {tag ? <div className="table-card-tag">{tag}</div> : null}
         {search}
         {filters ? (
           <div className="table-filters" role="group" aria-label={filtersLabel}>
@@ -625,6 +659,7 @@ export function TableCard({
         {action ? <div className="table-action">{action}</div> : null}
       </div>
       <div className="table-card-body">{children}</div>
+      {footer ? <div className="table-card-foot">{footer}</div> : null}
     </section>
   );
 }
@@ -676,11 +711,13 @@ export function DataTable<T>({
   columns,
   rows,
   rowKey,
+  rowClassName,
 }: {
   caption: string;
   columns: readonly Column<T>[];
   rows: readonly T[];
   rowKey: (row: T) => string;
+  rowClassName?: (row: T) => string | undefined;
 }) {
   return (
     <div className="table-wrap" role="region" aria-label={caption} tabIndex={0}>
@@ -697,7 +734,7 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={rowKey(row)}>
+            <tr key={rowKey(row)} className={rowClassName?.(row)}>
               {columns.map((c) =>
                 c.rowHeader ? (
                   <th key={c.id} scope="row">
@@ -794,7 +831,7 @@ export function Modal({
         <div className="modal-head">
           {careful ? (
             <StarBadge>
-              <Icon name="alert" />
+              <Icon name="warning-circle" />
             </StarBadge>
           ) : null}
           <h2 id={titleId} className="modal-title">

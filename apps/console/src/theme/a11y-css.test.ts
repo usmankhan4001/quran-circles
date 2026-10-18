@@ -42,11 +42,14 @@ describe('reflow at large text and at 320 px (A-03, A-04)', () => {
 });
 
 describe('targets of 48 dp (A-05, checklist O1)', () => {
-  it('makes a field control fill its whole outlined box', () => {
-    expect(rule('.field-box .input')).toMatch(/min-block-size:\s*var\(--touch-min\)/);
-    expect(rule('.field-box > *')).toMatch(/grid-area:\s*1 \/ 1/);
-    // The label sits over the control without taking its clicks.
-    expect(rule('.field-box > .field-label')).toMatch(/pointer-events:\s*none/);
+  it('makes the pill itself the field control, with its label above it', () => {
+    // The control is the pill (at least 48 dp unless a compact bar sets its own height), and the
+    // label is a real label above it, so a click on either reaches the control.
+    expect(rule('.field-box .input')).toMatch(
+      /min-block-size:\s*var\(--field-h, var\(--touch-min\)\)/,
+    );
+    expect(rule('.input')).toMatch(/border-radius:\s*var\(--radius-field\)/);
+    expect(rule('.field-box')).toMatch(/display:\s*grid/);
   });
 
   it('makes a tick box itself 48 dp, drawing the box smaller inside it', () => {
@@ -59,7 +62,8 @@ describe('targets of 48 dp (A-05, checklist O1)', () => {
   it('gives links in table rows, tabs, credits, small buttons and segments the full size', () => {
     expect(rule('.row-actions a')).toMatch(/min-block-size:\s*var\(--touch-min\)/);
     expect(rule('.row-actions a')).toMatch(/min-inline-size:\s*var\(--touch-min\)/);
-    expect(rule('.btn-small')).toMatch(/min-block-size:\s*var\(--touch-min\)/);
+    // Small buttons follow the console artboard's 36 px pills (above the 24 px WCAG 2.2 minimum).
+    expect(rule('.btn-small')).toMatch(/min-block-size:\s*2\.25rem/);
     expect(rule('.segment')).toMatch(/min-block-size:\s*var\(--touch-min\)/);
     expect(rule('.segment')).toMatch(/min-inline-size:\s*var\(--touch-min\)/);
     expect(rule('.session-tab')).toMatch(/min-inline-size:\s*var\(--touch-min\)/);

@@ -12,17 +12,18 @@ import {
 import type { Locale } from '../i18n';
 
 // The mock config has the rc.4 flags on, so the ayah of the day page is in every staff menu.
+// The menu follows the console artboard's order.
 const NAV: Record<Exclude<TestRole, 'none'>, string[]> = {
-  venue: ['sessions', 'venues', 'exports', 'dailyAyahs'],
-  city: ['sessions', 'venues', 'exports', 'coordinators', 'import', 'audit', 'dailyAyahs'],
+  venue: ['venues', 'sessions', 'dailyAyahs', 'exports'],
+  city: ['venues', 'sessions', 'coordinators', 'dailyAyahs', 'import', 'exports', 'audit'],
   national: [
-    'sessions',
     'venues',
-    'exports',
+    'sessions',
     'coordinators',
-    'import',
-    'audit',
     'dailyAyahs',
+    'import',
+    'exports',
+    'audit',
     'settings',
   ],
 };

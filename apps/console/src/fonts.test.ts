@@ -24,11 +24,11 @@ describe('console fonts', () => {
   const main = read('main.tsx');
   const faces = fontFaces(read('fonts.css'));
 
-  it('loads Figtree from Fontsource in every weight the type roles use', () => {
+  it('loads Plus Jakarta Sans from Fontsource in every weight the type roles use', () => {
     const weights = new Set<string>(Object.values(typeRoles).map((r) => r.weight));
     weights.add('700'); // bold text
     for (const weight of weights)
-      expect(main).toContain(`import '@fontsource/figtree/${weight}.css';`);
+      expect(main).toContain(`import '@fontsource/plus-jakarta-sans/${weight}.css';`);
     expect(main).toMatch(/import '\.\/fonts\.css';\s*import '\.\/styles\.css';/);
   });
 

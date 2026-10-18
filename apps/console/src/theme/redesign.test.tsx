@@ -154,7 +154,8 @@ describe('redesign tokens as CSS variables', () => {
       expect(light[name], name).toBeTruthy();
       expect(dark[name], name).toBeTruthy();
     }
-    expect(light['--font-sans']).toMatch(/Figtree/);
+    // Plus Jakarta Sans leads, as on the showcase; Urdu keeps the kit's Mehr Nastaliq.
+    expect(light['--font-sans']).toMatch(/^'Plus Jakarta Sans', /);
     expect(light['--font-urdu']).toMatch(/^'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', serif$/);
   });
 
@@ -188,25 +189,30 @@ describe('initials', () => {
 describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
   const dir = directionForLocale(locale);
 
-  it('puts the menu, the person and the display settings in the sidebar frame', async () => {
+  it('puts the menu, the scope and the display settings in the sidebar, the person in the top bar', async () => {
     const { container } = renderConsole({ role: 'national', locale, path: '/sessions' });
     await shellReady(locale);
     expect(document.documentElement.dir).toBe(dir);
     const sidebar = container.querySelector('.sidebar') as HTMLElement;
     expect(sidebar).toBeTruthy();
-    // The pattern is decoration: hidden from screen readers.
-    expect(sidebar.querySelector('svg.pattern')?.getAttribute('aria-hidden')).toBe('true');
+    // The emerald brand block tops the white rail; no eight-point pattern any more (D17).
+    expect(sidebar.querySelector('.brand')).toBeTruthy();
+    expect(sidebar.querySelector('svg.pattern')).toBeNull();
     expect(within(sidebar).getByRole('navigation')).toBeTruthy();
-    expect(within(sidebar).getByText('Test Coordinator')).toBeTruthy();
-    expect(within(sidebar).getByText('TC')).toBeTruthy();
+    expect(within(sidebar).getByText(text('console.shell.scope.national', locale))).toBeTruthy();
     // Every icon sits beside a label, so none is read out.
     for (const icon of sidebar.querySelectorAll('svg')) {
       expect(icon.getAttribute('aria-hidden')).toBe('true');
     }
     // A named region, so the display settings are a landmark too (A-08).
     const tools = screen.getByRole('region', { name: text('console.shell.toolsLabel', locale) });
-    expect(sidebar.contains(tools)).toBe(false);
+    expect(sidebar.contains(tools)).toBe(true);
     expect(within(tools).getAllByRole('combobox')).toHaveLength(3);
+    // Who is signed in: the initials and the name in the top bar's pill.
+    const who = screen.getByRole('region', { name: text('console.shell.signedInLabel', locale) });
+    expect(sidebar.contains(who)).toBe(false);
+    expect(within(who).getByText('Test Coordinator')).toBeTruthy();
+    expect(within(who).getByText('TC')).toBeTruthy();
   });
 
   it('marks the current page in the menu', async () => {
@@ -219,34 +225,30 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
     expect(current.map((a) => a.textContent)).toEqual([text('console.nav.sessions', locale)]);
   });
 
-  it('keeps the focus order: skip link, menu, who is signed in, display settings, the page, then the credits', async () => {
+  it('keeps the focus order: skip link, menu, display settings, sign out, the top bar, the page, then the credits', async () => {
     const { user } = renderConsole({ role: 'national', locale, path: '/sessions' });
     await shellReady(locale);
     await screen.findByRole('table');
     // The page takes focus after a move; start from the top of the document, as a new visit would.
     (document.activeElement as HTMLElement | null)?.blur();
     const order: string[] = [];
-    for (let i = 0; i < 40; i += 1) {
+    for (let i = 0; i < 60; i += 1) {
       await user.tab();
       const el = document.activeElement as HTMLElement;
       if (el === document.body) break;
       if (el.classList.contains('skip-link')) order.push('skip');
       else if (el.closest('.shell-nav')) order.push('nav');
-      else if (el.closest('.shell-user')) order.push('user');
       else if (el.closest('.shell-bar')) order.push('tools');
+      else if (el.closest('.shell-user')) order.push('user');
+      else if (el.closest('.shell-top')) order.push('bar');
       else if (el.closest('main')) order.push('main');
       else if (el.closest('.credits')) order.push('credits');
       else order.push('other');
     }
-    const firstOf = (name: string) => order.indexOf(name);
     expect(order).not.toContain('other');
-    expect(firstOf('skip')).toBe(0);
-    expect(firstOf('nav')).toBeLessThan(firstOf('user'));
-    expect(firstOf('user')).toBeLessThan(firstOf('tools'));
-    expect(firstOf('tools')).toBeLessThan(firstOf('main'));
     // Each group is one run, never interleaved.
     const collapsed = order.filter((name, i) => name !== order[i - 1]);
-    expect(collapsed).toEqual(['skip', 'nav', 'user', 'tools', 'main', 'credits']);
+    expect(collapsed).toEqual(['skip', 'nav', 'tools', 'user', 'bar', 'main', 'credits']);
   });
 });
 
@@ -309,7 +311,7 @@ describe.each<Locale>(['en', 'ur'])('restyled pages in %s', (locale) => {
     expect(document.querySelector('.banner-notice')).toBeTruthy();
   });
 
-  it('draws the sign-in page as one card with a green top and the display settings above it', async () => {
+  it('draws the sign-in page as one card with an emerald top and the display settings above it', async () => {
     const { container } = renderConsole({ locale, path: '/sign-in', signedIn: false });
     const heading = await screen.findByRole('heading', {
       level: 1,
@@ -318,7 +320,7 @@ describe.each<Locale>(['en', 'ur'])('restyled pages in %s', (locale) => {
     expect(document.documentElement.dir).toBe(dir);
     const card = container.querySelector('.auth-card') as HTMLElement;
     expect(card.querySelector('.auth-hero')).toBeTruthy();
-    expect(card.querySelector('.auth-hero svg.pattern')).toBeTruthy();
+    expect(card.querySelector('.auth-hero .brand-mark')).toBeTruthy();
     expect(card.contains(heading)).toBe(true);
     const tools = screen.getByRole('group', { name: text('console.shell.toolsLabel', locale) });
     expect(card.contains(tools)).toBe(false);

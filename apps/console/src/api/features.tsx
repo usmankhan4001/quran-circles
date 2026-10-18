@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { featureOn, type FeatureFlagKey, type Principal } from '@qc/contracts';
+import { featureOn, type FeatureFlagKey, type Principal, type SeasonMode } from '@qc/contracts';
 import { useAuth } from './auth';
 import { useAsync } from './hooks';
 
@@ -15,6 +15,9 @@ export interface Features {
   status: 'loading' | 'ready' | 'error';
   flags: FeatureFlags;
   on(key: FeatureFlagKey): boolean;
+  /** Which program leads the apps' home screen, and the Hijri offset; null until loaded. */
+  seasonMode: SeasonMode | null;
+  hijriOffsetDays: number | null;
 }
 
 /**
@@ -37,15 +40,25 @@ export function FeaturesProvider({ children }: { children: ReactNode }) {
   const { api, status, principal } = useAuth();
   const cityId = configCityFor(principal);
   const loaded = useAsync(async () => {
-    if (status !== 'signedIn') return {} as FeatureFlags;
+    if (status !== 'signedIn') return null;
     const config = await api.config.get({ query: cityId ? { cityId } : {} });
-    return config.featureFlags as FeatureFlags;
+    return {
+      flags: config.featureFlags as FeatureFlags,
+      seasonMode: config.seasonMode,
+      hijriOffsetDays: config.hijriOffsetDays,
+    };
   }, [api, status, cityId]);
 
   const data = loaded.status === 'ready' ? loaded.data : undefined;
   const value = useMemo<Features>(() => {
-    const flags = data ?? {};
-    return { status: loaded.status, flags, on: (key) => featureOn(flags, key) };
+    const flags = data?.flags ?? {};
+    return {
+      status: loaded.status,
+      flags,
+      on: (key) => featureOn(flags, key),
+      seasonMode: data?.seasonMode ?? null,
+      hijriOffsetDays: data?.hijriOffsetDays ?? null,
+    };
   }, [loaded.status, data]);
 
   return <FeaturesContext.Provider value={value}>{children}</FeaturesContext.Provider>;

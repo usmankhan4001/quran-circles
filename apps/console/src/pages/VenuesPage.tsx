@@ -64,13 +64,19 @@ export default function VenuesPage() {
   // Venues are added through the bulk import; the console has no single-venue form yet.
   const canAdd = isNavAllowed(principal, 'import') && canSomewhere(principal, 'venue.create');
   const statCards: Stat[] = [
-    { id: 'active', label: t('console.venues.kpi.active'), value: stats.active },
-    { id: 'women', label: t('console.venues.kpi.womenSection'), value: stats.womenSection },
+    { id: 'active', label: t('console.venues.kpi.active'), value: stats.active, icon: 'mosque' },
+    {
+      id: 'women',
+      label: t('console.venues.kpi.womenSection'),
+      value: stats.womenSection,
+      icon: 'users-three',
+    },
     {
       id: 'noContact',
       label: t('console.venues.kpi.noContact'),
       value: stats.noContact,
       tone: 'notice',
+      icon: 'warning-circle',
     },
     ...(includeArchived
       ? [{ id: 'archived', label: t('console.venues.kpi.archived'), value: stats.archived }]

@@ -390,15 +390,31 @@ export default function CoordinatorsPage() {
           label={t('console.kpi.label')}
           partial={people.status === 'ready' && people.hasMore}
           stats={[
-            { id: 'waiting', label: t('console.invites.kpi.waiting'), value: stats.waiting },
-            { id: 'accepted', label: t('console.invites.kpi.accepted'), value: stats.accepted },
+            {
+              id: 'waiting',
+              label: t('console.invites.kpi.waiting'),
+              value: stats.waiting,
+              icon: 'clock',
+            },
+            {
+              id: 'accepted',
+              label: t('console.invites.kpi.accepted'),
+              value: stats.accepted,
+              icon: 'check',
+            },
             {
               id: 'expired',
               label: t('console.invites.kpi.expired'),
               value: stats.expired,
               tone: 'notice',
+              icon: 'warning-circle',
             },
-            { id: 'active', label: t('console.invites.kpi.active'), value: stats.activeRoles },
+            {
+              id: 'active',
+              label: t('console.invites.kpi.active'),
+              value: stats.activeRoles,
+              icon: 'shield-check',
+            },
           ]}
         />
       ) : null}

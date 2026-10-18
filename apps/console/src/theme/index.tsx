@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import {
   colors as palette,
+  consoleTagColors,
   elevation,
   fontFallbacks,
   lineHeightRatio,
@@ -36,22 +37,34 @@ const rem = (px: number) => `${px / 16}rem`;
 /**
  * Every value the stylesheet uses, as CSS custom properties generated from the shared tokens.
  * The stylesheet and the components hold no raw colours: they read these names only.
- * The sidebar is the C2 green (docs/design/redesign-decisions.md, D15): the deep green fading to
- * the night green by day, and the two darkest greens at night.
+ * The sidebar follows D17 (docs/design/redesign-decisions.md): a white rail whose brand block on
+ * top is the deep emerald fading to the emerald by day, and the two darkest greens at night.
  */
 export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   const vars: Record<string, string> = {};
   const colors: SemanticColors = semanticColors[mode];
   for (const [name, value] of Object.entries(colors)) vars[`--c-${kebab(name)}`] = value;
   const night = mode === 'dark';
+  // D17: the sidebar is white with a deep emerald brand block on top; these name that block.
   vars['--c-sidebar-from'] = night ? palette.green[900] : palette.brand.deep;
-  vars['--c-sidebar-to'] = night ? palette.green[975] : palette.brand.night;
+  vars['--c-sidebar-to'] = night ? palette.green[950] : palette.brand.emerald;
   vars['--c-sidebar-text'] = palette.white;
+  vars['--c-sidebar-soft'] = palette.green[200];
   vars['--c-on-sidebar-logo'] = palette.brand.deep;
+  // The work area: slate cloud by day so white cards stand off it, the night page after Isha.
+  vars['--c-page'] = night ? colors.background : colors.surfaceMuted;
+  for (const [name, value] of Object.entries(consoleTagColors[mode]))
+    vars[`--c-tag-${kebab(name)}`] = value;
   for (const [name, value] of Object.entries(spacing)) vars[`--space-${name}`] = rem(value);
   for (const [name, value] of Object.entries(radii)) vars[`--radius-${name}`] = `${value}px`;
   vars['--touch-min'] = rem(minTouchTarget);
-  vars['--font-sans'] = fontStack(fontFallbacks.sans);
+  // Plus Jakarta Sans leads Latin text, as on the showcase (owner override of D17); Urdu keeps
+  // the kit's Mehr Nastaliq.
+  vars['--font-sans'] = fontStack(
+    fontFallbacks.sans[0] === 'Plus Jakarta Sans'
+      ? fontFallbacks.sans
+      : ['Plus Jakarta Sans', ...fontFallbacks.sans],
+  );
   vars['--font-urdu'] = fontStack(fontFallbacks.urdu);
   vars['--font-mono'] = 'ui-monospace, SFMono-Regular, Menlo, monospace';
   for (const [role, spec] of Object.entries(typeRoles)) {

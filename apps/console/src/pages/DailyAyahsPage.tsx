@@ -293,14 +293,30 @@ export default function DailyAyahsPage() {
         <StatRow
           label={t('console.kpi.label')}
           stats={[
-            { id: 'national', label: t('console.dailyAyahs.kpi.national'), value: stats.national },
-            { id: 'venue', label: t('console.dailyAyahs.kpi.venue'), value: stats.venue },
-            { id: 'circle', label: t('console.dailyAyahs.kpi.circle'), value: stats.circle },
+            {
+              id: 'national',
+              label: t('console.dailyAyahs.kpi.national'),
+              value: stats.national,
+              icon: 'book-open-text',
+            },
+            {
+              id: 'venue',
+              label: t('console.dailyAyahs.kpi.venue'),
+              value: stats.venue,
+              icon: 'mosque',
+            },
+            {
+              id: 'circle',
+              label: t('console.dailyAyahs.kpi.circle'),
+              value: stats.circle,
+              icon: 'calendar-blank',
+            },
             {
               id: 'gaps',
               label: t('console.dailyAyahs.kpi.gaps'),
               value: stats.gaps,
               tone: 'notice',
+              icon: 'calendar-blank',
             },
           ]}
         />

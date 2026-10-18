@@ -61,7 +61,11 @@ describe.each<Locale>(['en', 'ur'])('sessions page (%s)', (locale) => {
       name: text('console.sessions.title', locale),
     });
     expect(within(table).getAllByRole('row')).toHaveLength(sessions.length + 1);
-    const link = within(table).getAllByRole('link', {
+    // The first row is open in the inspector beside the table, with its registrations link.
+    const inspector = screen.getByRole('complementary', {
+      name: text('console.sessions.inspector.label', locale),
+    });
+    const link = within(inspector).getAllByRole('link', {
       name: new RegExp(text('console.sessions.registrations', locale)),
     })[0];
     expect(link?.getAttribute('href')).toBe(`/sessions/${sessions[0]!.id}/registrations`);
@@ -73,9 +77,12 @@ describe('scope filters', () => {
   it('narrows sessions by city and venue through the API', async () => {
     const { user, calls } = renderConsole({ role: 'national', path: '/sessions' });
     await screen.findByRole('table');
-    await user.selectOptions(
-      screen.getByLabelText(text('console.shell.filter.city')),
-      rawalpindi!.id,
+    // The city is chosen with the pills in the top bar.
+    await user.click(
+      within(screen.getByRole('group', { name: text('console.shell.cityPills') })).getByRole(
+        'button',
+        { name: rawalpindi!.name.en },
+      ),
     );
     await waitFor(() =>
       expect(
@@ -98,9 +105,12 @@ describe('scope filters', () => {
   it('offers only the venues of the chosen city', async () => {
     const { user } = renderConsole({ role: 'national', path: '/sessions' });
     await screen.findByRole('table');
-    await user.selectOptions(
-      screen.getByLabelText(text('console.shell.filter.city')),
-      rawalpindi!.id,
+    // The city is chosen with the pills in the top bar.
+    await user.click(
+      within(screen.getByRole('group', { name: text('console.shell.cityPills') })).getByRole(
+        'button',
+        { name: rawalpindi!.name.en },
+      ),
     );
     const venue = screen.getByLabelText(text('console.shell.filter.venue'));
     const labels = within(venue)

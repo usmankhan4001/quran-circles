@@ -77,11 +77,10 @@ describe('searching a table', () => {
       target.title.en,
     );
     const narrowed = screen.getByRole('table', { name: text('console.sessions.title') });
-    const names = within(narrowed)
-      .getAllByRole('rowheader')
-      .map((r) => r.textContent);
-    expect(names).toContain(target.title.en);
-    expect(names.length).toBeLessThan(adminSessions.length);
+    // Each row names its masjid in the row header; the session title sits in the program cell.
+    const rowsLeft = within(narrowed).getAllByRole('row').slice(1);
+    expect(rowsLeft.some((r) => r.textContent?.includes(target.title.en))).toBe(true);
+    expect(rowsLeft.length).toBeLessThan(adminSessions.length);
     expect(listCalls(calls, '/v1/admin/sessions')).toHaveLength(before);
   });
 
