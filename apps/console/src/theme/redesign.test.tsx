@@ -202,7 +202,8 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
     for (const icon of sidebar.querySelectorAll('svg')) {
       expect(icon.getAttribute('aria-hidden')).toBe('true');
     }
-    const tools = screen.getByRole('group', { name: text('console.shell.toolsLabel', locale) });
+    // A named region, so the display settings are a landmark too (A-08).
+    const tools = screen.getByRole('region', { name: text('console.shell.toolsLabel', locale) });
     expect(sidebar.contains(tools)).toBe(false);
     expect(within(tools).getAllByRole('combobox')).toHaveLength(3);
   });

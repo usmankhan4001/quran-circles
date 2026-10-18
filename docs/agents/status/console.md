@@ -1,7 +1,14 @@
 # Status: console
 
-Updated: 2026-10-17
+Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## Accessibility fix pass (2026-10-18, `docs/quality/accessibility-rtl.md`)
+
+- **A-08 (landmarks).** In `components/Shell.tsx` the sidebar is a `<header>` (banner) and the language, colours and text size tools a named `<section>` (region), so no content sits outside a landmark. Tests: `pages/shell.test.tsx`, `theme/redesign.test.tsx`.
+- **A-03 and A-04 (reflow).** `styles.css`: the page is one `minmax(0, 1fr)` column; every fixed minimum width became `min(Xrem, 100%)` (fields, filters, form grid, stat tiles, poster source list); long words break; the shell user block wraps; the split layouts stay one column at text sizes 2 and 3 until the window is wide enough for them.
+- **A-05 (48 dp targets).** The whole outlined field box is now the control (label laid over it, `pointer-events: none`); tick boxes are 48×48 with the box drawn inside (forced colours keep a border); table row links, session tabs, credit links, small buttons and segments are at least 48×48.
+- Tests: new `theme/a11y-css.test.ts` (7, reads the stylesheet; jsdom has no layout, the e2e quality run is the real check).
 
 ## Done
 

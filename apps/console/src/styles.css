@@ -25,6 +25,8 @@ body {
   font-family: var(--font-sans);
   font-size: var(--type-body-size);
   line-height: 1.5;
+  /* A word longer than its line breaks instead of pushing the page sideways (WCAG 1.4.10). */
+  overflow-wrap: break-word;
 }
 
 html[lang='ur'] body {
@@ -296,11 +298,11 @@ a {
 }
 .shell-bar .field,
 .auth-tools .field {
-  min-inline-size: 9rem;
+  min-inline-size: min(9rem, 100%);
 }
 .auth-tools .field {
   flex: 1;
-  min-inline-size: 7rem;
+  min-inline-size: min(7rem, 100%);
 }
 .shell-bar .field-box,
 .auth-tools .field-box {
@@ -353,6 +355,12 @@ a {
   font-weight: var(--type-label-weight);
   color: var(--c-text);
 }
+/* A link on its own line part is a target, so it gets the full 48 dp height (A-05). */
+.credits-group a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+}
 
 @media (max-width: 52rem) {
   .shell {
@@ -373,7 +381,8 @@ a {
   }
   .shell-user {
     margin-block-start: 0;
-    grid-auto-flow: column;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
   }
@@ -391,6 +400,9 @@ a {
 
 .page {
   display: grid;
+  /* One column no wider than the window: a wide table scrolls inside its own box instead of
+     widening the page past the window at large text or on a narrow screen (A-03, A-04). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-xl);
   max-inline-size: 80rem;
 }
@@ -445,7 +457,7 @@ a {
   box-shadow: var(--shadow-low);
 }
 .filters .field {
-  min-inline-size: 12rem;
+  min-inline-size: min(12rem, 100%);
 }
 
 .auth-page {
@@ -590,7 +602,7 @@ a.btn {
   background: var(--c-hero-glass-pressed);
 }
 .btn-small {
-  min-block-size: 2.5rem;
+  min-block-size: var(--touch-min);
   padding-inline: var(--space-md);
   border-radius: var(--radius-md);
 }
@@ -602,19 +614,32 @@ a.btn {
   align-content: start;
 }
 .field-box {
+  /* Height of the small label's line, for the room the control leaves above its value. */
+  --field-label-line: calc(0.8125rem * 1.3);
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  /* The label and the control share one cell: the control fills the whole outlined box under
+     the label, so the box is the target (48 dp, checklist O1), not a 28 px line inside it (A-05). */
+  display: grid;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   min-block-size: 3.75rem;
-  padding: var(--space-sm) var(--space-md);
   background: var(--c-surface);
   color: var(--c-text);
   border: 1px solid var(--c-border-strong);
   border-radius: var(--radius-field);
 }
 html[lang='ur'] .field-box {
+  --field-label-line: calc(0.875rem * 1.8);
   min-block-size: 4.125rem;
+}
+.field-box > * {
+  grid-area: 1 / 1;
+}
+.field-box > .field-label {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  padding: var(--space-sm) var(--space-md) 0;
+  pointer-events: none;
 }
 .field-box:focus-within {
   border-color: var(--c-focus);
@@ -670,18 +695,21 @@ html[lang='ur'] .field-label {
   font: inherit;
 }
 .field-box .input {
-  min-block-size: 1.75rem;
-  padding: 0;
+  align-self: stretch;
+  min-block-size: var(--touch-min);
+  padding: calc(var(--space-sm) + var(--field-label-line) + var(--space-xxs)) var(--space-md)
+    var(--space-sm);
   background: transparent;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--radius-field);
   outline: none;
 }
 .field-box .input:disabled {
   color: var(--c-disabled-text);
   cursor: not-allowed;
 }
-textarea.input {
+textarea.input,
+.field-box textarea.input {
   min-block-size: 6rem;
 }
 .field-box-select .input {
@@ -754,17 +782,31 @@ html[dir='rtl'] .field-box-select::after {
   min-block-size: var(--touch-min);
 }
 .check input {
+  /* The drawn box is 1.5rem; a transparent ring of 0.75rem around it makes the tick box itself a
+     48 dp target (checklist O1, A-05), and the negative margin keeps the row where it was. */
+  --check-ring: calc((var(--touch-min) - 1.5rem) / 2);
   appearance: none;
   flex: none;
   display: grid;
   place-content: center;
-  inline-size: 1.5rem;
-  block-size: 1.5rem;
-  margin: 0;
+  inline-size: var(--touch-min);
+  block-size: var(--touch-min);
+  margin: calc(-1 * var(--check-ring));
   background: var(--c-surface);
-  border: 1.5px solid var(--c-border-strong);
-  border-radius: 7px;
+  background-clip: padding-box;
+  border: var(--check-ring) solid transparent;
+  box-shadow: inset 0 0 0 1.5px var(--c-border-strong);
+  border-radius: calc(7px + var(--check-ring));
   cursor: pointer;
+}
+@media (forced-colors: active) {
+  /* Forced colours would paint the transparent ring; the system draws the box instead. */
+  .check input {
+    border: var(--check-ring) solid Canvas;
+    box-shadow: none;
+    outline: 1.5px solid CanvasText;
+    outline-offset: -1.5px;
+  }
 }
 .check input::after {
   content: '';
@@ -777,7 +819,8 @@ html[dir='rtl'] .field-box-select::after {
 }
 .check input:checked {
   background: var(--c-accent);
-  border-color: var(--c-accent);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1.5px var(--c-accent);
 }
 .check input:checked::after {
   transform: rotate(45deg) scale(1);
@@ -791,7 +834,7 @@ html[dir='rtl'] .field-box-select::after {
   gap: var(--space-lg);
 }
 .form-grid {
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
   align-items: start;
 }
 .form-grid > .form-actions,
@@ -1008,6 +1051,14 @@ html[dir='rtl'] .field-box-select::after {
   flex-wrap: wrap;
   gap: var(--space-xs);
 }
+/* Links in a table row are whole targets of 48 dp, not just their words (checklist O1). */
+.row-actions a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--touch-min);
+  min-inline-size: var(--touch-min);
+  padding-inline: var(--space-xs);
+}
 .row-error > * {
   background: var(--c-danger-subtle);
 }
@@ -1015,7 +1066,7 @@ html[dir='rtl'] .field-box-select::after {
 /* Number cards. */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
   gap: var(--space-md);
   margin: 0;
 }
@@ -1085,7 +1136,7 @@ html[dir='rtl'] .field-box-select::after {
   gap: var(--space-sm);
 }
 .table-filters .field {
-  min-inline-size: 11rem;
+  min-inline-size: min(11rem, 100%);
 }
 .table-filters .check {
   min-block-size: var(--touch-min);
@@ -1153,7 +1204,8 @@ html[dir='rtl'] .field-box-select::after {
   background: var(--c-surface-muted);
 }
 .segment {
-  min-block-size: 2.25rem;
+  min-block-size: var(--touch-min);
+  min-inline-size: var(--touch-min);
   padding-inline: var(--space-md);
   border: 0;
   border-radius: var(--radius-sm);
@@ -1342,7 +1394,9 @@ html[lang='ur'] .ayah-preview-ref {
 .session-tab {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-block-size: var(--touch-min);
+  min-inline-size: var(--touch-min);
   padding-inline: var(--space-md);
   color: var(--c-text-secondary);
   font-weight: 600;
@@ -1362,6 +1416,19 @@ html[lang='ur'] .ayah-preview-ref {
 @media (min-width: 64rem) {
   .split-posters {
     grid-template-columns: minmax(0, 1fr) 24rem;
+  }
+}
+/* Breakpoints are in the browser's rem, which ignores the console's own text size. At the two
+   largest sizes the side column needs that much more room, so the page keeps one column until the
+   window is as much wider (64rem x 1.3 and x 1.5; A-03). */
+@media (max-width: 83.2rem) {
+  html[data-text-step='2'] :is(.split, .split-posters) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 96rem) {
+  html[data-text-step='3'] :is(.split, .split-posters) {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .poster-column,
@@ -1385,7 +1452,7 @@ html[lang='ur'] .ayah-preview-ref {
   gap: var(--space-sm);
 }
 .poster-source-list dt {
-  min-inline-size: 5rem;
+  min-inline-size: min(5rem, 100%);
   color: var(--c-text-secondary);
 }
 .poster-source-list dd {

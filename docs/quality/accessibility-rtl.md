@@ -128,6 +128,40 @@ The probe also reported "nav is not at the left of main" at 320 px. That is not 
 | ------------ | --------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Quran reader | `region` (A-08) | Moderate, best practice | No landmark around the verse list. Placeholder text stood in for the Quran source during the run (the run has no internet), so line height and stacking marks with real AlMushaf or KFGQPC text need the device check. |
 
+## After fixes (2026-10-18)
+
+The same audit (`QC_QUALITY=1 pnpm --filter @qc/e2e exec playwright test --project=quality accessibility-rtl`) was run again after the fix pass, on a fresh stack with fresh web exports. It covered all 17 screens, 392 combinations (all rendered) and 358 axe runs.
+
+| Measure                                            | Before                                  | After                        |
+| -------------------------------------------------- | --------------------------------------- | ---------------------------- |
+| Serious axe rules (WCAG)                           | 3 rules, 11 elements (user-app)         | 0                            |
+| Moderate axe rules (`region`)                      | 17 rules, 132 elements (all four lanes) | 0                            |
+| Any other axe rule (including `landmark-*`)        | 0                                       | 0                            |
+| Console target size (combination × element)        | 663                                     | 0                            |
+| Console overflow, 1280 px and 320 px               | 74                                      | 0                            |
+| User-app overflow (Nearby at 320 px)               | 2                                       | 0                            |
+| Admin `dir` and `lang` (A-01, not in this pass)    | 180                                     | 180                          |
+| Console "nav is not at the left of main" at 320 px | 4 (not a finding, see above)            | 4 (unchanged, not a finding) |
+
+| ID   | State | Fix                                                                                                                                                                                                                                   |
+| ---- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A-01 | Open  | Not in this pass (admin-app `FontGate`, root layout and web template).                                                                                                                                                                |
+| A-02 | Fixed | No `aria-label` on role-less tiles and rows; the number and caption are read as text (`FacilitiesChecklist.tsx`, `JourneyScreen.tsx`, `MemorisationScreen.tsx`).                                                                      |
+| A-03 | Fixed | Console page is one `minmax(0, 1fr)` column, fixed minimum widths became `min(Xrem, 100%)`, and the split layouts stay one column at text sizes 2 and 3 until the window is wide enough.                                              |
+| A-04 | Fixed | Same rules, plus long words break and the shell user block wraps.                                                                                                                                                                     |
+| A-05 | Fixed | The whole outlined field box is the control; tick boxes are 48×48 with the box drawn inside; row links, session tabs, credit links, small buttons and segments are at least 48×48.                                                    |
+| A-06 | Fixed | The kit `SearchField` input can shrink (`minWidth: 0`).                                                                                                                                                                               |
+| A-07 | Fixed | Kit `useForcedColors()`: icons and the admin and user-app glyphs draw in `CanvasText` with `forced-color-adjust: none`, the hero pattern is left out, and the search field and Home filter button have a border forced colours paint. |
+| A-08 | Fixed | `main` in the user-app `ScreenFrame` (a sheet is a named modal `dialog`) and the admin `Screen`; `navigation` around the kit `TabBar`; console sidebar is a `<header>` and the tools a named `<section>`. Covers the Quran reader.    |
+| A-09 | Open  | Change request with the exact fix in `docs/agents/status/i18n.md` (new `time.period.*` keys, Urdu period before the figures in the three formatters).                                                                                 |
+| A-10 | Fixed | Home's time is laid out as figures plus a separate day period on one row (`features/home/clock.ts`); the bell badge and the chosen tab's label sit clear of each other.                                                               |
+
+Notes on the run:
+
+- One screen, admin-attendance, comes from a narrowed run on the same stack and the same admin build (02:21). Its slot in the final full run failed in the harness: a Playwright trace file vanished from the shared `test-results` folder. A retry was refused by the API's per-phone daily sign-in code cap on that stack's database. No admin code changed between the two runs.
+- The console is served by its dev server, so a commit made during the run briefly served the old stylesheet. The console screens were measured again after the dev server picked the file up again; the numbers above are from that measurement.
+- Still for a person: the device checks above, and the two forced-colours screens (`user-home`, `admin-home`) looked at on a real Windows machine.
+
 ## Colour contrast that needs a human
 
 axe left text it could not decide on every screen, because the text sits over a gradient, pattern or photo: the hero headers, the session photo and the console sidebar gradient. The most undecided elements in one combination were 2–10 per user-app screen, 3–6 per admin screen and 15–17 per console screen. A person should check these in light, dark and high contrast, in daylight and in a dim room (ui checklist, device check 3).

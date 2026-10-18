@@ -4,6 +4,7 @@ import type { Session } from '@qc/contracts';
 import { useI18n } from '../i18n/I18nProvider';
 import type { TFunction } from '../i18n/translate';
 import { describeWhenParts } from '../features/nearby/schedule';
+import { splitClock } from '../features/home/clock';
 import { describePortion } from '../features/session/portion';
 import { SectionIcon } from '../ui/SectionIcon';
 
@@ -45,6 +46,10 @@ const styles = StyleSheet.create({
   card: { borderRadius: radii.card, padding: spacing.lg, gap: spacing.md },
   top: { gap: spacing.xs },
   when: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: spacing.sm },
+  clock: { flexDirection: 'row', alignItems: 'baseline', columnGap: spacing.xs },
+  // A Latin "PM" stays to the right of the figures in Urdu too, as the formatter's isolate keeps
+  // it in running text.
+  latinClock: { direction: 'ltr' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     flexDirection: 'row',
@@ -86,6 +91,20 @@ export function NextCircleCard({
     : null;
   const section = t(`sections.${session.section}`);
   const dayLine = countdown ? `${when.day}${t('schedule.separator')}${countdown}` : when.day;
+  // The figures large and the part of the day smaller beside them: "7:30 PM" in one large style
+  // is wider than a phone at the largest text size, and "PM" wrapped onto its own line (A-10).
+  const clock = splitClock(when.time);
+  const period = clock.period ? (
+    <Text
+      variant="title2"
+      color="textSecondary"
+      testID="home-lead-period"
+      decorative
+      {...(clock.latinPeriod ? { lang: 'en' as const } : {})}
+    >
+      {clock.period}
+    </Text>
+  ) : null;
   return (
     <View
       style={[
@@ -122,9 +141,16 @@ export function NextCircleCard({
           </View>
         </View>
         <View style={styles.when}>
-          <Text variant="countdown" testID="home-lead-time" decorative>
-            {when.time}
-          </Text>
+          <View
+            style={[styles.clock, clock.latinPeriod ? styles.latinClock : null]}
+            testID="home-lead-time"
+          >
+            {clock.periodFirst ? period : null}
+            <Text variant="countdown" testID="home-lead-clock" decorative>
+              {clock.clock}
+            </Text>
+            {clock.periodFirst ? null : period}
+          </View>
           <Text variant="label" color="textSecondary" testID="home-lead-countdown" decorative>
             {dayLine}
           </Text>

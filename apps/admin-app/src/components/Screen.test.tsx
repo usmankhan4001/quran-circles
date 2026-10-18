@@ -31,6 +31,25 @@ describe.each(combos)('Screen in $name', (combo) => {
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 
+  it('is the main landmark, with the header, body and pinned bar inside it (A-08)', async () => {
+    renderScreen(
+      <Screen title="Sample title" testID="frame">
+        <Form />
+      </Screen>,
+      { combo },
+    );
+    const bar = await screen.findByTestId('screen-footer');
+    const mains = screen.getAllByRole('main');
+    expect(mains).toHaveLength(1);
+    const main = mains[0]!;
+    expect(main.tagName).toBe('MAIN');
+    expect(main.contains(screen.getByTestId('frame-hero'))).toBe(true);
+    expect(main.contains(screen.getByTestId('body-button'))).toBe(true);
+    expect(main.contains(bar)).toBe(true);
+    // A banner may not sit inside main; the in-screen header has none.
+    expect(screen.queryByRole('banner')).toBeNull();
+  });
+
   it('pins the form’s main action in the bar at the bottom', async () => {
     renderScreen(
       <Screen title="Sample title" testID="frame">

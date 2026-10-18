@@ -268,8 +268,16 @@ export function ScreenFrame({
 
   const body = <View style={flush ? styles.flush : styles.body}>{children}</View>;
 
+  // Landmarks (A-08): a page is the `main` landmark, so screen-reader users can jump to it and
+  // past the tab bar (`navigation`, in the kit's TabBar). A sheet over another page is a named
+  // modal dialog instead, so it never adds a second `main`. The green header stays inside: a
+  // `banner` may not sit inside `main`, and the kit's in-screen header has no banner role
+  // (docs/design/accessibility.md).
+  const landmark = sheet
+    ? ({ role: 'dialog', 'aria-modal': true, 'aria-label': title } as const)
+    : ({ role: 'main' } as const);
   return (
-    <View testID={testID} style={[styles.root, { backgroundColor: c.background }]}>
+    <View testID={testID} {...landmark} style={[styles.root, { backgroundColor: c.background }]}>
       {/* The status bar area is green too, so the header reaches the top edge. */}
       <View style={{ backgroundColor: c.hero, paddingTop: insets.top }}>
         {sheet ? (

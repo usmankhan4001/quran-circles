@@ -27,6 +27,30 @@ describe('VenueScreen', () => {
     expect(within(list).getByText(noor.facilities.entranceNotes!.en)).toBeTruthy();
   });
 
+  it('lets a screen reader read each facility line as text, with no name on a plain row (A-02)', async () => {
+    const view = await renderScreen(<VenueScreen venueId={noor.id} />);
+    await view.findByTestId('facilities');
+    for (const key of [
+      'womenSection',
+      'parking',
+      'wuduArea',
+      'elderWheelchairAccess',
+      'childFriendly',
+    ] as const) {
+      const row = view.getByTestId(`facility-${key}`);
+      // A name on an element with no role is ignored on the web (axe aria-prohibited-attr).
+      expect(row.getAttribute('aria-label')).toBeNull();
+      expect(row.getAttribute('role')).toBeNull();
+      // The words are not hidden: they are what is read. Only the icon is decoration.
+      const words = within(row).getByText(en[`facilities.${key}`]);
+      expect(words.closest('[aria-hidden="true"]')).toBeNull();
+      const state =
+        within(row).queryByText(en['facilities.available']) ??
+        within(row).getByText(en['facilities.notListed']);
+      expect(state.closest('[aria-hidden="true"]')).toBeNull();
+    }
+  });
+
   it('says "not listed" for what a venue lacks', async () => {
     const view = await renderScreen(<VenueScreen venueId={darul.id} />);
     await view.findByTestId('facilities');

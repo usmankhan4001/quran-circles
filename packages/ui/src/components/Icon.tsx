@@ -1,5 +1,6 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { iconFlipTransform } from '../direction';
+import { keepColorsInForcedMode, systemColors, useForcedColors } from '../forcedColors';
 import { useTheme } from '../theme';
 import { Text } from './Text';
 
@@ -520,7 +521,10 @@ function objectArt(name: IconName, size: number, tint: string) {
 
 export function Icon({ name, size = 24, color, accessibilityLabel }: IconProps) {
   const theme = useTheme();
-  const tint = color ?? theme.colors.text;
+  // In forced colours (web) the browser would repaint the drawn parts as the page colour, so
+  // the art keeps its colours and is drawn in the system text colour instead (A-07).
+  const forced = useForcedColors();
+  const tint = forced ? systemColors.text : (color ?? theme.colors.text);
   const flip = iconFlipTransform(name, theme.direction);
   let art;
   switch (name) {
@@ -623,7 +627,7 @@ export function Icon({ name, size = 24, color, accessibilityLabel }: IconProps) 
       role={accessibilityLabel ? 'img' : undefined}
       aria-label={accessibilityLabel}
       aria-hidden={accessibilityLabel ? undefined : true}
-      style={[s.box, { width: size, height: size }, flip]}
+      style={[s.box, { width: size, height: size }, flip, forced ? keepColorsInForcedMode : null]}
     >
       {art}
     </View>

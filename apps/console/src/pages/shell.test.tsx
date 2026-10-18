@@ -45,6 +45,34 @@ describe.each<Locale>(['en', 'ur'])('console shell (%s)', (locale) => {
     );
   });
 
+  it('puts everything on the screen in a landmark (A-08)', async () => {
+    renderConsole({ role: 'national', locale, path: '/sessions' });
+    await shellReady(locale);
+    // The page's own header sits inside main, where it is no banner; the sidebar is the one.
+    const banner = document.querySelector('header.sidebar') as HTMLElement;
+    expect(banner.closest('main')).toBeNull();
+    expect(within(banner).getByText(text('app.name', locale))).toBeTruthy();
+    expect(
+      within(banner).getByRole('navigation', { name: text('console.shell.navLabel', locale) }),
+    ).toBeTruthy();
+    expect(
+      within(banner).getByRole('button', { name: text('console.shell.signOut', locale) }),
+    ).toBeTruthy();
+    const tools = screen.getByRole('region', { name: text('console.shell.toolsLabel', locale) });
+    expect(within(tools).getByLabelText(text('console.shell.language', locale))).toBeTruthy();
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('contentinfo')).toBeTruthy();
+    // Nothing with text sits directly in the shell outside those landmarks.
+    const shell = document.querySelector('.shell') as HTMLElement;
+    const outside = [...shell.children].filter(
+      (el) =>
+        !el.matches('header, main, nav, footer, section[aria-label], .skip-link') &&
+        !el.querySelector('header, main, nav, footer, section[aria-label]') &&
+        (el.textContent ?? '').trim() !== '',
+    );
+    expect(outside).toEqual([]);
+  });
+
   it('sets the page language and direction', async () => {
     renderConsole({ role: 'national', locale, path: '/sessions' });
     await shellReady(locale);

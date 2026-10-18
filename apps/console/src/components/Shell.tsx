@@ -103,7 +103,10 @@ export function Shell() {
       <a className="skip-link" href="#main">
         {t('console.shell.skipToContent')}
       </a>
-      <div className="sidebar">
+      {/* Landmarks (A-08): the sidebar is the page's banner (brand, menu, who is signed in), the
+          display settings are a named region, the page is main and the credits the content info,
+          so nothing on the screen sits outside a landmark. */}
+      <header className="sidebar">
         <PatternLayer />
         <div className="brand">
           <span className="brand-mark">
@@ -140,11 +143,11 @@ export function Shell() {
             {t('console.shell.signOut')}
           </Button>
         </div>
-      </div>
+      </header>
       <div className="shell-body">
-        <div className="shell-bar" role="group" aria-label={t('console.shell.toolsLabel')}>
+        <section className="shell-bar" aria-label={t('console.shell.toolsLabel')}>
           <DisplayControls />
-        </div>
+        </section>
         <main id="main" className="shell-main" tabIndex={-1}>
           <Outlet />
         </main>

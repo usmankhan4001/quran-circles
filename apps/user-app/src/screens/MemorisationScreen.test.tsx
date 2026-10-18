@@ -34,12 +34,25 @@ describe('MemorisationScreen', () => {
     const view = await tracker();
     await view.findByTestId('surah-1');
     for (const surah of [1, 36, 67, 112]) expect(view.getByTestId(`surah-${surah}`)).toBeTruthy();
-    expect(view.getByTestId('memorisation-stat-memorised').getAttribute('aria-label')).toBe(
-      `${en['memorisation.status.memorised']}: 2`,
-    );
-    expect(view.getByTestId('memorisation-stat-learning').getAttribute('aria-label')).toBe(
-      `${en['memorisation.status.learning']}: 1`,
-    );
+    const memorised = within(view.getByTestId('memorisation-stat-memorised'));
+    expect(memorised.getByText('2')).toBeTruthy();
+    expect(memorised.getByText(en['memorisation.status.memorised'])).toBeTruthy();
+    const learning = within(view.getByTestId('memorisation-stat-learning'));
+    expect(learning.getByText('1')).toBeTruthy();
+    expect(learning.getByText(en['memorisation.status.learning'])).toBeTruthy();
+  });
+
+  it('lets a screen reader read each count as text, with no name on a plain tile (A-02)', async () => {
+    const view = await tracker();
+    await view.findByTestId('surah-1');
+    for (const status of ['learning', 'memorised', 'revising'] as const) {
+      const tile = view.getByTestId(`memorisation-stat-${status}`);
+      // A name on an element with no role is ignored on the web (axe aria-prohibited-attr).
+      expect(tile.getAttribute('aria-label')).toBeNull();
+      expect(tile.getAttribute('aria-hidden')).toBeNull();
+      expect(tile.querySelector('[aria-hidden="true"]')).toBeNull();
+      expect(tile.textContent).toContain(en[`memorisation.status.${status}`]);
+    }
   });
 
   it('lists in "revise this week" only memorised surahs past the setting (default 14 days)', async () => {

@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import type { Section } from '@qc/contracts';
+import { keepColorsInForcedMode, systemColors, useForcedColors } from '@qc/ui';
 
 export interface SectionIconProps {
   section: Section;
@@ -63,11 +64,15 @@ function Figure({ unit, color, gown }: { unit: number; color: string; gown: bool
  * drawn with views like the kit's icons. Decoration: the section's name is always next to it.
  * TODO(kit): replace with @qc/ui section icons when the ui lane adds them.
  */
-export function SectionIcon({ section, size = 24, color }: SectionIconProps) {
-  const box = { width: size, height: size };
+export function SectionIcon({ section, size = 24, color: themed }: SectionIconProps) {
+  // Drawn from backgrounds, which forced colours (web) repaint as the page: keep the drawing
+  // and use the system text colour, as the kit's Icon does (A-07).
+  const forced = useForcedColors();
+  const color = forced ? systemColors.text : themed;
+  const box = [{ width: size, height: size }, forced ? keepColorsInForcedMode : null];
   if (section === 'family') {
     return (
-      <View aria-hidden style={[s.box, box, { gap: size * 0.04 }]}>
+      <View aria-hidden style={[s.box, ...box, { gap: size * 0.04 }]}>
         <Figure unit={size * 0.5} color={color} gown={false} />
         <Figure unit={size * 0.34} color={color} gown={false} />
         <Figure unit={size * 0.5} color={color} gown />
@@ -75,7 +80,7 @@ export function SectionIcon({ section, size = 24, color }: SectionIconProps) {
     );
   }
   return (
-    <View aria-hidden style={[s.box, box]}>
+    <View aria-hidden style={[s.box, ...box]}>
       <Figure unit={size * 0.9} color={color} gown={section === 'women'} />
     </View>
   );

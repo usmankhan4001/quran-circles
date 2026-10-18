@@ -20,6 +20,11 @@ const styles = StyleSheet.create({
 /**
  * The fixed facilities checklist of a venue. Each line says "Available" or "Not listed" in
  * words as well as with an icon, so it does not depend on colour or shape.
+ *
+ * A screen reader reads the two words of a line as its text ("Women's section, Available"):
+ * the line is grouped into one stop on a phone (`accessible`), and on the web the words are
+ * plain text. A name on the line itself would be ignored on the web, where it is a plain `div`
+ * (axe `aria-prohibited-attr`), and the words would then be silent.
  */
 export function FacilitiesChecklist({ facilities }: { facilities: VenueFacilities }) {
   const { t, l } = useI18n();
@@ -31,24 +36,16 @@ export function FacilitiesChecklist({ facilities }: { facilities: VenueFacilitie
       {FACILITY_KEYS.map((key) => {
         const yes = facilities[key];
         return (
-          <View
-            key={key}
-            style={styles.row}
-            testID={`facility-${key}`}
-            accessible
-            aria-label={`${t(`facilities.${key}`)}: ${yes ? t('facilities.available') : t('facilities.notListed')}`}
-          >
+          <View key={key} style={styles.row} testID={`facility-${key}`} accessible>
             <Icon
               name={yes ? 'success' : 'close'}
               size={22}
               color={yes ? c.success : c.textSecondary}
             />
             <View style={styles.label}>
-              <Text variant="body" decorative>
-                {t(`facilities.${key}`)}
-              </Text>
+              <Text variant="body">{t(`facilities.${key}`)}</Text>
             </View>
-            <Text variant="caption" color={yes ? 'textSuccess' : 'textSecondary'} decorative>
+            <Text variant="caption" color={yes ? 'textSuccess' : 'textSecondary'}>
               {yes ? t('facilities.available') : t('facilities.notListed')}
             </Text>
           </View>

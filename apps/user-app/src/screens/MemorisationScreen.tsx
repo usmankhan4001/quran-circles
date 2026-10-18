@@ -78,17 +78,17 @@ function MemorisationSummary({ items }: { items: readonly MemorisationEntry[] })
       {MEMORISATION_STATUSES.map((status) => {
         const label = t(`memorisation.status.${status}`);
         return (
+          // Read as text ("2, Memorised"), as on My Journey: no name on a plain `div`.
           <View
             key={status}
             accessible
-            aria-label={`${label}: ${formatNumber(counts[status], locale)}`}
             style={[styles.stat, { backgroundColor: c.heroGlass }]}
             testID={`memorisation-stat-${status}`}
           >
-            <Text variant="title1" color="textOnHero" decorative>
+            <Text variant="title1" color="textOnHero">
               {formatNumber(counts[status], locale)}
             </Text>
-            <Text variant="caption" color="textOnHero" align="center" decorative>
+            <Text variant="caption" color="textOnHero" align="center">
               {label}
             </Text>
           </View>

@@ -61,8 +61,11 @@ export function Screen({
   const { colors, mode } = useTheme();
   const [slotted, setSlotted] = useState<ReactNode>(null);
   const bar = footer ?? slotted;
+  // The screen is the page's `main` landmark (A-08), with the green header inside it: a `banner`
+  // may not sit inside `main`, and the kit's in-screen header has no banner role. The bottom
+  // menu is the `navigation` landmark (the kit's TabBar).
   return (
-    <View testID={testID} style={[styles.fill, { backgroundColor: colors.background }]}>
+    <View testID={testID} role="main" style={[styles.fill, { backgroundColor: colors.background }]}>
       <HeroHeader
         testID={testID ? `${testID}-hero` : undefined}
         title={title}

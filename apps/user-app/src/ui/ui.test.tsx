@@ -189,6 +189,10 @@ describe('small pieces', () => {
     );
     expect(view.getByTestId('bell').getAttribute('aria-label')).toBe('Updates');
     expect(view.getByTestId('badge-count')).toBeTruthy();
+    // The count sits out on the corner, past the button's edge, so it never covers the bell at
+    // the largest text size (A-10).
+    const corner = getComputedStyle(view.getByTestId('badge-count').parentElement as HTMLElement);
+    expect(parseFloat(corner.top)).toBeLessThan(0);
     fireEvent.click(view.getByTestId('bell'));
     expect(onPress).toHaveBeenCalledOnce();
   });
@@ -243,6 +247,35 @@ describe('small pieces', () => {
       );
       const icon = view.getByTestId('wrap').firstElementChild as HTMLElement;
       expect(icon.getAttribute('aria-hidden')).toBe('true');
+    },
+  );
+
+  it.each([true, false])(
+    'SectionIcon keeps its drawing in forced colours only when they are on (%s, A-07)',
+    async (active) => {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn((query: string) => ({
+          matches: active && query === '(forced-colors: active)',
+          media: query,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        })),
+      );
+      try {
+        const view = await renderScreen(
+          <div data-testid="wrap">
+            <SectionIcon section="women" color="#ffffff" />
+          </div>,
+        );
+        const icon = view.getByTestId('wrap').firstElementChild as HTMLElement;
+        expect(icon.style.getPropertyValue('forced-color-adjust')).toBe(active ? 'none' : '');
+        // With forced colours it is drawn in the system text colour, not the theme colour.
+        expect(icon.outerHTML.includes('rgb(255, 255, 255)')).toBe(!active);
+        expect(icon.outerHTML.includes('CanvasText')).toBe(active);
+      } finally {
+        vi.unstubAllGlobals();
+      }
     },
   );
 

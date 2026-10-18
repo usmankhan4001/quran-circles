@@ -51,6 +51,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   label: { marginStart: spacing.xs + 2, flexShrink: 1 },
+  // The badge reaches past the icon's end by 12, and grows with the text size; the label of the
+  // chosen tab starts clear of it, so the count never covers the label (A-10).
+  labelAfterBadge: { marginStart: 12 + spacing.xs },
   iconWrap: { minHeight: 28, alignItems: 'center', justifyContent: 'center' },
   // On the icon's top end corner, clear of the label.
   badge: { position: 'absolute', top: -6, end: -12 },
@@ -60,72 +63,77 @@ const styles = StyleSheet.create({
 export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID }: TabBarProps) {
   const theme = useTheme();
   const c = theme.colors;
+  // The bar is the app's navigation landmark (A-08), so screen-reader users can jump to it and
+  // past it. It is the only one on a screen, so it needs no name of its own; the tab list inside
+  // keeps the name.
   return (
-    <View
-      testID={testID}
-      role="tablist"
-      aria-label={accessibilityLabel}
-      style={[
-        styles.bar,
-        {
-          backgroundColor: c.surfaceRaised,
-          borderColor: theme.mode === 'light' ? c.surfaceRaised : c.border,
-          boxShadow: theme.mode === 'light' ? elevation.high : undefined,
-        },
-      ]}
-    >
-      {items.map((item) => {
-        const selected = item.key === activeKey;
-        const color = selected ? c.textOnAccent : c.textSecondary;
-        const extra = item.badge ? badgeLabel(theme, item.badge) : undefined;
-        return (
-          <Touchable
-            key={item.key}
-            testID={item.testID ?? `tab-${item.key}`}
-            role="tab"
-            selected={selected}
-            accessibilityLabel={extra ? `${item.label}, ${extra}` : item.label}
-            onPress={() => onChange(item.key)}
-            style={({ pressed }) => [
-              styles.tab,
-              selected ? chosen : other,
-              {
-                backgroundColor: selected ? c.accent : pressed ? c.surfaceMuted : 'transparent',
-              },
-            ]}
-          >
-            {item.icon ? (
-              <View style={styles.iconWrap}>
-                {typeof item.icon === 'function' ? item.icon({ selected, color }) : item.icon}
-                {item.badge ? (
-                  <View style={styles.badge}>
-                    <Badge {...item.badge} decorative />
-                  </View>
-                ) : null}
-              </View>
-            ) : null}
-            {/* Without an icon the label is the only thing to see, so it always shows. */}
-            {selected || !item.icon ? (
-              <Text
-                variant="caption"
-                color={selected ? 'textOnAccent' : 'textSecondary'}
-                align="center"
-                strong={selected}
-                numberOfLines={1}
-                decorative
-                style={styles.label}
-              >
-                {item.label}
-              </Text>
-            ) : null}
-            {item.badge && !item.icon ? (
-              <View style={styles.badgeInline}>
-                <Badge {...item.badge} decorative />
-              </View>
-            ) : null}
-          </Touchable>
-        );
-      })}
+    <View role="navigation">
+      <View
+        testID={testID}
+        role="tablist"
+        aria-label={accessibilityLabel}
+        style={[
+          styles.bar,
+          {
+            backgroundColor: c.surfaceRaised,
+            borderColor: theme.mode === 'light' ? c.surfaceRaised : c.border,
+            boxShadow: theme.mode === 'light' ? elevation.high : undefined,
+          },
+        ]}
+      >
+        {items.map((item) => {
+          const selected = item.key === activeKey;
+          const color = selected ? c.textOnAccent : c.textSecondary;
+          const extra = item.badge ? badgeLabel(theme, item.badge) : undefined;
+          return (
+            <Touchable
+              key={item.key}
+              testID={item.testID ?? `tab-${item.key}`}
+              role="tab"
+              selected={selected}
+              accessibilityLabel={extra ? `${item.label}, ${extra}` : item.label}
+              onPress={() => onChange(item.key)}
+              style={({ pressed }) => [
+                styles.tab,
+                selected ? chosen : other,
+                {
+                  backgroundColor: selected ? c.accent : pressed ? c.surfaceMuted : 'transparent',
+                },
+              ]}
+            >
+              {item.icon ? (
+                <View style={styles.iconWrap}>
+                  {typeof item.icon === 'function' ? item.icon({ selected, color }) : item.icon}
+                  {item.badge ? (
+                    <View style={styles.badge}>
+                      <Badge {...item.badge} decorative />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+              {/* Without an icon the label is the only thing to see, so it always shows. */}
+              {selected || !item.icon ? (
+                <Text
+                  variant="caption"
+                  color={selected ? 'textOnAccent' : 'textSecondary'}
+                  align="center"
+                  strong={selected}
+                  numberOfLines={1}
+                  decorative
+                  style={[styles.label, item.badge && item.icon ? styles.labelAfterBadge : null]}
+                >
+                  {item.label}
+                </Text>
+              ) : null}
+              {item.badge && !item.icon ? (
+                <View style={styles.badgeInline}>
+                  <Badge {...item.badge} decorative />
+                </View>
+              ) : null}
+            </Touchable>
+          );
+        })}
+      </View>
     </View>
   );
 }

@@ -29,6 +29,36 @@ describe('ScreenFrame', () => {
     expect(view.getByRole('heading', { level: 1 }).textContent).toBe('My Journey');
   });
 
+  it('is the main landmark of the page, with the header and body inside it (A-08)', async () => {
+    const view = await renderScreen(
+      <ScreenFrame title="My Journey" footer={<Text>Main action</Text>}>
+        <Text>Body</Text>
+      </ScreenFrame>,
+    );
+    const mains = view.getAllByRole('main');
+    expect(mains).toHaveLength(1);
+    const main = mains[0]!;
+    expect(main.tagName).toBe('MAIN');
+    expect(within(main).getByRole('heading', { level: 1 }).textContent).toBe('My Journey');
+    expect(within(main).getByText('Body')).toBeTruthy();
+    expect(within(main).getByText('Main action')).toBeTruthy();
+    // A banner may not sit inside main; the in-screen header has no banner role.
+    expect(view.queryByRole('banner')).toBeNull();
+    expect(view.queryByRole('dialog')).toBeNull();
+  });
+
+  it('as a sheet is a named modal dialog, so it never adds a second main (A-08)', async () => {
+    const view = await renderScreen(
+      <ScreenFrame title="Register" onBack={() => undefined} sheet>
+        <Text>Body</Text>
+      </ScreenFrame>,
+    );
+    const dialog = view.getByRole('dialog', { name: 'Register' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(within(dialog).getByText('Body')).toBeTruthy();
+    expect(view.queryByRole('main')).toBeNull();
+  });
+
   it('shows a back button that goes back', async () => {
     const onBack = vi.fn();
     const view = await renderScreen(

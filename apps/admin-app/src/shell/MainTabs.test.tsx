@@ -47,6 +47,12 @@ describe('MainTabs', () => {
     expect(screen.getByTestId('main-tabs')).toBeTruthy();
   });
 
+  it('is the navigation landmark of the screen (A-08)', () => {
+    renderTabs('en');
+    const nav = screen.getByRole('navigation');
+    expect(nav.contains(screen.getByTestId('main-tabs'))).toBe(true);
+  });
+
   it('reports the tab that was pressed', () => {
     const onChange = renderTabs('en');
     fireEvent.click(screen.getByTestId('tab-updates'));

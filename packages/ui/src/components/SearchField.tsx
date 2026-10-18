@@ -26,7 +26,9 @@ const styles = StyleSheet.create({
     paddingStart: spacing.lg,
     paddingEnd: spacing.xxs,
   },
-  input: { flex: 1, minHeight: 48, marginStart: spacing.sm, borderWidth: 0 },
+  // `minWidth: 0` lets the field shrink below the browser's default input width, so it fits
+  // a 320 px screen at the largest text size (A-06).
+  input: { flex: 1, minWidth: 0, minHeight: 48, marginStart: spacing.sm, borderWidth: 0 },
 });
 
 /** The search field (D9): pill-shaped, 52 tall, with a clear button once something is typed. */
@@ -47,8 +49,10 @@ export function SearchField({
         styles.box,
         {
           backgroundColor: c.surface,
-          borderWidth: theme.mode === 'light' ? 0 : 1,
-          borderColor: c.borderStrong,
+          // In light mode the edge is transparent: it shows only in forced colours (Windows
+          // high contrast), where the field would otherwise have no edge at all (A-07).
+          borderWidth: 1,
+          borderColor: theme.mode === 'light' ? 'transparent' : c.borderStrong,
         },
       ]}
     >

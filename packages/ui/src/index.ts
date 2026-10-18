@@ -3,6 +3,7 @@ export * from './contrast';
 export * from './semantic-colors';
 export * from './direction';
 export * from './numerals';
+export * from './forcedColors';
 export { ThemeProvider, useTheme, createTheme } from './theme';
 export type { Theme, ThemeOptions, ThemeProviderProps } from './theme';
 

@@ -19,7 +19,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badge: { position: 'absolute', top: 2, end: 2 },
+  // Out on the corner, not over the icon: the count grows with the text size and covered the
+  // bell at the largest size (A-10).
+  badge: { position: 'absolute', top: -6, end: -10 },
 });
 
 /**

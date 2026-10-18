@@ -196,6 +196,26 @@ describe('HomeScreen', () => {
   });
 
   describe('next circle card (H4)', () => {
+    it.each(['en', 'ur'] as const)(
+      'shows the figures large and the part of the day apart, so "PM" cannot wrap alone (A-10, %s)',
+      async (locale) => {
+        const world = await createWorld({ cityId: CITY_RAWALPINDI.id, locale, textSize: 3 });
+        const view = await renderScreen(<HomeScreen />, { world });
+        await view.findByTestId('home-lead-card');
+        const clock = view.getByTestId('home-lead-clock');
+        const period = view.getByTestId('home-lead-period');
+        expect(clock.textContent).toMatch(/^\d{1,2}:\d{2}$/);
+        expect(period.textContent).not.toBe('');
+        expect(clock.textContent + (period.textContent ?? '')).not.toMatch(/[\u2066-\u2069]/);
+        // Both sit in one row with the figures; the card's name still reads the whole time.
+        const time = view.getByTestId('home-lead-time');
+        expect(time.contains(clock) && time.contains(period)).toBe(true);
+        const card = view.getByTestId('home-lead-card');
+        expect(card.getAttribute('role')).toBe('button');
+        expect(card.getAttribute('aria-label')).toContain(clock.textContent ?? '');
+      },
+    );
+
     it('shows the big start time, the day with a countdown, the section and directions', async () => {
       const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
       const view = await renderScreen(<HomeScreen />, { world });

@@ -59,6 +59,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.field,
     alignItems: 'center',
     justifyContent: 'center',
+    // Invisible normally; forced colours (Windows high contrast) paint it, so the filled
+    // button keeps an edge when its fill is taken away (A-07).
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },

@@ -54,17 +54,18 @@ function JourneySummary() {
   return (
     <View style={styles.stats} testID="journey-summary">
       {stats.map((stat) => (
+        // The number and its caption are read as text ("0, Upcoming"), as one stop on a phone.
+        // A name on the tile would be ignored on the web, where the tile is a plain `div`.
         <View
           key={stat.key}
           accessible
-          aria-label={`${stat.label}: ${formatNumber(stat.value, locale)}`}
           style={[styles.stat, { backgroundColor: c.heroGlass }]}
           testID={`journey-stat-${stat.key}`}
         >
-          <Text variant="title1" color="textOnHero" decorative>
+          <Text variant="title1" color="textOnHero">
             {formatNumber(stat.value, locale)}
           </Text>
-          <Text variant="caption" color="textOnHero" align="center" decorative>
+          <Text variant="caption" color="textOnHero" align="center">
             {stat.label}
           </Text>
         </View>

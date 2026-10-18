@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
+import { useForcedColors } from '../forcedColors';
 import { useTheme } from '../theme';
 import { radii, spacing } from '../tokens';
 import { Icon } from './Icon';
@@ -88,6 +89,7 @@ export function HeroHeader({
   testID,
 }: HeroHeaderProps) {
   const theme = useTheme();
+  const forced = useForcedColors();
   const c = theme.colors;
   const hasTop = Boolean(onBack || actions);
   // The fade needs a CSS gradient, so it is drawn on the web; native keeps the solid green with
@@ -106,7 +108,9 @@ export function HeroHeader({
       };
   return (
     <View testID={testID} style={[styles.hero, look]}>
-      {pattern && theme.mode !== 'highContrast' ? <Pattern color={c.heroGlass} /> : null}
+      {/* Decoration only: left out in high contrast and in forced colours, where it would be
+          drawn as a grid of solid shapes (A-07). */}
+      {pattern && theme.mode !== 'highContrast' && !forced ? <Pattern color={c.heroGlass} /> : null}
       {hasTop ? (
         <View style={styles.row}>
           {onBack ? (

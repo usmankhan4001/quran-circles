@@ -41,6 +41,25 @@ describe('JourneyScreen', () => {
     expect(view.world.http.callsTo('GET /v1/registrations')).toHaveLength(0);
   });
 
+  it('lets a screen reader read the summary numbers as text, with no name on a plain tile (A-02)', async () => {
+    const world = await createWorld({ signedIn: true, mock: mine() });
+    const view = await renderScreen(<JourneyScreen />, { world });
+    await waitFor(() =>
+      expect(view.getByTestId('journey-stat-upcoming').textContent).toContain('1'),
+    );
+    for (const [key, label] of [
+      ['upcoming', en['journey.summary.upcoming']],
+      ['waiting', en['journey.summary.waiting']],
+      ['following', en['journey.summary.following']],
+    ] as const) {
+      const tile = view.getByTestId(`journey-stat-${key}`);
+      // A name on an element with no role is ignored on the web (axe aria-prohibited-attr).
+      expect(tile.getAttribute('aria-label')).toBeNull();
+      expect(tile.querySelector('[aria-hidden="true"]')).toBeNull();
+      expect(tile.textContent).toContain(label);
+    }
+  });
+
   it('lists registrations with their status and opens a session', async () => {
     const waitlisted = registrationFor(SESSIONS.womenFull, {
       id: WAIT_ID,

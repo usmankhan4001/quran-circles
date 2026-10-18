@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Icon, type IconName } from '@qc/ui';
+import { Icon, keepColorsInForcedMode, systemColors, useForcedColors, type IconName } from '@qc/ui';
 
 /**
  * The three line icons the kit does not have yet (phone, chat and minus), drawn with views so the
@@ -34,7 +34,11 @@ function Bar({ w, h, color, style }: { w: number; h: number; color: string; styl
   );
 }
 
-export function Glyph({ name, color, size = 24 }: GlyphProps) {
+export function Glyph({ name, color: themed, size = 24 }: GlyphProps) {
+  // Drawn from backgrounds and borders, which forced colours (web) repaint: keep the drawing and
+  // use the system text colour, as the kit's Icon does (A-07).
+  const forced = useForcedColors();
+  const color = forced ? systemColors.text : themed;
   const stroke = Math.max(2, Math.round(size / 12));
   let art;
   switch (name) {
@@ -89,7 +93,10 @@ export function Glyph({ name, color, size = 24 }: GlyphProps) {
     <View
       aria-hidden
       testID={`glyph-${name}`}
-      style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}
+      style={[
+        { width: size, height: size, alignItems: 'center', justifyContent: 'center' },
+        forced ? keepColorsInForcedMode : null,
+      ]}
     >
       {art}
     </View>
