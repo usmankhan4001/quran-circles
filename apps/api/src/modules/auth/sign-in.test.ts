@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { eq, type SQL } from 'drizzle-orm';
+import { PgDatabase, PgDialect, PgTransaction } from 'drizzle-orm/pg-core';
 import { ApiError, RequestCodeResponse, SignInResponse } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { getAuthContext } from '../../auth/context';
@@ -544,6 +545,153 @@ describe('auth.requestCode ceilings in the database (SEC-04, SEC-07)', () => {
       expect(JSON.stringify(capped.logger.entries)).not.toContain(phones[3]!.slice(1));
       capped.clock.advance(3601);
       expect((await capped.requestCode(phones[3]!, { ip: '198.51.100.9' })).status).toBe(202);
+    } finally {
+      await capped.close();
+    }
+  });
+
+  it('lets parallel requests take the last slots under a ceiling only once', async () => {
+    // The ceilings are counted and the code stored in one transaction under one lock, so requests
+    // arriving together (on one API process or several) cannot all pass at the ceiling.
+    const capped = await createHarness({ config: { codeCaps: { globalPerHour: 3 } } });
+    try {
+      await capped.reset();
+      const answers = await Promise.all(
+        Array.from({ length: 8 }, (_, n) =>
+          capped.requestCode(`+92300000041${n}`, { ip: `198.51.100.${n + 20}` }),
+        ),
+      );
+      expect(answers.filter((r) => r.status === 202)).toHaveLength(3);
+      expect(answers.filter((r) => r.status === 429)).toHaveLength(5);
+      expect(await capped.db.select().from(schema.otpChallenges)).toHaveLength(3);
+      expect(capped.sender.sent).toHaveLength(3);
+      // One number asking twice at once gets one code: the resend wait is under the same lock.
+      await capped.reset();
+      const twice = await Promise.all([
+        capped.requestCode(PHONE_B, { ip: '198.51.100.40' }),
+        capped.requestCode(PHONE_B, { ip: '198.51.100.41' }),
+      ]);
+      expect(twice.map((r) => r.status).sort()).toEqual([202, 429]);
+    } finally {
+      await capped.close();
+    }
+  });
+
+  it('holds the daily ceiling exactly under parallel requests too', async () => {
+    const capped = await createHarness({ config: { codeCaps: { globalPerDay: 2 } } });
+    try {
+      await capped.reset();
+      const answers = await Promise.all(
+        Array.from({ length: 6 }, (_, n) =>
+          capped.requestCode(`+92300000051${n}`, { ip: `198.51.100.${n + 50}` }),
+        ),
+      );
+      expect(answers.filter((r) => r.status === 202)).toHaveLength(2);
+      expect(answers.filter((r) => r.status === 429)).toHaveLength(4);
+      expect(await capped.db.select().from(schema.otpChallenges)).toHaveLength(2);
+      expect(capped.sender.sent).toHaveLength(2);
+    } finally {
+      await capped.close();
+    }
+  });
+
+  it('issues under one transaction-scoped lock, and refuses without it once a ceiling is reached', async () => {
+    const capped = await createHarness({ config: { codeCaps: { globalPerHour: 1 } } });
+    const dialect = new PgDialect();
+    const transactions = vi.spyOn(capped.db, 'transaction');
+    const executes = vi.spyOn(PgDatabase.prototype, 'execute');
+    const lockCalls = () =>
+      executes.mock.calls.flatMap(([query], i) => {
+        const text = dialect.sqlToQuery(query as SQL).sql;
+        return text.includes('pg_advisory')
+          ? [{ text, inTx: executes.mock.contexts[i] instanceof PgTransaction }]
+          : [];
+      });
+    try {
+      await capped.reset();
+      expect((await capped.requestCode(PHONE_A, { ip: '198.51.100.60' })).status).toBe(202);
+      expect(transactions).toHaveBeenCalledTimes(1);
+      // The transaction-scoped form, inside the transaction: released at commit or rollback.
+      expect(lockCalls()).toEqual([
+        { text: expect.stringContaining('pg_advisory_xact_lock(') as string, inTx: true },
+      ]);
+      // At the ceiling a request is refused by the first look, without opening a transaction or
+      // waiting for the lock, so a flood past the ceiling does not queue on it.
+      const blocked = await errorOf(await capped.requestCode(PHONE_B, { ip: '198.51.100.61' }));
+      expect(blocked.code).toBe('rate_limited');
+      expect(transactions).toHaveBeenCalledTimes(1);
+      expect(lockCalls()).toHaveLength(1);
+    } finally {
+      transactions.mockRestore();
+      executes.mockRestore();
+      await capped.close();
+    }
+  });
+
+  it('keeps one issuing transaction open at a time in a process, and carries on after refusals', async () => {
+    // Waiting requests queue in the process, not on pooled connections parked on the lock, so a
+    // burst of code requests leaves connections for the rest of the API.
+    const capped = await createHarness({ config: { codeCaps: { globalPerHour: 3 } } });
+    const original = capped.db.transaction.bind(capped.db);
+    let open = 0;
+    let most = 0;
+    const tracked = (async (...args: Parameters<typeof original>) => {
+      open += 1;
+      most = Math.max(most, open);
+      try {
+        return await original(...args);
+      } finally {
+        open -= 1;
+      }
+    }) as typeof original;
+    const transactions = vi.spyOn(capped.db, 'transaction').mockImplementation(tracked);
+    try {
+      await capped.reset();
+      const answers = await Promise.all(
+        Array.from({ length: 8 }, (_, n) =>
+          capped.requestCode(`+92300000061${n}`, { ip: `198.51.100.${n + 80}` }),
+        ),
+      );
+      expect(answers.filter((r) => r.status === 202)).toHaveLength(3);
+      expect(most).toBe(1);
+      // Refusals inside the queue (thrown under the lock) do not jam it.
+      capped.clock.advance(3601);
+      expect((await capped.requestCode('+923000000620', { ip: '198.51.100.90' })).status).toBe(202);
+    } finally {
+      transactions.mockRestore();
+      await capped.close();
+    }
+  });
+
+  it('counts a code while it is sent, sends after the lock is gone, and frees the slot if sending fails', async () => {
+    const capped = await createHarness({ config: { codeCaps: { globalPerHour: 1 } } });
+    try {
+      await capped.reset();
+      let entered!: () => void;
+      const sending = new Promise<void>((resolve) => (entered = resolve));
+      let finish!: (error: Error | null) => void;
+      let calls = 0;
+      capped.sender.send = async () => {
+        calls += 1;
+        if (calls > 1) return;
+        entered();
+        await new Promise<void>((resolve, reject) => {
+          finish = (error) => (error ? reject(error) : resolve());
+        });
+      };
+      const first = capped.requestCode(PHONE_A, { ip: '198.51.100.70' });
+      await sending;
+      // The first code is still being sent. Its row already counts, so the ceiling holds; and this
+      // request gets its answer now, which it could not if the lock or the transaction were held
+      // across the send.
+      const second = await errorOf(await capped.requestCode(PHONE_B, { ip: '198.51.100.71' }));
+      expect(second.code).toBe('rate_limited');
+      finish(new Error('provider down'));
+      expect((await first).status).toBe(503);
+      expect(await capped.db.select().from(schema.otpChallenges)).toHaveLength(0);
+      // The failed delivery gave its slot back.
+      expect((await capped.requestCode(PHONE_B, { ip: '198.51.100.71' })).status).toBe(202);
+      expect(calls).toBe(2);
     } finally {
       await capped.close();
     }

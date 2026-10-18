@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { and, count, desc, eq, gt, isNull, lt, min, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gt, isNull, lt, min, sql, type SQL } from 'drizzle-orm';
 import { PAKISTAN_MOBILE_PATTERN, PHONE_NOT_PAKISTAN_MOBILE, type PhoneE164 } from '@qc/contracts';
 import { schema } from '@qc/db';
 import type { RateRule } from '../../auth/config';
 import type { AuthContext } from '../../auth/context';
 import { hashCode, hashIdentifier, safeEqualHex, generateCode } from '../../auth/crypto';
 import { AuthHttpError, rateLimited } from '../../auth/errors';
-import { describeError } from '../../auth/types';
+import { describeError, type AuthDb } from '../../auth/types';
 import type { RequestCodeInput, RequestCodeResult, VerifyCodeInput } from './types';
 
 const { otpChallenges } = schema;
@@ -57,22 +57,59 @@ async function enforce(
   if (!result.allowed) throw onDeny(result.retryAfterSeconds);
 }
 
-/** Codes made since `since` (for one number, or for everyone), and the oldest of them. */
-async function issuedSince(
-  ctx: AuthContext,
-  since: Date,
-  phone?: string,
-): Promise<{ n: number; oldest: Date | null }> {
-  const [row] = await ctx.db
-    .select({ n: count(), oldest: min(otpChallenges.createdAt) })
-    .from(otpChallenges)
-    .where(
-      and(
-        gt(otpChallenges.createdAt, since),
-        phone === undefined ? undefined : eq(otpChallenges.phoneE164, phone),
+/** What the resend wait and the ceilings need to know, from one pass over the last day's codes. */
+interface IssueCounts {
+  /** This number's codes in the last hour, and the newest of them: the resend wait. */
+  mineHour: number;
+  mineNewest: Date | null;
+  /** This number's codes in the last 24 hours, and the oldest of them. */
+  mineDay: number;
+  mineOldest: Date | null;
+  /** Everyone's codes in the last hour and the last 24 hours, and the oldest of each. */
+  hour: number;
+  hourOldest: Date | null;
+  day: number;
+  dayOldest: Date | null;
+}
+
+/**
+ * Counts in one query what the resend wait and the three ceilings need. One statement, not four,
+ * because `requestCode` runs it while it holds the issue lock, and every other code request waits
+ * for that lock.
+ */
+async function issueCounts(db: AuthDb, phone: string, now: Date): Promise<IssueCounts> {
+  const createdAt = otpChallenges.createdAt;
+  const mine = eq(otpChallenges.phoneE164, phone);
+  const inHour = gt(createdAt, new Date(now.getTime() - HOUR_MS));
+  const mineInHour = sql`${mine} and ${inHour}`;
+  const n = (where: SQL) => sql<number>`count(*) filter (where ${where})`.mapWith(Number);
+  const oldest = (where: SQL) =>
+    sql<Date | null>`min(${createdAt}) filter (where ${where})`.mapWith(createdAt);
+  const [row] = await db
+    .select({
+      mineHour: n(mineInHour),
+      mineNewest: sql<Date | null>`max(${createdAt}) filter (where ${mineInHour})`.mapWith(
+        createdAt,
       ),
-    );
-  return { n: row?.n ?? 0, oldest: row?.oldest ?? null };
+      mineDay: n(mine),
+      mineOldest: oldest(mine),
+      hour: n(inHour),
+      hourOldest: oldest(inHour),
+      day: count(),
+      dayOldest: min(createdAt),
+    })
+    .from(otpChallenges)
+    .where(gt(createdAt, new Date(now.getTime() - DAY_MS)));
+  return {
+    mineHour: row?.mineHour ?? 0,
+    mineNewest: row?.mineNewest ?? null,
+    mineDay: row?.mineDay ?? 0,
+    mineOldest: row?.mineOldest ?? null,
+    hour: row?.hour ?? 0,
+    hourOldest: row?.hourOldest ?? null,
+    day: row?.day ?? 0,
+    dayOldest: row?.dayOldest ?? null,
+  };
 }
 
 /** Seconds until the oldest counted code leaves its window and one slot frees up. */
@@ -80,27 +117,59 @@ const secondsUntilFree = (oldest: Date | null, windowMs: number, now: Date): num
   oldest ? Math.max(1, Math.ceil((oldest.getTime() + windowMs - now.getTime()) / 1000)) : 60;
 
 /**
- * The ceilings kept in the database (SEC-04, SEC-07): codes per number in any 24 hours, and codes
- * for everyone together per hour and per 24 hours, a cost backstop against SMS pumping. They count
- * `otp_challenges` rows, which the purge keeps for a day past their expiry, so they hold across
- * restarts and processes. A delivery that failed deletes its row and is not counted.
+ * Refuses a new code while the number must still wait (the resend wait, kept in the database so it
+ * survives restarts) or a ceiling is reached (SEC-04, SEC-07): codes per number in any 24 hours,
+ * and codes for everyone together per hour and per 24 hours, a cost backstop against SMS pumping.
+ * They count `otp_challenges` rows, which the purge keeps for a day past their expiry, so they
+ * hold across restarts and processes. A delivery that failed deletes its row and is not counted.
  */
-async function enforceCodeCaps(ctx: AuthContext, phone: string, now: Date): Promise<void> {
+function assertMayIssue(ctx: AuthContext, counts: IssueCounts, now: Date): void {
+  if (counts.mineNewest) {
+    const elapsed = (now.getTime() - counts.mineNewest.getTime()) / 1000;
+    const wait = cooldownSeconds(ctx, counts.mineHour) - elapsed;
+    if (wait > 0) throw rateLimited(wait);
+  }
   const caps = ctx.config.codeCaps;
-  const dayAgo = new Date(now.getTime() - DAY_MS);
-  const mine = await issuedSince(ctx, dayAgo, phone);
-  if (mine.n >= caps.perPhonePerDay) throw rateLimited(secondsUntilFree(mine.oldest, DAY_MS, now));
-
-  const lastHour = await issuedSince(ctx, new Date(now.getTime() - HOUR_MS));
-  if (lastHour.n >= caps.globalPerHour) {
+  if (counts.mineDay >= caps.perPhonePerDay) {
+    throw rateLimited(secondsUntilFree(counts.mineOldest, DAY_MS, now));
+  }
+  if (counts.hour >= caps.globalPerHour) {
     ctx.logger.warn('auth.code_global_cap_reached', { window: 'hour', limit: caps.globalPerHour });
-    throw rateLimited(secondsUntilFree(lastHour.oldest, HOUR_MS, now));
+    throw rateLimited(secondsUntilFree(counts.hourOldest, HOUR_MS, now));
   }
-  const lastDay = await issuedSince(ctx, dayAgo);
-  if (lastDay.n >= caps.globalPerDay) {
+  if (counts.day >= caps.globalPerDay) {
     ctx.logger.warn('auth.code_global_cap_reached', { window: 'day', limit: caps.globalPerDay });
-    throw rateLimited(secondsUntilFree(lastDay.oldest, DAY_MS, now));
+    throw rateLimited(secondsUntilFree(counts.dayOldest, DAY_MS, now));
   }
+}
+
+/**
+ * Codes are issued one at a time across every API process: the resend wait and the ceilings are
+ * counted, and the new code stored, under this lock, so requests in flight together cannot all
+ * pass a ceiling that has one slot left. Transaction-scoped: released at commit or rollback, so
+ * never leaked. It is the only advisory lock the sign-in lane takes, it is taken before any row
+ * lock, and nothing that holds a row lock waits for it (verify, refresh and the purge never take
+ * it), so it cannot close a deadlock. The two-key form keeps it apart from the single-key advisory
+ * locks other modules take.
+ */
+const ISSUE_LOCK = sql`select pg_advisory_xact_lock(hashtext('qc.auth'), hashtext('otp_issue'))`;
+
+/**
+ * One issuing transaction at a time in this process, ahead of the database lock. Without it, a
+ * burst of code requests would each take a pooled connection and wait on the lock while holding
+ * it, and the rest of the API in this process would queue for connections behind them. With it,
+ * each process has at most one connection waiting on the lock. Keyed by the database handle,
+ * which is one per process (and one per test harness).
+ */
+const issueQueues = new WeakMap<AuthDb, Promise<unknown>>();
+
+function oneAtATime<T>(db: AuthDb, work: () => Promise<T>): Promise<T> {
+  const turn = (issueQueues.get(db) ?? Promise.resolve()).then(work);
+  issueQueues.set(
+    db,
+    turn.catch(() => undefined),
+  );
+  return turn;
 }
 
 /**
@@ -144,34 +213,42 @@ export async function requestCode(
   await enforce(ctx, `otp-request:ip:${ipHash}`, rateLimits.requestPerIp, now);
   await enforce(ctx, `otp-request:phone:${phoneHash}`, rateLimits.requestPerPhone, now);
 
-  const wait = await cooldownRemaining(ctx, phone, now);
-  if (wait > 0) throw rateLimited(wait);
-  await enforceCodeCaps(ctx, phone, now);
+  // A first look without the lock. Once a ceiling is reached, which is when a flood arrives, the
+  // request is refused here, in parallel with the others, without waiting for the lock or holding
+  // a pooled connection while it waits. Whatever passes is counted again under the lock below.
+  assertMayIssue(ctx, await issueCounts(ctx.db, phone, now), now);
 
   const challengeId = randomUUID();
   const code = otp.fixedCode ?? generateCode();
   const expiresAt = new Date(now.getTime() + otp.ttlSeconds * 1000);
 
-  // Only the newest code for a number works: retire the others, then add this one.
-  await ctx.db.transaction(async (tx) => {
-    await tx
-      .update(otpChallenges)
-      .set({ consumedAt: now })
-      .where(and(eq(otpChallenges.phoneE164, phone), isNull(otpChallenges.consumedAt)));
-    await tx.insert(otpChallenges).values({
-      id: challengeId,
-      phoneE164: phone,
-      channel: body.channel,
-      // Copied to the account if this sign-in creates one, so it starts in this language.
-      locale: body.locale,
-      codeHash: hashCode(ctx.keys, challengeId, code),
-      expiresAt,
-      createdAt: now,
-      ipHash,
-    });
-  });
-  const issued = await recentChallenges(ctx, phone, now);
+  const issuedThisHour = await oneAtATime(ctx.db, () =>
+    ctx.db.transaction(async (tx) => {
+      await tx.execute(ISSUE_LOCK);
+      const counts = await issueCounts(tx, phone, now);
+      assertMayIssue(ctx, counts, now);
+      // Only the newest code for a number works: retire the others, then add this one.
+      await tx
+        .update(otpChallenges)
+        .set({ consumedAt: now })
+        .where(and(eq(otpChallenges.phoneE164, phone), isNull(otpChallenges.consumedAt)));
+      await tx.insert(otpChallenges).values({
+        id: challengeId,
+        phoneE164: phone,
+        channel: body.channel,
+        // Copied to the account if this sign-in creates one, so it starts in this language.
+        locale: body.locale,
+        codeHash: hashCode(ctx.keys, challengeId, code),
+        expiresAt,
+        createdAt: now,
+        ipHash,
+      });
+      return counts.mineHour + 1;
+    }),
+  );
 
+  // The lock is released at commit, before the slow part: handing the code to the provider. The
+  // row is already counted, so a parallel request cannot take its slot while this one sends.
   let channel = body.channel;
   try {
     const sent = await ctx.codeSender.send({ phone, code, locale: body.locale, channel });
@@ -187,7 +264,7 @@ export async function requestCode(
     challengeId,
     channel,
     expiresAt: expiresAt.toISOString(),
-    resendAfterSeconds: cooldownSeconds(ctx, issued.length),
+    resendAfterSeconds: cooldownSeconds(ctx, issuedThisHour),
   };
 }
 
