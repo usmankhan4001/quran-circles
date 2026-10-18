@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Icon, Text, elevation, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
+import { Icon, Text, minTouchTarget, radii, spacing, useTheme } from '@qc/ui';
 
 export interface SearchButtonProps {
   /** The name a screen reader says. */
@@ -14,7 +14,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: minTouchTarget + spacing.xs,
+    minHeight: minTouchTarget,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.pill,
   },
@@ -37,15 +37,15 @@ export function SearchButton({ label, placeholder, onPress, testID }: SearchButt
       style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: pressed ? c.surfaceMuted : c.surface,
+          // D17: a grey pill with a hairline, like the kit's SearchField.
+          backgroundColor: pressed ? c.border : c.surfaceMuted,
           borderWidth: 1,
-          borderColor: theme.mode === 'light' ? 'transparent' : c.borderStrong,
-          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
           transform: pressed && !theme.reduceMotion ? [{ scale: 0.995 }] : undefined,
         },
       ]}
     >
-      <Icon name="search" size={20} color={c.textAccent} />
+      <Icon name="search" size={20} color={c.textSecondary} />
       <View style={styles.grow}>
         <Text variant="body" color="textSecondary" numberOfLines={1}>
           {placeholder}

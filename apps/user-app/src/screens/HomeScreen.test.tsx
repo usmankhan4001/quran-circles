@@ -90,36 +90,40 @@ describe('HomeScreen', () => {
     expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
   });
 
-  it('keeps updates behind the bell and the Updates shortcut, with no feed on Home', async () => {
+  it('keeps updates behind the bell, with no feed on Home', async () => {
     const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
-    fireEvent.click(await view.findByTestId('home-also-updates'));
-    expect(view.world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
-    fireEvent.click(view.getByTestId('home-bell'));
+    fireEvent.click(await view.findByTestId('home-bell'));
     expect(view.world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
     expect(view.world.http.callsTo('GET /v1/updates')).toHaveLength(0);
     expect(view.queryByTestId('home-updates')).toBeNull();
-    expect(view.getByTestId('home-also-updates').getAttribute('aria-label')).toBe(
-      en['updates.title'],
-    );
+    expect(view.getByTestId('home-bell').getAttribute('aria-label')).toBe(en['updates.title']);
   });
 
-  it('shows the unread count on the Updates shortcut when signed in', async () => {
+  it('shows the unread count on the bell when signed in', async () => {
     const world = await createWorld({ signedIn: true, cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
     const unread = fixtures.updates.filter((u) => !u.isRead).length;
     await waitFor(() =>
-      expect(view.getByTestId('home-also-updates').getAttribute('aria-label')).toBe(
+      expect(view.getByTestId('home-bell').getAttribute('aria-label')).toBe(
         `${en['updates.title']}, ${en['ui.unread'].replace('{count}', String(unread))}`,
       ),
     );
   });
 
-  it('opens the Quran tab from the Quran, Prayer times and Qibla shortcuts', async () => {
+  it('changes city and area from the area picker at the top of the header (D17)', async () => {
     const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
-    for (const key of ['quran', 'prayer', 'qibla']) {
-      fireEvent.click(await view.findByTestId(`home-also-${key}`));
-      expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
-    }
+    const header = await view.findByTestId('screen-header');
+    const trigger = within(header).getByTestId('home-area');
+    expect(trigger.getAttribute('aria-label')).toContain(CITY_RAWALPINDI.name.en);
+    fireEvent.click(trigger);
+    expect(await view.findByTestId(`area-city-${CITY_RAWALPINDI.id}`)).toBeTruthy();
+    fireEvent.click(await view.findByTestId(`area-option-${AREA_SADDAR.id}`));
+    await waitFor(() => expect(view.world.services.preferences.get().areaId).toBe(AREA_SADDAR.id));
+    await waitFor(() =>
+      expect(view.getByTestId('home-area').getAttribute('aria-label')).toContain(
+        AREA_SADDAR.name.en,
+      ),
+    );
   });
 
   it('puts the session the person registered for first', async () => {
@@ -131,7 +135,9 @@ describe('HomeScreen', () => {
     });
     const view = await renderScreen(<HomeScreen />, { world });
     expect(await view.findByTestId('home-your-next')).toBeTruthy();
-    expect(view.getByText(en['home.nextSession.title'])).toBeTruthy();
+    expect(view.getByTestId('home-lead-countdown').textContent).toContain(
+      en['home.nextSession.title'],
+    );
     fireEvent.click(view.getAllByTestId('home-lead-card')[0]!);
     expect(world.nav.last()).toEqual({
       type: 'go',
@@ -276,10 +282,11 @@ describe('HomeScreen', () => {
 
   describe('Hijri date in the green header', () => {
     // The app clock is fixed at 2027-02-15 13:00 in Pakistan: 8 Ramadan 1448.
-    it("shows today's Hijri date above the title", async () => {
+    it("shows today's Hijri date on the white pill, named in full", async () => {
       const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
       const header = await view.findByTestId('screen-header');
-      expect(within(header).getByText('8 Ramadan 1448 AH')).toBeTruthy();
+      expect(within(header).getByTestId('home-season').textContent).toBe('8 Ramadan');
+      expect(within(header).getByLabelText('8 Ramadan 1448 AH')).toBeTruthy();
     });
 
     it('moves the date by the offset from config', async () => {
@@ -289,8 +296,8 @@ describe('HomeScreen', () => {
       });
       const view = await renderScreen(<HomeScreen />, { world });
       const header = await view.findByTestId('screen-header');
-      expect(await within(header).findByText('9 Ramadan 1448 AH')).toBeTruthy();
-      expect(within(header).queryByText('8 Ramadan 1448 AH')).toBeNull();
+      expect(await within(header).findByLabelText('9 Ramadan 1448 AH')).toBeTruthy();
+      expect(within(header).queryByLabelText('8 Ramadan 1448 AH')).toBeNull();
     });
 
     it('takes a negative offset too', async () => {
@@ -300,7 +307,7 @@ describe('HomeScreen', () => {
       });
       const view = await renderScreen(<HomeScreen />, { world });
       const header = await view.findByTestId('screen-header');
-      expect(await within(header).findByText('7 Ramadan 1448 AH')).toBeTruthy();
+      expect(await within(header).findByLabelText('7 Ramadan 1448 AH')).toBeTruthy();
     });
 
     it('turns the day at midnight in Pakistan', async () => {
@@ -309,7 +316,7 @@ describe('HomeScreen', () => {
       world.clock.advance(11.5 * 3600_000);
       const view = await renderScreen(<HomeScreen />, { world });
       const header = await view.findByTestId('screen-header');
-      expect(within(header).getByText('9 Ramadan 1448 AH')).toBeTruthy();
+      expect(within(header).getByLabelText('9 Ramadan 1448 AH')).toBeTruthy();
     });
 
     it('writes it in Urdu with the Urdu month name', async () => {
@@ -322,7 +329,7 @@ describe('HomeScreen', () => {
         .replace('{day}', '8')
         .replace('{month}', ur['prayer.hijriMonth.9'])
         .replace('{year}', '1448');
-      expect(within(header).getByText(expected)).toBeTruthy();
+      expect(within(header).getByLabelText(expected)).toBeTruthy();
     });
   });
 
@@ -412,10 +419,10 @@ describe('HomeScreen', () => {
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
       expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
-      // "Updates" is a round shortcut of "Also in the app".
-      expect(view.getAllByText(words['updates.title']).length).toBeGreaterThan(0);
+      expect(view.getByTestId('home-bell').getAttribute('aria-label')).toContain(
+        words['updates.title'],
+      );
       expect(view.getByText(words['home.season.doraTitle'])).toBeTruthy();
-      expect(view.getByText(words['home.also.title'])).toBeTruthy();
       expect(view.getByText(words['home.ayah.title'])).toBeTruthy();
       expect(view.getByTestId('home-search')).toBeTruthy();
     });
@@ -427,8 +434,7 @@ describe('Home on the web start', () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     armStartFrameDeferral();
     const view = await renderScreen(<HomeScreen />, { world });
-    expect(view.queryByTestId('home-also')).toBeNull();
-    expect(await view.findByTestId('home-also')).toBeTruthy();
+    expect(view.queryByTestId('home-ayah')).toBeNull();
     expect(await view.findByTestId('home-ayah')).toBeTruthy();
     expect(view.getAllByTestId('home-lead-card').length).toBeGreaterThan(0);
   });

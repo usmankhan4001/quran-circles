@@ -12,7 +12,7 @@ export interface MapPreviewCardProps {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radii.card, overflow: 'hidden', height: 148, justifyContent: 'flex-end' },
+  card: { borderRadius: radii.card, overflow: 'hidden', height: 128, justifyContent: 'flex-end' },
   pin: { position: 'absolute' },
   road: { position: 'absolute', height: spacing.sm, borderRadius: spacing.xs },
   caption: {

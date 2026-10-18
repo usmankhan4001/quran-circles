@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Card, Text, spacing, useTheme } from '@qc/ui';
+import { Button, Card, Text, spacing } from '@qc/ui';
 import { formatClockTime } from '../core/format';
 import { useTodayPortions } from '../features/readAlong/hooks';
 import { describePortion } from '../features/session/portion';
@@ -10,7 +10,13 @@ import { useServices } from '../providers/services';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.sm },
-  rule: { height: 3, width: spacing.xxl, borderRadius: 2 },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
 });
 
 /**
@@ -21,7 +27,6 @@ const styles = StyleSheet.create({
 function ReadAlongCardContent() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
-  const c = useTheme().colors;
   const { now } = useServices();
   const { enabled, portions } = useTodayPortions();
   const first = portions[0];
@@ -32,15 +37,16 @@ function ReadAlongCardContent() {
   return (
     <Card variant="raised" testID="home-read-along">
       <View style={styles.stack}>
-        <View style={[styles.rule, { backgroundColor: c.decoration }]} aria-hidden />
-        <Text variant="eyebrow" color="textSecondary">
-          {t('readAlong.eyebrow')}
-        </Text>
-        <Text variant="title3" heading={2}>
-          {t('readAlong.title')}
-        </Text>
+        <View style={styles.head}>
+          <Text variant="title3" heading={2}>
+            {t('readAlong.title')}
+          </Text>
+          <Text variant="caption" color="textSecondary">
+            {when}
+          </Text>
+        </View>
         {portion ? (
-          <Text variant="bodyLarge" testID="read-along-portion">
+          <Text variant="label" testID="read-along-portion">
             {portion}
           </Text>
         ) : null}
@@ -48,8 +54,10 @@ function ReadAlongCardContent() {
           {t('readAlong.session', { session: l(session.title).text, time: when })}
         </Text>
         <Button
+          variant="outline"
           label={t('readAlong.open')}
           icon="book"
+          trailingIcon="chevron-forward"
           onPress={() => nav.tab({ name: 'quran', reader: { ...start, at: now().getTime() } })}
           testID="read-along-open"
         />

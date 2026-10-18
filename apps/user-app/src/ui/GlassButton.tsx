@@ -15,7 +15,7 @@ const styles = StyleSheet.create({
   button: {
     width: minTouchTarget,
     height: minTouchTarget,
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },

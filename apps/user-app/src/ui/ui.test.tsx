@@ -301,7 +301,7 @@ describe('small pieces', () => {
   });
 
   it('every tab has an icon', async () => {
-    for (const key of ['home', 'nearby', 'quran', 'journey'] as const) {
+    for (const key of ['home', 'nearby', 'quran', 'journey', 'profile'] as const) {
       const icon = tabIcon(key);
       expect(typeof icon).toBe('function');
     }

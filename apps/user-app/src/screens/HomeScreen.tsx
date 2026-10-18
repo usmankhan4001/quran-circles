@@ -1,9 +1,10 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
   EmptyState,
+  HeroHeader,
   Icon,
   Text,
   elevation,
@@ -12,18 +13,16 @@ import {
   radii,
   spacing,
   useTheme,
-  type IconName,
 } from '@qc/ui';
+import type { OccurrenceWithSession } from '@qc/contracts';
+import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { AyahOfTheDayCard } from '../components/AyahOfTheDayCard';
 import { CommunityTodayCard } from '../components/CommunityTodayCard';
 import { DaysReadCard } from '../components/DaysReadCard';
 import { NextCircleCard } from '../components/NextCircleCard';
 import { ReadAlongCard } from '../components/ReadAlongCard';
-import { ProfileButton } from '../components/ProfileButton';
 import { QueryBoundary } from '../components/QueryBoundary';
-import { ScreenFrame } from '../components/ScreenFrame';
 import { Section } from '../components/Section';
-import { SessionCard } from '../components/SessionCard';
 import { distanceParts, haversineMetres, nearestMetres } from '../core/distance';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { useFeature } from '../features/reading/hooks';
@@ -42,13 +41,13 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useAuthStatus, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
-import { useCities } from '../features/places/usePlaces';
+import { useAreas, useCities } from '../features/places/usePlaces';
 import { GlassButton } from '../ui/GlassButton';
 import { MapPreviewCard } from '../ui/MapPreviewCard';
 import { PictureCard } from '../ui/PictureCard';
 import { SearchButton } from '../ui/SearchButton';
-import { Shortcut } from '../ui/Shortcut';
 import { useStartFrameDeferral } from '../ui/startFrame';
+import { TabFrame } from '../ui/TabFrame';
 import { venueMapUrl } from '../features/session/links';
 
 const styles = StyleSheet.create({
@@ -70,10 +69,36 @@ const styles = StyleSheet.create({
   carousel: { gap: spacing.md, paddingBottom: spacing.sm, paddingHorizontal: spacing.xxs },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   shortcuts: { flexDirection: 'row', gap: spacing.sm },
+  area: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: minTouchTarget,
+    flexShrink: 1,
+    paddingEnd: spacing.sm,
+  },
+  areaText: { flexShrink: 1 },
+  pill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
+  // A page heading for screen readers: Home shows no big title (D17), the area leads instead.
+  hidden: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0 },
+  secondary: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  secondaryText: { flex: 1, gap: spacing.xxs },
+  seeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    minHeight: minTouchTarget,
+    paddingStart: spacing.sm,
+  },
 });
 
-/** Width of a picture card in the "near you" row (H4). */
-const PICTURE_WIDTH = 176;
+/** Width of a portrait picture card in the "near you" row (H4, D17). */
+const PICTURE_WIDTH = 136;
 
 /** Unread updates for the person signed in; none when signed out. */
 function useHomeUnread(): number {
@@ -105,65 +130,88 @@ const HomeBell = memo(function HomeBell() {
   );
 });
 
-const HomeShortcuts = memo(function HomeShortcuts() {
+/**
+ * The area at the start of the green header (D17): a pin, "City · Area" in white and a chevron.
+ * It opens the area sheet, where city and area can both change.
+ */
+function AreaTrigger({ label, onPress }: { label: string; onPress: () => void }) {
   const { t } = useI18n();
-  const nav = useNav();
-  const unreadCount = useHomeUnread();
-  const shortcuts: {
-    key: string;
-    icon: IconName;
-    label: string;
-    onPress: () => void;
-    count?: number;
-  }[] = [
-    {
-      key: 'quran',
-      icon: 'book',
-      label: t('home.also.quran'),
-      onPress: () => nav.tab({ name: 'quran' }),
-    },
-    {
-      key: 'prayer',
-      icon: 'prayer',
-      label: t('home.prayer.title'),
-      onPress: () => nav.tab({ name: 'quran' }),
-    },
-    {
-      key: 'qibla',
-      icon: 'route',
-      label: t('home.also.qibla'),
-      onPress: () => nav.tab({ name: 'quran' }),
-    },
-    {
-      key: 'updates',
-      icon: 'bell',
-      label: t('updates.title'),
-      onPress: () => nav.go({ name: 'updates' }),
-      ...(unreadCount > 0 ? { count: unreadCount } : {}),
-    },
-  ];
+  const theme = useTheme();
+  const c = theme.colors;
   return (
-    <Section title={t('home.also.title')} testID="home-also">
-      <View style={styles.shortcuts}>
-        {shortcuts.map((item) => (
-          <Shortcut
-            key={item.key}
-            icon={item.icon}
-            label={item.label}
-            {...(item.count
-              ? {
-                  count: item.count,
-                  accessibilityLabel: `${item.label}, ${t('ui.unread', { count: item.count })}`,
-                }
-              : {})}
-            onPress={item.onPress}
-            testID={`home-also-${item.key}`}
-          />
-        ))}
+    <Pressable
+      role="button"
+      aria-label={t('home.area.change', { place: label })}
+      testID="home-area"
+      onPress={onPress}
+      style={({ pressed }) => [styles.area, pressed ? { opacity: 0.8 } : null]}
+    >
+      <Icon name="pin" size={18} color={c.textOnHero} />
+      <View style={styles.areaText}>
+        <Text variant="label" color="textOnHero" numberOfLines={1} decorative>
+          {label}
+        </Text>
       </View>
-    </Section>
+      <Icon name="chevron-down" size={16} color={c.textOnHero} />
+    </Pressable>
   );
-});
+}
+
+/**
+ * The second programme of the season as one compact row (D17): an amber line with the programme
+ * and when, then the title and the venue, and a chevron. It opens the session.
+ */
+function SecondaryProgramCard({ item }: { item: OccurrenceWithSession }) {
+  const { t, l, locale } = useI18n();
+  const nav = useNav();
+  const c = useTheme().colors;
+  const session = occurrenceAsSession(item);
+  const title = l(session.title);
+  const venue = l(session.venue.name);
+  const when = describeOccurrence(item, session.timezone, locale);
+  const program = t(`programs.${session.program}`);
+  const line = `${title.text}${t('schedule.separator')}${venue.text}`;
+  return (
+    <Card
+      onPress={() => nav.go({ name: 'session', sessionId: item.sessionId })}
+      accessibilityLabel={[program, when, title.text, venue.text].join(', ')}
+      testID={`home-other-${item.id}`}
+    >
+      <View style={styles.secondary}>
+        <View style={styles.secondaryText}>
+          <Text variant="caption" color="textWarning" strong decorative>
+            {t('home.dora.when', { program, when })}
+          </Text>
+          <Text variant="label" decorative numberOfLines={2}>
+            {line}
+          </Text>
+        </View>
+        <Icon name="chevron-forward" size={18} color={c.textMuted} />
+      </View>
+    </Card>
+  );
+}
+
+/** A section's "See all" link at the end of its title row. */
+function SeeAll({
+  label,
+  onPress,
+  testID,
+}: {
+  label: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  const c = useTheme().colors;
+  return (
+    <Pressable role="link" onPress={onPress} testID={testID} style={styles.seeAll}>
+      <Text variant="caption" color="textSecondary" strong>
+        {label}
+      </Text>
+      <Icon name="chevron-forward" size={14} color={c.textSecondary} />
+    </Pressable>
+  );
+}
 
 export function HomeScreen() {
   const { t, l, locale } = useI18n();
@@ -176,9 +224,11 @@ export function HomeScreen() {
   const next = useNextNearYou();
   const registrations = useMyRegistrations();
   const cities = useCities();
+  const areas = useAreas(prefs.cityId);
   // The same "near me" point as Nearby: the chosen area's centre, no phone location needed.
   const origin = useOrigin();
   const { PrayerStrip } = content;
+  const [showArea, setShowArea] = useState(false);
   // Stable, so the memoised strip does not draw again each time Home does.
   const openPrayer = useCallback(() => nav.tab({ name: 'quran' }), [nav]);
   // The map, the ayah, the reading cards and the shortcuts sit below the fold on a phone: on the
@@ -189,19 +239,27 @@ export function HomeScreen() {
   const leadingProgram = config.seasonMode === 'dora' ? 'dora' : 'circles';
   const otherProgram = leadingProgram === 'dora' ? 'circles' : 'dora';
   const city = cities.data?.find((x) => x.id === prefs.cityId);
+  const area = areas.data?.find((x) => x.id === prefs.areaId);
   const items = next.data;
   const lead = items ? pickLeadOccurrence(items, leadingProgram) : undefined;
   const other = items?.find((o) => o.session.program === otherProgram && o.id !== lead?.id);
   const daysRead = useFeature('reading_days');
   const community = useFeature('community_today');
   const hijri = hijriToday(now(), config.hijriOffsetDays);
+  const hijriMonth = hijri ? t(HIJRI_MONTH_KEYS[hijri.month - 1] ?? 'prayer.hijriMonth.1') : '';
   const hijriText = hijri
     ? t('home.hijri.date', {
         day: formatNumber(hijri.day, locale),
-        month: t(HIJRI_MONTH_KEYS[hijri.month - 1] ?? 'prayer.hijriMonth.1'),
+        month: hijriMonth,
         year: formatNumber(hijri.year, locale),
       })
     : null;
+  const sep = t('schedule.separator');
+  const areaLabel = city
+    ? area
+      ? `${l(city.name).text} · ${l(area.name).text}`
+      : l(city.name).text
+    : t('home.area.choose');
   const distanceText = (metres: number) => {
     const parts = distanceParts(metres, locale);
     return parts.unit === 'km'
@@ -220,13 +278,18 @@ export function HomeScreen() {
     nearest === null
       ? t('home.map.count', { count })
       : t('home.map.countNearest', { count, distance: distanceText(nearest) });
+  const venueDistance = (venue: { lat: number; lng: number }) =>
+    origin ? distanceText(haversineMetres(origin, venue)) : undefined;
 
+  const heroSession = mine ? mine.registration.session : lead ? occurrenceAsSession(lead) : null;
+  const heroDistance = heroSession ? venueDistance(heroSession.venue) : undefined;
   const heroCard = mine ? (
     <View testID="home-your-next">
       <NextCircleCard
         session={mine.registration.session}
         eyebrow={t('home.nextSession.title')}
         now={now()}
+        {...(heroDistance ? { distance: heroDistance } : {})}
         onPress={() => nav.go({ name: 'session', sessionId: mine.registration.sessionId })}
         onDirections={() => void openUrl(venueMapUrl(mine.registration.session.venue))}
         onRegistration={() => nav.tab({ name: 'journey' })}
@@ -238,26 +301,50 @@ export function HomeScreen() {
       session={occurrenceAsSession(lead)}
       eyebrow={t('home.nextSession.near')}
       now={now()}
+      {...(heroDistance ? { distance: heroDistance } : {})}
       onPress={() => nav.go({ name: 'session', sessionId: lead.sessionId })}
       onDirections={() => void openUrl(venueMapUrl(lead.session.venue))}
       testID="home-lead-card"
     />
   ) : null;
 
-  return (
-    <ScreenFrame
-      title={t('tabs.home')}
-      {...(hijriText ? { eyebrow: hijriText } : {})}
-      {...(city ? { subtitle: l(city.name).text } : {})}
+  const header = (
+    <HeroHeader
+      testID="screen-header"
+      leading={<AreaTrigger label={areaLabel} onPress={() => setShowArea(true)} />}
       actions={
         <View style={styles.actions}>
+          {hijri && hijriText ? (
+            <View
+              testID="home-season"
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: c.surface,
+                  borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.surface,
+                },
+              ]}
+            >
+              <Text variant="caption" color="textAccent" strong accessibilityLabel={hijriText}>
+                {t('home.hijri.short', { day: formatNumber(hijri.day, locale), month: hijriMonth })}
+              </Text>
+            </View>
+          ) : null}
           <HomeBell />
-          <ProfileButton />
         </View>
       }
-      hero={heroCard}
-      testID="home-screen"
     >
+      <View style={styles.hidden}>
+        <Text variant="title1" color="textOnHero" heading={1}>
+          {t('tabs.home')}
+        </Text>
+      </View>
+      {heroCard}
+    </HeroHeader>
+  );
+
+  return (
+    <TabFrame header={header} green testID="home-screen">
       <View style={styles.stack}>
         <View style={styles.searchRow}>
           <View style={styles.grow}>
@@ -282,7 +369,7 @@ export function HomeScreen() {
               },
             ]}
           >
-            <Icon name="filter" size={22} color={c.textOnAccent} />
+            <Icon name="sliders" size={20} color={c.textOnAccent} />
           </Pressable>
         </View>
 
@@ -297,11 +384,18 @@ export function HomeScreen() {
           </Card>
         )}
 
-        <ReadAlongCard />
-
         <Section
           title={
             leadingProgram === 'dora' ? t('home.season.doraTitle') : t('home.season.circlesTitle')
+          }
+          action={
+            items && items.length > 0 ? (
+              <SeeAll
+                label={t('home.near.seeAll')}
+                onPress={() => nav.tab({ name: 'nearby' })}
+                testID="home-see-all"
+              />
+            ) : undefined
           }
           testID="home-lead"
         >
@@ -354,16 +448,15 @@ export function HomeScreen() {
                         const session = occurrenceAsSession(o);
                         const title = l(session.title);
                         const when = describeOccurrence(o, session.timezone, locale);
-                        const distance = origin
-                          ? distanceText(haversineMetres(origin, session.venue))
-                          : undefined;
+                        const distance = venueDistance(session.venue);
                         return (
                           <PictureCard
                             key={o.id}
+                            variant="portrait"
                             seed={session.venue.id}
                             width={PICTURE_WIDTH}
                             title={title.text}
-                            caption={`${l(session.venue.name).text}${t('schedule.separator')}${when}`}
+                            caption={`${l(session.venue.name).text}${sep}${when}`}
                             section={session.section}
                             sectionLabel={t(`sections.${session.section}`)}
                             {...(distance ? { distance } : {})}
@@ -375,16 +468,7 @@ export function HomeScreen() {
                     </ScrollView>
                   ) : null}
                   {other && !pictures.some((o) => o.id === other.id) ? (
-                    <>
-                      <Text variant="label" color="textSecondary">
-                        {otherProgram === 'dora' ? t('home.also.dora') : t('home.also.circles')}
-                      </Text>
-                      <SessionCard
-                        session={occurrenceAsSession(other)}
-                        emphasis="next"
-                        onPress={() => nav.go({ name: 'session', sessionId: other.sessionId })}
-                      />
-                    </>
+                    <SecondaryProgramCard item={other} />
                   ) : null}
                 </View>
               );
@@ -392,14 +476,27 @@ export function HomeScreen() {
           </QueryBoundary>
         </Section>
 
+        {belowFold ? <ReadAlongCard /> : null}
+
         {belowFold && items && items.length > 0 ? (
-          <MapPreviewCard
-            pins={items.length}
-            title={mapTitle(items.length)}
-            caption={t('home.map.open')}
-            onPress={() => nav.tab({ name: 'nearby' })}
-            testID="home-map"
-          />
+          <Section
+            title={t('home.map.title')}
+            action={
+              <SeeAll
+                label={t('home.map.open')}
+                onPress={() => nav.tab({ name: 'nearby' })}
+                testID="home-map-open"
+              />
+            }
+          >
+            <MapPreviewCard
+              pins={items.length}
+              title={mapTitle(items.length)}
+              caption={t('home.map.open')}
+              onPress={() => nav.tab({ name: 'nearby' })}
+              testID="home-map"
+            />
+          </Section>
         ) : null}
 
         {belowFold ? <AyahOfTheDayCard /> : null}
@@ -410,9 +507,15 @@ export function HomeScreen() {
             <CommunityTodayCard />
           </View>
         ) : null}
-
-        {belowFold ? <HomeShortcuts /> : null}
       </View>
-    </ScreenFrame>
+      <AreaPickerSheet
+        visible={showArea}
+        onClose={() => setShowArea(false)}
+        cityId={prefs.cityId}
+        value={prefs.areaId}
+        onCityChange={(cityId) => void prefs.update({ cityId, areaId: null })}
+        onChange={(areaId) => void prefs.update({ areaId })}
+      />
+    </TabFrame>
   );
 }

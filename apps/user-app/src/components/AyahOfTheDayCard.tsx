@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Button, Card, Skeleton, Text, formatNumber, spacing, useTheme } from '@qc/ui';
+import { Button, Card, Skeleton, Text, formatNumber, spacing } from '@qc/ui';
 import type { Follow, Localized } from '@qc/contracts';
 import { useAyahOfTheDay, type DailyAyah } from '../features/ayah/useAyahOfTheDay';
 import { useMyFollows } from '../features/journey/hooks';
@@ -12,7 +12,13 @@ import { useServices } from '../providers/services';
 
 const styles = StyleSheet.create({
   ayah: { gap: spacing.md },
-  rule: { height: 3, width: spacing.xxl, borderRadius: 2 },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
 });
 
 /**
@@ -45,7 +51,6 @@ export function ayahSourceLine(
 function AyahOfTheDayCardContent() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
-  const c = useTheme().colors;
   const { content, now } = useServices();
   const { ayah } = useAyahOfTheDay();
   const follows = useMyFollows();
@@ -55,26 +60,33 @@ function AyahOfTheDayCardContent() {
   return (
     <Card testID="home-ayah">
       <View style={styles.ayah}>
-        <View style={[styles.rule, { backgroundColor: c.decoration }]} aria-hidden />
-        <Text variant="eyebrow" color="textSecondary">
-          {t('home.ayah.title')}
-        </Text>
+        <View style={styles.head}>
+          <Text variant="title3" heading={2}>
+            {t('home.ayah.title')}
+          </Text>
+          {from ? (
+            <Text variant="caption" color="textAccent" strong testID="home-ayah-from">
+              {from}
+            </Text>
+          ) : null}
+        </View>
         {ayah ? (
           <>
             {AyahText ? <AyahText surah={ayah.surah} ayah={ayah.ayah} /> : null}
-            <Text variant="label" color="textSecondary" testID="home-ayah-reference">
+            <Text
+              variant="caption"
+              color="textSecondary"
+              align="center"
+              testID="home-ayah-reference"
+            >
               {t('home.ayah.reference', {
                 surah: formatNumber(ayah.surah, locale),
                 ayah: formatNumber(ayah.ayah, locale),
               })}
             </Text>
-            {from ? (
-              <Text variant="caption" color="textSecondary" testID="home-ayah-from">
-                {from}
-              </Text>
-            ) : null}
             <Button
-              variant="secondary"
+              variant="outline"
+              trailingIcon="chevron-forward"
               label={t('home.ayah.read')}
               onPress={() =>
                 nav.tab({

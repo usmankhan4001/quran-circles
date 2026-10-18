@@ -5,8 +5,8 @@ import { useCommunityToday } from '../features/reading/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  grow: { flex: 1, gap: spacing.xxs },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexWrap: 'wrap' },
+  grow: { flex: 1, minWidth: 160, gap: spacing.xxs },
 });
 
 /**
@@ -24,24 +24,26 @@ function CommunityTodayCardContent() {
   return (
     <Card variant="flat" testID="home-community">
       <View style={styles.row}>
-        <Icon name="people" size={28} color={c.textAccent} />
+        <Icon name="people" size={24} color={c.textAccent} />
         <View style={styles.grow}>
-          <Text variant="eyebrow" color="textSecondary">
+          <Text variant="caption" color="textSecondary">
             {t('communityToday.title')}
           </Text>
           {data ? (
             <>
-              <Text variant="title3" testID="community-readers">
+              <Text variant="label" testID="community-readers">
                 {t('communityToday.readers', { count: data.readersToday })}
-              </Text>
-              <Text variant="body" color="textSecondary" testID="community-pages">
-                {t('communityToday.pages', { count: data.pagesTogether })}
               </Text>
             </>
           ) : (
             <Skeleton shape="text" lines={2} announce />
           )}
         </View>
+        {data ? (
+          <Text variant="label" color="textAccent" testID="community-pages">
+            {t('communityToday.pages', { count: data.pagesTogether })}
+          </Text>
+        ) : null}
       </View>
     </Card>
   );

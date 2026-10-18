@@ -8,7 +8,6 @@ import {
   MATRIX,
   createWorld,
   directionOf,
-  expectGreenHeader,
   renderScreen,
   waitFor,
 } from '../test/harness';
@@ -171,7 +170,7 @@ describe('NearbyScreen', () => {
   });
 
   describe('one chip row under the search (N2)', () => {
-    it('holds the city, area, day, the three sections and the filters', async () => {
+    it('holds the place, area, section, day and the filters (D17)', async () => {
       const view = await renderScreen(<NearbyScreen />);
       await view.findByTestId('nearby-list');
       const header = view.getByTestId('screen-header');
@@ -179,30 +178,33 @@ describe('NearbyScreen', () => {
       for (const id of [
         'nearby-city',
         'nearby-area-button',
+        'nearby-section',
         'nearby-day',
-        'nearby-section-women',
-        'nearby-section-men',
-        'nearby-section-family',
         'nearby-filters-button',
       ]) {
         expect(within(chips).getByTestId(id)).toBeTruthy();
       }
     });
 
-    it('turns a section on and off from its chip, and asks the server for it', async () => {
+    it('picks a section from the Section chip, asks the server for it, and takes it off again', async () => {
       const view = await renderScreen(<NearbyScreen />);
       await view.findByTestId('nearby-list');
-      const women = view.getByTestId('nearby-section-women');
-      fireEvent.click(women);
+      fireEvent.click(view.getByTestId('nearby-section'));
+      fireEvent.click(await view.findByTestId('filter-section-women'));
+      fireEvent.click(view.getByTestId('filters-apply'));
       await waitFor(() => {
         const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
         expect(new URLSearchParams(last.search).get('section')).toBe('women');
       });
-      expect(view.getByTestId('nearby-section-women').getAttribute('aria-checked')).toBe('true');
-      fireEvent.click(view.getByTestId('nearby-section-women'));
+      expect(view.getByTestId('nearby-section').textContent).toContain(en['sections.women']);
+      fireEvent.click(view.getByTestId('nearby-section'));
+      fireEvent.click(await view.findByTestId('filter-section-women'));
+      fireEvent.click(view.getByTestId('filters-apply'));
       // Off again: the list without a section comes back (from the saved answer).
       await waitFor(() =>
-        expect(view.getByTestId('nearby-section-women').getAttribute('aria-checked')).toBe('false'),
+        expect(view.getByTestId('nearby-section').textContent).toContain(
+          en['nearby.filters.section'],
+        ),
       );
       expect(await view.findByTestId('nearby-list')).toBeTruthy();
     });
@@ -248,8 +250,12 @@ describe('NearbyScreen', () => {
       const view = await renderScreen(<NearbyScreen />, { locale, color, textSize });
       await view.findByTestId('nearby-list');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
-      expect(view.getByText((locale === 'ur' ? ur : en)['tabs.nearby'])).toBeTruthy();
+      // D17: a white header with the "Nearby circles" title, not the green one.
+      const heading = within(view.getByTestId('screen-header')).getByRole('heading', {
+        name: (locale === 'ur' ? ur : en)['nearby.heading'],
+      });
+      expect(heading).toBeTruthy();
+      void color;
       const first =
         locale === 'ur'
           ? (SESSIONS.taraweeh.title.ur ?? SESSIONS.taraweeh.title.en)
