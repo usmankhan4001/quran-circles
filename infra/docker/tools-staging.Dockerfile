@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 #
-# Staging tools image: the @qc/db command-line tools (seed) from source, for the one-shot `seed`
-# service in infra/docker-compose.staging.yml. Never used in production; the seed itself refuses
-# APP_ENV=production.
+# Staging tools image: the @qc/db command-line tools (seed) and the @qc/load scope and load runners
+# from source, for the one-shot `seed` and `gate5` services in infra/docker-compose.staging.yml.
+# Never used in production; the seed refuses APP_ENV=production and the runners refuse remote hosts
+# unless QC_ALLOW_REMOTE=staging.
 #
 # Base image: the same pinned digest as infra/docker/Dockerfile.
 

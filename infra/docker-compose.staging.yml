@@ -115,6 +115,49 @@ services:
       - no-new-privileges:true
     init: true
 
+  # One-shot: the Gate 5 scope verification and Ramadan-evening load run (tests/load/README.md),
+  # from inside the stack so the api reads each synthetic person's X-Forwarded-For (no Cloudflare
+  # or Traefik in between). Behind the `gate5` profile: runs only on a deploy with
+  # COMPOSE_PROFILES=gate5; remove that variable again afterwards. Results are in its log.
+  gate5:
+    profiles:
+      - gate5
+    image: ${QC_IMAGE_REGISTRY:-qc-staging}/tools:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/tools-staging.Dockerfile
+      target: tools-staging
+    restart: 'no'
+    depends_on:
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    working_dir: /repo
+    command:
+      - sh
+      - -c
+      - >-
+        pnpm --filter @qc/load scope --base-url http://qc-staging-api:3000
+        --admin-phone "$$QC_SCOPE_ADMIN"; echo "gate5: scope exit $$?";
+        pnpm --filter @qc/load load --base-url http://qc-staging-api:3000
+        --worker-url http://qc-staging-worker:8081 --admin-phone "$$QC_LOAD_ADMIN";
+        echo "gate5: load exit $$?"
+    environment:
+      QC_ALLOW_REMOTE: staging
+      QC_FIXED_CODE: ${AUTH_FIXED_CODE:?set AUTH_FIXED_CODE in the env file}
+      QC_SCOPE_ADMIN: ${QC_GATE5_SCOPE_ADMIN:-+923189990001}
+      QC_LOAD_ADMIN: ${QC_GATE5_LOAD_ADMIN:-+923189990002}
+    networks:
+      - edge
+    tmpfs:
+      - /tmp:size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+
   # Unique aliases on `edge`, merged into the production network list.
   api:
     networks:
