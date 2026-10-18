@@ -46,3 +46,10 @@ None. All work is on branch `claude/peaceful-archimedes-ain95k`.
 - Decide the open change requests (auth session grace, users display name, OTP locale, outbox venue/provider id, bulk import, export scope, handover lookup, contract gaps in api-core).
 - Meta template approval, native Urdu review, Google Maps key, VAPID keys, store accounts.
 - Live prayer-time comparison: run `node packages/content/scripts/compare-aladhan.mjs` with internet access.
+
+## Documentation (2026-10-18)
+
+- Done: root `README.md` rewritten (was the Wave 0 scaffold text), `CONTRIBUTING.md`, expanded `docs/README.md`, new `docs/getting-started.md` (local setup checked against Postgres 16: migrate, seed, `bootstrap-admin`, API `/health`, worker start), `docs/architecture.md`, `docs/deployment.md` (staging on Dokploy, no credentials), `docs/credits-and-licences.md`, and a `README.md` in every app and package that lacked one. Documentation only; no code or behaviour changed.
+- Open for the owner: no licence is chosen for the code (`README.md` says all rights reserved; `packages/ui/assets/fonts/LICENSES.md` refers to "the Quran Circles code licence").
+- Open for the platform lane: `infra/README.md` still opens with "Nothing has been deployed yet"; staging is now live.
+- Open for api-core: `apps/api/package.json` has no `dev` or `start` script; the docs use `pnpm exec tsx --env-file=../../.env src/index.ts` from `apps/api`.
