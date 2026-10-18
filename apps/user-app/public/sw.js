@@ -10,7 +10,16 @@
  */
 // v2 drops any shell that v1 may have saved from a non-page response (SEC-23).
 const VERSION = 'qc-shell-v2';
-const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+const SHELL = [
+  '/',
+  '/boot.js',
+  '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+];
+// The start-up script the page loads before the app (public/boot.js). Its name has no content
+// hash, so it is read from the network first and the saved copy is only for offline starts.
+const BOOT_SCRIPT = '/boot.js';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -86,6 +95,21 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => caches.match('/').then((cached) => cached || Response.error())),
+    );
+    return;
+  }
+
+  if (url.pathname === BOOT_SCRIPT) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(VERSION).then((cache) => cache.put(BOOT_SCRIPT, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(BOOT_SCRIPT).then((cached) => cached || Response.error())),
     );
     return;
   }

@@ -1,4 +1,5 @@
-import { View } from 'react-native';
+import { useEffect } from 'react';
+import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { TabBar, useTheme, type TabItem } from '@qc/ui';
 import { useI18n } from '../../i18n/I18nProvider';
@@ -6,6 +7,21 @@ import { useUnreadCount } from '../../features/updates/hooks';
 import { useInsets } from '../../providers/insets';
 import { TAB_ROUTES, type TabRoute } from '../../nav/routes';
 import { tabIcon } from '../../ui/tabIcons';
+import { prefetchTabLater } from '../../boot/routeChunks';
+
+/** How long after the tabs appear the web build fetches Nearby's code, the likeliest next tab. */
+const NEARBY_PREFETCH_DELAY_MS = 1500;
+
+/**
+ * The web build loads each tab's code when it is first opened. Nearby's is fetched once the
+ * first screen has had time to settle, so the first tap on Nearby does not wait for it.
+ */
+function usePrefetchNearby() {
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    return prefetchTabLater('nearby', NEARBY_PREFETCH_DELAY_MS);
+  }, []);
+}
 
 const LABELS: Record<
   TabRoute,
@@ -48,6 +64,7 @@ function BottomTabs({
 
 /** The four tabs. Their bar is the kit's TabBar, so it follows the theme, size and direction. */
 export default function TabsLayout() {
+  usePrefetchNearby();
   return (
     <Tabs
       screenOptions={{ headerShown: false }}

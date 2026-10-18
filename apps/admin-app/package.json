@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "main": "expo-router/entry",
+  "main": "./src/entry.ts",
   "scripts": {
     "start": "expo start",
     "web": "expo start --web",

@@ -3,6 +3,58 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Low-end cold start (2026-10-18, `tests/e2e/src/quality/budgets.ts`)
+
+Only `apps/user-app/**` outside screen components, plus the ui lane's font files (ui status).
+
+- **Start screen in `public/index.html`.** The browser draws the app's name ("Quran Circles", the same in both languages, so it has no direction to get wrong) and a spinner on the header green before any script arrives, in light, dark (the media query or the saved choice) and high contrast, at all four text sizes, and slower under reduced motion. `src/boot/startScreen.ts` takes it away once the root layout is ready (saved choices, sign-in and the first font), so nothing is ever seen in the wrong language or direction underneath it. FCP goes from 9.7 s to 0.8 s.
+- **`public/boot.js`** (external: the production policy allows no inline script) reads `qc.preferences.v1` before the app's scripts and sets `<html lang dir>`, `data-qc-color` and `data-qc-text-size`, and the start screen's label (`ui.loading`). Urdu comes from the saved choice, or from a device in Urdu when nothing is chosen (as `defaultPreferences` does). For Urdu it preloads Mehr; `index.html` preloads Figtree 400. It never throws. The service worker serves `/boot.js` network-first with the cached copy offline (`public/sw.js`, version unchanged); tests in `platform/sw.test.ts`.
+- **Fonts.** The web no longer downloads every TTF and OTF (310 KB) before the first frame. `src/fonts/loadFonts.web.ts` declares the `@qc/ui/web-fonts` faces (WOFF2, `font-display: swap`) and waits only for the language's face; the first screen's other Figtree weights are preloaded once Home's data has been asked for (`startFonts`). The Quran font loads only with Quran text. iOS and Android keep `loadFonts.ts` (all bundled fonts, as before).
+- **Bundle.** `src/entry.ts` (package `main`) puts the root layout, the tabs layout and Home in the main bundle instead of three chunks fetched one after another. `metro.config.cjs` + `metro.redirects.cjs`: zod's all-locales barrel (about 40 KB gzip, never used) and, on the web only, `expo-notifications` are swapped for an empty module; the minifier writes Urdu as UTF-8, not `\uXXXX`.
+- **Start requests.** `src/boot/startQueries.ts`: once the saved choices are read, the config (every start) and, on a start at Home, the next sessions, your registrations and your follows are asked for while the page is still drawing; Home's own queries join them through the new `QueryCache.share` (one request per key in flight, so start-up no longer sends config 8 times and registrations and follows 4 times each). Keys and requests match the hooks'; the test renders Home after the prefetch and checks nothing is asked twice. `src/app/_layout.tsx` reads the saved state once (`loadOnce`).
+- **Nearby.** Its code is fetched 1.5 s after the tabs appear (`prefetchTabLater`), so the first tap does not wait for the download.
+- Tests (new): `boot/bootPage.test.ts` (19: boot.js run in a sandbox for en, ur, device Urdu, colours, sizes, damaged values; preload URLs equal the bundler's content-hash names; strings equal `app.name` and `ui.loading`; no inline script), `boot/startQueries.test.ts` (6), `boot/routeChunks.test.ts` (4), `boot/startScreen.test.ts` (2), `fonts/loadFonts.web.test.ts` (4), `platform/metroRedirects.test.ts` (3), 7 more in `data/cache.test.ts`, 3 more in `platform/sw.test.ts`. `pnpm --filter @qc/user-app test` 994 passing in 66 files; typecheck clean; eslint and prettier clean on every changed file.
+
+### Results
+
+Measured with `QC_QUALITY=1 QC_QUALITY_RUNS=3 pnpm --filter @qc/e2e exec playwright test --project=quality low-end-budgets` (low-end emulation, Slow 4G, medians of 3). Before is the tree at the start of this pass. After is two full runs on separate fresh stacks (A, B); the machine was shared with other agents' runs, so expect about ±0.3 s.
+
+| Measure                             | Budget  | Before  | After A | After B |
+| ----------------------------------- | ------- | ------- | ------- | ------- |
+| First paint (FCP)                   | 3 s     | 9.65 s  | 0.78 s  | 0.79 s  |
+| Home content                        | 6 s     | 11.63 s | 7.01 s  | 7.35 s  |
+| Home interactive                    | 8 s     | 12.17 s | 8.86 s  | 8.24 s  |
+| Transfer before interactive         | 900 KiB | 923 KiB | 620 KiB | 618 KiB |
+| First-screen JS (gzip, script tags) | 450 KiB | 545 KiB | 524 KiB | 524 KiB |
+| First tap to Nearby                 | 1.5 s   | 1.97 s  | 1.37 s  | 1.52 s  |
+| Admin Today content                 | 6 s     | 11.79 s | 7.31 s  | 7.55 s  |
+| Admin first paint                   | 3 s     | 9.70 s  | 0.78 s  | 0.78 s  |
+| Admin first-screen JS (gzip)        | 450 KiB | 510 KiB | 476 KiB | 477 KiB |
+| Warm start content                  | 3 s     | 3.23 s  | 2.90 s  | 3.01 s  |
+
+Scroll (0.3 to 1.3 % dropped), map (0.3 to 0.4 s) and the Quran reader (2.4 s first, 0.5 to 0.8 s again) stay within budget. Fonts at start: 310 KB before, 67 KB after.
+
+### Still over budget, and why
+
+- **Home content (7.0 to 7.4 s, budget 6 s) and first-screen JS (524 KiB, budget 450 KiB).** The main bundle (about 530 KB gzip) takes until about 4.2 s to arrive on Slow 4G and about 1.1 s to run on the emulated CPU, so the first screen cannot draw before about 5.7 s. The rest is one API round trip (0.6 s) and the render. Getting under 6 s needs about 100 KB less JS. The largest parts are expo-router, react-native-web and react-dom (about 60 % together, not removable), zod (about 56 KB gzip), `@qc/i18n` (both languages and every app's strings, about 36 KB gzip for Urdu alone) and `@qc/content` (about 30 KB gzip, imported whole). Moving Home into the main bundle added about 17 KB to the "script tags" number, but it is code the first screen needed anyway; it removed two round trips.
+- **Home interactive (8.2 to 8.9 s, budget 8 s).** After content, a run of responses each re-render Home (150 to 400 ms each on the emulated CPU): places, `me`, unread count, reading position, bookmarks, community today, reading days, ayah of the day and its text (which waits on config and follows). Fewer, cheaper re-renders mean changes inside screens and providers, which this pass did not touch.
+- **First tap to Nearby (1.37 / 1.52 s) and warm start (2.90 / 3.01 s)** are on the line: within budget in one run, just over in the other.
+
+### Change requests (not made here)
+
+- **i18n per language** (`packages/i18n`): export each language's table on its own (`@qc/i18n/en`, `@qc/i18n/ur`) and load only the saved language at start, the other on switch. Ideally also split by app (user app, admin, console). Saves about 36 KB gzip at start.
+- **`@qc/content` subpath exports**: Home pulls the whole package (surah list, Quran mounts, import banner). Subpaths such as `@qc/content/surahs` would keep the rest out of the main bundle. About 30 KB gzip.
+- Both would bring first-screen JS close to the 450 KiB budget and Home content close to 6 s.
+
+## Accessibility fix pass (2026-10-18, `docs/quality/accessibility-rtl.md`)
+
+- **A-02 (serious, `aria-prohibited-attr`).** The facilities rows (`components/FacilitiesChecklist.tsx`) and the stat tiles on My Journey and Memorisation no longer put `aria-label` on a role-less `div`; the visible number and caption are no longer `decorative`, so a screen reader reads them as text. Tests: `VenueScreen`, `JourneyScreen`, `MemorisationScreen`.
+- **A-08 (landmarks).** `ScreenFrame` is the `main` landmark (`<main>` on the web); a sheet frame is a modal `dialog` named by its title instead. The kit `TabBar` adds the `navigation` landmark. Test: `ScreenFrame.test.tsx`.
+- **A-10.** Home's big time is split into the figures and the day period (`features/home/clock.ts`, `splitClock`), laid out as one row (`NextCircleCard.tsx`), so "PM" can no longer wrap under the figures; the bell badge sits clear of the bell (`ui/GlassButton.tsx`). Tests: `clock.test.ts` (7), `HomeScreen.test.tsx` (en and ur), `ui.test.tsx`.
+- **A-07 (forced colours).** The Home filter button has a transparent border, which forced colours paint, so it stays visible; `ui/SectionIcon.tsx` draws its glyph in the system text colour while forced colours are on (kit `useForcedColors`). Test: `ui.test.tsx`.
+- **A-09** is not fixed here: the Latin "PM" comes from `Intl` in `core/format.ts`. Change request in `docs/agents/status/i18n.md`.
+- Not touched in that pass: `_layout.tsx`, `public/index.html`, routes (changed since in the low-end pass above).
+
 ## Web push fixtures and SEC-23 (2026-10-18)
 
 - **Push fixtures for the web push allowlist (contracts commit `8201cf0`).** A `webpush` token must now be `PushSubscription.toJSON()` serialised, on an allowed push host. 8 tests (reminders service, auth actions, Profile push switch) sent `'test-subscription'` and failed. `src/test/harness.tsx` now exports `FAKE_WEB_PUSH_TOKEN` (made-up subscription on `fcm.googleapis.com`, `expirationTime: null`, fake keys), used by `FakeRegistrar` and the device registration assertion in `features/reminders/service.test.ts`. No app code changed: `WebPushRegistrar` already sends `JSON.stringify(subscription.toJSON())`, which the rule accepts.

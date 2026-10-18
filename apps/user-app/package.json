@@ -43,5 +43,5 @@
     "jsdom": "29.1.1",
     "tsx": "4.23.15"
   },
-  "main": "expo-router/entry"
+  "main": "./src/entry.ts"
 }

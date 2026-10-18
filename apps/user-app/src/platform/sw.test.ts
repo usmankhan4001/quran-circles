@@ -142,7 +142,7 @@ describe('service worker', () => {
   it('saves the shell on install and removes older versions when it takes over', async () => {
     await worker.waitUntilOf('install');
     expect([...worker.stored.keys()]).toEqual(
-      expect.arrayContaining(['/', '/manifest.webmanifest', '/icons/icon-192.png']),
+      expect.arrayContaining(['/', '/boot.js', '/manifest.webmanifest', '/icons/icon-192.png']),
     );
     await worker.waitUntilOf('activate');
     expect(worker.deleted).toEqual(['qc-shell-v0', 'qc-shell-v1']);
@@ -167,6 +167,33 @@ describe('service worker', () => {
     expect(handled).toBe(true);
     await expect(response).resolves.toBe('cached:https://app.test/assets/logo.png');
     expect(worker.fetched).toHaveLength(0);
+  });
+
+  it('reads the start-up script from the network first and saves the new copy', async () => {
+    const online = loadWorker({ cached: new Set(['/boot.js']) });
+    const { handled, response } = online.fetchEvent('https://app.test/boot.js');
+    expect(handled).toBe(true);
+    await expect(response).resolves.toMatchObject({ status: 200 });
+    await new Promise((done) => setTimeout(done, 0));
+    expect(online.fetched).toEqual(['https://app.test/boot.js']);
+    expect(online.stored.get('/boot.js')).toMatchObject({ status: 200 });
+  });
+
+  it('starts from the saved start-up script when there is no connection', async () => {
+    const offline = loadWorker({ cached: new Set(['/boot.js']), networkFails: true });
+    const { response } = offline.fetchEvent('https://app.test/boot.js');
+    await expect(response).resolves.toBe('cached:/boot.js');
+    const none = loadWorker({ networkFails: true });
+    await expect(none.fetchEvent('https://app.test/boot.js').response).resolves.toBe(
+      'error-response',
+    );
+  });
+
+  it('never saves a failed start-up script', async () => {
+    const failing = loadWorker({ response: { status: 404 } });
+    await failing.fetchEvent('https://app.test/boot.js').response;
+    await new Promise((done) => setTimeout(done, 0));
+    expect(failing.stored.has('/boot.js')).toBe(false);
   });
 
   it('opens the saved shell for a page load when there is no connection', async () => {

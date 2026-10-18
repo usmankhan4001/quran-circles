@@ -79,7 +79,7 @@ export function useQuery<T>(
     const id = ++runId.current;
     setStored((s) => ({ ...(s.key === key ? s : initial(key)), fetching: true }));
     try {
-      const data = await fetcherRef.current();
+      const data = await cache.share(key, () => fetcherRef.current());
       if (id !== runId.current) return;
       cache.set(key, data, persist);
       setStored({ key, data, error: undefined, fetching: false, offline: false, loaded: true });

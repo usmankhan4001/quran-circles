@@ -8,3 +8,7 @@ declare module '*.otf' {
   const asset: number | string;
   export default asset;
 }
+declare module '*.woff2' {
+  const asset: number | string;
+  export default asset;
+}

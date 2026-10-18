@@ -13,10 +13,12 @@ import {
   createApiClient,
   Tokens,
   type ApiClient,
+  Me,
   type Locale,
-  type Me,
 } from '@qc/contracts';
 import { createAuthedFetch } from '../api/authedFetch';
+import { takeEarlyMe } from './earlyMe';
+import { TOKENS_KEY } from './keys';
 import type { KeyValueStore } from '../storage/storage';
 
 export type SignInResult = Awaited<ReturnType<ApiClient['auth']['verifyCode']>>;
@@ -36,7 +38,7 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export const TOKENS_KEY = 'qc.admin.tokens';
+export { TOKENS_KEY } from './keys';
 
 export interface AuthProviderProps {
   baseUrl: string;
@@ -122,7 +124,9 @@ export function AuthProvider({
       }
       tokens.current = parsed.data;
       try {
-        const current = await clients.api.me.get();
+        // The answer `startEarlyMe` asked for while the page loaded, if any, else ask now.
+        const current =
+          (await takeEarlyMe(parsed.data.accessToken, parseMe)) ?? (await clients.api.me.get());
         if (!cancelled) {
           setMe(current);
           setStatus('signedIn');
@@ -190,6 +194,11 @@ export function AuthProvider({
     [status, me, clients, completeSignIn, signOut, reloadMe],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function parseMe(data: unknown): Me | null {
+  const checked = Me.safeParse(data);
+  return checked.success ? checked.data : null;
 }
 
 function safeJson(raw: string): unknown {

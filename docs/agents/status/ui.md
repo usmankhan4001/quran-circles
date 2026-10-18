@@ -1,7 +1,26 @@
 # Status: ui
 
-Updated: 2026-10-17
+Updated: 2026-10-18
 Branch: lane/ui/wp21 (orchestrator commits; nothing committed by this lane)
+
+## Web fonts for the low-end start (2026-10-18, low-end budgets)
+
+Font assets and loading only; no component changed.
+
+- **WOFF2 copies** in `assets/fonts/web/`: Figtree 400 to 800 (OFL, no Reserved Font Name) and Mehr Nastaliq Web (CC BY-SA 4.0), written by `scripts/web-fonts.py` (fontTools + brotli; the same fonts in a compressed container, nothing subset). The script refuses the KFGQPC font: its licence forbids conversion, so the web keeps the original OTF. `assets/fonts/LICENSES.md` has a "Web copies (WOFF2)" section with the licence notes and sha256 of each file. Figtree goes from about 24 KB to 17 KB a weight, Mehr from 73 KB to 56 KB.
+- **`@qc/ui/web-fonts`** (new entry, `src/web-fonts.ts`): `webFontFaces` (the faces under the `fonts` token names), `fontFaceCss` and `installWebFonts` (one `@font-face` rule per face, `font-display: swap`, so the browser downloads a face only when text uses it), `firstPaintFace(locale)` (Figtree 400 in English, Mehr in Urdu: the only face worth holding the first frame for), `waitForWebFont` (through `doc.fonts.load`, never rejects, 3 s timeout), `webFacesOf(family, weights)` and `warmWebFonts` (a `<link rel="preload" as="font" crossorigin>` per face, once each). It re-exports `fonts` so a page's earliest script can name faces without loading the kit.
+- `src/font-loading.ts` now holds `fontLoadTimeoutMs`, `FontLoadResult` and `loadFontsWithFallback` (moved out of `font-sources.ts`, which re-exports them), so `web-fonts` does not pull in the TTF files. `font-assets.d.ts` declares `*.woff2`.
+- iOS and Android keep `@qc/ui/font-sources` and the TTF/OTF files, unchanged.
+- Tests: new `src/web-fonts.test.ts` (12: faces and formats, no converted KFGQPC file, checksums match `LICENSES.md`, CSS escaping, install once, wait loaded/failed/empty/timeout/no font set, preload links). `pnpm --filter @qc/ui test` 934 passing; typecheck, eslint and prettier clean on the changed files.
+- The user app and admin app use it (their status files). The bundler names the files by content hash; both apps' `bootPage.test.ts` check that the hard-coded preload URLs in their `public/` pages match these files, so re-running the script means updating those two URLs.
+
+## Accessibility fix pass (2026-10-18, `docs/quality/accessibility-rtl.md`)
+
+- **A-07 (forced colours).** New `src/forcedColors.ts`, exported from the index: `useForcedColors()` (web only, follows the media query), `forcedColorsActive()`, `systemColors.text` (`var(--qc-system-text, CanvasText)`, because react-native-web drops colour names it does not know) and `keepColorsInForcedMode` (`forced-color-adjust: none`). `Icon` draws in the system text colour and keeps its drawing while forced colours are on; `HeroHeader` leaves out its pattern; `SearchField` always has a 1 px border (transparent in light mode) that forced colours can paint.
+- **A-06.** The `SearchField` input can shrink below the browser's default width (`minWidth: 0`), so Nearby fits at 320 px at the largest text.
+- **A-08.** `TabBar` sits in a `navigation` landmark (`<nav>` on the web); the tab list keeps its name.
+- **A-10.** With a badge on the chosen tab, the label starts clear of the badge.
+- Tests: new `components/a11y-fixes.test.tsx` (22). Font loading not touched.
 
 ## Done
 

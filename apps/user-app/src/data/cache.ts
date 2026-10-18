@@ -44,6 +44,8 @@ export class QueryCache {
   private readonly writeDelayMs: number;
   private writeTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingWrite: Promise<void> = Promise.resolve();
+  /** Requests under way, by key, so screens asking for the same thing at once share one. */
+  private readonly running = new Map<string, Promise<unknown>>();
 
   constructor(private readonly options: QueryCacheOptions = {}) {
     this.now = options.now ?? Date.now;
@@ -78,11 +80,32 @@ export class QueryCache {
     this.version.update((n) => n + 1);
   }
 
+  /**
+   * Runs `fetcher` for `key`, or joins the run already under way for the same key. At start-up
+   * several parts of a screen ask for the same thing at once (the config, your registrations);
+   * one request answers all of them instead of one each. A run that `invalidate` or `clear`
+   * marked out of date is never joined: the next caller asks again.
+   */
+  share<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+    const running = this.running.get(key);
+    if (running) return running as Promise<T>;
+    const run: Promise<T> = Promise.resolve()
+      .then(fetcher)
+      .finally(() => {
+        if (this.running.get(key) === run) this.running.delete(key);
+      });
+    this.running.set(key, run);
+    return run;
+  }
+
   /** Marks entries whose key starts with `prefix` as out of date, so mounted queries reload. */
   invalidate(prefix = ''): void {
     for (const [key, entry] of this.memory) {
       if (key.startsWith(prefix))
         this.memory.set(key, { ...entry, updatedAt: Number.MIN_SAFE_INTEGER });
+    }
+    for (const key of [...this.running.keys()]) {
+      if (key.startsWith(prefix)) this.running.delete(key);
     }
     this.invalidations.update((n) => n + 1);
     this.version.update((n) => n + 1);
@@ -91,6 +114,7 @@ export class QueryCache {
   /** Drops everything, in memory and on the device: after sign-out or account deletion. */
   async clear(): Promise<void> {
     this.memory.clear();
+    this.running.clear();
     this.persistedKeys.length = 0;
     if (this.writeTimer) clearTimeout(this.writeTimer);
     this.writeTimer = null;

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import type { Locale } from '@qc/contracts';
 import { formatNumber, ThemeProvider, type ColorMode, type TextSizeStep } from '@qc/ui';
 import { createTranslator, type Translator } from '../i18n/translate';
@@ -90,6 +90,14 @@ export function AppearanceProvider({
       cancelled = true;
     };
   }, [store, initial]);
+
+  // The page's language and direction, for screen readers and the browser (A-01). Only once the
+  // saved choice is read: until then the page keeps what public/boot.js set from it.
+  useEffect(() => {
+    if (!ready || Platform.OS !== 'web' || typeof document === 'undefined') return;
+    document.documentElement.lang = state.locale;
+    document.documentElement.dir = state.locale === 'ur' ? 'rtl' : 'ltr';
+  }, [ready, state.locale]);
 
   const update = useCallback(
     (patch: Partial<Appearance>) => {

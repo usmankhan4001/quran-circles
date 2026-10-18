@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./font-sources": "./src/font-sources.ts",
+    "./web-fonts": "./src/web-fonts.ts",
     "./assets/fonts/*": "./assets/fonts/*"
   },
   "scripts": {

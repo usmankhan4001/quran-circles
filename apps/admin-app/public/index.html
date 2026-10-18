@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Zooming stays allowed: some of our readers need large text. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>%WEB_TITLE%</title>
+    <!--
+      Figtree 400 is the face the first screen waits for (@qc/ui/web-fonts), and Urdu screens use
+      it for numbers, so it downloads alongside the scripts. The URL is the bundler's name for
+      packages/ui/assets/fonts/web/Figtree-400.woff2; src/boot/bootPage.test.ts checks it.
+    -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin
+      href="/assets/__packages/ui/assets/fonts/web/Figtree-400.e7f8c89c16063fa80aee9b0ec43ef205.woff2"
+    />
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <!--
+      The start screen: drawn by the browser before any script has arrived, and removed by the
+      app once its first screen is ready (src/boot/startScreen.ts). It shows only the app's name,
+      which reads the same in English and Urdu and so has no direction to get wrong, on the green
+      of the app's header in each colour mode. System fonts only: nothing waits for a download.
+    -->
+    <style id="qc-start-style">
+      #qc-start {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5em;
+        background: #226836;
+        color: #ffffff;
+        font-family: system-ui, sans-serif;
+      }
+      #qc-start .qc-start-name {
+        margin: 0;
+        font-size: 1.75em;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+      #qc-start .qc-start-spinner {
+        width: 2em;
+        height: 2em;
+        border-radius: 50%;
+        border: 0.25em solid rgba(255, 255, 255, 0.35);
+        border-top-color: #ffffff;
+        animation: qc-start-spin 0.9s linear infinite;
+      }
+      @keyframes qc-start-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #qc-start .qc-start-spinner {
+          animation-duration: 3s;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-qc-color='light']):not([data-qc-color='highContrast']) #qc-start {
+          background: #154a27;
+        }
+      }
+      html[data-qc-color='dark'] #qc-start {
+        background: #154a27;
+      }
+      html[data-qc-color='highContrast'] #qc-start {
+        background: #06160c;
+      }
+      html[data-qc-text-size='1'] #qc-start {
+        font-size: 115%;
+      }
+      html[data-qc-text-size='2'] #qc-start {
+        font-size: 130%;
+      }
+      html[data-qc-text-size='3'] #qc-start {
+        font-size: 150%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript> You need to enable JavaScript to run this app. </noscript>
+    <div id="qc-start" role="progressbar" aria-label="Loading">
+      <p class="qc-start-name" lang="en" dir="ltr">Quran Circles</p>
+      <div class="qc-start-spinner" aria-hidden="true"></div>
+    </div>
+    <!--
+      Sets the page's language, direction, colour mode and text size from the saved choices, and
+      starts the Urdu font early for Urdu readers. External, not inline: the production policy allows no
+      inline script. It comes after the start screen, so the start screen never waits for it.
+    -->
+    <script src="/boot.js"></script>
+    <div id="root"></div>
+  </body>
+</html>

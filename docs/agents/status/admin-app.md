@@ -1,7 +1,23 @@
 # Status: admin-app
 
-Updated: 2026-10-17 (posters, contract 1.0.0-rc.5)
+Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## Low-end cold start and A-01 (2026-10-18)
+
+- **A-01 fixed.** `AppearanceProvider` sets `document.documentElement.lang` and `.dir` (web only) from the saved language once it has been read, and on every change; until then the page keeps what `public/boot.js` set, so the default English never reaches the page. Tests: new `appearance/AppearanceProvider.test.tsx` (4: saved Urdu, English and junk, untouched before the read, switching).
+- **Start screen.** New `public/index.html` (the user app's start screen; the admin app had Expo's default page) and `public/boot.js`, which reads `qc.admin.appearance` and sets `<html lang dir>`, `data-qc-color` (from `colorChoice`), `data-qc-text-size` and the loading label, and preloads Mehr for Urdu. Unlike the user app it ignores the device language, because the app starts in English until someone changes it. The root layout removes the start screen once FontGate is through and the saved appearance is read (`StartScreenOff`). FCP 9.7 s to 0.8 s.
+- **FontGate on the web** waits only for the page language's face from `@qc/ui/web-fonts` (`src/fonts/loadFonts.web.ts`) instead of every bundled TTF and OTF (about 330 KB). FontGate itself, its timeout and fallback, and phones (`loadFonts.ts`, `Font.loadAsync`) are unchanged; its tests pass as before.
+- **Start path.** `src/entry.ts` (package `main`) bundles the root layout, tabs and Today, and first imports `boot/earlyStart.web.ts`, which starts the first screen's fonts and `auth/earlyMe.ts`: a plain read-only `GET /v1/me` with the saved access token, sent as soon as the scripts finish. `AuthProvider` takes that answer (`takeEarlyMe`, checked with the `Me` schema) instead of asking again. Any failure or a token within a minute of expiry means no early answer, and `AuthProvider` runs its usual path; nothing is refreshed, written or forgotten early. `TOKENS_KEY` moved to `auth/keys.ts` (re-exported). `metro.config.cjs` + `metro.redirects.cjs` drop zod's locale barrel. Tests: `auth/earlyMe.test.tsx` (9, including refresh and sign-out still working through `AuthProvider`), `boot/bootPage.test.ts` (19), `boot/startScreen.test.ts` (2), `fonts/loadFonts.web.test.ts` (5), `platform/metroRedirects.test.ts` (2).
+- Results (same runs as `user-app.md`): Today content 11.79 s before, 7.31 s and 7.55 s after (budget 6 s); first paint 9.70 s to 0.78 s; first-screen JS 510 to 477 KiB gzip. **Still over 6 s**: the 475 KB main bundle arrives at about 3.9 s and runs until about 5.1 s; then `me` (one round trip, which cannot go out before the scripts finish), the render, and `admin/sessions` (another round trip; it needs the working scope from `me`). Under 6 s needs a smaller bundle: the i18n per-language split and the zod and contracts weight noted in `user-app.md`.
+- `pnpm --filter @qc/admin-app test` 788 passing in 47 files; typecheck clean; eslint and prettier clean on every changed file.
+
+## Accessibility fix pass (2026-10-18, `docs/quality/accessibility-rtl.md`)
+
+- **A-08.** `components/Screen.tsx` is the `main` landmark; the tab bar is a `navigation` landmark through the kit `TabBar`. Tests: `Screen.test.tsx`, `shell/MainTabs.test.tsx`.
+- **A-07.** `components/glyphs.tsx` draws its glyphs in the system text colour while forced colours are on (kit `useForcedColors`). Test: new `glyphs.test.tsx` (4).
+- **A-01** (`<html dir>` and `lang`): fixed in the low-end pass above.
+- **A-09** (Latin "PM" from `lib/time.ts`): change request in `docs/agents/status/i18n.md`.
 
 ## Done
 
