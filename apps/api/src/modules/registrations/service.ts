@@ -34,6 +34,51 @@ import { sessionFacts, type PublishDeps } from '../updates/publish';
 import { promoteWaitlist } from './waitlist';
 
 const { registrations, sessions, venues, circles, occurrences, users, areas, consents } = schema;
+const { messageOutbox } = schema;
+
+/**
+ * SEC-03: a person who cancels and registers again for the same session and occurrence gets no
+ * second paid confirmation while one queued for an earlier registration of theirs is this recent.
+ */
+export const CONFIRMATION_REPEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Whether a WhatsApp confirmation was already queued for this person, session and occurrence (the
+ * same `occurrenceId`, or none for both) by a registration made in the last 24 hours, other than
+ * `exceptId`. The registration's `createdAt` is the request time, the same transaction that queued
+ * its confirmation, so it dates the message. The caller holds the session row lock, so two
+ * registrations for the session cannot both pass this check at once.
+ */
+async function confirmationQueuedRecently(
+  tx: Db,
+  target: { userId: string; sessionId: string; occurrenceId: string | null; exceptId: string },
+  now: Date,
+): Promise<boolean> {
+  const [recent] = await tx
+    .select({ id: registrations.id })
+    .from(registrations)
+    .where(
+      and(
+        eq(registrations.userId, target.userId),
+        eq(registrations.sessionId, target.sessionId),
+        target.occurrenceId === null
+          ? isNull(registrations.occurrenceId)
+          : eq(registrations.occurrenceId, target.occurrenceId),
+        ne(registrations.id, target.exceptId),
+        gte(registrations.createdAt, new Date(now.getTime() - CONFIRMATION_REPEAT_WINDOW_MS)),
+        exists(
+          tx
+            .select({ one: sql`1` })
+            .from(messageOutbox)
+            .where(
+              sql`${messageOutbox.idempotencyKey} = 'registration_confirmation:' || ${registrations.id}::text || ':whatsapp'`,
+            ),
+        ),
+      ),
+    )
+    .limit(1);
+  return recent !== undefined;
+}
 
 type RegistrationRow = typeof registrations.$inferSelect;
 
@@ -221,7 +266,15 @@ export async function createRegistration(
       );
     }
 
-    if (status === 'confirmed' && input.allowWhatsapp) {
+    const repeat =
+      status === 'confirmed' &&
+      input.allowWhatsapp &&
+      (await confirmationQueuedRecently(
+        tx,
+        { userId, sessionId: session.id, occurrenceId, exceptId: created.id },
+        now,
+      ));
+    if (status === 'confirmed' && input.allowWhatsapp && !repeat) {
       const facts = await sessionFacts(tx, session.id);
       if (facts) {
         const locale: Locale = user.locale;

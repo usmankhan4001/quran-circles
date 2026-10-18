@@ -325,7 +325,27 @@ describe('public sessions', () => {
     ).toBe(404);
   });
 
-  it('adds more occurrences as time passes, once, without recreating a cancelled one', async () => {
+  it('writes nothing on a public read while the stored schedule is ahead (SEC-24); the daily job adds the dates', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    expect(await occurrencesOf(session.id)).toHaveLength(13);
+    const stored = async () =>
+      (await h.db.select().from(schema.occurrences)).filter((o) => o.sessionId === session.id)
+        .length;
+
+    h.clock.advanceDays(30);
+    const read = await h.api('sessions.occurrences', {
+      params: { sessionId: session.id },
+      query: { limit: 100, from: '2026-10-01T00:00:00.000Z' },
+    });
+    expect(read.status).toBe(200);
+    expect(read.json<{ items: Occurrence[] }>().items).toHaveLength(13);
+    expect(await stored()).toBe(13);
+
+    await topUpAllOccurrences(h.db, h.clock.now(), 90);
+    expect(await stored()).toBeGreaterThan(13);
+  });
+
+  it('tops up a lapsed schedule once as a fallback, without recreating a cancelled one', async () => {
     const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
     const before = await occurrencesOf(session.id);
     expect(before).toHaveLength(13);
@@ -336,7 +356,8 @@ describe('public sessions', () => {
       body: { status: 'cancelled' },
     });
 
-    h.clock.advanceDays(30);
+    // The daily job has not run for 80 days: the last stored date is now under a week away.
+    h.clock.advanceDays(80);
     const topped = (
       await h.api('sessions.occurrences', {
         params: { sessionId: session.id },

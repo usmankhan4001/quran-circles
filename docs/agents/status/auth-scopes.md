@@ -1,7 +1,16 @@
 # Status: auth-scopes
 
-Updated: 2026-10-17
+Updated: 2026-10-18 (security review SEC-04, SEC-07, SEC-20)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; lane branch name to be set by the orchestrator)
+
+## Done (2026-10-18: security review SEC-04, SEC-07, SEC-20)
+
+- **SEC-04 (owner decision, from the orchestrator): Pakistani mobile numbers only.** The contract's `RequestCodeBody.phone` is now `PakistaniMobilePhone` (contracts commit de8d579). Second guard in the service: `assertSignInCountry` in `modules/auth/otp.ts` runs first in `requestCode` and refuses anything not matching the contract's `PAKISTAN_MOBILE_PATTERN` (`+923` and nine digits) with `validation_failed` `{path: 'phone', code: 'phone_not_pakistan_mobile'}` (the contract's own code), before any limiter is touched, any row written or any send. `readBody` in `modules/auth/routes.ts` now builds issues with the contract's `issuesFromZod`, so the schema refusal also carries `phone_not_pakistan_mobile` (not Zod's `custom`). Verify, the mobile apps and the SMS fallback are unchanged.
+- **Global cost backstop (SEC-04) and per-number daily cap (SEC-07)**, counted from `otp_challenges` in the database (index `(phone_e164, created_at)`; the purge keeps rows a day past expiry, so a 24-hour count is complete), so they survive restarts and hold across processes: new `AuthConfig.codeCaps` `{ perPhonePerDay: 10, globalPerHour: 1000, globalPerDay: 10000 }`. Checked in `requestCode` after the existing per-IP and per-number limiters and the resend wait. Over a cap: `rate_limited` with `retryAfterSeconds` until the oldest counted code leaves the window. Reaching a global cap logs `auth.code_global_cap_reached` at warn with `{window, limit}` only, as the alert hook for platform. A code whose delivery failed is deleted and not counted.
+- **Refresh throttle (SEC-07):** `POST /v1/auth/refresh` takes a hit on `refresh:ip:<hashed address>` before the body is read; new `rateLimits.refreshPerIp` default 600 per 10 minutes (generous because many people share one carrier NAT address; the access token lives 15 minutes). Over it: `rate_limited` with `Retry-After`; the refused call does not consume the refresh token.
+- **SEC-20, one client-address rule:** new `apps/api/src/auth/client-address.ts` (`rightmostForwarded`, `clientAddress(c, trustProxy)`): behind the trusted proxy, the rightmost `X-Forwarded-For` entry (the hop Caddy appends); otherwise the socket address. `defaultClientIp` (auth lane) and api-core's rate-limit key in `modules/shared/route.ts` both use it now (the binder used the leftmost entry before).
+- Tests: `sign-in.test.ts` +7 (country refusal through the route with the contract code for four numbers incl. a Pakistani landline, nothing counted or sent; the service guard called directly; per-number daily cap surviving a limiter reset and freeing after the window; default 10; global hourly cap with the warn entry and no number in logs; global daily cap; failed delivery not counted), `sessions.test.ts` +2 (refresh throttle per address with junk tokens counted, other address unaffected, window frees; generous default), new `auth/client-address.test.ts` (2: rightmost rule, sign-in and shared helper agree on forged headers with and without trust). `auth-wiring.test.ts` +2 (real server answers `phone_not_pakistan_mobile`; the shared binder reports contract codes).
+- `@qc/api` 694 passing in 33 files (with `--maxWorkers=3`; at full parallelism under the shared machine's load, one scope-matrix test hit its 30 s timeout and passes alone in 14 s). Typecheck, eslint and prettier clean on `apps/api`.
 
 ## Done (2026-10-17: contract 1.0.0-rc.4 follow-up, change request `auth-purge-to-db`)
 
@@ -76,12 +85,16 @@ interface CodeSender {
 ## Behaviour worth knowing
 
 - Reuse detection: the previous refresh token is accepted for 10 seconds after a rotation and answers with the same pair, so a lost response or two tabs refreshing together no longer sign the device out. After the window it is theft and revokes the session. A token two rotations old matches neither hash and is refused without revoking anything.
-- The in-memory rate limiter resets on restart and is per process. The resend wait with backoff, the attempt counters and expiry live in the database and hold across restarts.
+- The in-memory rate limiter (`auth/rate-limiter.ts`: per-IP and per-number code requests, verify attempts, refresh) resets on restart and is per process. The resend wait with backoff, attempt counters, expiry, the per-number daily cap and the global caps live in the database and hold across restarts and processes. A Postgres-backed limiter is **not** warranted while the API runs as one container (prod compose today): the costly paths (codes sent) are already capped in the database, and the remaining in-memory limits only slow guessing and flooding, which the database-backed per-challenge attempt limit (5) and daily cap (10 codes, so at most about 50 guesses a day per number) bound anyway. It becomes necessary before running a second API process, behind the existing `RateLimiter` interface.
+- Registry buckets (SEC-07): the contract's `rateLimit: 'auth_code'` on code and verify is not applied; the auth lane's own limits above replace it (they are stricter and keyed per number and per address). The contract text should say so (change request below).
 - New accounts get no name (null) and the language chosen on the code screen.
 - Account deletion (`me.delete`) and admin invite creation/revocation (`adminRoles.*`) are not in this lane's code; api-core has them under `modules/me` and `modules/roles`. They must use `requireAction` or the adapter, and write audit rows.
 - `apps/api/src/auth/no-direct-role-checks.test.ts` scans the API source outside the auth lane and fails if a handler compares roles or reads `principal.assignments`.
 
 ## Questions for the orchestrator
+
+- SEC-04 global caps: defaults are 1,000 codes an hour and 10,000 a day for the whole country. Confirm with the owner's Meta/SMS budget; when hit, everyone's sign-in waits, so platform should alert on `auth.code_global_cap_reached`. IPv6 /64 grouping for the IP key (also in SEC-04's fix list) is not done; the +92-mobile rule and the global caps now bound the cost.
+- `TRUST_PROXY` (api-core) and `AUTH_TRUST_PROXY` (auth) are still two variables, both `true` in prod compose. They now share one rule; merging them into one variable is a platform/index.ts follow-up.
 
 - Approve the decision record 0002 (hand-built on `jose`)?
 - The brief says to wait for approval of the record before implementing. I implemented in parallel on your instruction; if the record is rejected, the token and session code is isolated in `auth/tokens.ts`, `auth/crypto.ts` and `modules/auth/sessions.ts`.
@@ -89,5 +102,7 @@ interface CodeSender {
 - Who wires `authRoutes`, `authMiddleware` and the real `CodeSender` into `apps/api/src/index.ts` (api-core owns that file)?
 
 ## Contract change requests
+
+- New (2026-10-18), `auth-limits-doc`: document on `auth.requestCode`, `auth.verifyCode` and `auth.refresh` that the auth lane's limits replace the `auth_code` bucket (per number and per address, a per-number daily cap of 10 codes, global hourly and daily ceilings, refresh per address), all answering `rate_limited` with `retryAfterSeconds`.
 
 - Applied 2026-10-17: `auth-session-grace`, `users-display-name`, `otp-locale`, `auth-failure-reason`.

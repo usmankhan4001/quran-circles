@@ -1,6 +1,7 @@
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   gt,
@@ -128,10 +129,49 @@ const toInvite = (r: InviteRow, now: Date): Invite => ({
   replacesAssignmentId: r.replacesAssignmentId,
 });
 
+export interface InviteLimits {
+  /** Rows in one coordinator import. */
+  perImport: number;
+  /** Invitations one person may send in any 24 hours, every path together. */
+  perActorPerDay: number;
+}
+
 export interface InviteDeps {
   now: Date;
   ttlDays: number;
   webBase?: string | undefined;
+  limits: InviteLimits;
+}
+
+const INVITE_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * SEC-03: every invitation is a paid WhatsApp message to a number the inviter typed, so one person
+ * may send at most `perActorPerDay` in any 24 hours (single invites, resends and imports together).
+ * Counts the invites they created in the window (`createdAt` is the request time); refuses with
+ * `validation_failed`, issue `rows` / `invite_daily_limit` (`invite_daily_limit` on `phone` for a
+ * single invite), when `adding` more would pass the ceiling. Nothing is written by the check.
+ */
+export async function assertInviteAllowance(
+  db: Db,
+  actorId: string,
+  adding: number,
+  deps: Pick<InviteDeps, 'now' | 'limits'>,
+  path: 'rows' | 'phone',
+): Promise<void> {
+  if (adding <= 0) return;
+  const [row] = await db
+    .select({ n: count() })
+    .from(coordinatorInvites)
+    .where(
+      and(
+        eq(coordinatorInvites.invitedBy, actorId),
+        gt(coordinatorInvites.createdAt, new Date(deps.now.getTime() - INVITE_WINDOW_MS)),
+      ),
+    );
+  if ((row?.n ?? 0) + adding > deps.limits.perActorPerDay) {
+    fail('validation_failed', { issues: [{ path, code: 'invite_daily_limit' }] });
+  }
 }
 
 type Tx = Db;
@@ -303,6 +343,7 @@ export async function createInvite(
   try {
     const invite = await db.transaction(async (tx) => {
       await retireLapsedInvites(tx, body.phone, target, deps.now);
+      await assertInviteAllowance(tx, actorId, 1, deps, 'phone');
       const { user: existing, holds } = await roleHolder(tx, body.phone, target);
       if (holds) return fail('role_already_assigned');
       if (replacesId && !(await handoverAssignmentExists(tx, replacesId, target))) {

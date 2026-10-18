@@ -271,4 +271,30 @@ describe('rate limits', () => {
       await limited.close();
     }
   });
+
+  it('keys callers with no account by the address our proxy appended, so forged entries do not help (SEC-20)', async () => {
+    const limited = await createHarness({
+      config: {
+        trustProxy: true,
+        rateLimits: {
+          default: { limit: 2, windowSeconds: 60 },
+          auth_code: { limit: 5, windowSeconds: 60 },
+          registration: { limit: 20, windowSeconds: 60 },
+          messaging: { limit: 30, windowSeconds: 60 },
+        },
+      },
+    });
+    try {
+      const from = (forwarded: string) =>
+        limited.get('/v1/places/provinces', { headers: { 'x-forwarded-for': forwarded } });
+      expect((await from('198.51.100.9')).status).toBe(200);
+      // A different made-up first entry each time: still the same caller.
+      expect((await from('1.1.1.1, 198.51.100.9')).status).toBe(200);
+      expect((await from('2.2.2.2, 3.3.3.3, 198.51.100.9')).status).toBe(429);
+      // A different real address (the rightmost entry) has its own bucket.
+      expect((await from('198.51.100.9, 198.51.100.10')).status).toBe(200);
+    } finally {
+      await limited.close();
+    }
+  });
 });

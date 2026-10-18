@@ -2,6 +2,7 @@ import {
   and,
   arrayOverlaps,
   asc,
+  desc,
   eq,
   gte,
   ilike,
@@ -154,6 +155,36 @@ export function specOf(s: typeof sessions.$inferSelect): ScheduleSpec {
   };
 }
 
+/** How close the stored schedule may come to running out before a public read tops it up. */
+export const OCCURRENCE_LAPSE_DAYS = 7;
+
+/**
+ * SEC-24: a public read does not write. The worker tops every recurring session up to the horizon
+ * each day (`topUpAllOccurrences`), so the stored schedule normally runs about 90 days ahead and
+ * this only reads the latest occurrence. It tops up here only as a fallback, when the stored
+ * schedule has lapsed to within `OCCURRENCE_LAPSE_DAYS` of now (the daily job has not run for
+ * weeks); one top-up restores the horizon, so later reads go back to reading only. A session whose
+ * own end date is near plans nothing, so the fallback reads but writes nothing for it.
+ */
+async function topUpIfLapsed(
+  db: Db,
+  row: typeof sessions.$inferSelect,
+  now: Date,
+  horizonDays: number,
+): Promise<void> {
+  if (row.kind !== 'recurring') return;
+  const [latest] = await db
+    .select({ startsAt: occurrences.startsAt })
+    .from(occurrences)
+    .where(eq(occurrences.sessionId, row.id))
+    .orderBy(desc(occurrences.startsAt))
+    .limit(1);
+  const lapseDays = Math.min(OCCURRENCE_LAPSE_DAYS, horizonDays);
+  const lapsesAt = now.getTime() + lapseDays * 24 * 60 * 60 * 1000;
+  if (latest && latest.startsAt.getTime() >= lapsesAt) return;
+  await topUpOccurrences(db, row.id, specOf(row), now, horizonDays);
+}
+
 export async function getPublicOccurrences(
   db: Db,
   now: Date,
@@ -165,7 +196,7 @@ export async function getPublicOccurrences(
     .leftJoin(circles, eq(circles.id, sessions.circleId))
     .where(and(eq(sessions.id, sessionId), ...publicSessionConditions()));
   if (!row) return fail('not_found');
-  await topUpOccurrences(db, sessionId, specOf(row.s), now, horizonDays);
+  await topUpIfLapsed(db, row.s, now, horizonDays);
   const from = query.from ? new Date(query.from) : now;
   const rows = await db
     .select()

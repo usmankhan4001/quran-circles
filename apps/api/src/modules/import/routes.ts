@@ -1,5 +1,5 @@
 import type { Handlers, HandlerCtx } from '../shared/route';
-import { messagingDepsOf } from '../shared/context';
+import { inviteDepsOf, messagingDepsOf } from '../shared/context';
 import { importCoordinators, importSessions, importVenues, type ImportCaller } from './service';
 
 /** The caller as the import sees it: who they are, and the scope engine's per-row answer. */
@@ -31,11 +31,6 @@ export const importHandlers = (): Handlers => ({
       'role.assign_city_coordinator',
       'role.assign_venue_coordinator',
     );
-    return importCoordinators(
-      ctx.db,
-      { now: ctx.now, ttlDays: ctx.deps.config.inviteTtlDays, webBase: ctx.deps.config.webBase },
-      callerOf(ctx),
-      ctx.body,
-    );
+    return importCoordinators(ctx.db, inviteDepsOf(ctx.deps, ctx.now), callerOf(ctx), ctx.body);
   },
 });

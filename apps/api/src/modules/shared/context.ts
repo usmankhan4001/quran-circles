@@ -23,6 +23,14 @@ export interface ApiConfig {
   rateLimits: Record<RateLimitBucket, RateLimitRule>;
   /** Days a coordinator invite stays valid. */
   inviteTtlDays: number;
+  /**
+   * Ceilings on coordinator invitations, each a paid WhatsApp message (SEC-03): rows in one
+   * coordinator import, and invitations one person may send in any 24 hours (single invites,
+   * resends and imports together).
+   */
+  inviteLimits: { perImport: number; perActorPerDay: number };
+  /** Poster create and regenerate calls per staff member (SEC-13), on top of the endpoint bucket. */
+  posterRateLimit: RateLimitRule;
   /** Days a "circle near me" request stays active. */
   circleRequestTtlDays: number;
   /** How far ahead occurrences of a recurring session are created. */
@@ -48,6 +56,14 @@ export interface AppDeps {
    */
   posters?: PosterRuntime;
 }
+
+/** What the invite paths need from the request: the clock, expiry, links and the ceilings. */
+export const inviteDepsOf = (deps: AppDeps, now: Date) => ({
+  now,
+  ttlDays: deps.config.inviteTtlDays,
+  webBase: deps.config.webBase,
+  limits: deps.config.inviteLimits,
+});
 
 /** What the modules that post updates and queue messages need from the request. */
 export const messagingDepsOf = (deps: AppDeps, now: Date) => ({

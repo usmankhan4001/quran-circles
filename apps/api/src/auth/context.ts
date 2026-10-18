@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import { getConnInfo } from '@hono/node-server/conninfo';
+import { clientAddress } from './client-address';
 import type { AuthConfig } from './config';
 import type { CodeSender } from './code-sender';
 import { deriveKeys, type AuthKeys } from './crypto';
@@ -19,30 +19,15 @@ export interface AuthContext {
 }
 
 /**
- * The caller's address. Behind our reverse proxy (`trustProxy`) it is the last `X-Forwarded-For`
- * entry, which the proxy appended; earlier entries can be forged by the caller. Otherwise it is
- * the socket address. Used only for rate limits, and only as a hash.
+ * The caller's address, by the API's one rule (`client-address.ts`): behind our reverse proxy
+ * (`trustProxy`) the rightmost `X-Forwarded-For` entry, which the proxy appended; earlier entries
+ * can be forged by the caller. Otherwise the socket address. Used only for rate limits, and only
+ * as a hash.
  */
 export const defaultClientIp =
   (trustProxy: boolean) =>
-  (c: Context): string | null => {
-    if (trustProxy) {
-      const forwarded = c.req.header('x-forwarded-for');
-      if (forwarded) {
-        const last = forwarded
-          .split(',')
-          .map((part) => part.trim())
-          .filter(Boolean)
-          .pop();
-        if (last) return last;
-      }
-    }
-    try {
-      return getConnInfo(c).remote.address ?? null;
-    } catch {
-      return null;
-    }
-  };
+  (c: Context): string | null =>
+    clientAddress(c, trustProxy);
 
 const cache = new WeakMap<AuthDeps, AuthContext>();
 

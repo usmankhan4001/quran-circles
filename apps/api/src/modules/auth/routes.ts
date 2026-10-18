@@ -8,9 +8,11 @@ import {
   Tokens,
   VerifyCodeBody,
   endpoints,
+  issuesFromZod,
 } from '@qc/contracts';
 import { getAuthContext, type AuthContext } from '../../auth/context';
-import { AuthHttpError, errorResponse } from '../../auth/errors';
+import { hashIdentifier } from '../../auth/crypto';
+import { AuthHttpError, errorResponse, rateLimited } from '../../auth/errors';
 import { authMiddleware, requireAction, sessionIdOf } from '../../auth/middleware';
 import { describeError, type AuthDeps, type AuthVariables } from '../../auth/types';
 import { randomUUID } from 'node:crypto';
@@ -36,11 +38,8 @@ async function readBody<S extends z.ZodType>(c: Context<AuthEnv>, schema: S): Pr
   }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
-    throw new AuthHttpError(
-      'validation_failed',
-      undefined,
-      parsed.error.issues.map((issue) => ({ path: issue.path.join('.'), code: issue.code })),
-    );
+    // The contract's own issue codes, for example `phone_not_pakistan_mobile` (SEC-04).
+    throw new AuthHttpError('validation_failed', undefined, issuesFromZod(parsed.error));
   }
   return parsed.data;
 }
@@ -92,6 +91,14 @@ export function authRoutes(deps: AuthDeps): Hono<AuthEnv> {
   });
 
   app.post(endpoints['auth.refresh'].path, async (c) => {
+    // SEC-07: each refresh costs a database read, so it is throttled per address before parsing.
+    const ipHash = hashIdentifier(ctx.keys, 'ip', ctx.clientIp(c) ?? 'unknown');
+    const limit = await ctx.rateLimiter.hit(
+      `refresh:ip:${ipHash}`,
+      ctx.config.rateLimits.refreshPerIp,
+      ctx.now(),
+    );
+    if (!limit.allowed) throw rateLimited(limit.retryAfterSeconds);
     const body = await readBody(c, RefreshBody);
     const result = await refreshTokens(ctx, body);
     return c.json(checked(Tokens, result), endpoints['auth.refresh'].success.status);

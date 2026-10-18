@@ -367,3 +367,61 @@ describe('auth.signOut', () => {
     ).toBe('unauthenticated');
   });
 });
+
+describe('auth.refresh throttle (SEC-07)', () => {
+  it('limits refresh calls per address, before reading the token, and frees them as the window passes', async () => {
+    const tight = await createHarness({
+      config: { rateLimits: { refreshPerIp: { limit: 3, windowSeconds: 600 } } },
+    });
+    try {
+      await tight.reset();
+      const signed = await tight.signIn(PHONE_A);
+      let token = signed.body.refreshToken;
+      for (let n = 0; n < 2; n++) {
+        const ok = await tight.post(
+          '/v1/auth/refresh',
+          { refreshToken: token },
+          { ip: '198.51.100.1' },
+        );
+        expect(ok.status).toBe(200);
+        token = Tokens.parse(await ok.json()).refreshToken;
+      }
+      // Junk tokens count too: the limit is what stops a flood of database reads.
+      const junk = await tight.post(
+        '/v1/auth/refresh',
+        { refreshToken: 'x' },
+        { ip: '198.51.100.1' },
+      );
+      expect(junk.status).toBe(400);
+      const blocked = await tight.post(
+        '/v1/auth/refresh',
+        { refreshToken: token },
+        { ip: '198.51.100.1' },
+      );
+      const error = ApiError.parse(await blocked.json()).error;
+      expect(blocked.status).toBe(429);
+      expect(error.code).toBe('rate_limited');
+      expect(error.retryAfterSeconds).toBeGreaterThan(0);
+      expect(blocked.headers.get('retry-after')).toBe(String(error.retryAfterSeconds));
+      // Another address is not affected, and the token was not used up by the refused call.
+      const elsewhere = await tight.post(
+        '/v1/auth/refresh',
+        { refreshToken: token },
+        { ip: '198.51.100.2' },
+      );
+      expect(elsewhere.status).toBe(200);
+      token = Tokens.parse(await elsewhere.json()).refreshToken;
+      tight.clock.advance(600);
+      expect(
+        (await tight.post('/v1/auth/refresh', { refreshToken: token }, { ip: '198.51.100.1' }))
+          .status,
+      ).toBe(200);
+    } finally {
+      await tight.close();
+    }
+  });
+
+  it('has a default generous enough for many people behind one carrier address', () => {
+    expect(h.config.rateLimits.refreshPerIp.limit).toBeGreaterThanOrEqual(300);
+  });
+});

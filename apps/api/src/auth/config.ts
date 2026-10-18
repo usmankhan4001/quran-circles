@@ -31,15 +31,32 @@ export interface AuthConfig {
     requestPerIp: RateRule;
     verifyPerPhone: RateRule;
     verifyPerIp: RateRule;
+    /** Refresh calls per address (SEC-07). Generous: many people can share one carrier address. */
+    refreshPerIp: RateRule;
+  };
+  /**
+   * Ceilings on codes sent, counted from `otp_challenges` in the database, so they survive restarts
+   * and hold across processes (SEC-04, SEC-07). The global ones are a cost backstop against SMS
+   * pumping; reaching one logs `auth.code_global_cap_reached` (no personal data) for alerting.
+   */
+  codeCaps: {
+    /** Codes per number in any 24 hours. */
+    perPhonePerDay: number;
+    /** Codes for all numbers together in any hour, and in any 24 hours. */
+    globalPerHour: number;
+    globalPerDay: number;
   };
   /** Trust the last `X-Forwarded-For` entry (set by our reverse proxy) as the caller's address. */
   trustProxy: boolean;
 }
 
-export type AuthConfigInput = Partial<Omit<AuthConfig, 'otp' | 'rateLimits' | 'secret'>> & {
+export type AuthConfigInput = Partial<
+  Omit<AuthConfig, 'otp' | 'rateLimits' | 'codeCaps' | 'secret'>
+> & {
   secret: string;
   otp?: Partial<AuthConfig['otp']>;
   rateLimits?: Partial<AuthConfig['rateLimits']>;
+  codeCaps?: Partial<AuthConfig['codeCaps']>;
 };
 
 export class AuthConfigError extends Error {
@@ -73,7 +90,14 @@ export function createAuthConfig(input: AuthConfigInput): AuthConfig {
       requestPerIp: { limit: 30, windowSeconds: 60 * 60 },
       verifyPerPhone: { limit: 10, windowSeconds: 15 * 60 },
       verifyPerIp: { limit: 40, windowSeconds: 15 * 60 },
+      refreshPerIp: { limit: 600, windowSeconds: 10 * 60 },
       ...input.rateLimits,
+    },
+    codeCaps: {
+      perPhonePerDay: 10,
+      globalPerHour: 1_000,
+      globalPerDay: 10_000,
+      ...input.codeCaps,
     },
     trustProxy: input.trustProxy ?? false,
   };
@@ -98,6 +122,9 @@ export function createAuthConfig(input: AuthConfigInput): AuthConfig {
     positive(`rateLimits.${name}.limit`, rule.limit);
     positive(`rateLimits.${name}.windowSeconds`, rule.windowSeconds);
   }
+  positive('codeCaps.perPhonePerDay', config.codeCaps.perPhonePerDay);
+  positive('codeCaps.globalPerHour', config.codeCaps.globalPerHour);
+  positive('codeCaps.globalPerDay', config.codeCaps.globalPerDay);
   if (config.otp.fixedCode !== null) {
     if (config.appEnv === 'production') {
       throw new AuthConfigError('A fixed sign-in code is not allowed when appEnv is production');

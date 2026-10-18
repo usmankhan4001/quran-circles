@@ -2,7 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import { eq } from 'drizzle-orm';
 import { ApiError, RequestCodeResponse, SignInResponse } from '@qc/contracts';
 import { schema } from '@qc/db';
+import { getAuthContext } from '../../auth/context';
 import { PHONE_A, PHONE_B, TEST_IP, createHarness, type Harness } from '../../auth/testing/harness';
+import { requestCode } from './otp';
 
 vi.setConfig({ testTimeout: 30_000, hookTimeout: 60_000 });
 
@@ -459,5 +461,119 @@ describe('auth.verifyCode', () => {
     const [row] = await challengeRows();
     expect(row?.consumedAt).toBeNull();
     expect((await verify(challengeId, code)).status).toBe(200);
+  });
+});
+
+describe('auth.requestCode country rule (SEC-04)', () => {
+  it('refuses numbers that are not Pakistani mobiles with the contract code, before anything is counted or sent', async () => {
+    // Abroad, an international premium range, North America, and a Pakistani landline.
+    for (const phone of ['+447700900123', '+8823123456789', '+12025550123', '+924235761234']) {
+      const response = await h.requestCode(phone);
+      const error = await errorOf(response);
+      expect(error.status).toBe(400);
+      expect(error.code).toBe('validation_failed');
+      expect(error.issues).toEqual([{ path: 'phone', code: 'phone_not_pakistan_mobile' }]);
+      expect(JSON.stringify(error)).not.toContain(phone.slice(1));
+    }
+    expect(h.sender.sent).toHaveLength(0);
+    expect(await challengeRows()).toHaveLength(0);
+    // Nothing was counted against the address either.
+    expect((await h.requestCode(PHONE_A)).status).toBe(202);
+  });
+
+  it('applies the guard in the service itself, whatever the schema lets through', async () => {
+    for (const phone of ['+447700900123', '+924235761234']) {
+      await expect(
+        requestCode(getAuthContext(h.deps), { phone, locale: 'en', channel: 'sms' }, null),
+      ).rejects.toMatchObject({
+        code: 'validation_failed',
+        issues: [{ path: 'phone', code: 'phone_not_pakistan_mobile' }],
+      });
+    }
+    expect(h.sender.sent).toHaveLength(0);
+    expect(await challengeRows()).toHaveLength(0);
+  });
+});
+
+describe('auth.requestCode ceilings in the database (SEC-04, SEC-07)', () => {
+  /** Waits out the per-number cooldown and hourly window between codes. */
+  const nextCode = async (target: Harness, phone: string, ip?: string) => {
+    target.clock.advance(3601);
+    return target.requestCode(phone, ip ? { ip } : {});
+  };
+
+  it('caps codes per number in any 24 hours, survives a restart, and frees a slot a day later', async () => {
+    const capped = await createHarness({ config: { codeCaps: { perPhonePerDay: 3 } } });
+    try {
+      await capped.reset();
+      for (let n = 0; n < 3; n++) expect((await nextCode(capped, PHONE_A)).status).toBe(202);
+      capped.limiter.clear(); // a restart forgets the in-memory limits, not this one
+      const blocked = await errorOf(await nextCode(capped, PHONE_A));
+      expect(blocked.code).toBe('rate_limited');
+      expect(blocked.retryAfterSeconds).toBeGreaterThan(3600);
+      expect(blocked.retryAfterSeconds).toBeLessThanOrEqual(24 * 3600);
+      expect(capped.sender.sent).toHaveLength(3);
+      // Another number is not affected.
+      expect((await capped.requestCode(PHONE_B)).status).toBe(202);
+      capped.clock.advance(blocked.retryAfterSeconds ?? 0);
+      expect((await capped.requestCode(PHONE_A)).status).toBe(202);
+    } finally {
+      await capped.close();
+    }
+  });
+
+  it('defaults to ten codes a day per number', () => {
+    expect(h.config.codeCaps.perPhonePerDay).toBe(10);
+  });
+
+  it('stops all sends at the global hourly ceiling and logs an alert without personal data', async () => {
+    const capped = await createHarness({ config: { codeCaps: { globalPerHour: 3 } } });
+    try {
+      await capped.reset();
+      const phones = ['+923000000201', '+923000000202', '+923000000203', '+923000000204'];
+      for (const [n, phone] of phones.slice(0, 3).entries()) {
+        expect((await capped.requestCode(phone, { ip: `198.51.100.${n + 1}` })).status).toBe(202);
+      }
+      const blocked = await errorOf(await capped.requestCode(phones[3]!, { ip: '198.51.100.9' }));
+      expect(blocked.code).toBe('rate_limited');
+      expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
+      expect(blocked.retryAfterSeconds).toBeLessThanOrEqual(3600);
+      expect(capped.sender.sent).toHaveLength(3);
+      const alert = capped.logger.entries.find((e) => e.event === 'auth.code_global_cap_reached');
+      expect(alert).toMatchObject({ level: 'warn', fields: { window: 'hour', limit: 3 } });
+      expect(JSON.stringify(capped.logger.entries)).not.toContain(phones[3]!.slice(1));
+      capped.clock.advance(3601);
+      expect((await capped.requestCode(phones[3]!, { ip: '198.51.100.9' })).status).toBe(202);
+    } finally {
+      await capped.close();
+    }
+  });
+
+  it('stops all sends at the global daily ceiling', async () => {
+    const capped = await createHarness({ config: { codeCaps: { globalPerDay: 2 } } });
+    try {
+      await capped.reset();
+      expect((await capped.requestCode('+923000000301')).status).toBe(202);
+      expect((await nextCode(capped, '+923000000302')).status).toBe(202);
+      const blocked = await errorOf(await nextCode(capped, '+923000000303'));
+      expect(blocked.code).toBe('rate_limited');
+      expect(capped.logger.entries.some((e) => e.fields.window === 'day')).toBe(true);
+      expect(capped.sender.sent).toHaveLength(2);
+    } finally {
+      await capped.close();
+    }
+  });
+
+  it('does not count a code that could not be delivered', async () => {
+    const capped = await createHarness({ config: { codeCaps: { perPhonePerDay: 1 } } });
+    try {
+      await capped.reset();
+      capped.sender.failWith = new Error('provider down');
+      expect((await capped.requestCode(PHONE_A)).status).toBe(503);
+      capped.sender.failWith = null;
+      expect((await nextCode(capped, PHONE_A)).status).toBe(202);
+    } finally {
+      await capped.close();
+    }
   });
 });

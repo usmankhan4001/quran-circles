@@ -10,6 +10,7 @@ import {
   type ScopeAction,
   type ScopeFilter,
   can,
+  issuesFromZod,
 } from '@qc/contracts';
 import {
   authorize,
@@ -17,6 +18,7 @@ import {
   hasQualifyingRole,
   resourceMissing,
 } from '../../middleware/auth-adapter';
+import { clientAddress } from '../../auth/client-address';
 import { errorResponse } from '../../middleware/error-handler';
 import type { AppDeps, AppEnv } from './context';
 import type { Db } from '../../db';
@@ -128,27 +130,22 @@ function queryObject(def: EndpointDef, url: URL): Record<string, unknown> {
   return out;
 }
 
-function parseWith(schema: z.ZodType, input: unknown): unknown {
+/** Validates input with a contract schema, or fails `validation_failed`. Exported for tests. */
+export function parseWith(schema: z.ZodType, input: unknown): unknown {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  return fail('validation_failed', {
-    issues: result.error.issues.slice(0, 20).map((i) => ({ path: i.path.join('.'), code: i.code })),
-  });
+  // The contract's own issue codes (for example `phone_not_pakistan_mobile`), not Zod's `custom`.
+  return fail('validation_failed', { issues: issuesFromZod(result.error) });
 }
 
-function clientAddress(c: Context<AppEnv>, deps: AppDeps): string {
-  if (deps.config.trustProxy) {
-    const forwarded = c.req.header('x-forwarded-for')?.split(',')[0]?.trim();
-    if (forwarded) return forwarded;
-  }
-  const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)
-    ?.incoming;
-  return incoming?.socket?.remoteAddress ?? 'unknown';
+/** The caller's address for the rate-limit key: the API's one rule, shared with sign-in (SEC-20). */
+function callerAddress(c: Context<AppEnv>, deps: AppDeps): string {
+  return clientAddress(c, deps.config.trustProxy) ?? 'unknown';
 }
 
 async function enforceRateLimit(c: Context<AppEnv>, deps: AppDeps, def: EndpointDef) {
   const rule = deps.config.rateLimits[def.rateLimit];
-  const who = c.get('principal')?.userId ?? `ip:${clientAddress(c, deps)}`;
+  const who = c.get('principal')?.userId ?? `ip:${callerAddress(c, deps)}`;
   const result = await deps.rateLimiter.consume(
     `${def.rateLimit}:${who}`,
     rule,

@@ -726,3 +726,56 @@ describe('poster render queue', () => {
     }
   });
 });
+
+describe('poster throttle (SEC-13)', () => {
+  it('gives each staff member ten makes or remakes a minute, for every staff role', async () => {
+    const staff = [
+      admin,
+      await h.cityCoordinator(h.world.cityA.id),
+      await h.venueCoordinator(h.world.venueA1),
+    ];
+    for (const who of staff) {
+      for (let n = 0; n < 10; n++) {
+        expect((await make(who, { formats: ['story'] })).status).toBe(202);
+      }
+      const over = await make(who, { formats: ['story'] });
+      expect(over.status).toBe(429);
+      expect(code(over)).toBe('rate_limited');
+      expect(over.json<ApiError>().error.retryAfterSeconds).toBeGreaterThan(0);
+      expect(over.headers.get('retry-after')).not.toBeNull();
+    }
+    const rows = await posterRows();
+    // Ten each, and the refused calls wrote nothing.
+    expect(rows).toHaveLength(30);
+    h.clock.advanceMinutes(1);
+    expect((await make(admin, { formats: ['story'] })).status).toBe(202);
+  });
+
+  it('counts regenerate against the same allowance', async () => {
+    const [p] = await madePosters({ formats: ['story'] });
+    await finishPoster(h, p!.id);
+    for (let n = 0; n < 9; n++)
+      expect((await make(admin, { formats: ['story'] })).status).toBe(202);
+    const remake = await h.api('adminPosters.regenerate', {
+      as: admin,
+      params: { posterId: p!.id },
+    });
+    expect(remake.status).toBe(429);
+    expect(code(remake)).toBe('rate_limited');
+    h.clock.advanceMinutes(1);
+    const later = await h.api('adminPosters.regenerate', {
+      as: admin,
+      params: { posterId: p!.id },
+    });
+    expect(later.status).toBe(202);
+  });
+
+  it('refuses people without a staff role, and still throttles their attempts', async () => {
+    const person = await h.person();
+    for (let n = 0; n < 10; n++)
+      expect((await make(person, { formats: ['story'] })).status).toBe(403);
+    expect((await make(person, { formats: ['story'] })).status).toBe(429);
+    expect((await make(null, { formats: ['story'] })).status).toBe(401);
+    expect(await posterRows()).toHaveLength(0);
+  });
+});

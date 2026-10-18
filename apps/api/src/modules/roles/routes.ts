@@ -1,4 +1,5 @@
 import { roleAssignAction } from '@qc/contracts';
+import { inviteDepsOf } from '../shared/context';
 import type { Handlers } from '../shared/route';
 import {
   assignRole,
@@ -19,13 +20,7 @@ export const roleHandlers = (): Handlers => ({
     const target = await resolveRoleTarget(ctx.db, ctx.body);
     if (!target) return ctx.unknownRef(action);
     ctx.authorize(action, target.resource);
-    return createInvite(
-      ctx.db,
-      { now: ctx.now, ttlDays: ctx.deps.config.inviteTtlDays, webBase: ctx.deps.config.webBase },
-      ctx.uid(),
-      target,
-      ctx.body,
-    );
+    return createInvite(ctx.db, inviteDepsOf(ctx.deps, ctx.now), ctx.uid(), target, ctx.body);
   },
 
   'adminRoles.invites': (ctx) => listInvites(ctx.db, ctx.now, ctx.scope('role.list')),

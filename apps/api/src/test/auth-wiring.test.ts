@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { ApiClientError, createApiClient, type ApiClient } from '@qc/contracts';
+import { ApiClientError, RequestCodeBody, createApiClient, type ApiClient } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { createApp } from '../app';
 import { FakeCodeSender, authRoutes, createAuthConfig, silentLogger } from '../auth';
 import { authLane } from '../middleware/auth-lane';
 import { silentLogger as quietLogger } from '../middleware/logger';
 import { MemoryRateLimiter } from '../middleware/rate-limit';
+import { ApiException } from '../modules/shared/errors';
+import { parseWith } from '../modules/shared/route';
 import { createHarness, type Harness } from './harness';
 
 /**
@@ -189,5 +191,39 @@ describe('signing in and using the API', () => {
       body: { name: { en: 'Renamed by coordinator' } },
     });
     expect(allowed.name.en).toBe('Renamed by coordinator');
+  });
+});
+
+describe('contract issue codes (SEC-04)', () => {
+  it('answers a non-Pakistani-mobile number with phone_not_pakistan_mobile through the real server, sending nothing', async () => {
+    for (const phone of ['+447700900123', '+924235761234']) {
+      const res = await app.request('/v1/auth/code', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as {
+        error: { code: string; issues: { path: string; code: string }[] };
+      };
+      expect(body.error.code).toBe('validation_failed');
+      expect(body.error.issues).toEqual([{ path: 'phone', code: 'phone_not_pakistan_mobile' }]);
+    }
+    expect(sender.sent).toHaveLength(0);
+  });
+
+  it('reports refinement codes from the contract in the shared route binder too, never `custom`', async () => {
+    let thrown: unknown;
+    try {
+      parseWith(RequestCodeBody, { phone: '+447700900123' });
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ApiException);
+    expect((thrown as ApiException).extra.issues).toEqual([
+      { path: 'phone', code: 'phone_not_pakistan_mobile' },
+    ]);
+    // Zod's own codes are unchanged.
+    expect(() => parseWith(RequestCodeBody, { phone: 12 })).toThrow(ApiException);
   });
 });

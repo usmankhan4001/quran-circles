@@ -432,3 +432,130 @@ describe('issue codes and races (contract rc.3)', () => {
     expect(await importAudits()).toHaveLength(0);
   });
 });
+
+describe('invitation ceilings (SEC-03)', () => {
+  type ErrorBody = { error: { code: string; issues?: { path: string; code: string }[] } };
+  const issuesOf = (res: { json<T>(): T }) => res.json<ErrorBody>().error.issues ?? [];
+
+  it('refuses a coordinator file over the per-import ceiling as a whole, dry run or not', async () => {
+    const rows = Array.from({ length: 101 }, () => coordinatorRow());
+    for (const dryRun of [true, false]) {
+      const res = await run('coordinators', admin, rows, dryRun);
+      expect(res.status).toBe(400);
+      expect(res.json<ErrorBody>().error.code).toBe('validation_failed');
+      expect(issuesOf(res)).toEqual([{ path: 'rows', code: 'too_big' }]);
+    }
+    expect(await h.db.select().from(schema.coordinatorInvites)).toHaveLength(0);
+    expect(await outboxRows(h)).toHaveLength(0);
+    // Venue and session files keep the contract's own maximum.
+    expect(
+      (
+        await run(
+          'venues',
+          admin,
+          Array.from({ length: 101 }, () => venueRow()),
+          true,
+        )
+      ).status,
+    ).toBe(200);
+  });
+
+  it('caps the invitations one person sends in a day, across imports and single invites', async () => {
+    const tight = await createHarness({
+      config: { inviteLimits: { perImport: 3, perActorPerDay: 5 } },
+    });
+    try {
+      await tight.reset();
+      const boss = await tight.nationalAdmin();
+      const row = () => ({
+        role: 'venue_coordinator',
+        venueId: tight.world.venueA1,
+        phone: newPhone(),
+      });
+      const imp = (as: Actor, rows: unknown[], dryRun = false) =>
+        tight.api('adminImport.coordinators', { as, body: { dryRun, rows } });
+      const invite = (as: Actor) => tight.api('adminRoles.invite', { as, body: row() });
+      const invites = async () => tight.db.select().from(schema.coordinatorInvites);
+      const messages = async () =>
+        (await tight.db.select().from(schema.messageOutbox)).filter(
+          (o) => o.templateKey === 'coordinator_invite',
+        );
+
+      expect((await imp(boss, [row(), row(), row(), row()], true)).status).toBe(400);
+      expect(result(await imp(boss, [row(), row(), row()])).counts.created).toBe(3);
+
+      // Three more would make six: refused whole, dry run included, nothing written or queued.
+      for (const dryRun of [true, false]) {
+        const over = await imp(boss, [row(), row(), row()], dryRun);
+        expect(over.status).toBe(400);
+        expect(issuesOf(over)).toEqual([{ path: 'rows', code: 'invite_daily_limit' }]);
+      }
+      expect(await invites()).toHaveLength(3);
+      expect(await messages()).toHaveLength(3);
+
+      // Rows that are duplicates send nothing, so they do not count.
+      const firstPhone = (await invites())[0]!.phoneE164;
+      const dup = { role: 'venue_coordinator', venueId: tight.world.venueA1, phone: firstPhone };
+      expect(result(await imp(boss, [dup, row()])).counts).toMatchObject({
+        created: 1,
+        duplicate: 1,
+      });
+      expect((await invite(boss)).status).toBe(201);
+
+      // Five sent: the next single invite is refused, naming the field and not the number.
+      const sixth = await invite(boss);
+      expect(sixth.status).toBe(400);
+      expect(issuesOf(sixth)).toEqual([{ path: 'phone', code: 'invite_daily_limit' }]);
+      expect(await messages()).toHaveLength(5);
+      expect(tight.logs.join('\n')).not.toContain(firstPhone);
+
+      // Another person's allowance is their own; the window passing frees the first one.
+      const other = await tight.nationalAdmin();
+      expect((await invite(other)).status).toBe(201);
+      tight.clock.advanceDays(1);
+      expect((await invite(boss)).status).toBe(201);
+    } finally {
+      await tight.close();
+    }
+  });
+
+  it('holds every role to the ceiling in its own scope, and refuses the rest as before', async () => {
+    const tight = await createHarness({
+      config: { inviteLimits: { perImport: 2, perActorPerDay: 2 } },
+    });
+    try {
+      await tight.reset();
+      const row = (venueId = tight.world.venueA1) => ({
+        role: 'venue_coordinator',
+        venueId,
+        phone: newPhone(),
+      });
+      const imp = (as: Actor | null, rows: unknown[], dryRun = false) =>
+        tight.api('adminImport.coordinators', {
+          ...(as ? { as } : {}),
+          body: { dryRun, rows },
+        });
+      for (const who of [
+        await tight.nationalAdmin(),
+        await tight.cityCoordinator(tight.world.cityA.id),
+      ]) {
+        expect((await imp(who, [row(), row(), row()], true)).status).toBe(400);
+        expect(result(await imp(who, [row(), row()])).counts.created).toBe(2);
+        const over = await imp(who, [row()]);
+        expect(issuesOf(over)).toEqual([{ path: 'rows', code: 'invite_daily_limit' }]);
+      }
+      // An out-of-scope row is still invalid row by row, and is not counted as an invite.
+      const fresh = await tight.cityCoordinator(tight.world.cityA.id);
+      const mixed = result(await imp(fresh, [row(), row(tight.world.venueB1)], true));
+      expect(statuses(mixed)).toEqual(['created', 'invalid']);
+      // No qualifying role, or no account: refused before any ceiling.
+      expect((await imp(await tight.venueCoordinator(tight.world.venueA1), [row()])).status).toBe(
+        403,
+      );
+      expect((await imp(await tight.person(), [row()])).status).toBe(403);
+      expect((await imp(null, [row()])).status).toBe(401);
+    } finally {
+      await tight.close();
+    }
+  });
+});

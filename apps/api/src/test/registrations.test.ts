@@ -552,3 +552,103 @@ describe('the CSV export', () => {
     expect(JSON.stringify(rows[0])).not.toContain(person.phone);
   });
 });
+
+describe('repeat confirmations (SEC-03)', () => {
+  const confirmations = async (userId?: string) =>
+    (await outboxRows(h)).filter(
+      (r) =>
+        r.templateKey === 'registration_confirmation' &&
+        (userId === undefined || r.recipientUserId === userId),
+    );
+  const occurrencesOf = async (sessionId: string) =>
+    (
+      await h.api('adminSessions.occurrences', {
+        as: admin,
+        params: { sessionId },
+        query: { limit: 100 },
+      })
+    ).json<{ items: AdminOccurrence[] }>().items;
+
+  it('queues one paid confirmation however often a person cancels and registers again within a day', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const person = await h.person();
+    for (let round = 0; round < 5; round++) {
+      const res = await register(h, person, session.id, { areaId: h.world.cityA.areaId });
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('confirmed');
+      await cancel(person, res.body.id);
+      h.clock.advanceMinutes(30);
+    }
+    expect(await confirmations(person.userId)).toHaveLength(1);
+    expect(h.logs.join('\n')).not.toContain(person.phone);
+  });
+
+  it('confirms again once the day has passed', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const person = await h.person();
+    const first = await register(h, person, session.id, { areaId: h.world.cityA.areaId });
+    await cancel(person, first.body.id);
+    h.clock.advanceMinutes(23 * 60);
+    const second = await register(h, person, session.id, { areaId: h.world.cityA.areaId });
+    expect(second.status).toBe(201);
+    expect(await confirmations(person.userId)).toHaveLength(1);
+    await cancel(person, second.body.id);
+    h.clock.advanceMinutes(61);
+    const third = await register(h, person, session.id, { areaId: h.world.cityA.areaId });
+    expect(third.status).toBe(201);
+    const rows = await confirmations(person.userId);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.idempotencyKey)).toContain(
+      `registration_confirmation:${third.body.id}:whatsapp`,
+    );
+  });
+
+  it('confirms a different occurrence, and keeps people and sessions apart', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const other = await createSession(h, { venueId: h.world.venueA1, as: admin, title: 'Other' });
+    const [occ1, occ2] = await occurrencesOf(session.id);
+    const person = await h.person();
+    const neighbour = await h.person();
+
+    const a = await register(h, person, session.id, {
+      areaId: h.world.cityA.areaId,
+      occurrenceId: occ1!.id,
+    });
+    await cancel(person, a.body.id);
+    // The same occurrence again: suppressed.
+    const b = await register(h, person, session.id, {
+      areaId: h.world.cityA.areaId,
+      occurrenceId: occ1!.id,
+    });
+    expect(b.status).toBe(201);
+    expect(await confirmations(person.userId)).toHaveLength(1);
+    await cancel(person, b.body.id);
+    // Another occurrence of the session: a new confirmation with the right date.
+    await register(h, person, session.id, {
+      areaId: h.world.cityA.areaId,
+      occurrenceId: occ2!.id,
+    });
+    expect(await confirmations(person.userId)).toHaveLength(2);
+    // Another session, and another person on the first session, are not affected.
+    await register(h, person, other.id, { areaId: h.world.cityA.areaId });
+    await register(h, neighbour, session.id, {
+      areaId: h.world.cityA.areaId,
+      occurrenceId: occ1!.id,
+    });
+    expect(await confirmations(person.userId)).toHaveLength(3);
+    expect(await confirmations(neighbour.userId)).toHaveLength(1);
+  });
+
+  it('still confirms when the earlier registration sent nothing (WhatsApp was off)', async () => {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const person = await h.person();
+    const quiet = await register(h, person, session.id, {
+      areaId: h.world.cityA.areaId,
+      allowWhatsapp: false,
+    });
+    expect(await confirmations(person.userId)).toHaveLength(0);
+    await cancel(person, quiet.body.id);
+    await register(h, person, session.id, { areaId: h.world.cityA.areaId, allowWhatsapp: true });
+    expect(await confirmations(person.userId)).toHaveLength(1);
+  });
+});

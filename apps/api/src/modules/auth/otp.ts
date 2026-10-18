@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, gt, isNull, lt, sql } from 'drizzle-orm';
-import type { PhoneE164 } from '@qc/contracts';
+import { and, count, desc, eq, gt, isNull, lt, min, sql } from 'drizzle-orm';
+import { PAKISTAN_MOBILE_PATTERN, PHONE_NOT_PAKISTAN_MOBILE, type PhoneE164 } from '@qc/contracts';
 import { schema } from '@qc/db';
 import type { RateRule } from '../../auth/config';
 import type { AuthContext } from '../../auth/context';
@@ -14,6 +14,7 @@ const { otpChallenges } = schema;
 export type OtpChallengeRow = typeof otpChallenges.$inferSelect;
 
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 /** How long to wait after the `count`th code in the last hour: 60 s, 120 s, 240 s, ... capped. */
 export function cooldownSeconds(ctx: AuthContext, count: number): number {
@@ -56,6 +57,66 @@ async function enforce(
   if (!result.allowed) throw onDeny(result.retryAfterSeconds);
 }
 
+/** Codes made since `since` (for one number, or for everyone), and the oldest of them. */
+async function issuedSince(
+  ctx: AuthContext,
+  since: Date,
+  phone?: string,
+): Promise<{ n: number; oldest: Date | null }> {
+  const [row] = await ctx.db
+    .select({ n: count(), oldest: min(otpChallenges.createdAt) })
+    .from(otpChallenges)
+    .where(
+      and(
+        gt(otpChallenges.createdAt, since),
+        phone === undefined ? undefined : eq(otpChallenges.phoneE164, phone),
+      ),
+    );
+  return { n: row?.n ?? 0, oldest: row?.oldest ?? null };
+}
+
+/** Seconds until the oldest counted code leaves its window and one slot frees up. */
+const secondsUntilFree = (oldest: Date | null, windowMs: number, now: Date): number =>
+  oldest ? Math.max(1, Math.ceil((oldest.getTime() + windowMs - now.getTime()) / 1000)) : 60;
+
+/**
+ * The ceilings kept in the database (SEC-04, SEC-07): codes per number in any 24 hours, and codes
+ * for everyone together per hour and per 24 hours, a cost backstop against SMS pumping. They count
+ * `otp_challenges` rows, which the purge keeps for a day past their expiry, so they hold across
+ * restarts and processes. A delivery that failed deletes its row and is not counted.
+ */
+async function enforceCodeCaps(ctx: AuthContext, phone: string, now: Date): Promise<void> {
+  const caps = ctx.config.codeCaps;
+  const dayAgo = new Date(now.getTime() - DAY_MS);
+  const mine = await issuedSince(ctx, dayAgo, phone);
+  if (mine.n >= caps.perPhonePerDay) throw rateLimited(secondsUntilFree(mine.oldest, DAY_MS, now));
+
+  const lastHour = await issuedSince(ctx, new Date(now.getTime() - HOUR_MS));
+  if (lastHour.n >= caps.globalPerHour) {
+    ctx.logger.warn('auth.code_global_cap_reached', { window: 'hour', limit: caps.globalPerHour });
+    throw rateLimited(secondsUntilFree(lastHour.oldest, HOUR_MS, now));
+  }
+  const lastDay = await issuedSince(ctx, dayAgo);
+  if (lastDay.n >= caps.globalPerDay) {
+    ctx.logger.warn('auth.code_global_cap_reached', { window: 'day', limit: caps.globalPerDay });
+    throw rateLimited(secondsUntilFree(lastDay.oldest, DAY_MS, now));
+  }
+}
+
+/**
+ * Sign-in codes go to Pakistani mobile numbers only (SEC-04, owner decision). The contract schema
+ * (`PakistaniMobilePhone`) refuses other numbers first; this is the second guard in the service,
+ * before anything is counted or sent, with the contract's same issue code. It names the field,
+ * never the value.
+ */
+export function assertSignInCountry(phone: string): void {
+  if (!PAKISTAN_MOBILE_PATTERN.test(phone)) {
+    throw new AuthHttpError('validation_failed', undefined, [
+      { path: 'phone', code: PHONE_NOT_PAKISTAN_MOBILE },
+    ]);
+  }
+}
+
 /** The rate-limit key for wrong-code attempts against one number. */
 export const verifyPhoneKey = (ctx: AuthContext, phone: string): string =>
   `otp-verify:phone:${hashIdentifier(ctx.keys, 'phone', phone)}`;
@@ -76,6 +137,7 @@ export async function requestCode(
   const now = ctx.now();
   const { rateLimits, otp } = ctx.config;
   const phone: PhoneE164 = body.phone;
+  assertSignInCountry(phone);
   const ipHash = ipKeyOf(ctx, ip);
   const phoneHash = hashIdentifier(ctx.keys, 'phone', phone);
 
@@ -84,6 +146,7 @@ export async function requestCode(
 
   const wait = await cooldownRemaining(ctx, phone, now);
   if (wait > 0) throw rateLimited(wait);
+  await enforceCodeCaps(ctx, phone, now);
 
   const challengeId = randomUUID();
   const code = otp.fixedCode ?? generateCode();

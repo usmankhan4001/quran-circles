@@ -20,6 +20,7 @@ import { compareDates } from '../shared/time';
 import { insertSession, type AdminDeps } from '../sessions/admin';
 import { insertVenue } from '../venues/service';
 import {
+  assertInviteAllowance,
   inviteMessage,
   inviterNameOf,
   inviteValues,
@@ -452,13 +453,23 @@ export async function importCoordinators(
   caller: ImportCaller,
   body: { dryRun: boolean; rows: readonly unknown[] },
 ): Promise<ImportResult> {
+  // SEC-03: each invite is a paid message, so one file is capped well below the import maximum,
+  // and the invites it would create count against the caller's daily ceiling. A dry run answers
+  // the same refusals, so the console learns them before the real import.
+  if (body.rows.length > deps.limits.perImport) {
+    fail('validation_failed', { issues: [{ path: 'rows', code: 'too_big' }] });
+  }
+  const created = (outcomes: Outcome<unknown>[]) =>
+    outcomes.filter((o) => o.status === 'created').length;
   if (body.dryRun) {
     const outcomes = await checkCoordinators(db, caller, body.rows, deps.now);
+    await assertInviteAllowance(db, caller.actorId, created(outcomes), deps, 'rows');
     return summarise(true, outcomes).result;
   }
   const written = await inTransaction(db, async (tx) => {
     const outcomes = await checkCoordinators(tx, caller, body.rows, deps.now);
     const { result, apply } = summarise(false, outcomes);
+    if (apply) await assertInviteAllowance(tx, caller.actorId, created(outcomes), deps, 'rows');
     const invites: { row: typeof coordinatorInvites.$inferSelect; target: RoleTarget }[] = [];
     if (!apply) return { result, invites };
     for (const o of outcomes) {

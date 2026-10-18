@@ -16,6 +16,8 @@ export const defaultConfig: ApiConfig = {
   trustProxy: false,
   rateLimits: DEFAULT_RATE_LIMITS,
   inviteTtlDays: 7,
+  inviteLimits: { perImport: 100, perActorPerDay: 200 },
+  posterRateLimit: { limit: 10, windowSeconds: 60 },
   circleRequestTtlDays: 90,
   occurrenceHorizonDays: 90,
 };
