@@ -464,7 +464,13 @@ export function evening(data) {
 function outbox() {
   const res = http.get(`${WORKER}/healthz`, { tags: { op: 'healthz' } });
   const d = res.json('details') || {};
-  return { sent: d.sent || 0, pending: (d.queued || 0) + (d.sending || 0) };
+  const m = res.json('metrics') || {};
+  return {
+    sent: d.sent || 0,
+    pending: (d.queued || 0) + (d.sending || 0),
+    // Updates whose push rows the worker has not written yet (the API leaves the fan-out to it).
+    fanOutPending: m.updatePushesPending || 0,
+  };
 }
 
 export function pushBurst(data) {
@@ -489,6 +495,7 @@ export function pushBurst(data) {
   const started = Date.now();
   // The worker's counts are global (other bursts, reminders queued for later), so the burst is
   // measured by progress: drained when the sent count has grown and then stood still for 5 s.
+  // Never while the worker still has an update's pushes to write: until then they are not rows.
   let lastSent = before.sent;
   let lastProgress = started;
   while (Date.now() - started < 14 * 60_000) {
@@ -497,7 +504,11 @@ export function pushBurst(data) {
     if (now.sent > lastSent) {
       lastSent = now.sent;
       lastProgress = Date.now();
-    } else if (lastSent > before.sent && Date.now() - lastProgress >= 5000) {
+    } else if (
+      now.fanOutPending === 0 &&
+      lastSent > before.sent &&
+      Date.now() - lastProgress >= 5000
+    ) {
       break;
     }
   }

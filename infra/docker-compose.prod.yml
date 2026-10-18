@@ -204,7 +204,17 @@ services:
       # Serves /healthz (internal) and /webhooks/whatsapp (routed by Caddy).
       WORKER_HTTP_PORT: '8081'
       WORKER_POLL_MS:
+      # WhatsApp and SMS only; push has its own lane below.
       WORKER_SEND_CONCURRENCY:
+      # Push lane (queue outbox-send-push) and the dispatcher's claim limits; defaults in infra/ENV.md.
+      WORKER_PUSH_CONCURRENCY:
+      WORKER_PUSH_BATCH_SIZE:
+      WORKER_PUSH_PARALLEL:
+      WORKER_PUSH_POLL_MS:
+      WORKER_PUSH_MAX_IN_FLIGHT:
+      WORKER_MESSAGE_MAX_IN_FLIGHT:
+      WORKER_LEASE_MS:
+      WORKER_BUSY_POLL_MS:
       OCCURRENCE_HORIZON_DAYS:
       # WhatsApp spend limits (SEC-02); the console's settings override them.
       WHATSAPP_DAILY_CAP:

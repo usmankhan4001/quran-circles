@@ -14,6 +14,9 @@
 #   restore    (only with QC_EXPECT_RESTORE_CHECK=1, i.e. on the host that runs restore tests)
 #              the last restore test passed and is less than 8 days old
 #   tls        the certificate for QC_DOMAIN is valid for at least 14 more days
+#   worker     the worker's /healthz `metrics.workerLost` (outbox leases that ran out, logged as
+#              `outbox.worker_lost`; a counter since the worker started) has not grown since the
+#              last run. A restart resets the counter; the next run starts from the new value.
 #
 # This cannot see the whole server going down. Pair it with an external uptime monitor on the
 # same health URL (see infra/README.md).
@@ -51,6 +54,23 @@ for service in proxy api worker poster-renderer postgres; do
   status="$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid")"
   [[ "$status" == "running healthy" ]] || problems+=("$service is $status")
 done
+
+# Read inside the container: /healthz is not published outside the stack. Any growth is a problem,
+# because every lost lease is a row a worker died on or could not send in time.
+lost_file="$state_dir/$project.worker-lost"
+worker_cid="$(compose ps -q worker 2>/dev/null || true)"
+if [[ -n "$worker_cid" ]]; then
+  lost="$(docker exec "$worker_cid" node -e \
+    "fetch('http://127.0.0.1:8081/healthz').then(r=>r.json()).then(b=>{const n=b&&b.metrics&&b.metrics.workerLost;console.log(Number.isInteger(n)?n:'')},()=>console.log(''))" \
+    2>/dev/null || true)"
+  if [[ "$lost" =~ ^[0-9]+$ ]]; then
+    before="$(cat "$lost_file" 2>/dev/null || true)"
+    if [[ "$before" =~ ^[0-9]+$ && "$lost" -gt "$before" ]]; then
+      problems+=("worker lost $((lost - before)) outbox lease(s) since the last check (outbox.worker_lost)")
+    fi
+    printf '%s\n' "$lost" >"$lost_file"
+  fi
+fi
 
 for path in / "$backup_dir"; do
   [[ -d "$path" ]] || continue

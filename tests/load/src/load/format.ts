@@ -28,14 +28,14 @@ export function formatLoad<T>(report: LoadReport<T>, dbLine?: (db: T) => string[
       const f = push.final;
       lines.push(
         `   push burst: post ${push.postStatus} in ${push.postMs} ms, ${push.rowsQueued} rows for ${push.recipients} recipients; ` +
-          `first sent ${push.firstSentS ?? '-'} s, all sent ${push.allSentS ?? 'timeout'} s (${push.drainPerSecond ?? '-'} /s); ` +
+          `rows written ${push.pushesWrittenS ?? '-'} s, first sent ${push.firstSentS ?? '-'} s, all sent ${push.allSentS ?? 'timeout'} s (${push.drainPerSecond ?? '-'} /s); ` +
           `under load ${push.sentUnderLoad ?? '-'} sent (${push.underLoadPerSecond ?? '-'} /s)`,
       );
       lines.push(
         `   push outbox: queued=${f.queued} sending=${f.sending} sent=${f.sent} other=${f.other}` +
-          (f.workerLost !== undefined
-            ? ` worker_lost=${f.workerLost} max_attempts=${f.maxAttempts}`
-            : ''),
+          (f.workerLost !== undefined ? ` worker_lost=${f.workerLost}` : '') +
+          (f.maxAttempts !== undefined ? ` max_attempts=${f.maxAttempts}` : '') +
+          (f.pushesPending ? ` pushes_pending=${f.pushesPending}` : ''),
       );
     }
     if (db && dbLine) lines.push(...dbLine(db).map((l) => `   ${l}`));

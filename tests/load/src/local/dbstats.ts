@@ -185,12 +185,23 @@ export class DbSampler {
   }
 }
 
-/** Reads one update's outbox rows straight from the stack's database. */
+/**
+ * Reads one update's outbox rows straight from the stack's database, and whether the worker has
+ * still to write them (`updates.push_pending_since` set; the API leaves the fan-out to the worker).
+ */
 export function databaseProbe(databaseUrl: string): DrainProbe & { close(): Promise<void> } {
   const pool = new pg.Pool({ connectionString: databaseUrl, max: 1 });
   return {
     kind: 'database',
     async counts(updateId: string): Promise<OutboxCounts> {
+      // The mark first: the worker writes the rows and clears the mark in one transaction, so once
+      // this read sees the mark cleared, the rows query below (a later snapshot) sees every row.
+      // The other order could see no rows, then a cleared mark, and call the burst drained.
+      const mark = await pool.query<{ pending: boolean }>(
+        `/* qc-load probe */ SELECT push_pending_since IS NOT NULL AS pending
+           FROM updates WHERE id = $1`,
+        [updateId],
+      );
       const res = await pool.query<{ status: string; n: string; lost: string; attempts: number }>(
         `/* qc-load probe */ SELECT status, count(*) AS n,
                 count(*) FILTER (WHERE last_error_code = 'worker_lost') AS lost,
@@ -205,6 +216,7 @@ export function databaseProbe(databaseUrl: string): DrainProbe & { close(): Prom
         other: 0,
         workerLost: 0,
         maxAttempts: 0,
+        pushesPending: mark.rows[0]?.pending ? 1 : 0,
       };
       for (const r of res.rows) {
         const n = Number(r.n);

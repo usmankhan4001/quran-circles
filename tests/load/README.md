@@ -101,9 +101,12 @@ The scale target is about 200 venues and under 50,000 users in the first season
   so 100 VUs is about 300 requests a second: 50,000 users with a fifth of them opening the app in
   the 15 minutes before Taraweeh, with headroom.
 - **Push burst**, 10 s into every step: a national admin posts a national announcement with
-  `notify: true`. The API queues one push per person with a device in the same request; the worker
-  claims the rows and sends them through the fake provider. Measured: the post's latency and the
-  time until every row is sent (locally from the database, remotely from the worker's `/healthz`).
+  `notify: true`. The API marks the update `push_pending_since` and answers; the worker then writes
+  one push per person with a device (the fan-out), claims the rows and sends them through the fake
+  provider. Measured: the post's latency, when the rows were written, and the time until every row
+  is sent (locally from the database, remotely from the worker's `/healthz`). The burst is not
+  drained while the fan-out is pending (`push_pending_since` set locally,
+  `metrics.updatePushesPending` above 0 remotely), and the row count is taken at the end.
 
 ### Proposed pass thresholds
 

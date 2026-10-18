@@ -35,9 +35,26 @@ The four database passwords must differ; `db-roles` (`infra/postgres/roles.sql`)
 | `AUTH_SECRET`             | A       | yes      | Token signing secret, 32+ characters                                      |
 | `CORS_ORIGINS`            | A       | no       | Extra browser origins, comma-separated                                    |
 | `AUTH_FIXED_CODE`         | A       | no       | Staging only: fixed six-digit sign-in code; refused in production         |
-| `WORKER_POLL_MS`          | W       | no       | Outbox poll interval (default 5000)                                       |
-| `WORKER_SEND_CONCURRENCY` | W       | no       | Parallel sends (default 4)                                                |
+| `WORKER_POLL_MS`          | W       | no       | Outbox poll interval (250-60000, default 5000)                            |
+| `WORKER_SEND_CONCURRENCY` | W       | no       | WhatsApp and SMS batches sent at once per node (1-32, default 4)          |
 | `OCCURRENCE_HORIZON_DAYS` | W       | no       | Days ahead the daily top-up keeps session occurrences (1-366, default 90) |
+
+### Worker send lanes and claim limits
+
+Push rows go to the queue `outbox-send-push`, WhatsApp and SMS rows to `outbox-send` (the worker creates both at start). Before claiming, the dispatcher counts every worker's rows in `sending` for a lane and claims only up to that lane's limit; the rest wait as `queued` with no lease and no attempt spent. Push provider calls in flight per node are `WORKER_PUSH_CONCURRENCY` x `WORKER_PUSH_PARALLEL` (40 by default); the worker's database pool stays at 10. Defaults and ranges are those of `apps/worker/src/config.ts`; a value out of range stops the worker at start with the variable's name.
+
+| Name                           | Read by | Required | Meaning                                                                                                               |
+| ------------------------------ | ------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| `WORKER_PUSH_CONCURRENCY`      | W       | no       | Push batches sent at once per node (1-32, default 4)                                                                  |
+| `WORKER_PUSH_BATCH_SIZE`       | W       | no       | Push jobs fetched per batch (1-500, default 50)                                                                       |
+| `WORKER_PUSH_PARALLEL`         | W       | no       | Pushes sent at once within one batch (1-100, default 10)                                                              |
+| `WORKER_PUSH_POLL_MS`          | W       | no       | How often idle push senders look for jobs (500-60000, default 500; pg-boss minimum 500)                               |
+| `WORKER_PUSH_MAX_IN_FLIGHT`    | W       | no       | Push rows claimed and not finished, across all workers (1-100000, default 2000); keep it below one lease's work       |
+| `WORKER_MESSAGE_MAX_IN_FLIGHT` | W       | no       | WhatsApp and SMS rows claimed and not finished, across all workers (1-10000, default 100)                             |
+| `WORKER_LEASE_MS`              | W       | no       | How long a claim or a sender's hold on a row lasts before it is handed out again (60000-3600000, default 300000)      |
+| `WORKER_BUSY_POLL_MS`          | W       | no       | How soon the dispatcher looks again while a lane is full or update pushes are being written (100-60000, default 1000) |
+
+Keep `WORKER_PUSH_MAX_IN_FLIGHT` below what the push senders finish within one `WORKER_LEASE_MS`: 2,000 is about 20 s of work at 100 pushes a second. A lease that runs out anyway is logged as `outbox.worker_lost` (see "Monitoring" in `infra/README.md`).
 
 ### WhatsApp spend limits (worker, SEC-02)
 
