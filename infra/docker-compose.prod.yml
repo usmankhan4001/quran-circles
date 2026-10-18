@@ -140,6 +140,9 @@ services:
       DATABASE_URL: postgres://qc_api:${POSTGRES_API_PASSWORD:?set POSTGRES_API_PASSWORD in the env file}@postgres:5432/qc
       POSTER_STORAGE_DIR: /var/lib/qc/posters
       PORT: '3000'
+      # Server processes in this container (node:cluster, apps/api/src/cluster.ts). One Node process
+      # uses about one core, so keep it equal to QC_API_CPUS. Each has a pool of 10 connections.
+      API_PROCESSES: ${API_PROCESSES:-2}
       # Behind Caddy, which replaces X-Forwarded-For with the real client address.
       TRUST_PROXY: 'true'
       AUTH_TRUST_PROXY: 'true'
@@ -180,8 +183,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${QC_API_CPUS:-1.0}'
-          memory: ${QC_API_MEMORY:-512m}
+          cpus: '${QC_API_CPUS:-2.0}'
+          memory: ${QC_API_MEMORY:-1g}
     logging: *logging
 
   worker:

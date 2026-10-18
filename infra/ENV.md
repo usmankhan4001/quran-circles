@@ -34,11 +34,21 @@ The four database passwords must differ; `db-roles` (`infra/postgres/roles.sql`)
 | `PUBLIC_WEB_BASE`         | A, W    | yes      | Public https origin for links in messages                                                                                     |
 | `AUTH_SECRET`             | A       | yes      | Token signing secret, 32+ characters                                                                                          |
 | `CORS_ORIGINS`            | A       | no       | Extra browser origins, comma-separated                                                                                        |
+| `API_PROCESSES`           | C, A    | no       | API server processes in the api container (1-8; compose default 2, code default 1). Keep it equal to `QC_API_CPUS`            |
 | `AUTH_FIXED_CODE`         | A       | no       | Staging only: fixed six-digit sign-in code; refused in production                                                             |
 | `WORKER_POLL_MS`          | W       | no       | Longest time without a full outbox pass; a safety net (250-60000, default 30000)                                              |
 | `WORKER_WAKE_MS`          | W       | no       | Wake probe interval; starts a pass as soon as work is pending (0 or 100-60000, default 1000; 0 = pass every `WORKER_POLL_MS`) |
 | `WORKER_SEND_CONCURRENCY` | W       | no       | WhatsApp and SMS batches sent at once per node (1-32, default 4)                                                              |
 | `OCCURRENCE_HORIZON_DAYS` | W       | no       | Days ahead the daily top-up keeps session occurrences (1-366, default 90)                                                     |
+
+### API processes (`API_PROCESSES`)
+
+One Node process serves on about one core, so the api container runs `API_PROCESSES` server processes with `node:cluster` (`apps/api/src/cluster.ts`): a small primary process forks them, they share port 3000 (the primary hands out connections in turn), and the primary restarts one that dies (1 s, doubling to 30 s for repeated crashes) and passes SIGTERM to all of them on `docker stop` (each finishes its requests; any still running after 12 s is killed, inside the 15 s `stop_grace_period`). If a process dies before any has started serving, the container exits, as one process would. The health check is unchanged.
+
+- **Production defaults** (compose): `API_PROCESSES` 2, `QC_API_CPUS` 2.0, `QC_API_MEMORY` 1g (owner decision 2026-10-18: 2 CPUs at launch). Staging takes the same defaults from the production file, so Gate 5 on staging runs at launch size; staging's env file must not set `QC_API_CPUS`, `QC_API_MEMORY` or `API_PROCESSES` to other values.
+- **Sizing**: keep `API_PROCESSES` equal to `QC_API_CPUS`; more processes than CPUs only adds memory. Allow about 350 MB per process plus 100 MB for the primary: in a local load test of the production bundle at saturation (300 virtual users) the two processes peaked at 262 and 249 MB and the primary at 88 MB, 600 MB together; 1g leaves room for garbage-collection peaks, since each process sizes its heap from the container's limit as if it were alone.
+- **Database connections**: each process has its own pool of 10 and a pg-boss sender of 2, so the api uses up to 12 x `API_PROCESSES` connections (24 at the default; Postgres allows 100).
+- **Rate limits stay exact**: the per-endpoint buckets, the poster allowance and the sign-in limits per number, per address and for refresh are kept in the primary, and every process asks it, so two processes never both take the last slot. They live in memory, as with one process, and start again from zero when the container restarts. The invite allowance and the sign-in ceilings (per number per day, for everyone per hour and per day) are counted in Postgres; parallel requests can still pass the sign-in ceilings by a few until change request `docs/engineering/change-requests/2026-10-18-otp-issue-lock.md` lands. Running the api as several containers (compose replicas) would split the in-memory limits per container; that needs a shared store first.
 
 ### Worker send lanes and claim limits
 

@@ -1,7 +1,40 @@
 # Status: platform
 
-Updated: 2026-10-18 (staging redeployed with the security review fixes)
+Updated: 2026-10-18 (API at 2 CPUs and 2 processes by default)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
+
+## API at launch size: 2 CPUs, 2 processes (2026-10-18, owner decision)
+
+Muhammad decided the API gets 2 CPUs at launch. One Node process uses about one core, so the API now runs several processes in one container (`API_PROCESSES`, api-core's `apps/api/src/cluster.ts`; see `status/api-core.md`). Edited `infra/docker-compose.prod.yml`, `infra/ENV.md`, `infra/.env.example`, root `.env.example` and this file. Not committed (the orchestrator commits).
+
+### Done
+
+- `infra/docker-compose.prod.yml` api service: `API_PROCESSES: ${API_PROCESSES:-2}`, `cpus` default `2.0` (was 1.0), `memory` default `1g` (was 512m). Health check, `stop_grace_period: 15s` (the primary kills stragglers after 12 s), networks and hardening unchanged; `init: true` passes SIGTERM to the primary, which passes it to each process. Staging (`docker-compose.staging.yml`) sets none of these, so it inherits them: checked with `docker compose -f prod -f staging config` (cpus 2, memory 1 GiB, `API_PROCESSES` "2"). An env-file `API_PROCESSES` overrides (checked with 3).
+- Why `node:cluster` and not compose replicas behind Caddy: one container keeps the health check, `deploy.sh`'s health wait and rollback, the staging alias `qc-staging-api`, Caddy's single upstream and the CPU limit as they are (the limit covers all processes together); replicas would need Caddy upstream changes (Docker DNS round robin is not load balancing), per-replica limits and, above all, a shared store for the in-memory rate limits, which the cluster primary provides for free.
+- Memory: production bundle (`infra/docker/bundle.sh`, esbuild 0.25.12) under the evening load at 300 VUs: workers 262 and 249 MB, primary 88 MB, 600 MB together (one process alone: 285 MB). 1g leaves room for GC peaks (each process sizes its heap from the container limit as if alone). Database connections: up to 12 per process (pool 10 + pg-boss sender 2), 24 at the default.
+- Documented `API_PROCESSES` in `infra/ENV.md` (API table row and a section "API processes": defaults, sizing, connections, why the limits stay exact, replicas caveat, the open sign-in ceiling change request), `infra/.env.example` (commented, with the new `QC_API_CPUS`/`QC_API_MEMORY` defaults and a note that staging leaves them unset) and the root `.env.example`.
+
+### Measured locally (provisional)
+
+One 4-CPU container shared by the API, the worker, Postgres 16 (durability off) and the load generator, so the API never had 2 free cores; the scratch copy of `@qc/load local` differs from the repo only by the `dbstats.ts` fix noted in `status/api-core.md`. Closed model, 40 s steps, req/s and overall p95:
+
+| Run                             | 50 VUs      | 100 VUs      | 200 VUs      | 300 VUs        |
+| ------------------------------- | ----------- | ------------ | ------------ | -------------- |
+| before (main, 1 process, tsx)   | 152 / 41 ms | 273 / 171 ms | not run      | not run        |
+| 1 process (tsx)                 | 148 / 61 ms | 278 / 155 ms | 311 / 649 ms | 320 / 1,146 ms |
+| 2 processes (tsx)               | 146 / 61 ms | 274 / 139 ms | 412 / 397 ms | 408 / 801 ms   |
+| 1 process (production bundle)   | not run     | 247 / 228 ms | 312 / 737 ms | 334 / 1,114 ms |
+| 2 processes (production bundle) | not run     | 266 / 189 ms | 431 / 420 ms | 440 / 659 ms   |
+
+Up to 100 VUs the offered load (about 3 requests a second per VU) is below one process's ceiling, so both serve it. Saturated, 2 processes give about 1.3 to 1.4 times the throughput with p95 down by a third to a half; here they are held back by the shared CPUs (Postgres alone used about one core). 0 failed requests and 0 rate-limited answers in every step. The load runner's CPU column reads only the primary in cluster mode (it samples the process on the port), so it shows 3 to 4 % for the api there.
+
+Exactness on real Postgres with 2 processes (scratch script, real API): default bucket 300 of 400 from one address; code requests 30 of 60 from one address; single invites 30 a minute (the `messaging` bucket) shared; invite allowance exactly 200 (240 without the new lock); sign-in global hourly ceiling 1,018 to 1,021 stored for a cap of 1,000 (1,025 with 1 process), exactly 1,000 with the auth-lane patch in change request `2026-10-18-otp-issue-lock`.
+
+### For the Gate 5 re-run on staging
+
+- Redeploy staging from this commit. Its env file must leave `QC_API_CPUS`, `QC_API_MEMORY` and `API_PROCESSES` unset (or set them to the production values); if the Dokploy host cannot give 2 CPUs, say so and the result is not launch size.
+- Nothing else changes for the run: same `gate5` service, same api alias, same sign-in budget (at most 900 sign-ins an hour; the global ceiling is shared by both processes).
+- The api logs one `api process listening` line per process at start; two of them confirm the cluster is up.
 
 ## Security review fixes (2026-10-18)
 
