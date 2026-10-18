@@ -1,11 +1,21 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import type { AuthState } from '../auth/session';
+import type { AuthState, AuthStatus } from '../auth/session';
 import type { Preferences } from '../core/preferences';
 import { useServices } from './services';
 
 export function useAuthState(): AuthState {
   const { auth } = useServices();
   return useSyncExternalStore(auth.subscribe, auth.getState, auth.getState);
+}
+
+/**
+ * Whether someone is signed in, and nothing else: a component that needs only this does not
+ * draw again when `me` arrives after start-up.
+ */
+export function useAuthStatus(): AuthStatus {
+  const { auth } = useServices();
+  const read = () => auth.getState().status;
+  return useSyncExternalStore(auth.subscribe, read, read);
 }
 
 export function usePreferences(): Preferences & {

@@ -1,33 +1,45 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, memo, useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import {
   ContentProvider,
   ContinueReadingCard,
-  FIVE_PRAYERS,
   NextPrayerCard,
-  PAKISTAN_CITIES,
-  PrayerTimesScreen,
-  QuranIndexScreen,
-  QuranReaderScreen,
   QuranTextCredit,
-  computeDay,
   createContentServices,
-  formatClock,
-  nextPrayer,
-  offsetOf,
-  todayAt,
   useContent,
   useNow,
   verseTranslation,
   type ContentServices,
   type CreateContentServicesOptions,
   type QuranVerse,
-  type ReaderTarget,
-  type ViewState,
-} from '@qc/content';
-import { Card, PrayerStrip, SegmentedControl, Skeleton, Text, screenGutter, spacing } from '@qc/ui';
+} from '@qc/content/home';
+import {
+  FIVE_PRAYERS,
+  PAKISTAN_CITIES,
+  computeDay,
+  formatClock,
+  nextPrayer,
+  offsetOf,
+  todayAt,
+} from '@qc/content/prayer';
+import { Card, PrayerStrip, Skeleton, Text, screenGutter, spacing } from '@qc/ui';
 import { useI18n } from '../../i18n/I18nProvider';
-import type { ContentModules, QuranPlace, ReaderRequest } from './modules';
+import type { ContentModules, QuranPlace } from './modules';
+
+/**
+ * The Quran & Prayer tab's screens (the reader, the surah list, prayer times) are a file of
+ * their own on the web, downloaded when the tab is first opened, so Home's start does not wait
+ * for them. A phone bundles them anyway.
+ */
+const QuranPrayerTab = lazy(() => import('./quranPrayerTab'));
+
+function TabLoading() {
+  return (
+    <View style={{ padding: screenGutter }} testID="tab-loading">
+      <Skeleton shape="text" lines={4} announce />
+    </View>
+  );
+}
 
 /**
  * The city chosen in the prayer view. The package keeps it in its own saved state and does not
@@ -135,82 +147,6 @@ function HomeAyahText({ surah, ayah }: QuranPlace) {
   );
 }
 
-/** The package's saved view (Quran or Prayer, the city, week or month), read and changed here. */
-function useSavedView() {
-  const { services } = useContent();
-  const [state, setState] = useState<ViewState | null>(null);
-  useEffect(() => {
-    let active = true;
-    void services.viewState.load().then((value) => {
-      if (active) setState(value);
-    });
-    return () => {
-      active = false;
-    };
-  }, [services]);
-  const update = (change: Partial<ViewState>) => {
-    setState((current) => (current ? { ...current, ...change } : current));
-    void services.viewState.update(change);
-  };
-  return { state, update };
-}
-
-/**
- * The Quran & Prayer tab, put together from the package's screens under the app's own green
- * header, so the page has one title (the package's own tab adds a second, large one). The
- * switch, the saved choice and the screens are the package's.
- */
-function AppQuranPrayerTab({ initialReader }: { initialReader?: ReaderTarget }) {
-  const { t } = useI18n();
-  const view = useSavedView();
-  const [reader, setReader] = useState<ReaderTarget | null>(initialReader ?? null);
-  if (reader) {
-    return (
-      <QuranReaderScreen
-        target={reader}
-        onBack={() => setReader(null)}
-        testID="content-tab-reader"
-      />
-    );
-  }
-  const section = view.state?.section ?? 'quran';
-  return (
-    <View style={{ flex: 1 }} testID="content-tab">
-      <View style={{ paddingHorizontal: screenGutter, paddingVertical: spacing.md }}>
-        <SegmentedControl<ViewState['section']>
-          accessibilityLabel={t('tabs.quranPrayer')}
-          value={section}
-          onChange={(next) => view.update({ section: next })}
-          options={[
-            { value: 'quran', label: t('quran.tab.quran') },
-            { value: 'prayer', label: t('quran.tab.prayer') },
-          ]}
-          testID="section-switch"
-        />
-      </View>
-      {!view.state ? (
-        <View style={{ padding: screenGutter }} testID="tab-loading">
-          <Skeleton shape="text" lines={4} announce />
-        </View>
-      ) : section === 'prayer' ? (
-        <PrayerTimesScreen
-          placeId={view.state.placeId}
-          ready
-          onPlaceChange={(placeId) => view.update({ placeId })}
-          calendarView={view.state.calendarView}
-          onCalendarViewChange={(calendarView) => view.update({ calendarView })}
-        />
-      ) : (
-        <QuranIndexScreen onOpen={setReader} />
-      )}
-    </View>
-  );
-}
-
-function readerTarget(request: ReaderRequest | undefined) {
-  return request ? ({ kind: 'surah', id: request.surah, ayah: request.ayah } as const) : undefined;
-}
-
 /**
  * Builds the Quran and prayer modules from `@qc/content`. The package owns its own storage, text
  * cache and bookmark sync; this only gives it a device, a fetch and the signed-in API client,
@@ -226,16 +162,11 @@ export function createContentModules(
         {children}
       </ContentProvider>
     ),
-    QuranPrayerScreen: ({ reader }) => {
-      const target = readerTarget(reader);
-      // A new request mounts the tab again so it opens at the requested place.
-      return (
-        <AppQuranPrayerTab
-          key={reader ? `${reader.surah}:${reader.ayah}:${reader.at ?? 0}` : 'tab'}
-          {...(target ? { initialReader: target } : {})}
-        />
-      );
-    },
+    QuranPrayerScreen: ({ reader }) => (
+      <Suspense fallback={<TabLoading />}>
+        <QuranPrayerTab {...(reader ? { reader } : {})} />
+      </Suspense>
+    ),
     NextPrayerCard: ({ onPress }) => {
       // The city is the one chosen in the prayer view; the card asks for one until then.
       const cityId = usePrayerCityId();
@@ -245,7 +176,8 @@ export function createContentModules(
     ContinueReadingCard: ({ onOpen }: { onOpen: (place: QuranPlace) => void }) => (
       <ContinueReadingCard onOpen={({ surah, ayah }) => onOpen({ surah, ayah })} />
     ),
-    PrayerStrip: HomePrayerStrip,
+    // Memoised: Home passes a stable `onPress`, so the strip draws again only on its own clock.
+    PrayerStrip: memo(HomePrayerStrip),
     AyahText: HomeAyahText,
     subscribeReading: (listener) =>
       services.readingPosition.subscribe(() => {

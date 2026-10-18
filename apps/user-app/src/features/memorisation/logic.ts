@@ -5,7 +5,7 @@ import {
   type MemorisationEntry,
   type MemorisationStatus,
 } from '@qc/contracts';
-import { SURAHS, getSurah } from '@qc/content';
+import { SURAHS, getSurah } from '@qc/content/meta';
 
 /**
  * The memorisation tracker (feature 3): private to the person, per surah. "Revise this week" is a

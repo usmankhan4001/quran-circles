@@ -1,7 +1,13 @@
-import { messages, type MessageKey } from '@qc/i18n';
+import { messages, type UserAppKey } from '@qc/i18n';
 import { formatNumber } from '@qc/ui';
 import type { Locale } from '@qc/contracts';
 
+/**
+ * The keys this app has words for: the catalogue's shared part and the app's own
+ * (`@qc/i18n` `UserAppKey`). On the web only this app's table is downloaded, so a key from
+ * another app's part would have no words; the typechecker refuses it.
+ */
+export type MessageKey = UserAppKey;
 /** `home.sessions` is a plural key when `home.sessions.one` and `home.sessions.other` exist. */
 type PluralBase<K extends string> = K extends `${infer B}.one` ? B : never;
 export type PluralKey = PluralBase<MessageKey>;

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Icon, Text, formatNumber, spacing, useTheme } from '@qc/ui';
 import type { ReadingDayRecord } from '@qc/contracts';
@@ -36,7 +37,7 @@ function CountedLine({ text, testID }: { text: string; testID: string }) {
  * and, with a daily goal set, "I met today's goal". No streak, no missed-day words: a day that
  * was not read is simply not counted. Visible only to the person.
  */
-export function DaysReadCard() {
+function DaysReadCardContent() {
   const { t, locale } = useI18n();
   const nav = useNav();
   const c = useTheme().colors;
@@ -149,3 +150,6 @@ export function DaysReadCard() {
     </Card>
   );
 }
+
+/** It takes no props, so it draws again when its own data changes, not each time Home does. */
+export const DaysReadCard = memo(DaysReadCardContent);

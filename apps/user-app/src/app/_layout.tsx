@@ -19,6 +19,7 @@ import { ReminderSync } from '../providers/ReminderSync';
 import { ReadingSync } from '../providers/ReadingSync';
 import { registerServiceWorker } from '../platform/serviceWorker';
 import { loadFirstFonts, startFonts } from '../fonts/loadFonts';
+import { languages } from '../i18n/languages';
 
 // One set of services for the life of the page or the app process.
 let services: AppServices | null = null;
@@ -118,11 +119,17 @@ export default function RootLayout() {
 
   useEffect(() => {
     let active = true;
-    // The saved choices first, then the font of the saved language (the web waits for that one
-    // face only; a phone loads its bundled fonts). Font loading never rejects and stops waiting
-    // after a few seconds, so a missing font only means a fallback font.
+    // The saved choices first, then the font and the words of the saved language (the web waits
+    // for that one face only and downloads that one language; a phone has its fonts and every
+    // language in the binary). Font loading never rejects and stops waiting after a few seconds,
+    // so a missing font only means a fallback font. The words were asked for before the bundle
+    // ran (boot/earlyLanguage.web.ts); if they cannot be had, the screens fall back to the keys
+    // rather than never starting.
     void loadOnce(app)
-      .then(() => loadFirstFonts(app.preferences.get().locale))
+      .then(() => {
+        const locale = app.preferences.get().locale;
+        return Promise.all([loadFirstFonts(locale), languages.load(locale).catch(() => undefined)]);
+      })
       .then(() => {
         if (active) setReady(true);
       });

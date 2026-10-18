@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Skeleton, Text, formatNumber, spacing, useTheme } from '@qc/ui';
 import type { Follow, Localized } from '@qc/contracts';
@@ -41,7 +42,7 @@ export function ayahSourceLine(
  * content package's `AyahText` mount, read from the reader's own source. "Read this ayah" opens
  * the reader at it: the `quran` route, `/quran?surah=…&ayah=…`.
  */
-export function AyahOfTheDayCard() {
+function AyahOfTheDayCardContent() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const c = useTheme().colors;
@@ -93,3 +94,6 @@ export function AyahOfTheDayCard() {
     </Card>
   );
 }
+
+/** It takes no props, so it draws again when its own data changes, not each time Home does. */
+export const AyahOfTheDayCard = memo(AyahOfTheDayCardContent);

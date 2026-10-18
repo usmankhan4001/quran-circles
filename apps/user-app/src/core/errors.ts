@@ -1,5 +1,5 @@
 import { ApiClientError, ERROR_CODE_LIST, type ErrorCode } from '@qc/contracts';
-import type { MessageKey } from '@qc/i18n';
+import type { MessageKey } from '../i18n/translate';
 
 /** What the screens know about a failed call. It never carries names, numbers or bodies. */
 export type AppErrorCode = ErrorCode | 'network_error' | 'invalid_response' | 'unknown';

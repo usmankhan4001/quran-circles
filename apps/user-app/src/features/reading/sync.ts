@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { addDays, pakistanDate, type ReadingDayClientSource } from '@qc/contracts';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 import { placeInPortion } from '../readAlong/portion';
 import { useTodayPortions } from '../readAlong/hooks';
@@ -15,7 +15,7 @@ import { useFeature, useRecordReadingDay } from './hooks';
  */
 export function useReadingDaySync(): void {
   const { content, now } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const feature = useFeature('reading_days');
   const { portions } = useTodayPortions();
   const record = useRecordReadingDay();

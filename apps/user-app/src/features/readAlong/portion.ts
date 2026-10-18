@@ -1,5 +1,5 @@
 import { pakistanDate, type Occurrence, type Portion, type Session } from '@qc/contracts';
-import { juzOf, juzStart } from '@qc/content';
+import { juzOf, juzStart } from '@qc/content/meta';
 import type { QuranPlace } from '../content/modules';
 
 /**

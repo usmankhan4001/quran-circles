@@ -1,9 +1,16 @@
 # Status: content
 
-Updated: 2026-10-17
+Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
 ## Done
+
+### 2026-10-18: subpath exports, so an app's first screen imports only what it shows (low-end budgets)
+
+- `package.json` exports, besides `.` (unchanged, everything): `@qc/content/meta` (surah and juz data, search), `/prayer` (prayer times, Hijri), `/storage` (cache storage), `/home` (what Home mounts: `ContentProvider`, `useContent`, `createContentServices`, `NextPrayerCard`, `ContinueReadingCard`, `AyahText`, `QuranTextCredit`, `SavedMark`, `verseTranslation`, their hooks and types) and `/screens` (`QuranIndexScreen`, `QuranReaderScreen`, `PrayerTimesScreen`, `QuranPrayerTab`, `V1ImportBanner`).
+- Code moved, not changed: `src/meta/index.ts`, `src/prayer/index.ts`, `src/storage/index.ts`, `src/ui/home.ts`, `src/ui/screens.ts`; `src/index.ts` and `src/ui/index.ts` re-export them, so every existing import still works.
+- New `src/subpaths.test.ts`: each subpath gives the same values as the main entry, together they cover it, and `package.json` lists each one. `pnpm --filter @qc/content test`: 864 passing in 26 files.
+- The user app imports the subpaths and loads the Quran and Prayer tab as its own chunk; with the i18n split this took the user app's first-screen JS under the 450 KiB budget (`user-app.md`).
 
 ### 2026-10-17: English translation (Maududi) on English screens (owner decision 2026-10-17)
 

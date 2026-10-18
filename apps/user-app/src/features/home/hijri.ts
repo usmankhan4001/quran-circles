@@ -4,8 +4,8 @@ import {
   hijriDate,
   todayAt,
   type HijriDate,
-} from '@qc/content';
-import type { MessageKey } from '@qc/i18n';
+} from '@qc/content/prayer';
+import type { MessageKey } from '../../i18n/translate';
 
 /** The month names, in the keys `@qc/content` already uses for its own Hijri dates. */
 export const HIJRI_MONTH_KEYS = [

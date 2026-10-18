@@ -7,8 +7,11 @@
  * already downloads at full speed, so Home draws as soon as the main bundle has run. Every other
  * route still loads on demand. iOS and Android bundle everything anyway.
  */
-// `@expo/metro-runtime` has to come first (expo-router/entry-classic says why).
+// `@expo/metro-runtime` has to come first (expo-router/entry-classic says why). Then, on the
+// web, the download of the page language's words (boot/earlyLanguage.web.ts), so it arrives
+// while the rest of the bundle runs.
 import '@expo/metro-runtime';
+import './boot/earlyLanguage';
 import './app/_layout';
 import './app/(tabs)/_layout';
 import './app/(tabs)/home';

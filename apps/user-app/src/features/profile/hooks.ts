@@ -2,12 +2,12 @@ import { useCallback } from 'react';
 import { consentGranted, type Consent, type Follow, type ProfileUpdate } from '@qc/contracts';
 import { useAction } from '../../data/useAction';
 import { useQuery } from '../../data/useQuery';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 
 export function useConsents() {
   const { api } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   return useQuery<Consent[]>(
     status === 'signedIn' ? 'me:consents' : null,
     async () => (await api.consents.list()).items,
@@ -74,7 +74,7 @@ export function useProfileName() {
 
 export function useLocaleSync() {
   const { api } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   return useCallback(
     async (locale: 'en' | 'ur') => {
       if (status !== 'signedIn') return;

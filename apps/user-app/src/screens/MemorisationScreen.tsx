@@ -36,7 +36,7 @@ import {
 import { useI18n } from '../i18n/I18nProvider';
 import type { TFunction } from '../i18n/translate';
 import { useNav } from '../nav/NavProvider';
-import { useAuthState } from '../providers/hooks';
+import { useAuthStatus } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
 
@@ -106,7 +106,7 @@ function MemorisationSummary({ items }: { items: readonly MemorisationEntry[] })
 export function MemorisationScreen() {
   const { t } = useI18n();
   const nav = useNav();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const tracker = useMemorisation();
   const items = tracker.data?.items;
 

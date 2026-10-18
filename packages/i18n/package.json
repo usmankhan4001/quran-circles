@@ -6,7 +6,12 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./tables/user-app/en": "./src/tables/user-app.en.ts",
+    "./tables/user-app/ur": "./src/tables/user-app.ur.ts",
+    "./tables/admin-app/en": "./src/tables/admin-app.en.ts",
+    "./tables/admin-app/ur": "./src/tables/admin-app.ur.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

@@ -10,7 +10,10 @@ import {
 import { Platform, useColorScheme } from 'react-native';
 import type { Locale } from '@qc/contracts';
 import { formatNumber, ThemeProvider, type ColorMode, type TextSizeStep } from '@qc/ui';
+import type { LanguageLoader } from '../i18n/languageLoader';
+import { languages as appLanguages } from '../i18n/languages';
 import { createTranslator, type Translator } from '../i18n/translate';
+import { usePrefetchOtherLanguage, useShownLocale } from '../i18n/useLanguage';
 import type { KeyValueStore } from '../storage/storage';
 
 export type ColorChoice = 'system' | ColorMode;
@@ -24,11 +27,24 @@ export interface Appearance {
 
 export const APPEARANCE_KEY = 'qc.admin.appearance';
 
+/** The language `public/boot.js` put on the page (web), else English. */
+function pageLocale(): Locale {
+  if (Platform.OS !== 'web' || typeof document === 'undefined') return 'en';
+  return document.documentElement.lang === 'ur' ? 'ur' : 'en';
+}
+
 interface AppearanceContextValue extends Appearance {
-  setLocale: (locale: Locale) => void;
+  /**
+   * Switches once the language's words are in (the web downloads one language at a time).
+   * Rejects, changing nothing, when they cannot be had.
+   */
+  setLocale: (locale: Locale) => Promise<void>;
   setTextSize: (size: TextSizeStep) => void;
   setColorChoice: (choice: ColorChoice) => void;
-  /** True once saved choices have been read, so the first paint does not flash the defaults. */
+  /**
+   * True once saved choices have been read and the saved language's words are in, so the first
+   * paint does not flash the defaults.
+   */
   ready: boolean;
 }
 
@@ -39,6 +55,8 @@ export interface AppearanceProviderProps {
   initial?: Partial<Appearance>;
   /** Skips animations. Tests set it: jsdom never finishes a CSS animation. */
   reduceMotion?: boolean;
+  /** Where the languages' words come from. Tests pass one they control. */
+  languages?: LanguageLoader;
   children: ReactNode;
 }
 
@@ -68,10 +86,14 @@ export function AppearanceProvider({
   store,
   initial,
   reduceMotion,
+  languages = appLanguages,
   children,
 }: AppearanceProviderProps) {
   const [state, setState] = useState<Appearance>({
-    locale: initial?.locale ?? 'en',
+    // Until the saved choice is read, the page's language: `public/boot.js` set it from the same
+    // saved choice and its words are already downloading, so the other language is not fetched
+    // for nothing (a phone, and tests, start in English as before).
+    locale: initial?.locale ?? pageLocale(),
     textSize: initial?.textSize ?? 0,
     colorChoice: initial?.colorChoice ?? 'system',
   });
@@ -81,23 +103,33 @@ export function AppearanceProvider({
   useEffect(() => {
     if (initial) return;
     let cancelled = false;
-    void store.get(APPEARANCE_KEY).then((raw) => {
+    void store.get(APPEARANCE_KEY).then(async (raw) => {
+      const saved = parseSaved(raw);
+      // `public/boot.js` started the saved language's download before the scripts. Without it
+      // (offline) the screens fall back to the other language or the keys, rather than never
+      // starting.
+      await languages.load(saved.locale ?? 'en').catch(() => undefined);
       if (cancelled) return;
-      setState((prev) => ({ ...prev, ...parseSaved(raw) }));
+      // Nothing saved means English, whatever the page said before the read.
+      setState((prev) => ({ ...prev, ...saved, locale: saved.locale ?? 'en' }));
       setReady(true);
     });
     return () => {
       cancelled = true;
     };
-  }, [store, initial]);
+  }, [store, initial, languages]);
+
+  // The saved language once its words are in.
+  const locale = useShownLocale(state.locale, languages);
+  usePrefetchOtherLanguage(locale, { loader: languages });
 
   // The page's language and direction, for screen readers and the browser (A-01). Only once the
   // saved choice is read: until then the page keeps what public/boot.js set from it.
   useEffect(() => {
     if (!ready || Platform.OS !== 'web' || typeof document === 'undefined') return;
-    document.documentElement.lang = state.locale;
-    document.documentElement.dir = state.locale === 'ur' ? 'rtl' : 'ltr';
-  }, [ready, state.locale]);
+    document.documentElement.lang = locale;
+    document.documentElement.dir = locale === 'ur' ? 'rtl' : 'ltr';
+  }, [ready, locale]);
 
   const update = useCallback(
     (patch: Partial<Appearance>) => {
@@ -113,12 +145,13 @@ export function AppearanceProvider({
   const value = useMemo<AppearanceContextValue>(
     () => ({
       ...state,
+      locale,
       ready,
-      setLocale: (locale) => update({ locale }),
+      setLocale: (next) => languages.load(next).then(() => update({ locale: next })),
       setTextSize: (textSize) => update({ textSize }),
       setColorChoice: (colorChoice) => update({ colorChoice }),
     }),
-    [state, ready, update],
+    [state, locale, ready, update, languages],
   );
 
   const mode: ColorMode =
@@ -128,7 +161,7 @@ export function AppearanceProvider({
     <AppearanceContext.Provider value={value}>
       <ThemeProvider
         mode={mode}
-        locale={state.locale}
+        locale={locale}
         textSize={state.textSize}
         reduceMotion={reduceMotion}
         style={{ flex: 1 }}

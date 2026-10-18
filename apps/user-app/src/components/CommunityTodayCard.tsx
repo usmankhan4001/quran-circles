@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card, Icon, Skeleton, Text, spacing, useTheme } from '@qc/ui';
 import { useCommunityToday } from '../features/reading/hooks';
@@ -13,7 +14,7 @@ const styles = StyleSheet.create({
  * pages read together. No city, venue or circle numbers exist, so nothing is ever compared. The
  * card stays away when the number cannot be had; it is a nice extra, not something to retry.
  */
-export function CommunityTodayCard() {
+function CommunityTodayCardContent() {
   const { t } = useI18n();
   const c = useTheme().colors;
   const { query, enabled } = useCommunityToday();
@@ -45,3 +46,6 @@ export function CommunityTodayCard() {
     </Card>
   );
 }
+
+/** It takes no props, so it draws again when its own data changes, not each time Home does. */
+export const CommunityTodayCard = memo(CommunityTodayCardContent);

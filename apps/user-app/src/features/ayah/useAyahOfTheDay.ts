@@ -1,6 +1,6 @@
 import { builtInAyahFor, pakistanDate, type AyahOfTheDay, type Follow } from '@qc/contracts';
 import { useQuery } from '../../data/useQuery';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 import { ayahOfTheDay, type AyahPlace } from '../home/ayah';
 import { useMyFollows } from '../journey/hooks';
@@ -44,7 +44,7 @@ export interface DailyAyah extends AyahPlace {
  */
 export function useAyahOfTheDay(): { ayah: DailyAyah | null; enabled: boolean } {
   const { api, now } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const feature = useFeature('ayah_of_the_day');
   const follows = useMyFollows();
   const today = pakistanDate(now());

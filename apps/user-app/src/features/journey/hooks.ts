@@ -2,13 +2,13 @@ import { useCallback } from 'react';
 import type { Follow, Registration } from '@qc/contracts';
 import { useAction } from '../../data/useAction';
 import { useQuery } from '../../data/useQuery';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 
 /** Own registrations that are still ahead. Personal, so never saved on the device. */
 export function useMyRegistrations() {
   const { api } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   return useQuery<Registration[]>(
     status === 'signedIn' ? 'me:registrations' : null,
     async () =>
@@ -19,7 +19,7 @@ export function useMyRegistrations() {
 
 export function useMyFollows() {
   const { api } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   return useQuery<Follow[]>(
     status === 'signedIn' ? 'me:follows' : null,
     async () => (await api.follows.list()).items,

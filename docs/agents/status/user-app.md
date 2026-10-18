@@ -3,6 +3,47 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Low-end budgets, second pass (2026-10-18): i18n per language, content subpaths, zod, Home renders
+
+Lanes touched: user-app, admin-app, `packages/i18n`, `packages/content` (see `i18n.md`, `content.md`, `admin-app.md`).
+
+- **Words: one language, this app's words only.** On the web, Metro sends `@qc/i18n` to `@qc/i18n/client` (`metro.redirects.cjs`), a live catalogue that starts empty. `src/i18n/languages.web.ts` downloads `@qc/i18n/tables/user-app/<lang>` (shared and user-app parts, about 9.6 KB gzip for English, 12 KB for Urdu) as its own chunk. `src/boot/earlyLanguage.web.ts` starts the page language's download as soon as the bundle starts running (it first imports `expo`, which installs the chunk loader; without it the download threw "Requiring unknown module"). The root layout waits for it next to the first font. Phones and tests keep every language in the bundle (`languages.ts`).
+- **Switching.** `useShownLocale` keeps the screens in the old language until the new one's words are in, so nothing shows half-translated or as keys. Profile prefetches the other language when it opens; the tabs fetch it quietly 20 s after they appear, at idle (`usePrefetchOtherLanguage`), so the service worker has both files and an offline switch works. A switch whose download fails shows the offline toast (`ui.offlineBody`) and leaves the choice as it was. A loader that throws before it starts counts as a failed download and is retried next time.
+- **Content subpaths.** Imports moved to `@qc/content/home`, `/prayer`, `/meta` and `/storage`; the Quran and Prayer tab (`features/content/quranPrayerTab.tsx`) is now a lazy chunk with a skeleton (`tab-loading`).
+- **zod.** On the web only, zod's JSON-schema modules (`to-json-schema`, `json-schema-*`, `compile`, `from-json-schema`) are swapped for `src/platform/zod-left-out.js`, whose functions throw if ever called. Parsing and validation code is untouched; `metroRedirects.test.ts` checks the stub's exports against zod's own and that parsing still works.
+- **Home renders.** `useAuthStatus()` (selects `status` only) replaces `useAuthState()` in 16 places, so token refreshes no longer re-render Home and the tabs. `useCacheEntry` subscribes per key. AyahOfTheDay, ReadAlong, DaysRead and CommunityToday cards and the prayer strip are memoised; the bell and the shortcuts are their own memoised components. Home interactive is now within budget.
+- Tests: `i18n/languages.test.tsx` (13: loader once, retry after failure, a throwing loader, prefetch, web catalogue gets only this app's words one language at a time, `useShownLocale`, the delayed prefetch), `metroRedirects.test.ts` (catalogue and zod redirects), `dynamicKeys.test.ts` reads the app's own parts. `pnpm --filter @qc/user-app test`: 1022 passing in 67 files.
+
+### Results (same command, low-end emulation, Slow 4G, medians of 3)
+
+| Measure                             | Budget  | Before (two runs) | After A | After B |
+| ----------------------------------- | ------- | ----------------- | ------- | ------- |
+| First-screen JS (gzip, script tags) | 450 KiB | 524 KiB (1)       | 445 KiB | 445 KiB |
+| Home content                        | 6 s     | 7.01 / 7.35 s     | 6.83 s  | 6.87 s  |
+| Home interactive                    | 8 s     | 8.86 / 8.24 s     | 7.40 s  | 7.60 s  |
+| Transfer before interactive         | 900 KiB | 620 / 618 KiB     | 549 KiB | 549 KiB |
+| First tap to Nearby                 | 1.5 s   | 1.37 / 1.52 s     | 1.46 s  | 1.50 s  |
+| Warm start content                  | 3 s     | 2.90 / 3.01 s     | 2.99 s  | 3.14 s  |
+| Admin Today content                 | 6 s     | 7.31 / 7.55 s     | 7.30 s  | 6.97 s  |
+| Admin first-screen JS (gzip)        | 450 KiB | 476 KiB (1)       | 406 KiB | 406 KiB |
+
+(1) As measured in the first pass. The same measurement on this morning's tree, before this pass, was 545 KiB (user) and 510 KiB (admin): other lanes' work had grown both since. First paint stays at 0.77 s, scroll, map and the Quran reader stay within budget. Warm start and first tap stay on the line (±0.15 s between runs).
+
+### Still over budget, and exactly why
+
+Measured with an in-page CPU profile and resource timings on the same harness (a probe spec in my scratch folder, not committed).
+
+- **Home content, 6.85 s (0.85 s over).** The main bundle arrives at 3.7 s (450 KB gzip on Slow 4G). Running it takes 1.28 s (to 5.0 s): about 25 % is zod building the contract schemas at import (`@qc/contracts`, about 250 ms), about 25 % is the module loader compiling code, the rest expo-router and react-native-web. The start requests and the language file then take one round trip (to 5.7 s). The first render takes 0.70 s and shows the skeleton because the next sessions arrive 40 ms after it starts; the second render, with the data, takes 0.37 s, so content shows at 6.9 s. Most of the render time is React reconciling react-native-web's element tree (0.77 s of 1.3 s), not app code.
+- **Admin Today content, 6.97 to 7.30 s (1.0 to 1.3 s over).** Bundle at 3.5 s; it runs until 4.7 s; `me` (asked early) can only finish after that, at 5.3 s; first render 0.62 s; only then does Today ask `admin/sessions` (it needs the working scope from `me`), another round trip, so Today shows at 6.8 to 7.3 s.
+- **Test-harness effect.** `localOnly` (tests/e2e/src/support/browser.ts) and the Quran stub use Playwright request routing, which intercepts every request. Under it, a request made while the main thread is busy completes only after the busy stretch ends: the language file and the admin `me`, both asked at about 3.6 to 3.8 s, get their first byte exactly when the bundle finishes running. Without routing (same probe, 3 runs each) Home content is 0.2 to 0.3 s and Today 0.1 to 0.25 s sooner. Real phones have no such interception. Fix for the integration lane: block outside hosts with Chromium's `--host-resolver-rules` instead of a route, so nothing is intercepted.
+
+### What would close the rest
+
+- **Contracts lane:** build the zod schemas lazily (or per endpoint) so importing `@qc/contracts` does not construct all of them. About 0.25 s of bundle run time at start in both apps.
+- **Admin app (mine, next step):** start `admin/sessions` as soon as the early `me` answer is in (the working scope comes from `me` and the saved scope), instead of after the first render. In the probe that saves about 0.55 s.
+- **User app (mine, next step):** draw Home's first frame only once the start queries have answered or failed (capped, about 0.8 s), so there is one render instead of a skeleton and then the content (about 0.3 s); and mount the cards below the fold a frame later (needs a check that the screen tests still pass unchanged).
+- Even with all three, Home content is close to 6 s, not clearly under it. The rest is the size of expo-router, react-native-web and React themselves.
+
 ## Low-end cold start (2026-10-18, `tests/e2e/src/quality/budgets.ts`)
 
 Only `apps/user-app/**` outside screen components, plus the ui lane's font files (ui status).
@@ -40,7 +81,7 @@ Scroll (0.3 to 1.3 % dropped), map (0.3 to 0.4 s) and the Quran reader (2.4 s fi
 - **Home interactive (8.2 to 8.9 s, budget 8 s).** After content, a run of responses each re-render Home (150 to 400 ms each on the emulated CPU): places, `me`, unread count, reading position, bookmarks, community today, reading days, ayah of the day and its text (which waits on config and follows). Fewer, cheaper re-renders mean changes inside screens and providers, which this pass did not touch.
 - **First tap to Nearby (1.37 / 1.52 s) and warm start (2.90 / 3.01 s)** are on the line: within budget in one run, just over in the other.
 
-### Change requests (not made here)
+### Change requests (not made here; both done in the second pass above)
 
 - **i18n per language** (`packages/i18n`): export each language's table on its own (`@qc/i18n/en`, `@qc/i18n/ur`) and load only the saved language at start, the other on switch. Ideally also split by app (user app, admin, console). Saves about 36 KB gzip at start.
 - **`@qc/content` subpath exports**: Home pulls the whole package (surah list, Quran mounts, import banner). Subpaths such as `@qc/content/surahs` would keep the rest out of the main bundle. About 30 KB gzip.
@@ -179,6 +220,8 @@ Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the we
 
 ## Questions for the orchestrator
 
+- Low-end budgets (second pass above): Home content and Admin Today are still over 6 s. Should I take the two next steps listed there (start `admin/sessions` from the early `me`; one first render with data on Home)? They need the contracts lane's lazy schemas as well to get close to 6 s.
+- For the integration lane: the quality harness's request routing (`localOnly`, the Quran stub) delays every request made while the page's main thread is busy (see "Test-harness effect" above). Blocking outside hosts with `--host-resolver-rules` would measure what a phone sees.
 - App id: iOS bundle id and Android package are unset in `app.config.ts`. What are they, and who owns the store accounts?
 - Google Maps key: the web and phone map need a public key in `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (the name `src/platform/env.ts` reads); until then the list-only view is shown. Who creates it, and which referrer restrictions apply?
 - For the platform lane: the root `.env.example` and the deploy env docs should carry `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (not `EXPO_PUBLIC_GOOGLE_MAPS_KEY`), next to `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_VAPID_PUBLIC_KEY`. This lane did not edit `.env.example`. The full list is in the header comment of `apps/user-app/app.config.ts`.

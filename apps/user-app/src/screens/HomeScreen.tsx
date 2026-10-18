@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Button,
@@ -38,7 +39,7 @@ import { useOrigin } from '../features/nearby/useOrigin';
 import { useUnreadCount } from '../features/updates/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
-import { useAuthState, usePreferences } from '../providers/hooks';
+import { useAuthStatus, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useCities } from '../features/places/usePlaces';
 import { GlassButton } from '../ui/GlassButton';
@@ -72,22 +73,112 @@ const styles = StyleSheet.create({
 /** Width of a picture card in the "near you" row (H4). */
 const PICTURE_WIDTH = 176;
 
+/** Unread updates for the person signed in; none when signed out. */
+function useHomeUnread(): number {
+  const status = useAuthStatus();
+  const unread = useUnreadCount();
+  return status === 'signedIn' ? unread : 0;
+}
+
+/**
+ * The bell in the header and the shortcuts at the bottom read the unread count themselves, so
+ * the count arriving after start-up draws only them, not the whole of Home.
+ */
+const HomeBell = memo(function HomeBell() {
+  const { t } = useI18n();
+  const nav = useNav();
+  const unreadCount = useHomeUnread();
+  return (
+    <GlassButton
+      icon="bell"
+      accessibilityLabel={
+        unreadCount > 0
+          ? `${t('updates.title')}, ${t('ui.unread', { count: unreadCount })}`
+          : t('updates.title')
+      }
+      count={unreadCount}
+      onPress={() => nav.go({ name: 'updates' })}
+      testID="home-bell"
+    />
+  );
+});
+
+const HomeShortcuts = memo(function HomeShortcuts() {
+  const { t } = useI18n();
+  const nav = useNav();
+  const unreadCount = useHomeUnread();
+  const shortcuts: {
+    key: string;
+    icon: IconName;
+    label: string;
+    onPress: () => void;
+    count?: number;
+  }[] = [
+    {
+      key: 'quran',
+      icon: 'book',
+      label: t('home.also.quran'),
+      onPress: () => nav.tab({ name: 'quran' }),
+    },
+    {
+      key: 'prayer',
+      icon: 'prayer',
+      label: t('home.prayer.title'),
+      onPress: () => nav.tab({ name: 'quran' }),
+    },
+    {
+      key: 'qibla',
+      icon: 'route',
+      label: t('home.also.qibla'),
+      onPress: () => nav.tab({ name: 'quran' }),
+    },
+    {
+      key: 'updates',
+      icon: 'bell',
+      label: t('updates.title'),
+      onPress: () => nav.go({ name: 'updates' }),
+      ...(unreadCount > 0 ? { count: unreadCount } : {}),
+    },
+  ];
+  return (
+    <Section title={t('home.also.title')} testID="home-also">
+      <View style={styles.shortcuts}>
+        {shortcuts.map((item) => (
+          <Shortcut
+            key={item.key}
+            icon={item.icon}
+            label={item.label}
+            {...(item.count
+              ? {
+                  count: item.count,
+                  accessibilityLabel: `${item.label}, ${t('ui.unread', { count: item.count })}`,
+                }
+              : {})}
+            onPress={item.onPress}
+            testID={`home-also-${item.key}`}
+          />
+        ))}
+      </View>
+    </Section>
+  );
+});
+
 export function HomeScreen() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const theme = useTheme();
   const c = theme.colors;
   const { content, now, openUrl } = useServices();
-  const { status } = useAuthState();
   const prefs = usePreferences();
   const config = useAppConfig();
   const next = useNextNearYou();
   const registrations = useMyRegistrations();
-  const unread = useUnreadCount();
   const cities = useCities();
   // The same "near me" point as Nearby: the chosen area's centre, no phone location needed.
   const origin = useOrigin();
   const { PrayerStrip } = content;
+  // Stable, so the memoised strip does not draw again each time Home does.
+  const openPrayer = useCallback(() => nav.tab({ name: 'quran' }), [nav]);
 
   const mine = registrations.data ? nextRegisteredOccurrence(registrations.data, now()) : undefined;
   const leadingProgram = config.seasonMode === 'dora' ? 'dora' : 'circles';
@@ -124,7 +215,6 @@ export function HomeScreen() {
     nearest === null
       ? t('home.map.count', { count })
       : t('home.map.countNearest', { count, distance: distanceText(nearest) });
-  const unreadCount = status === 'signedIn' ? unread : 0;
 
   const heroCard = mine ? (
     <View testID="home-your-next">
@@ -149,40 +239,6 @@ export function HomeScreen() {
     />
   ) : null;
 
-  const shortcuts: {
-    key: string;
-    icon: IconName;
-    label: string;
-    onPress: () => void;
-    count?: number;
-  }[] = [
-    {
-      key: 'quran',
-      icon: 'book',
-      label: t('home.also.quran'),
-      onPress: () => nav.tab({ name: 'quran' }),
-    },
-    {
-      key: 'prayer',
-      icon: 'prayer',
-      label: t('home.prayer.title'),
-      onPress: () => nav.tab({ name: 'quran' }),
-    },
-    {
-      key: 'qibla',
-      icon: 'route',
-      label: t('home.also.qibla'),
-      onPress: () => nav.tab({ name: 'quran' }),
-    },
-    {
-      key: 'updates',
-      icon: 'bell',
-      label: t('updates.title'),
-      onPress: () => nav.go({ name: 'updates' }),
-      ...(unreadCount > 0 ? { count: unreadCount } : {}),
-    },
-  ];
-
   return (
     <ScreenFrame
       title={t('tabs.home')}
@@ -190,17 +246,7 @@ export function HomeScreen() {
       {...(city ? { subtitle: l(city.name).text } : {})}
       actions={
         <View style={styles.actions}>
-          <GlassButton
-            icon="bell"
-            accessibilityLabel={
-              unreadCount > 0
-                ? `${t('updates.title')}, ${t('ui.unread', { count: unreadCount })}`
-                : t('updates.title')
-            }
-            count={unreadCount}
-            onPress={() => nav.go({ name: 'updates' })}
-            testID="home-bell"
-          />
+          <HomeBell />
           <ProfileButton />
         </View>
       }
@@ -229,7 +275,7 @@ export function HomeScreen() {
         </View>
 
         {PrayerStrip ? (
-          <PrayerStrip onPress={() => nav.tab({ name: 'quran' })} />
+          <PrayerStrip onPress={openPrayer} />
         ) : (
           <Card onPress={() => nav.tab({ name: 'quran' })} testID="home-prayer-placeholder">
             <Text variant="label">{t('home.prayer.title')}</Text>
@@ -353,25 +399,7 @@ export function HomeScreen() {
           </View>
         ) : null}
 
-        <Section title={t('home.also.title')} testID="home-also">
-          <View style={styles.shortcuts}>
-            {shortcuts.map((item) => (
-              <Shortcut
-                key={item.key}
-                icon={item.icon}
-                label={item.label}
-                {...(item.count
-                  ? {
-                      count: item.count,
-                      accessibilityLabel: `${item.label}, ${t('ui.unread', { count: item.count })}`,
-                    }
-                  : {})}
-                onPress={item.onPress}
-                testID={`home-also-${item.key}`}
-              />
-            ))}
-          </View>
-        </Section>
+        <HomeShortcuts />
       </View>
     </ScreenFrame>
   );

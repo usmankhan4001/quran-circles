@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View } from 'react-native';
 import {
   Avatar,
@@ -6,6 +7,7 @@ import {
   Select,
   SegmentedControl,
   Text,
+  Toast,
   spacing,
   type TextSizeStep,
 } from '@qc/ui';
@@ -26,6 +28,8 @@ export function AccountScreen() {
   const { me, signOut } = useAuth();
   const { locale, setLocale, textSize, setTextSize, colorChoice, setColorChoice } = useAppearance();
   const sizes: TextSizeStep[] = [0, 1, 2, 3];
+  // The web downloads the other language's words on a switch; offline, nothing changes.
+  const [languageFailed, setLanguageFailed] = useState(false);
   return (
     <Screen title={t('admin.account.title')} testID="account">
       <Card>
@@ -51,12 +55,25 @@ export function AccountScreen() {
       <SegmentedControl
         accessibilityLabel={t('admin.account.language')}
         value={locale}
-        onChange={setLocale}
+        onChange={(next) => {
+          setLanguageFailed(false);
+          setLocale(next).catch(() => setLanguageFailed(true));
+        }}
         options={[
           { value: 'en', label: 'English' },
           { value: 'ur', label: 'اردو' },
         ]}
       />
+      {languageFailed ? (
+        <Toast
+          testID="account-language-failed"
+          kind="warning"
+          durationMs={0}
+          message={t('ui.offlineBody')}
+          onDismiss={() => setLanguageFailed(false)}
+          dismissLabel={t('ui.dismiss')}
+        />
+      ) : null}
       <SegmentedControl
         accessibilityLabel={t('admin.account.textSize')}
         value={String(textSize)}

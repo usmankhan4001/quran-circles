@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { CreateContentServicesOptions } from '@qc/content/home';
 import {
   createIndexedDbStorage,
   createResilientStorage,
   fromAsyncStorage,
-  type CreateContentServicesOptions,
-} from '@qc/content';
+} from '@qc/content/storage';
 import { Platform } from 'react-native';
 
 type StorageParts = Pick<CreateContentServicesOptions, 'storage' | 'cacheStorage' | 'readV1'>;

@@ -5,7 +5,7 @@ import {
   type Section,
   type Session,
 } from '@qc/contracts';
-import type { MessageKey } from '@qc/i18n';
+import type { MessageKey } from '../../i18n/translate';
 
 export const MAX_PARTY_SIZE = 20;
 

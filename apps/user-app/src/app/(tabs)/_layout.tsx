@@ -8,6 +8,7 @@ import { useInsets } from '../../providers/insets';
 import { TAB_ROUTES, type TabRoute } from '../../nav/routes';
 import { tabIcon } from '../../ui/tabIcons';
 import { prefetchTabLater } from '../../boot/routeChunks';
+import { usePrefetchOtherLanguage } from '../../i18n/useLanguage';
 
 /** How long after the tabs appear the web build fetches Nearby's code, the likeliest next tab. */
 const NEARBY_PREFETCH_DELAY_MS = 1500;
@@ -64,7 +65,9 @@ function BottomTabs({
 
 /** The four tabs. Their bar is the kit's TabBar, so it follows the theme, size and direction. */
 export default function TabsLayout() {
+  const { locale } = useI18n();
   usePrefetchNearby();
+  usePrefetchOtherLanguage(locale);
   return (
     <Tabs
       screenOptions={{ headerShown: false }}

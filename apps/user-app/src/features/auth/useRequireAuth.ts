@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNav } from '../../nav/NavProvider';
 import type { Route } from '../../nav/routes';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 
 /**
  * Browsing needs no account; registering, following and My Journey do. Call the returned
@@ -9,7 +9,7 @@ import { useAuthState } from '../../providers/hooks';
  * with a way back to `returnTo`.
  */
 export function useRequireAuth(): (returnTo: Route) => boolean {
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const nav = useNav();
   return useCallback(
     (returnTo: Route) => {

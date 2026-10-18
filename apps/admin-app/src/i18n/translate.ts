@@ -1,8 +1,13 @@
-import { messages, type MessageKey } from '@qc/i18n';
+import { messages, type AdminAppKey } from '@qc/i18n';
 import type { Locale } from '@qc/contracts';
 import { formatNumber } from '@qc/ui';
 
-export type { MessageKey };
+/**
+ * The keys this app has words for: the catalogue's shared part and the app's own
+ * (`@qc/i18n` `AdminAppKey`). On the web only this app's table is downloaded, so a key from
+ * another app's part would have no words; the typechecker refuses it.
+ */
+export type MessageKey = AdminAppKey;
 export type Params = Record<string, string | number>;
 
 /** Keys that have a `.one` and a `.other` form, named by their shared base. */
@@ -55,7 +60,12 @@ export function createTranslator(locale: Locale): Translator {
   return t;
 }
 
-/** True when a key exists, so a caller can fall back to plain text for an unknown id. */
+/**
+ * True when a key exists, so a caller can fall back to plain text for an unknown id. The web
+ * holds only the languages loaded so far (`@qc/i18n/client`), so either one may answer.
+ */
 export function hasMessage(key: string): key is MessageKey {
-  return key in (messages.en as Record<string, string>);
+  return (
+    key in (messages.en as Record<string, string>) || key in (messages.ur as Record<string, string>)
+  );
 }

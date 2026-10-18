@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Button, Card, Text, spacing, useTheme } from '@qc/ui';
 import { formatClockTime } from '../core/format';
@@ -17,7 +18,7 @@ const styles = StyleSheet.create({
  * follows, the portion the coordinator set, opening the reader at its first ayah. Reading any
  * ayah of it counts as a day read (`useReadingDaySync`). No notification is added.
  */
-export function ReadAlongCard() {
+function ReadAlongCardContent() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const c = useTheme().colors;
@@ -56,3 +57,6 @@ export function ReadAlongCard() {
     </Card>
   );
 }
+
+/** It takes no props, so it draws again when its own data changes, not each time Home does. */
+export const ReadAlongCard = memo(ReadAlongCardContent);

@@ -1,13 +1,18 @@
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Pressable, Text } from 'react-native';
+import type { Locale } from '@qc/contracts';
+import { createLanguageLoader } from '../i18n/languageLoader';
 import { createMemoryStore, type KeyValueStore } from '../storage/storage';
 import { APPEARANCE_KEY, AppearanceProvider, useAppearance } from './AppearanceProvider';
 
 function Probe() {
   const { locale, ready, setLocale } = useAppearance();
   return (
-    <Pressable testID="switch" onPress={() => setLocale(locale === 'ur' ? 'en' : 'ur')}>
+    <Pressable
+      testID="switch"
+      onPress={() => void setLocale(locale === 'ur' ? 'en' : 'ur').catch(() => undefined)}
+    >
       <Text testID="state">{`${locale}:${String(ready)}`}</Text>
     </Pressable>
   );
@@ -39,7 +44,7 @@ describe('AppearanceProvider and the page language (A-01)', () => {
       </AppearanceProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ur:true'));
-    expect(html().lang).toBe('ur');
+    await waitFor(() => expect(html().lang).toBe('ur'));
     expect(html().dir).toBe('rtl');
   });
 
@@ -58,7 +63,8 @@ describe('AppearanceProvider and the page language (A-01)', () => {
         </AppearanceProvider>,
       );
       await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('en:true'));
-      expect(html().lang).toBe('en');
+      // The page attributes follow in an effect after the render that shows `ready`.
+      await waitFor(() => expect(html().lang).toBe('en'));
       expect(html().dir).toBe('ltr');
       view.unmount();
     }
@@ -73,8 +79,9 @@ describe('AppearanceProvider and the page language (A-01)', () => {
         <Probe />
       </AppearanceProvider>,
     );
-    // The default is English, but it never reaches the page.
-    expect(screen.getByTestId('state').textContent).toBe('en:false');
+    // Until the read, the provider takes the page's language (so the web downloads only the
+    // words boot.js already asked for) and leaves the page alone.
+    expect(screen.getByTestId('state').textContent).toBe('ur:false');
     expect(html().lang).toBe('ur');
     expect(html().dir).toBe('rtl');
     await act(async () => {
@@ -82,6 +89,31 @@ describe('AppearanceProvider and the page language (A-01)', () => {
     });
     expect(screen.getByTestId('state').textContent).toBe('ur:true');
     expect(html().dir).toBe('rtl');
+  });
+
+  it('starts in English before the read when the page is English, and fetches no Urdu', async () => {
+    html().lang = 'en';
+    html().dir = 'ltr';
+    const asked: string[] = [];
+    const loader = {
+      isLoaded: () => false,
+      load: (locale: 'en' | 'ur') => {
+        asked.push(locale);
+        return Promise.resolve();
+      },
+    };
+    const { store, finish } = slowStore(null);
+    render(
+      <AppearanceProvider store={store} languages={loader}>
+        <Probe />
+      </AppearanceProvider>,
+    );
+    expect(screen.getByTestId('state').textContent).toBe('en:false');
+    await act(async () => {
+      finish();
+    });
+    await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('en:true'));
+    expect(asked.every((locale) => locale === 'en')).toBe(true);
   });
 
   it('follows a change of language at once', async () => {
@@ -101,5 +133,73 @@ describe('AppearanceProvider and the page language (A-01)', () => {
     });
     expect(html().lang).toBe('en');
     expect(html().dir).toBe('ltr');
+  });
+});
+
+/** A loader whose downloads the test finishes or fails by hand; English is already in. */
+function manualLanguages() {
+  const installed = new Set<Locale>(['en']);
+  const waiting: Partial<Record<Locale, { resolve: () => void; reject: () => void }>> = {};
+  const loader = createLanguageLoader({
+    tables: {
+      en: () => Promise.resolve({ default: {} }),
+      ur: () =>
+        new Promise((resolve, reject) => {
+          waiting.ur = {
+            resolve: () => resolve({ default: {} }),
+            reject: () => reject(new Error('offline')),
+          };
+        }),
+    },
+    install: (locale) => installed.add(locale),
+    has: (locale) => installed.has(locale),
+  });
+  return { loader, waiting };
+}
+
+describe('AppearanceProvider and the languages the web downloads one at a time', () => {
+  afterEach(() => {
+    html().removeAttribute('lang');
+    html().removeAttribute('dir');
+  });
+
+  it('is ready only once the saved language has downloaded', async () => {
+    const { loader, waiting } = manualLanguages();
+    const store = createMemoryStore({ [APPEARANCE_KEY]: JSON.stringify({ locale: 'ur' }) });
+    render(
+      <AppearanceProvider store={store} languages={loader}>
+        <Probe />
+      </AppearanceProvider>,
+    );
+    await waitFor(() => expect(waiting.ur).toBeDefined());
+    expect(screen.getByTestId('state').textContent).toBe('en:false');
+    await act(async () => waiting.ur?.resolve());
+    await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ur:true'));
+    await waitFor(() => expect(html().lang).toBe('ur'));
+  });
+
+  it('switches once the new language is in, and not at all when it cannot be had', async () => {
+    const { loader, waiting } = manualLanguages();
+    const store = createMemoryStore();
+    render(
+      <AppearanceProvider store={store} languages={loader}>
+        <Probe />
+      </AppearanceProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('en:true'));
+
+    fireEvent.click(screen.getByTestId('switch'));
+    await waitFor(() => expect(waiting.ur).toBeDefined());
+    await act(async () => waiting.ur?.reject());
+    expect(screen.getByTestId('state').textContent).toBe('en:true');
+    expect(await store.get(APPEARANCE_KEY)).toBeNull();
+
+    waiting.ur = undefined;
+    fireEvent.click(screen.getByTestId('switch'));
+    await waitFor(() => expect(waiting.ur).toBeDefined());
+    expect(screen.getByTestId('state').textContent).toBe('en:true');
+    await act(async () => waiting.ur?.resolve());
+    await waitFor(() => expect(screen.getByTestId('state').textContent).toBe('ur:true'));
+    expect(JSON.parse((await store.get(APPEARANCE_KEY)) ?? '{}')).toMatchObject({ locale: 'ur' });
   });
 });

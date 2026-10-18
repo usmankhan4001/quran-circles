@@ -47,8 +47,10 @@ import {
   reviseAfterOptions,
 } from '../features/profile/readingSettings';
 import { useI18n } from '../i18n/I18nProvider';
+import { languages } from '../i18n/languages';
+import { otherLocale, prefetchLanguage } from '../i18n/languageLoader';
 import { useNav } from '../nav/NavProvider';
-import { useAuthState, usePreferences } from '../providers/hooks';
+import { useAuthState, useAuthStatus, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
 
@@ -120,7 +122,7 @@ function QuickTiles() {
 export function ProfileScreen() {
   const { t } = useI18n();
   const nav = useNav();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
 
   return (
     <ScreenFrame
@@ -257,9 +259,14 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
 }
 
 function PreferencesSections() {
-  const { t } = useI18n();
+  const { t, locale: shown } = useI18n();
   const prefs = usePreferences();
   const syncLocale = useLocaleSync();
+  const toast = useToast();
+
+  // The web downloads one language's words at a time: fetch the other one now, since this is
+  // where people switch.
+  useEffect(() => prefetchLanguage(languages, otherLocale(shown)), [shown]);
 
   return (
     <>
@@ -268,8 +275,15 @@ function PreferencesSections() {
           accessibilityLabel={t('profile.language.title')}
           value={prefs.locale}
           onChange={(locale) => {
-            void prefs.update({ locale });
-            void syncLocale(locale);
+            // The words first, so the switch happens in one go. Without them (offline, before
+            // the other language was ever downloaded) nothing changes and the person is told.
+            languages.load(locale).then(
+              () => {
+                void prefs.update({ locale });
+                void syncLocale(locale);
+              },
+              () => toast.show(t('ui.offlineBody'), 'warning'),
+            );
           }}
           options={[
             { value: 'en', label: t('profile.language.en') },

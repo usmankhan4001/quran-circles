@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import type { Registration } from '@qc/contracts';
 import { useI18n } from '../../i18n/I18nProvider';
-import { useAuthState, useReminderOptIns } from '../../providers/hooks';
+import { useAuthStatus, useReminderOptIns } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 import { useToast } from '../../providers/Toasts';
 import { useMyRegistrations } from '../journey/hooks';
@@ -10,7 +10,7 @@ import { useMyRegistrations } from '../journey/hooks';
 export function useReminderSync(): void {
   const { reminders, api, now } = useServices();
   const { t, locale } = useI18n();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const optedIn = useReminderOptIns();
   const registrations = useMyRegistrations();
   const data = registrations.data;

@@ -1,37 +1,14 @@
 // Public API of @qc/content: the Quran reader, bookmarks and reading position, prayer times and
-// the Hijri date. Apps import from here only. Everything platform-specific (fetch, storage, the
-// signed-in API client) is passed in; nothing here reaches the network on its own.
+// the Hijri date. Everything platform-specific (fetch, storage, the signed-in API client) is
+// passed in; nothing here reaches the network on its own.
+//
+// The same API is also split into subpaths, so an app's first screen bundles only what it shows
+// (a bundler takes a whole module graph per import): `@qc/content/meta`, `/prayer`, `/storage`,
+// `/home` (the services and Home's cards) and `/screens` (the Quran & Prayer tab's screens).
+// This entry has all of them.
 
 // Surah, ayah and juz facts (names and counts only: no Quran text lives in this package).
-export {
-  SURAHS,
-  SURAH_COUNT,
-  JUZ_COUNT,
-  TOTAL_AYAHS,
-  getSurah,
-  ayahCountOf,
-  isSurahNumber,
-  type SurahInfo,
-} from './meta/surahs';
-export {
-  absoluteAyahNumber,
-  clampAyah,
-  formatVerseKey,
-  isValidAyah,
-  nextAyah,
-  parseVerseKey,
-  type AyahRef,
-} from './meta/ayah';
-export {
-  JUZ_STARTS,
-  isJuzNumber,
-  juzEnd,
-  juzOf,
-  juzSegments,
-  juzStart,
-  type JuzSegment,
-} from './meta/juz';
-export { searchSurahs, type SurahMatch, type SurahSearchResult } from './meta/search';
+export * from './meta';
 
 // Where the text comes from, and the cache in front of it.
 export {
@@ -73,15 +50,7 @@ export {
 } from './quran/prefs';
 
 // Storage adapters.
-export type { AsyncStorageLike, KeyValueStorage, WebStorageLike } from './storage/types';
-export {
-  createResilientStorage,
-  fromAsyncStorage,
-  fromWebStorage,
-  withPrefix,
-} from './storage/adapters';
-export { createIndexedDbStorage, type IndexedDbStorageOptions } from './storage/indexedDb';
-export { createMemoryStorage } from './storage/memory';
+export * from './storage';
 
 // Bookmarks, reading position and the V1 import.
 export type { ContentApi, GetContentApi } from './account/api';
@@ -123,38 +92,7 @@ export {
 } from './state/viewState';
 
 // Prayer times and the Hijri date.
-export {
-  FIVE_PRAYERS,
-  PAKISTAN_UTC_OFFSET_MINUTES,
-  PRAYER_NAMES,
-  computeDay,
-  offsetOf,
-  todayAt,
-  type DayTimes,
-  type FivePrayer,
-  type PrayerName,
-  type PrayerPlace,
-} from './prayer/calc';
-export { nextPrayer, toCountdown, type Countdown, type NextPrayer } from './prayer/next';
-export { clockParts, formatClock, type ClockLabels, type ClockParts } from './prayer/clock';
-export { monthGrid, shiftMonth, weekOf, type MonthGrid } from './prayer/calendar';
-export {
-  addDays,
-  compareDays,
-  dayOfWeek,
-  daysInMonth,
-  sameDay,
-  type CivilDate,
-} from './prayer/civil';
-export { DEFAULT_PLACE, PAKISTAN_CITIES, nearestCity } from './prayer/places';
-export {
-  HIJRI_MONTHS,
-  HIJRI_OFFSET_MAX,
-  HIJRI_OFFSET_MIN,
-  clampHijriOffset,
-  hijriDate,
-  type HijriDate,
-} from './prayer/hijri';
+export * from './prayer';
 
 // Screens, cards and hooks.
 export * from './ui';

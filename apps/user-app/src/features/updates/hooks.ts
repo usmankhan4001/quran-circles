@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useQuery } from '../../data/useQuery';
-import { useAuthState, usePreferences } from '../../providers/hooks';
+import { useAuthStatus, usePreferences } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 import { usePagedQuery } from '../../data/usePagedQuery';
 import type { Update } from '@qc/contracts';
@@ -8,7 +8,7 @@ import type { Update } from '@qc/contracts';
 /** The unread count for the badge on the Home tab. Needs sign-in; zero otherwise. */
 export function useUnreadCount(): number {
   const { api } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const query = useQuery(
     status === 'signedIn' ? 'me:updates:unread' : null,
     () => api.updates.unreadCount(),
@@ -20,7 +20,7 @@ export function useUnreadCount(): number {
 /** The Updates feed, newest first. National updates reach everyone; the rest follow the person. */
 export function useUpdatesFeed(limit = 20) {
   const { api } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const { cityId } = usePreferences();
   const feed = usePagedQuery<Update>(
     status === 'signedIn' ? `me:updates:feed:${cityId ?? 'any'}:${limit}` : null,

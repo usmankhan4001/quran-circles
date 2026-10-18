@@ -19,7 +19,7 @@ import {
 } from '../features/journey/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
-import { useAuthState } from '../providers/hooks';
+import { useAuthStatus } from '../providers/hooks';
 import { useToast } from '../providers/Toasts';
 
 const styles = StyleSheet.create({
@@ -77,7 +77,7 @@ function JourneySummary() {
 export function JourneyScreen() {
   const { t } = useI18n();
   const nav = useNav();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
 
   return (
     <ScreenFrame

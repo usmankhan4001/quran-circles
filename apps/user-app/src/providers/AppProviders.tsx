@@ -3,9 +3,10 @@ import { Platform, StyleSheet, useColorScheme } from 'react-native';
 import { ThemeProvider, type ColorMode } from '@qc/ui';
 import { NavProvider, type Navigator } from '../nav/NavProvider';
 import { I18nProvider } from '../i18n/I18nProvider';
+import { useShownLocale } from '../i18n/useLanguage';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { ServicesProvider, useServices, type AppServices } from './services';
-import { useAuthState, usePreferences } from './hooks';
+import { useAuthState, useAuthStatus, usePreferences } from './hooks';
 import { ToastProvider } from './Toasts';
 import { useReduceMotion } from './useReduceMotion';
 
@@ -27,23 +28,25 @@ function ThemeFromPreferences({
   const prefs = usePreferences();
   const system = useColorScheme();
   const systemReduceMotion = useReduceMotion();
-  const direction = prefs.locale === 'ur' ? 'rtl' : 'ltr';
+  // The saved language once its words are in (the web downloads one language at a time).
+  const locale = useShownLocale(prefs.locale);
+  const direction = locale === 'ur' ? 'rtl' : 'ltr';
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-    document.documentElement.lang = prefs.locale;
+    document.documentElement.lang = locale;
     document.documentElement.dir = direction;
-  }, [prefs.locale, direction]);
+  }, [locale, direction]);
 
   return (
     <ThemeProvider
       mode={modeFor(prefs.color, system)}
-      locale={prefs.locale}
+      locale={locale}
       textSize={prefs.textSize}
       reduceMotion={reduceMotion ?? systemReduceMotion}
       style={styles.root}
     >
-      <I18nProvider locale={prefs.locale}>{children}</I18nProvider>
+      <I18nProvider locale={locale}>{children}</I18nProvider>
     </ThemeProvider>
   );
 }
@@ -74,7 +77,7 @@ function LoadMe({ children }: { children: ReactNode }) {
  */
 function ContentHost({ children }: { children: ReactNode }) {
   const { content } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const { hijriOffsetDays } = useAppConfig();
   const Provider = content.Provider;
   if (!Provider) return <>{children}</>;

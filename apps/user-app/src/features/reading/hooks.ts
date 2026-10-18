@@ -8,7 +8,7 @@ import {
 import { useAction } from '../../data/useAction';
 import { useCacheEntry } from '../../data/useCacheEntry';
 import { useQuery } from '../../data/useQuery';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 import { useAppConfig } from '../config/useAppConfig';
 import {
@@ -38,7 +38,7 @@ const readingKey = (from: string, to: string) => `me:readingDays:${from}:${to}`;
  */
 export function useReadingDays() {
   const { api, now } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const feature = useFeature('reading_days');
   const today = todayInPakistan(now());
   const range = readingRange(today);

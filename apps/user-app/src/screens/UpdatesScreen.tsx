@@ -6,7 +6,7 @@ import { UpdateItem } from '../components/UpdateItem';
 import { useMarkRead, useUnreadCount, useUpdatesFeed } from '../features/updates/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
-import { useAuthState } from '../providers/hooks';
+import { useAuthStatus } from '../providers/hooks';
 
 const styles = StyleSheet.create({ stack: { gap: spacing.md } });
 
@@ -14,7 +14,7 @@ const styles = StyleSheet.create({ stack: { gap: spacing.md } });
 export function UpdatesScreen() {
   const { t } = useI18n();
   const nav = useNav();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const feed = useUpdatesFeed(20);
   const unread = useUnreadCount();
   const markRead = useMarkRead();

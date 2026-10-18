@@ -1,6 +1,6 @@
 import { pakistanDate, type OccurrenceWithSession } from '@qc/contracts';
 import { useQuery } from '../../data/useQuery';
-import { useAuthState } from '../../providers/hooks';
+import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 import { followedIds } from '../ayah/useAyahOfTheDay';
 import { toInstant } from '../home/useHome';
@@ -27,7 +27,7 @@ export function pakistanDayBounds(date: string): { from: string; to: string } {
  */
 export function useTodayPortions(): { enabled: boolean; portions: TodayPortion[] } {
   const { api, now } = useServices();
-  const { status } = useAuthState();
+  const status = useAuthStatus();
   const feature = useFeature('read_along');
   const enabled = feature.on && status === 'signedIn';
   const registrations = useMyRegistrations();

@@ -8,7 +8,7 @@ import {
   UPDATE_KINDS,
 } from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
-import { messages } from '@qc/i18n';
+import { parts } from '@qc/i18n';
 import { FACILITY_KEYS } from '../components/FacilitiesChecklist';
 import { COLOR_PREFERENCES } from '../core/preferences';
 import { DAY_KEYS } from '../core/format';
@@ -17,6 +17,11 @@ import { errorMessageKey } from '../core/errors';
 import { createTranslator, type TranslationKey } from './translate';
 
 const en = createTranslator('en');
+/** What the web downloads for this app: the catalogue's shared part and the app's own. */
+const appTable = {
+  en: { ...parts.shared.en, ...parts['user-app'].en } as Record<string, string>,
+  ur: { ...parts.shared.ur, ...parts['user-app'].ur } as Record<string, string>,
+};
 const ur = createTranslator('ur');
 
 /**
@@ -46,8 +51,8 @@ describe('keys built from values', () => {
     it(`${group} have words in English and Urdu`, () => {
       expect(keys.length).toBeGreaterThan(0);
       for (const key of keys) {
-        expect(messages.en, key).toHaveProperty([key]);
-        expect(messages.ur, key).toHaveProperty([key]);
+        expect(appTable.en, key).toHaveProperty([key]);
+        expect(appTable.ur, key).toHaveProperty([key]);
         expect(ur(key as TranslationKey)).not.toBe(key);
       }
     });
@@ -56,7 +61,7 @@ describe('keys built from values', () => {
   it('maps a failure that is not from the API to a plain message', () => {
     expect(errorMessageKey('network_error')).toBe('ui.offlineBody');
     expect(errorMessageKey('unknown')).toBe('ui.errorBody');
-    expect(messages.ur['ui.offlineBody']).toBeTruthy();
+    expect(appTable.ur['ui.offlineBody']).toBeTruthy();
   });
 });
 
