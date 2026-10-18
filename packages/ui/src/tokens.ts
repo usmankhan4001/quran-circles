@@ -228,20 +228,22 @@ interface TypeRoleSpec {
   letterSpacing: number;
 }
 
-/** Type scale (D5). Big times and countdowns are Plus Jakarta Sans figures in both languages. */
+/**
+ * Type scale (D17). Sizes at text size step 0 copy the owner's Iqraa artboards
+ * (apps/console/src/showcase); people who need bigger text pick a larger step.
+ */
 export const typeRoles: Record<TypeRole, TypeRoleSpec> = {
-  countdown: { size: 56, weight: '600', letterSpacing: -1 },
-  time: { size: 40, weight: '600', letterSpacing: -0.5 },
-  display: { size: 32, weight: '800', letterSpacing: -0.4 },
-  title1: { size: 26, weight: '700', letterSpacing: -0.2 },
-  title2: { size: 22, weight: '700', letterSpacing: 0 },
-  title3: { size: 18, weight: '700', letterSpacing: 0 },
-  bodyLarge: { size: 17, weight: '400', letterSpacing: 0 },
-  body: { size: 16, weight: '400', letterSpacing: 0 },
-  label: { size: 15, weight: '600', letterSpacing: 0 },
-  /** 14, not D5's 13: captions stay at the accessibility floor (docs/design/accessibility.md). */
-  caption: { size: 14, weight: '500', letterSpacing: 0.1 },
-  eyebrow: { size: 12, weight: '700', letterSpacing: 0.8 },
+  countdown: { size: 42, weight: '700', letterSpacing: -1 },
+  time: { size: 28, weight: '800', letterSpacing: -0.5 },
+  display: { size: 24, weight: '800', letterSpacing: -0.4 },
+  title1: { size: 21, weight: '800', letterSpacing: -0.2 },
+  title2: { size: 18, weight: '700', letterSpacing: -0.1 },
+  title3: { size: 16, weight: '700', letterSpacing: 0 },
+  bodyLarge: { size: 14.5, weight: '400', letterSpacing: 0 },
+  body: { size: 13, weight: '400', letterSpacing: 0 },
+  label: { size: 13, weight: '600', letterSpacing: 0 },
+  caption: { size: 11.5, weight: '500', letterSpacing: 0.1 },
+  eyebrow: { size: 10.5, weight: '700', letterSpacing: 0.8 },
   quran: { size: 28, weight: '400', letterSpacing: 0 },
 };
 
@@ -275,7 +277,7 @@ export interface TypeStyle {
 export function typeStyle(role: TypeRole, script: Script, step: TextSizeStep = 0): TypeStyle {
   const spec = typeRoles[role];
   const scale = textScale[step];
-  const fontSize = Math.round(spec.size * scriptSizeFactor[script] * scale);
+  const fontSize = Math.round(spec.size * scriptSizeFactor[script] * scale * 2) / 2;
   return {
     fontFamily: fonts[fontTokenFor(script)],
     fontSize,

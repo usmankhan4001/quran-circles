@@ -196,9 +196,15 @@ describe('type scale', () => {
       expect(sizes[i] as number).toBeGreaterThan(sizes[i - 1] as number);
   });
 
-  it('keeps body text at 16 dp or more at the default size', () => {
-    expect(typeStyle('body', 'latin', 0).fontSize).toBeGreaterThanOrEqual(16);
-    expect(typeStyle('caption', 'latin', 0).fontSize).toBeGreaterThanOrEqual(14);
+  it('copies the artboard sizes at the default step (D17)', () => {
+    expect(typeStyle('body', 'latin', 0).fontSize).toBe(13);
+    expect(typeStyle('caption', 'latin', 0).fontSize).toBe(11.5);
+    expect(typeStyle('title3', 'latin', 0).fontSize).toBe(16);
+  });
+
+  it('reaches 19 dp body and 17 dp captions at the largest step', () => {
+    expect(typeStyle('body', 'latin', 3).fontSize).toBeGreaterThanOrEqual(19);
+    expect(typeStyle('caption', 'latin', 3).fontSize).toBeGreaterThanOrEqual(17);
   });
 
   it('sets Urdu a little larger than Latin at the same role', () => {
@@ -210,7 +216,7 @@ describe('type scale', () => {
   it('never synthesises bold for Urdu or Quran text', () => {
     expect(typeStyle('title1', 'urdu', 0).fontWeight).toBe('400');
     expect(typeStyle('title1', 'quran', 0).fontWeight).toBe('400');
-    expect(typeStyle('title1', 'latin', 0).fontWeight).toBe('700');
+    expect(typeStyle('title1', 'latin', 0).fontWeight).toBe('800');
   });
 });
 
