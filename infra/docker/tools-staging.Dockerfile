@@ -19,9 +19,12 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
 WORKDIR /repo
 COPY . .
 
-# @qc/db and the workspace packages it reads, with dev dependencies (tsx runs the TypeScript CLI).
+# @qc/db, @qc/load and the workspace packages they read, with dev dependencies (tsx runs the
+# TypeScript CLIs). The load runner writes its reports under node_modules/.cache, owned by `node`.
 RUN --mount=type=cache,id=qc-pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts --filter "@qc/db..."
+    pnpm install --frozen-lockfile --ignore-scripts --filter "@qc/db..." --filter "@qc/load..." \
+ && mkdir -p tests/load/node_modules/.cache \
+ && chown -R node:node tests/load/node_modules/.cache
 
 USER node
 ENV HOME=/tmp
