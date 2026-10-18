@@ -1,7 +1,15 @@
 # Status: user-app
 
-Updated: 2026-10-17
+Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## Web push fixtures and SEC-23 (2026-10-18)
+
+- **Push fixtures for the web push allowlist (contracts commit `8201cf0`).** A `webpush` token must now be `PushSubscription.toJSON()` serialised, on an allowed push host. 8 tests (reminders service, auth actions, Profile push switch) sent `'test-subscription'` and failed. `src/test/harness.tsx` now exports `FAKE_WEB_PUSH_TOKEN` (made-up subscription on `fcm.googleapis.com`, `expirationTime: null`, fake keys), used by `FakeRegistrar` and the device registration assertion in `features/reminders/service.test.ts`. No app code changed: `WebPushRegistrar` already sends `JSON.stringify(subscription.toJSON())`, which the rule accepts.
+- New `src/platform/push.test.ts` (4 tests; `WebPushRegistrar` had no test): with a stubbed Push API, a new subscription and an existing one both give a token that `DeviceRegister` accepts and `parseWebPushToken` reads; refused permission returns `denied` without subscribing; no VAPID key is `unsupported`.
+- **SEC-23 (service worker shell).** `public/sw.js` saves a page load as the offline shell only when the response is status 200, `type` `basic` from this origin (and its final `url` on this origin) and `Content-Type` `text/html`. Page loads under `/api/` and `/webhooks/` are not handled by the worker at all. The cache name went from `qc-shell-v1` to `qc-shell-v2`, so `activate` drops any shell v1 may have saved from a bad response. `src/platform/sw.test.ts`: 13 new tests (good page saved, case-insensitive content type, 404/500/204, opaque redirect, JSON, text, no content type, cross-origin and off-origin responses not saved, a refused response still reaches the page, `/api/` and `/webhooks/` left alone); 12 of them fail against the old worker. The token-in-`localStorage` part of SEC-10 is untouched (separate decision).
+- Checks: `pnpm --filter @qc/user-app test` 930 passing in 59 files; `pnpm --filter @qc/user-app typecheck` clean; eslint and prettier clean on the five changed files.
+- For the orchestrator: mark SEC-23 fixed in the security findings once reviewed.
 
 ## Ayah push taps (2026-10-17, follow-up)
 

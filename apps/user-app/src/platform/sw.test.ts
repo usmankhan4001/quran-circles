@@ -5,8 +5,18 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 type Listener = (event: Record<string, unknown>) => void;
 
+/** What the fake network answers: by default a 200 same-origin HTML page. */
+interface FakeNetworkResponse {
+  status?: number;
+  type?: string;
+  url?: string;
+  contentType?: string | null;
+}
+
 /** Runs `public/sw.js` against small fakes of the worker scope, and records what it does. */
-function loadWorker(options: { cached?: Set<string>; networkFails?: boolean } = {}) {
+function loadWorker(
+  options: { cached?: Set<string>; networkFails?: boolean; response?: FakeNetworkResponse } = {},
+) {
   const listeners = new Map<string, Listener>();
   const stored = new Map<string, unknown>();
   const cache = {
@@ -45,7 +55,7 @@ function loadWorker(options: { cached?: Set<string>; networkFails?: boolean } = 
   };
   const caches = {
     open: async () => cache,
-    keys: async () => ['qc-shell-v0', 'qc-shell-v1'],
+    keys: async () => ['qc-shell-v0', 'qc-shell-v1', 'qc-shell-v2'],
     delete: async (key: string) => {
       deleted.push(key);
       return true;
@@ -56,7 +66,22 @@ function loadWorker(options: { cached?: Set<string>; networkFails?: boolean } = 
     },
   };
   class FakeResponse {
-    ok = true;
+    status: number;
+    ok: boolean;
+    type: string;
+    url: string;
+    headers: { get: (name: string) => string | null };
+    constructor(requestUrl: string) {
+      const r = options.response ?? {};
+      this.status = r.status ?? 200;
+      this.ok = this.status >= 200 && this.status < 300;
+      this.type = r.type ?? 'basic';
+      this.url = r.url ?? requestUrl;
+      const contentType = r.contentType === undefined ? 'text/html; charset=utf-8' : r.contentType;
+      this.headers = {
+        get: (name: string) => (name.toLowerCase() === 'content-type' ? contentType : null),
+      };
+    }
     clone() {
       return this;
     }
@@ -67,7 +92,7 @@ function loadWorker(options: { cached?: Set<string>; networkFails?: boolean } = 
   const fetchFn = async (request: { url: string }) => {
     fetched.push(request.url);
     if (options.networkFails) throw new Error('offline');
-    return new FakeResponse();
+    return new FakeResponse(request.url);
   };
   runInNewContext(readFileSync(resolve(__dirname, '../../public/sw.js'), 'utf8'), {
     self,
@@ -120,7 +145,7 @@ describe('service worker', () => {
       expect.arrayContaining(['/', '/manifest.webmanifest', '/icons/icon-192.png']),
     );
     await worker.waitUntilOf('activate');
-    expect(worker.deleted).toEqual(['qc-shell-v0']);
+    expect(worker.deleted).toEqual(['qc-shell-v0', 'qc-shell-v1']);
   });
 
   it('never touches another origin, so API calls are never saved', () => {
@@ -148,6 +173,63 @@ describe('service worker', () => {
     const offline = loadWorker({ cached: new Set(['/']), networkFails: true });
     const { response } = offline.fetchEvent('https://app.test/home', { mode: 'navigate' });
     await expect(response).resolves.toBe('cached:/');
+  });
+
+  describe('saving the shell from a page load (SEC-23)', () => {
+    /** Loads a page online, lets the cache write settle, and says whether the shell changed. */
+    async function shellAfterPageLoad(url: string, response?: FakeNetworkResponse) {
+      const online = loadWorker({ response });
+      const { handled, response: answer } = online.fetchEvent(url, { mode: 'navigate' });
+      if (handled) await answer;
+      await new Promise((done) => setTimeout(done, 0));
+      return { handled, saved: online.stored.get('/') };
+    }
+
+    it('saves a successful same-origin HTML page as the shell', async () => {
+      const { handled, saved } = await shellAfterPageLoad('https://app.test/home');
+      expect(handled).toBe(true);
+      expect(saved).toMatchObject({ status: 200, url: 'https://app.test/home' });
+    });
+
+    it('accepts text/html in any letter case', async () => {
+      const { saved } = await shellAfterPageLoad('https://app.test/home', {
+        contentType: 'Text/HTML',
+      });
+      expect(saved).toBeDefined();
+    });
+
+    it.each([
+      ['an error page', { status: 404 }],
+      ['a server error', { status: 500 }],
+      ['a success that is not 200', { status: 204 }],
+      ['a redirect the browser handles itself', { status: 0, type: 'opaqueredirect' }],
+      ['JSON', { contentType: 'application/json' }],
+      ['plain text', { contentType: 'text/plain' }],
+      ['a response with no content type', { contentType: null }],
+      ['a cross-origin response', { type: 'cors', url: 'https://evil.example/page' }],
+      ['a basic response that ended on another origin', { url: 'https://evil.example/page' }],
+    ] as const)('does not save %s as the shell', async (_name, response) => {
+      const { handled, saved } = await shellAfterPageLoad('https://app.test/home', response);
+      expect(handled).toBe(true);
+      expect(saved).toBeUndefined();
+    });
+
+    it('still passes a refused response on to the page', async () => {
+      const online = loadWorker({ response: { status: 404 } });
+      const { response } = online.fetchEvent('https://app.test/missing', { mode: 'navigate' });
+      await expect(response).resolves.toMatchObject({ status: 404 });
+    });
+
+    it.each(['https://app.test/api/v1/config', 'https://app.test/webhooks/whatsapp'])(
+      'leaves a page load of the server path %s to the network and saves nothing',
+      async (url) => {
+        const { handled, saved } = await shellAfterPageLoad(url, {
+          contentType: 'application/json',
+        });
+        expect(handled).toBe(false);
+        expect(saved).toBeUndefined();
+      },
+    );
   });
 
   it('shows a notification from a push, with a safe link', async () => {

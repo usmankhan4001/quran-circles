@@ -12,6 +12,12 @@ Updated: 2026-10-18. Brief item 6. **Provisional**: local rehearsal only, with n
 - Findings for the platform lane (details in the drill doc): (1) high: `--replace` must prove both files decrypt (and `tar -t`) before stopping or dropping anything; better, restore into a new database and swap names, and alert on failure. (2) `.sha256` is optional on `--replace` and on `restore-test.sh --remote`. (3) `--check` compares counts against nothing; suggest a counts manifest written with each backup. (4) No summary line or alert when a manual restore fails. (5) The remote test downloads into `/tmp`. (6) Sizing: about 6.8 GB of retained sets at this volume, posters 86 %. (7) Restoring onto a new server needs the stack deployed first; the README does not say so.
 - Questions for the orchestrator: no RPO or RTO is written down anywhere. Nightly dumps mean up to about 24 h of data loss and there is no point-in-time recovery. Who decides the targets the staging drill should pass?
 
+### Restore drill doc after `b375c9b` (2026-10-18)
+
+- `docs/quality/restore-drill.md` updated to the scripts as rewritten in `b375c9b`. Measured results, timings and failure tests kept as historical facts and labelled as the scripts before `b375c9b`. New section "Since the rehearsal" lists what changed and the state of each finding: 1, 2, 3, 4, 5 and 8 fixed; 6 (sizing) open and larger; 7 written down in `infra/README.md`, waiting for the owner.
+- Staging procedure: `--check` before `--replace` is no longer required; step 6 also compares the manifest with the baseline fingerprint; step 8 checks `qc_before_restore`; step 9 now runs failure tests against `--replace` (missing checksum, checksum mismatch, damage caught by `age` with `--allow-missing-checksum`, manifest off by one row), with the hand-made set carrying a copied manifest, poster archive and `.sha256` files; step 11 runs `restore.sh --cleanup`. `npx prettier --check` clean.
+- Not done: the quality lane has not re-run the local rehearsal against the new scripts. The staging drill is the first independent run.
+
 ## Security review
 
 Updated: 2026-10-18. Brief items 1 and 7. **Provisional**: code review of `main` at `3c84b79` plus local throwaway probes; no staging. Full write-up: `docs/security/review.md`.

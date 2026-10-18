@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTranslator } from '../../i18n/translate';
 import { SESSIONS, occurrencesOf, registrationFor } from '../../test/factories';
-import { NOW, createWorld } from '../../test/harness';
+import { FAKE_WEB_PUSH_TOKEN, NOW, createWorld } from '../../test/harness';
 import { DEVICE_KEY, REMINDERS_KEY } from './service';
 
 const handlers = {
@@ -108,7 +108,7 @@ describe('PushService', () => {
     expect(world.http.callsTo('PUT /v1/me/devices')[0]!.body).toEqual({
       platform: 'web',
       provider: 'webpush',
-      token: 'test-subscription',
+      token: FAKE_WEB_PUSH_TOKEN,
       locale: 'ur',
     });
     expect(await world.services.push.isEnabled()).toBe(true);

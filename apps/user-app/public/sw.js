@@ -3,10 +3,13 @@
  *
  * It caches the app's own files so the page opens without a connection. It never caches
  * anything from another origin, which includes the API, and never caches a non-GET request.
+ * The shell is replaced only by a successful same-origin HTML page (SEC-23), so a link to an
+ * error page or to JSON cannot become the offline page.
  * What the person did last (public sessions and venues they viewed) is kept by the app itself
  * on the device; personal data is not stored here.
  */
-const VERSION = 'qc-shell-v1';
+// v2 drops any shell that v1 may have saved from a non-page response (SEC-23).
+const VERSION = 'qc-shell-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -38,6 +41,32 @@ function isStaticAsset(url) {
   );
 }
 
+// Paths served by the server, never by the app: a page load there is left to the network.
+const SERVER_PREFIXES = ['/api/', '/webhooks/'];
+
+function isServerPath(url) {
+  return SERVER_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+}
+
+/**
+ * Whether a page load's response may replace the saved shell: status 200 (not a redirect or an
+ * error page), same-origin (`basic`, from this origin) and HTML.
+ */
+function isShellResponse(response) {
+  if (!response || response.status !== 200 || response.type !== 'basic') return false;
+  if (response.url) {
+    let origin;
+    try {
+      origin = new URL(response.url).origin;
+    } catch {
+      return false;
+    }
+    if (origin !== self.location.origin) return false;
+  }
+  const type = (response.headers && response.headers.get('content-type')) || '';
+  return type.toLowerCase().split(';')[0].trim() === 'text/html';
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -46,11 +75,14 @@ self.addEventListener('fetch', (event) => {
 
   // A page load: the network first so a new version shows up, the saved shell when offline.
   if (request.mode === 'navigate') {
+    if (isServerPath(url)) return;
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(VERSION).then((cache) => cache.put('/', copy));
+          if (isShellResponse(response)) {
+            const copy = response.clone();
+            caches.open(VERSION).then((cache) => cache.put('/', copy));
+          }
           return response;
         })
         .catch(() => caches.match('/').then((cached) => cached || Response.error())),

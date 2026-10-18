@@ -127,12 +127,22 @@ export class FakeScheduler implements ReminderScheduler {
   }
 }
 
+/**
+ * A fake web push token in the shape the browser gives: `PushSubscription.toJSON()` serialised,
+ * on a push service the contract allows. The endpoint id and keys are made up.
+ */
+export const FAKE_WEB_PUSH_TOKEN = JSON.stringify({
+  endpoint: 'https://fcm.googleapis.com/fcm/send/fake-endpoint-id',
+  expirationTime: null,
+  keys: { p256dh: 'fake-p256dh', auth: 'fake-auth' },
+});
+
 export class FakeRegistrar implements PushRegistrar {
   supported = true;
   result: PushRegistration | 'denied' | 'unsupported' = {
     platform: 'web',
     provider: 'webpush',
-    token: 'test-subscription',
+    token: FAKE_WEB_PUSH_TOKEN,
   };
   isSupported() {
     return this.supported;
