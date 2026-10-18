@@ -153,6 +153,8 @@ services:
       QC_LOAD_ADMIN: ${QC_GATE5_LOAD_ADMIN:-+923189990002}
       # `load` skips the scope run (saves its sign-ins for the hourly budget).
       QC_GATE5_ONLY: ${QC_GATE5_ONLY:-all}
+      # Seconds the load runner pauses between its seed and the first step (unset: no pause).
+      QC_AFTER_SEED_WAIT_S:
     networks:
       - edge
     tmpfs:
