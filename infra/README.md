@@ -42,6 +42,7 @@ Agents never receive production credentials. Nothing below goes into the reposit
 - [ ] **Secrets**, generated on the server: `POSTGRES_PASSWORD` (`openssl rand -hex 32`), `AUTH_SECRET` (`openssl rand -base64 48`), `WHATSAPP_VERIFY_TOKEN` (`openssl rand -hex 24`), `RENDERER_TOKEN` (`openssl rand -hex 32`).
 - [ ] **Disk for poster files**: rendered posters are kept in the `poster-files` Docker volume on the VPS's own disk (decision for now; an object store can replace it later) and go into the encrypted backups. Allow for it when sizing the disk and the second backup location.
 - [ ] **Provider credentials** from the owner's accounts: WhatsApp Cloud API phone number ID, system-user access token and app secret (after Meta Business verification); FCM service account; APNs key, key ID, team ID, bundle ID; VAPID key pair (`npx web-push generate-vapid-keys`); later an SMS gateway.
+- [ ] **Recovery targets**: accept the recovery point and recovery time under "Restore", "Recovery targets", or ask for more.
 - [ ] **Staging placement**: a second small VPS (recommended; identical shape), or the same VPS with a shared proxy (needs a small change to this setup, because both stacks would want ports 80 and 443).
 
 ### VPS baseline (human tasks)
@@ -155,7 +156,8 @@ If the data is damaged, restore the `pre-deploy` backup instead (below).
 
 - `pg_dump` (custom format) runs inside the postgres container and streams straight into `age`, encrypted to `QC_BACKUP_AGE_RECIPIENT`. No unencrypted dump touches the disk, and the production server cannot decrypt its own backups.
 - Poster files: the `poster-files` volume is archived with `tar` in a throwaway container (no network, read-only, the files' owner) and encrypted the same way, as a second file next to the dump.
-- Files: `/srv/qc/backups/daily/<project>-<UTC time>.dump.age` and `<same name>.posters.tar.age`, each with a `.sha256`; Sunday copies in `weekly/`; labelled runs (`pre-deploy`, `pre-restore`) in `manual/`.
+- Manifest: `<same name>.manifest` (plain text, counts only, never data): the exact row count of every public table, taken in the same snapshot `pg_dump` uses (so it is exact even while the app writes), and the number of files in the poster archive. `restore.sh` refuses a backup that does not match it.
+- Files: `/srv/qc/backups/daily/<project>-<UTC time>.dump.age`, `<same name>.posters.tar.age` and `<same name>.manifest`, each with a `.sha256`; Sunday copies in `weekly/`; labelled runs (`pre-deploy`, `pre-restore`) in `manual/`.
 - Retention: daily and labelled 14 days, weekly 8 weeks (`QC_BACKUP_RETENTION_DAYS`, `QC_BACKUP_WEEKLY_RETENTION_WEEKS`). The same retention is applied to the second location.
 - Second location: each new file is copied with rclone to `QC_BACKUP_RCLONE_REMOTE`.
 - A failure exits non-zero and sends an alert. `monitoring/check.sh` also alerts when the last good backup is more than 26 hours old.
@@ -166,16 +168,18 @@ Manual backup: `QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh manual-note`
 
 You need the age private key file. On production it is not present: copy it in for the restore and delete it afterwards (`shred -u`).
 
-When a `.posters.tar.age` file sits next to the `.dump.age`, both commands below use it: `--check` decrypts it and counts the files, `--replace` empties the `poster-files` volume and unpacks it there. Copy both files (and their `.sha256`) when restoring from the second location.
+A backup set is `<name>.dump.age`, `<name>.manifest` and `<name>.posters.tar.age` (when the manifest lists poster files), each with its `.sha256`, all in one directory. Copy every file of the set when restoring from the second location. `restore.sh` refuses a set with a missing `.sha256` or manifest; `--allow-missing-checksum` and `--allow-missing-manifest` exist only for backups made before checksums or manifests.
 
-**Check a backup without touching anything** (restores into a scratch database `qc_restore_check`, verifies the schema, prints row counts, drops it):
+Before it touches anything, `restore.sh` proves the whole set is readable: checksums, the manifest, a full decrypt of the dump into a private work directory (mode 700, under `TMPDIR` if set, else `QC_BACKUP_DIR`; deleted at the end), `pg_restore --list` on the decrypted file, and a full decrypt and `tar -t` of the poster archive, whose file count must match the manifest. A damaged, truncated or wrong-key file is refused at this point.
+
+**Check a backup without touching anything** (restores into a scratch database `qc_restore_check`, checks the schema, compares every table's row count with the manifest, drops it):
 
 ```sh
 QC_ENV_FILE=/srv/qc/prod.env infra/backup/restore.sh \
   --check /srv/qc/backups/daily/<file>.dump.age --identity /path/to/backup-restore.agekey
 ```
 
-**Replace the live database and poster files** (stops the api and worker, takes a `pre-restore` backup of the current database and poster files, recreates `qc`, restores, starts the stack, runs newer migrations, waits for health):
+**Replace the live database and poster files**:
 
 ```sh
 QC_ENV_FILE=/srv/qc/prod.env infra/backup/restore.sh \
@@ -183,9 +187,31 @@ QC_ENV_FILE=/srv/qc/prod.env infra/backup/restore.sh \
 # asks you to type the project name (qc-prod) to confirm; --yes skips the question
 ```
 
-From the second location: `rclone copy "<remote>/daily/<file>.dump.age" /srv/qc/backups/daily/` (and the `.posters.tar.age` and both `.sha256`), then restore as above. Both commands print the time taken: record it in the drill log.
+What `--replace` does, in order:
 
-**Weekly restore test** (staging host, Mondays 04:00 UTC from cron): `restore-test.sh --remote` fetches the newest production backup from the second location, runs `restore.sh --check` against the staging Postgres, writes `last-restore-check` and sends a "passed" or "FAILED" message. Silence on a Monday means it did not run. Set `QC_EXPECT_RESTORE_CHECK=1` on that host so `check.sh` alerts on a missing or failed test.
+1. Restores into a new database `qc_restore_new` and compares it with the manifest, while the stack keeps running. The live database is not touched.
+2. Stops the api and the worker and takes a `pre-restore` backup of the current database and poster files (when `QC_BACKUP_AGE_RECIPIENT` is set).
+3. Unpacks the poster files into `.restore-new` inside the `poster-files` volume and checks the count.
+4. Swaps: the poster files by renames inside the volume (undone if a rename fails), then the databases in one transaction: `qc` becomes `qc_before_restore`, `qc_restore_new` becomes `qc`.
+5. Starts the stack (newer migrations run) and waits for health.
+
+A failure in steps 1 to 4 leaves the live data as it was and starts the stack again. Every run ends with one line, `RESTORE OK` or `RESTORE FAILED` (with the step and whether live data was touched), and the time taken. `--replace` also sends that result as an alert. If it fails after the swap, it prints the exact command that restores the `pre-restore` backup it just took.
+
+`qc_before_restore` (the database from before the restore) is kept so you can compare. Drop it once you are satisfied: `restore.sh --cleanup` (the next `--replace` also drops it). It needs as much disk as the database itself.
+
+**Restoring onto a brand-new server**: deploy the stack first (the steps under "First deploy on a clean server", with the env file and the age key), so Postgres is running, the migrations have created an empty schema and the `poster-files` volume exists. Then copy the backup set from the second location and run `--replace`. `restore.sh` refuses to start without a running stack.
+
+From the second location: `rclone copy "<remote>/daily/" /srv/qc/backups/daily/ --include "<name>.*"`, then restore as above. Record the time each step takes in the drill log (`docs/quality/restore-drill.md`).
+
+**Weekly restore test** (staging host, Mondays 04:00 UTC from cron): `restore-test.sh --remote` fetches every file of the newest production backup set from the second location into a private temporary directory, runs `restore.sh --check` against the staging Postgres, writes `last-restore-check` and sends a "passed" or "FAILED" message. A failed download or a missing `.sha256` or manifest is a failure. Silence on a Monday means it did not run. Set `QC_EXPECT_RESTORE_CHECK=1` on that host so `check.sh` alerts on a missing or failed test.
+
+### Recovery targets (open: for the owner to accept)
+
+These are the recovery point and recovery time as the setup stands. Nobody has agreed to them yet. The owner should accept them, or ask for more (for example WAL archiving for point-in-time recovery), and the staging drill then passes or fails against them.
+
+- **Recovery point (RPO): up to about 24 hours of data.** Backups are nightly logical dumps (02:30 UTC) plus one before each deploy. There is no WAL archiving and no point-in-time recovery, so anything written since the last backup is lost if the database or the server is lost.
+- **Recovery time (RTO), restore on a running server: minutes.** The provisional local drill (`docs/quality/restore-drill.md`, 279 MB database, 258 MB of posters) took 16.5 s for `--replace`, 7 s for `--check` and 9.1 s for `restore-test.sh --remote`; downloading a set at 100 Mbit/s adds about 25 s. In practice the time is the human's: being reached, getting the key onto the server, choosing the backup and confirming. Not yet measured on staging.
+- **Recovery time, server lost:** provisioning a new VPS and DNS, the first deploy, then the restore. Not measured yet; the staging drill should time it.
 
 ## Monitoring
 

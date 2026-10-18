@@ -13,9 +13,13 @@
 #   with tar in a throwaway container (no network, read-only) and encrypted the same way, as a
 #   second file next to the dump: <same name>.posters.tar.age (+ .sha256). It is skipped, with a
 #   log line, while the volume does not exist yet.
+# - A manifest goes with each set: <same name>.manifest (+ .sha256), plain text, counts only, no
+#   data: the exact row count of every public table, taken in the same snapshot pg_dump uses, and
+#   the number of files in the poster archive. restore.sh refuses a restore that does not match it.
 # - Layout under QC_BACKUP_DIR:
 #     daily/<project>-<UTC time>.dump.age (+ .sha256)   kept QC_BACKUP_RETENTION_DAYS days
 #     daily/<project>-<UTC time>.posters.tar.age (+ .sha256)   the poster files, same retention
+#     daily/<project>-<UTC time>.manifest (+ .sha256)          counts only, same retention
 #     weekly/...                                           Sunday copies, kept ..._WEEKLY_RETENTION_WEEKS
 #     manual/...-<label>.dump.age                          labelled runs, kept like daily
 #     last-success                                         UTC time of the last good backup
@@ -28,8 +32,12 @@ set -euo pipefail
 # shellcheck source=infra/backup/lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
+tmp=""
+snap_pid=""
 on_exit() {
   local status=$?
+  if [[ -n "$snap_pid" ]]; then kill "$snap_pid" 2>/dev/null || true; fi
+  if [[ -n "$tmp" ]]; then rm -rf "$tmp"; fi
   if [[ $status -ne 0 ]]; then
     alert "backup FAILED (exit $status). Check the backup log on the server."
   fi
@@ -42,7 +50,7 @@ if [[ -n "$label" && ! "$label" =~ ^[a-z0-9-]{1,32}$ ]]; then
 fi
 
 require_env_file
-need docker age sha256sum
+need docker age sha256sum tar
 
 project="$(env_get COMPOSE_PROJECT_NAME qc-prod)"
 backup_dir="$(env_get QC_BACKUP_DIR /srv/qc/backups)"
@@ -69,12 +77,42 @@ fi
 mkdir -p "$backup_dir/daily" "$backup_dir/weekly" "$backup_dir/manual"
 target="$backup_dir/$subdir/$name"
 partial="$target.partial"
+tmp="$(mktemp -d "$backup_dir/.backup-tmp.XXXXXX")"
 
 started=$SECONDS
 log "backup: dumping database of $project"
+# One read-only REPEATABLE READ session exports its snapshot, pg_dump dumps exactly that snapshot,
+# and the same session then counts every table's rows for the manifest. So the counts describe the
+# data in the dump even while the app is writing.
+coproc SNAP {
+  compose exec -T -e PGOPTIONS='-c client_min_messages=warning' postgres \
+    psql -X -q -At -v ON_ERROR_STOP=1 -U qc -d qc
+}
+# shellcheck disable=SC2153 # SNAP_PID is set by coproc
+snap_pid="$SNAP_PID"
+snap_out="${SNAP[0]}"
+snap_in="${SNAP[1]}"
+printf '%s\n' 'BEGIN ISOLATION LEVEL REPEATABLE READ, READ ONLY;' 'SELECT pg_export_snapshot();' >&"$snap_in"
+snapshot=""
+read -r -t 60 snapshot <&"$snap_out" || true
+[[ "$snapshot" =~ ^[0-9A-F]+-[0-9A-F]+-[0-9]+$ ]] || die "could not export a snapshot for the dump"
 # --no-owner/--no-privileges keep the dump restorable into any database owned by `qc`.
-compose exec -T postgres pg_dump -U qc -d qc --format=custom --compress=6 --no-owner --no-privileges |
+compose exec -T postgres pg_dump -U qc -d qc --snapshot="$snapshot" --format=custom --compress=6 \
+  --no-owner --no-privileges |
   age --encrypt --recipient "$recipient" >"$partial"
+printf '%s\n' "$QC_COUNT_SQL" "SELECT 'end-of-counts';" 'COMMIT;' >&"$snap_in"
+counts=()
+while :; do
+  line=""
+  read -r -t 600 line <&"$snap_out" || die "could not count the rows for the manifest"
+  [[ "$line" == "end-of-counts" ]] && break
+  [[ "$line" =~ ^table\ [^[:space:]]+\ [0-9]+$ ]] || die "unexpected row count line for the manifest"
+  counts+=("$line")
+done
+exec {snap_in}>&-
+wait "$snap_pid" || die "the snapshot session failed"
+snap_pid=""
+[[ ${#counts[@]} -ge 1 ]] || die "no tables counted for the manifest"
 
 size="$(stat -c %s "$partial")"
 # An encrypted empty dump is still a few hundred bytes; a real one is far larger.
@@ -86,18 +124,40 @@ log "backup: wrote $subdir/$name ($size bytes) in $((SECONDS - started))s"
 names=("$name")
 
 posters_name="${name%.dump.age}.posters.tar.age"
+posters_count=""
 if [[ -n "$(poster_volume)" ]]; then
   posters_target="$backup_dir/$subdir/$posters_name"
   log "backup: archiving the poster files"
-  in_poster_volume ro tar -C /data -cf - . |
+  # The archive stream is also listed on the way to age, to count its files for the manifest
+  # (entries that are not directories, as restore.sh counts them).
+  mkfifo "$tmp/posters.fifo"
+  tar -tf - <"$tmp/posters.fifo" | awk '!/\/$/ { n++ } END { print n + 0 }' >"$tmp/posters.count" &
+  counter=$!
+  in_poster_volume ro tar -C /data -cf - . | tee "$tmp/posters.fifo" |
     age --encrypt --recipient "$recipient" >"$posters_target.partial"
+  wait "$counter" || die "could not list the poster files archive"
+  posters_count="$(cat "$tmp/posters.count")"
+  [[ "$posters_count" =~ ^[0-9]+$ ]] || die "could not count the poster files"
   mv "$posters_target.partial" "$posters_target"
   (cd "$(dirname "$posters_target")" && sha256sum "$posters_name" >"$posters_name.sha256")
-  log "backup: wrote $subdir/$posters_name ($(stat -c %s "$posters_target") bytes)"
+  log "backup: wrote $subdir/$posters_name ($(stat -c %s "$posters_target") bytes, $posters_count files)"
   names+=("$posters_name")
 else
   log "backup: no poster-files volume yet, poster files skipped"
 fi
+
+# The manifest: counts only (table names, row counts, poster file count), never data.
+manifest_name="${name%.dump.age}.manifest"
+{
+  printf '# Counts only, no data. Written by backup.sh, checked by restore.sh.\n'
+  printf 'format qc-backup-manifest 1\n'
+  printf 'backup %s\n' "$name"
+  printf '%s\n' "${counts[@]}"
+  if [[ -n "$posters_count" ]]; then printf 'posters %s\n' "$posters_count"; fi
+} >"$backup_dir/$subdir/$manifest_name"
+(cd "$backup_dir/$subdir" && sha256sum "$manifest_name" >"$manifest_name.sha256")
+log "backup: wrote $subdir/$manifest_name (${#counts[@]} tables)"
+names+=("$manifest_name")
 
 new_files=()
 for file_name in "${names[@]}"; do
@@ -111,12 +171,18 @@ if [[ -z "$label" && "$(date -u +%u)" == "7" ]]; then
   log "backup: kept a weekly copy"
 fi
 
-# Local retention (dumps and poster archives). -mtime +N means "older than N whole days".
-find "$backup_dir/daily" "$backup_dir/manual" -type f \( -name '*.age' -o -name '*.age.sha256' \) \
+# Local retention (dumps, poster archives, manifests). -mtime +N means "older than N whole days".
+find "$backup_dir/daily" "$backup_dir/manual" -type f \
+  \( -name '*.age' -o -name '*.age.sha256' -o -name '*.manifest' -o -name '*.manifest.sha256' \) \
   -mtime +"$((retention_days - 1))" -print -delete | sed 's/^/backup: pruned /' >&2 || true
-find "$backup_dir/weekly" -type f \( -name '*.age' -o -name '*.age.sha256' \) \
+find "$backup_dir/weekly" -type f \
+  \( -name '*.age' -o -name '*.age.sha256' -o -name '*.manifest' -o -name '*.manifest.sha256' \) \
   -mtime +"$((weekly_weeks * 7 - 1))" -print -delete | sed 's/^/backup: pruned /' >&2 || true
 find "$backup_dir" -type f -name '*.partial' -mmin +60 -delete || true
+# Work directories a killed restore or backup left behind (a restore's can hold a decrypted dump).
+find "$backup_dir" -mindepth 1 -maxdepth 1 -type d \
+  \( -name 'qc-restore.*' -o -name 'qc-restore-test.*' -o -name '.backup-tmp.*' \) \
+  -mmin +1440 -exec rm -rf {} + || true
 
 if [[ -n "$remote" ]]; then
   log "backup: copying to the second location"

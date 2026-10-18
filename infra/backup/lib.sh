@@ -81,22 +81,55 @@ poster_volume() {
     --filter "label=com.docker.compose.volume=poster-files" | head -n 1
 }
 
+# pg_image: the image of the running postgres container (already on the host and pinned).
+pg_image() {
+  local cid
+  cid="$(compose ps -q postgres)"
+  [[ -n "$cid" ]] || die "postgres is not running"
+  docker inspect --format '{{.Config.Image}}' "$cid"
+}
+
+# in_pg_image MOUNT USER ARGS...: runs ARGS (the first is the entrypoint) in a throwaway container
+# from the postgres image, with MOUNT (docker -v syntax), as USER, with no network, a read-only
+# root and no capabilities.
+in_pg_image() {
+  local mount="$1" user="$2" image
+  shift 2
+  image="$(pg_image)"
+  docker run --rm -i --pull never --network none --read-only --cap-drop ALL \
+    --security-opt no-new-privileges:true --user "$user" \
+    -v "$mount" --entrypoint "$1" "$image" "${@:2}"
+}
+
 # in_poster_volume MODE ARGS...: runs ARGS in a throwaway container with the poster-files volume
-# at /data (MODE ro or rw). It uses the running postgres container's image (already on the host,
-# pinned, has tar), with no network, a read-only root, no capabilities and the files' owner
-# (uid 1000, the `node` user that writes them), so it reads 0600 files without root.
+# at /data (MODE ro or rw), as the files' owner (uid 1000, the `node` user that writes them), so it
+# reads 0600 files without root. See in_pg_image.
 in_poster_volume() {
-  local mode="$1" volume image cid
+  local mode="$1" volume
   shift
   volume="$(poster_volume)"
   [[ -n "$volume" ]] || die "the poster-files volume does not exist"
-  cid="$(compose ps -q postgres)"
-  [[ -n "$cid" ]] || die "postgres is not running"
-  image="$(docker inspect --format '{{.Config.Image}}' "$cid")"
-  docker run --rm -i --pull never --network none --read-only --cap-drop ALL \
-    --security-opt no-new-privileges:true --user 1000:1000 \
-    -v "$volume:/data:$mode" --entrypoint "$1" "$image" "${@:2}"
+  in_pg_image "$volume:/data:$mode" 1000:1000 "$@"
 }
+
+# private_workdir NAME: creates a new directory only this user can open (mode 700) and prints its
+# path. It goes under TMPDIR when that is set, else under QC_BACKUP_DIR; never /tmp by default,
+# which is often small and shared. backup.sh removes ones older than a day that a killed run left
+# behind under QC_BACKUP_DIR.
+private_workdir() {
+  local base dir
+  base="${TMPDIR:-$(env_get QC_BACKUP_DIR /srv/qc/backups)}"
+  mkdir -p "$base" || die "cannot create $base"
+  dir="$(umask 077 && mktemp -d "$base/qc-$1.XXXXXX")" || die "cannot create a work directory in $base"
+  chmod 700 "$dir"
+  printf '%s' "$dir"
+}
+
+# QC_COUNT_SQL: the exact row count of every public table, one "table <name> <count>" line each.
+# backup.sh writes these into the manifest next to each backup; restore.sh compares a restored
+# database with them. Table names and counts only, never data.
+# shellcheck disable=SC2034 # used by the scripts that source this file
+QC_COUNT_SQL="SELECT format('table %s %s', table_name, (xpath('/row/c/text()', query_to_xml(format('SELECT count(*) AS c FROM public.%I', table_name), false, true, '')))[1]::text) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' ORDER BY table_name;"
 
 # alert MESSAGE: logs it and, when QC_ALERT_WEBHOOK_URL is set, posts {"text": MESSAGE}.
 # The message must never contain personal data or secrets.
