@@ -403,11 +403,12 @@ describe('My Journey (J1)', () => {
 });
 
 describe('Profile, Updates and Sign-in (B)', () => {
-  it('opens the profile with quick tiles in the green header', async () => {
+  it('opens the profile on white with quick tiles as cards under the account (D17)', async () => {
     const world = await createWorld({ signedIn: true });
     const view = await renderScreen(<ProfileScreen />, { world });
     const header = view.getByTestId('screen-header');
-    expect(within(header).getByTestId('profile-tiles')).toBeTruthy();
+    expect(within(header).queryByTestId('profile-tiles')).toBeNull();
+    expect(view.getByTestId('profile-tiles')).toBeTruthy();
     fireEvent.click(view.getByTestId('profile-tile-journey'));
     expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
     fireEvent.click(view.getByTestId('profile-tile-updates'));
@@ -446,10 +447,11 @@ describe('Profile, Updates and Sign-in (B)', () => {
     }
   });
 
-  it('draws a line masjid in the green top of sign-in', async () => {
+  it('opens sign-in on white with a back button and a big heading (D17)', async () => {
     const view = await renderScreen(<SignInScreen />);
     const header = view.getByTestId('screen-header');
-    expect(within(header).getByTestId('sign-in-art').getAttribute('aria-hidden')).toBe('true');
+    expect(within(header).getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(view.getByRole('heading', { level: 2 }).textContent).toBe(en['signIn.heading']);
   });
 
   it('takes the sign-in code in boxed cells and accepts digits only', async () => {

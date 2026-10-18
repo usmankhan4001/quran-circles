@@ -488,6 +488,8 @@
   "session.portion.surah": "سورت {number}",
   "session.portion.ayahRange": "سورت {surah}، آیات {from} سے {to} تک",
   "signIn.title": "سائن اِن",
+  "signIn.heading": "اپنے موبائل نمبر سے سائن اِن کریں",
+  "signIn.name.heading": "ہم آپ کو کس نام سے پکاریں؟",
   "signIn.phone.intro": "اپنا موبائل نمبر لکھیں۔ ہم واٹس ایپ پر کوڈ بھیجیں گے، اور اگر واٹس ایپ دستیاب نہ ہو تو ایس ایم ایس سے۔",
   "signIn.phone.label": "موبائل نمبر",
   "signIn.phone.helper": "مثلاً 0300 1234567",
@@ -694,5 +696,8 @@
   "nearby.filters.showCount.one": "1 ملتا حلقہ دکھائیں",
   "nearby.filters.showCount.other": "{count} ملتے حلقے دکھائیں",
   "nearby.area.city": "شہر",
-  "home.next.directions": "راستہ"
+  "home.next.directions": "راستہ",
+  "home.prayer.now": "ابھی",
+  "home.special.sampleWhen": "رمضان دورۂ قرآن · نمونہ",
+  "home.special.sampleTitle": "خصوصی دورۂ قرآن پروگرام یہاں دکھائے جائیں گے"
 }

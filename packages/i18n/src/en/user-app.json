@@ -486,6 +486,8 @@
   "session.portion.surah": "Surah {number}",
   "session.portion.ayahRange": "Surah {surah}, ayahs {from} to {to}",
   "signIn.title": "Sign in",
+  "signIn.heading": "Sign in with your mobile number",
+  "signIn.name.heading": "What should we call you?",
   "signIn.phone.intro": "Enter your mobile number. We will send a code on WhatsApp, or by SMS if WhatsApp is not available.",
   "signIn.phone.label": "Mobile number",
   "signIn.phone.helper": "For example 0300 1234567",
@@ -692,5 +694,8 @@
   "nearby.filters.showCount.one": "Show 1 matching circle",
   "nearby.filters.showCount.other": "Show {count} matching circles",
   "nearby.area.city": "City",
-  "home.next.directions": "Directions"
+  "home.next.directions": "Directions",
+  "home.prayer.now": "Now",
+  "home.special.sampleWhen": "Ramadan Dora-e-Quran · Sample",
+  "home.special.sampleTitle": "Special Dora programmes will show here"
 }

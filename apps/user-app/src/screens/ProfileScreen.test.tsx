@@ -1,17 +1,10 @@
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { TOKENS_KEY } from '../auth/session';
 import { followFor } from '../test/factories';
-import {
-  MATRIX,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
 import { ProfileScreen } from './ProfileScreen';
 
 const en = messages.en;
@@ -215,8 +208,11 @@ describe('ProfileScreen', () => {
       await view.findByTestId('profile-account');
       await view.findByTestId(`alerts-${FOLLOW.id}`);
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
+      // A plain white top with back and the title in the middle (D17).
+      expect(
+        within(view.getByTestId('screen-header')).getByText(words['profile.title']),
+      ).toBeTruthy();
       expect(view.getByText(words['profile.language.title'])).toBeTruthy();
       expect(view.getByText(words['profile.account.delete'])).toBeTruthy();
     });

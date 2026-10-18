@@ -20,7 +20,7 @@ export function UpdatesScreen() {
   const markRead = useMarkRead();
 
   return (
-    <ScreenFrame title={t('updates.title')} onBack={() => nav.back()} testID="updates-screen">
+    <ScreenFrame title={t('updates.title')} onBack={() => nav.back()} plain testID="updates-screen">
       {status !== 'signedIn' ? (
         <EmptyState
           title={t('updates.signedOut.title')}
@@ -39,7 +39,7 @@ export function UpdatesScreen() {
               <View style={styles.stack}>
                 {unread > 0 ? (
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     fullWidth
                     label={t('updates.markAll')}
                     onPress={() => void markRead({ all: true })}

@@ -1,8 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { issueMessageKey } from '@qc/contracts';
-import { Button, Card, CodeField, Text, TextField, spacing } from '@qc/ui';
+import { Button, CodeField, Text, TextField, spacing } from '@qc/ui';
 import { ScreenFrame } from '../components/ScreenFrame';
-import { MasjidLineArt } from '../ui/MasjidLineArt';
 import { errorMessageKey } from '../core/errors';
 import { useSignIn } from '../features/auth/useSignIn';
 import { useI18n } from '../i18n/I18nProvider';
@@ -41,128 +40,126 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
               : undefined;
 
   return (
-    <ScreenFrame
-      title={t('signIn.title')}
-      onBack={() => nav.back()}
-      hero={<MasjidLineArt height={120} testID="sign-in-art" />}
-      testID="sign-in-screen"
-    >
-      <Card>
-        <View style={styles.stack}>
-          {flow.step === 'phone' ? (
-            <>
-              <Text variant="bodyLarge">{t('signIn.phone.intro')}</Text>
-              <TextField
-                label={t('signIn.phone.label')}
-                helper={t('signIn.phone.helper')}
-                value={flow.phoneInput}
-                onChangeText={flow.setPhoneInput}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                contentDirection="ltr"
-                required
-                error={problemText}
-                onSubmitEditing={() => void flow.submitPhone()}
-                testID="phone-input"
-              />
-              <Button
-                label={t('signIn.phone.submit')}
-                size="large"
-                fullWidth
-                loading={flow.working}
-                onPress={() => void flow.submitPhone()}
-                testID="send-code"
-              />
-            </>
-          ) : null}
+    <ScreenFrame title={t('signIn.title')} onBack={() => nav.back()} plain testID="sign-in-screen">
+      <View style={styles.stack}>
+        <Text variant="title2" heading={2}>
+          {flow.step === 'name' ? t('signIn.name.heading') : t('signIn.heading')}
+        </Text>
+        {flow.step === 'phone' ? (
+          <>
+            <Text variant="body" color="textSecondary">
+              {t('signIn.phone.intro')}
+            </Text>
+            <TextField
+              label={t('signIn.phone.label')}
+              helper={t('signIn.phone.helper')}
+              value={flow.phoneInput}
+              onChangeText={flow.setPhoneInput}
+              keyboardType="phone-pad"
+              autoComplete="tel"
+              contentDirection="ltr"
+              required
+              error={problemText}
+              onSubmitEditing={() => void flow.submitPhone()}
+              testID="phone-input"
+            />
+            <Button
+              label={t('signIn.phone.submit')}
+              size="large"
+              fullWidth
+              loading={flow.working}
+              onPress={() => void flow.submitPhone()}
+              testID="send-code"
+            />
+          </>
+        ) : null}
 
-          {flow.step === 'code' ? (
-            <>
-              <Text variant="bodyLarge">
-                {flow.channel === 'sms'
-                  ? t('signIn.code.introSms')
-                  : t('signIn.code.introWhatsapp')}
-              </Text>
-              <CodeField
-                accessibilityLabel={t('signIn.code.label')}
-                value={flow.codeInput}
-                onChangeText={flow.setCodeInput}
-                {...(problemText ? { error: problemText } : {})}
-                testID="code-input"
-              />
+        {flow.step === 'code' ? (
+          <>
+            <Text variant="body" color="textSecondary">
+              {flow.channel === 'sms' ? t('signIn.code.introSms') : t('signIn.code.introWhatsapp')}
+            </Text>
+            <CodeField
+              accessibilityLabel={t('signIn.code.label')}
+              value={flow.codeInput}
+              onChangeText={flow.setCodeInput}
+              {...(problemText ? { error: problemText } : {})}
+              testID="code-input"
+            />
+            <Button
+              label={t('signIn.code.submit')}
+              size="large"
+              fullWidth
+              loading={flow.working}
+              onPress={() => void flow.submitCode()}
+              testID="verify-code"
+            />
+            <View style={styles.row}>
               <Button
-                label={t('signIn.code.submit')}
-                size="large"
+                variant="secondary"
                 fullWidth
-                loading={flow.working}
-                onPress={() => void flow.submitCode()}
-                testID="verify-code"
+                disabled={flow.resendIn > 0 || flow.working}
+                label={
+                  flow.resendIn > 0
+                    ? t('signIn.code.resendIn', { count: flow.resendIn })
+                    : t('signIn.code.resend')
+                }
+                onPress={() => void flow.resend('whatsapp')}
+                testID="resend-code"
               />
-              <View style={styles.row}>
-                <Button
-                  variant="secondary"
-                  fullWidth
-                  disabled={flow.resendIn > 0 || flow.working}
-                  label={
-                    flow.resendIn > 0
-                      ? t('signIn.code.resendIn', { count: flow.resendIn })
-                      : t('signIn.code.resend')
-                  }
-                  onPress={() => void flow.resend('whatsapp')}
-                  testID="resend-code"
-                />
-                {flow.resendIn === 0 ? (
-                  <Button
-                    variant="tertiary"
-                    fullWidth
-                    disabled={flow.working}
-                    label={t('signIn.code.useSms')}
-                    onPress={() => void flow.resend('sms')}
-                    testID="resend-sms"
-                  />
-                ) : null}
+              {flow.resendIn === 0 ? (
                 <Button
                   variant="tertiary"
                   fullWidth
-                  label={t('signIn.code.changeNumber')}
-                  onPress={flow.changeNumber}
-                  testID="change-number"
+                  disabled={flow.working}
+                  label={t('signIn.code.useSms')}
+                  onPress={() => void flow.resend('sms')}
+                  testID="resend-sms"
                 />
-              </View>
-            </>
-          ) : null}
-
-          {flow.step === 'name' ? (
-            <>
-              <Text variant="bodyLarge">{t('signIn.name.intro')}</Text>
-              <TextField
-                label={t('signIn.name.label')}
-                value={flow.nameInput}
-                onChangeText={flow.setNameInput}
-                autoComplete="name"
-                error={problemText}
-                onSubmitEditing={() => void flow.submitName()}
-                testID="name-input"
-              />
-              <Button
-                label={t('signIn.name.submit')}
-                size="large"
-                fullWidth
-                loading={flow.working}
-                onPress={() => void flow.submitName()}
-                testID="save-name"
-              />
+              ) : null}
               <Button
                 variant="tertiary"
                 fullWidth
-                label={t('signIn.name.skip')}
-                onPress={flow.skipName}
-                testID="skip-name"
+                label={t('signIn.code.changeNumber')}
+                onPress={flow.changeNumber}
+                testID="change-number"
               />
-            </>
-          ) : null}
-        </View>
-      </Card>
+            </View>
+          </>
+        ) : null}
+
+        {flow.step === 'name' ? (
+          <>
+            <Text variant="body" color="textSecondary">
+              {t('signIn.name.intro')}
+            </Text>
+            <TextField
+              label={t('signIn.name.label')}
+              value={flow.nameInput}
+              onChangeText={flow.setNameInput}
+              autoComplete="name"
+              error={problemText}
+              onSubmitEditing={() => void flow.submitName()}
+              testID="name-input"
+            />
+            <Button
+              label={t('signIn.name.submit')}
+              size="large"
+              fullWidth
+              loading={flow.working}
+              onPress={() => void flow.submitName()}
+              testID="save-name"
+            />
+            <Button
+              variant="tertiary"
+              fullWidth
+              label={t('signIn.name.skip')}
+              onPress={flow.skipName}
+              testID="skip-name"
+            />
+          </>
+        ) : null}
+      </View>
     </ScreenFrame>
   );
 }

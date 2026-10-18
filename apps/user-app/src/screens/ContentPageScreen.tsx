@@ -20,6 +20,7 @@ export function ContentPageScreen({ slug }: { slug: string }) {
     <ScreenFrame
       title={page.data ? l(page.data.title).text : t('ui.loading')}
       onBack={() => nav.back()}
+      plain
       testID="content-page-screen"
     >
       <QueryBoundary query={page}>
@@ -27,7 +28,7 @@ export function ContentPageScreen({ slug }: { slug: string }) {
           const body = l(p.body);
           return (
             <View>
-              <Text variant="bodyLarge" lang={body.lang} selectable>
+              <Text variant="body" lang={body.lang} selectable>
                 {body.text}
               </Text>
             </View>

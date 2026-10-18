@@ -1,4 +1,4 @@
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { makeApiError } from '@qc/contracts';
 import { messages } from '@qc/i18n';
@@ -6,7 +6,6 @@ import {
   MATRIX,
   createWorld,
   directionOf,
-  expectGreenHeader,
   renderScreen,
   signInHandlers,
   waitFor,
@@ -169,8 +168,13 @@ describe('SignInScreen', () => {
     it('draws the first step', async () => {
       const view = await renderScreen(<SignInScreen />, { locale, color, textSize });
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
-      expect(view.getByText((locale === 'ur' ? ur : en)['signIn.phone.intro'])).toBeTruthy();
+      const words = locale === 'ur' ? ur : en;
+      // A plain white top with back and the title in the middle, then a big heading (D17).
+      expect(
+        within(view.getByTestId('screen-header')).getByText(words['signIn.title']),
+      ).toBeTruthy();
+      expect(view.getByText(words['signIn.heading'])).toBeTruthy();
+      expect(view.getByText(words['signIn.phone.intro'])).toBeTruthy();
       expect(view.getByTestId('send-code')).toBeTruthy();
     });
   });

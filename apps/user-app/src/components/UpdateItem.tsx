@@ -3,7 +3,6 @@ import {
   Badge,
   Card,
   Icon,
-  Tag,
   Text,
   radii,
   spacing,
@@ -15,21 +14,22 @@ import type { Update, UpdateKind } from '@qc/contracts';
 import { useI18n } from '../i18n/I18nProvider';
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  kind: {
-    width: 36,
-    height: 36,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  inner: { padding: spacing.lg, gap: spacing.xs },
+  bar: { position: 'absolute', top: 0, bottom: 0, start: 0, width: 4 },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  stack: { flex: 1, gap: spacing.xs },
+  kindRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs + spacing.xxs, flex: 1 },
+  kind: {
+    width: 24,
+    height: 24,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   open: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, marginTop: spacing.xs },
 });
 
@@ -49,7 +49,7 @@ export const KIND_LOOK: Record<UpdateKind, { icon: IconName; tint: ColorKey; ink
  * session" and opens that session.
  */
 export function UpdateItem({ update, onPress }: { update: Update; onPress?: () => void }) {
-  const { l, t } = useI18n();
+  const { l, t, locale } = useI18n();
   const c = useTheme().colors;
   const title = l(update.title);
   const body = l(update.body);
@@ -63,35 +63,53 @@ export function UpdateItem({ update, onPress }: { update: Update; onPress?: () =
   ]
     .filter(Boolean)
     .join(', ');
+  const when = new Intl.DateTimeFormat(locale === 'ur' ? 'ur-PK' : 'en-GB', {
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(update.publishedAt));
   return (
-    <Card onPress={onPress} accessibilityLabel={label} testID={`update-${update.id}`}>
-      <View style={styles.row}>
-        <View
-          style={[styles.kind, { backgroundColor: c[look.tint] }]}
-          testID={`update-${update.id}-kind`}
-        >
-          <Icon name={look.icon} size={20} color={c[look.ink]} />
-        </View>
-        <View style={styles.stack}>
-          <View style={styles.head}>
-            <Tag label={t(`updates.kind.${update.kind}`)} kind="neutral" />
-            {update.isRead ? null : <Badge dot />}
-          </View>
-          <Text variant="label" lang={title.lang}>
-            {title.text}
-          </Text>
-          <Text variant="body" color="textSecondary" lang={body.lang}>
-            {body.text}
-          </Text>
-          {opensSession ? (
-            <View style={styles.open} testID={`update-${update.id}-open`}>
-              <Text variant="label" color="textAccent" decorative>
-                {t('updates.goToSession')}
-              </Text>
-              <Icon name="chevron-forward" size={18} color={c.textAccent} />
+    <Card
+      onPress={onPress}
+      padding="none"
+      accessibilityLabel={label}
+      testID={`update-${update.id}`}
+    >
+      {/* Unread: an emerald edge on the start side (D17), and the dot. */}
+      {update.isRead ? null : (
+        <View aria-hidden style={[styles.bar, { backgroundColor: c.accent }]} />
+      )}
+      <View style={styles.inner}>
+        <View style={styles.head}>
+          <View style={styles.kindRow}>
+            <View
+              style={[styles.kind, { backgroundColor: c[look.tint] }]}
+              testID={`update-${update.id}-kind`}
+            >
+              <Icon name={look.icon} size={14} color={c[look.ink]} />
             </View>
-          ) : null}
+            <Text variant="caption" color="textAccent" strong>
+              {t(`updates.kind.${update.kind}`)}
+            </Text>
+          </View>
+          <Text variant="caption" color="textSecondary">
+            {when}
+          </Text>
+          {update.isRead ? null : <Badge dot />}
         </View>
+        <Text variant="label" lang={title.lang}>
+          {title.text}
+        </Text>
+        <Text variant="caption" color="textSecondary" lang={body.lang}>
+          {body.text}
+        </Text>
+        {opensSession ? (
+          <View style={styles.open} testID={`update-${update.id}-open`}>
+            <Text variant="caption" color="textAccent" strong decorative>
+              {t('updates.goToSession')}
+            </Text>
+            <Icon name="chevron-forward" size={16} color={c.textAccent} />
+          </View>
+        ) : null}
       </View>
     </Card>
   );

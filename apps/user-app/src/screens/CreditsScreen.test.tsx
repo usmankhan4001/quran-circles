@@ -1,15 +1,8 @@
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { creditGroups, fonts } from '@qc/ui';
-import {
-  MATRIX,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
 import { CreditsScreen } from './CreditsScreen';
 import { ProfileScreen } from './ProfileScreen';
 
@@ -66,7 +59,10 @@ describe('CreditsScreen', () => {
       const view = await renderScreen(<CreditsScreen />, { world });
       const words = locale === 'ur' ? ur : en;
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
+      // A plain white top with back and the title in the middle (D17).
+      expect(
+        within(view.getByTestId('screen-header')).getByText(words['credits.title']),
+      ).toBeTruthy();
       expect(view.getByText(words['credits.intro'])).toBeTruthy();
       expect(view.getByText(words['credits.fonts.heading'])).toBeTruthy();
       expect(view.getByText(words['credits.text.heading'])).toBeTruthy();

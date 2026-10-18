@@ -51,7 +51,7 @@ export function CreditsScreen() {
   const { t } = useI18n();
   const nav = useNav();
   return (
-    <ScreenFrame title={t('credits.title')} onBack={() => nav.back()} testID="credits-screen">
+    <ScreenFrame title={t('credits.title')} onBack={() => nav.back()} plain testID="credits-screen">
       <View style={styles.stack}>
         <Text variant="bodyLarge">{t('credits.intro')}</Text>
         {creditGroups.map((group) => (

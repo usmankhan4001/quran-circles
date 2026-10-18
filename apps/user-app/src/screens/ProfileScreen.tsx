@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   gap: { gap: spacing.md },
 });
 
-/** The quick tiles the profile opens with (B): the places a person comes here to reach. */
+/** Quick tiles to the places a person comes here to reach, as small white cards (D17). */
 function QuickTiles() {
   const { t } = useI18n();
   const nav = useNav();
@@ -109,14 +109,14 @@ function QuickTiles() {
           style={({ pressed }) => [
             styles.tile,
             {
-              backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass,
-              borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.heroGlass,
+              backgroundColor: pressed ? c.surfaceMuted : c.surface,
+              borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
               transform: pressed && !theme.reduceMotion ? [{ scale: 0.96 }] : undefined,
             },
           ]}
         >
-          <Icon name={tile.icon} size={24} color={c.textOnHero} />
-          <Text variant="caption" color="textOnHero" align="center" decorative>
+          <Icon name={tile.icon} size={22} color={c.textAccent} />
+          <Text variant="caption" align="center" decorative>
             {tile.label}
           </Text>
         </Pressable>
@@ -131,14 +131,10 @@ export function ProfileScreen() {
   const status = useAuthStatus();
 
   return (
-    <ScreenFrame
-      title={t('profile.title')}
-      onBack={() => nav.back()}
-      hero={<QuickTiles />}
-      testID="profile-screen"
-    >
+    <ScreenFrame title={t('profile.title')} onBack={() => nav.back()} plain testID="profile-screen">
       <View style={styles.stack}>
         <AccountSection signedIn={status === 'signedIn'} />
+        <QuickTiles />
         <PreferencesSections />
         {status === 'signedIn' ? <ReadingSettingsSection /> : null}
         {status === 'signedIn' ? <AlertsSections /> : null}
