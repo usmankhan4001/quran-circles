@@ -19,8 +19,8 @@ export interface TagProps {
 const styles = StyleSheet.create({
   tag: {
     alignSelf: 'flex-start',
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.sm + spacing.xxs,
     paddingVertical: spacing.xxs,
   },
 });

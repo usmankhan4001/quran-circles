@@ -4,78 +4,88 @@
  * Raw values live here. Components never use raw colours: they read the semantic colours for
  * the current mode from `semantic-colors.ts` through `useTheme()`.
  *
- * Values follow the redesign agreed with the owner (docs/design/redesign-decisions.md, D3 to D13).
+ * Values follow the Iqraa redesign the owner pushed on 2026-10-18 (docs/design/redesign-decisions.md,
+ * D17), which replaces the D3 colours and the D8 to D13 shapes.
  */
 export const colors = {
   brand: {
-    /** Tanzeem-e-Islami green: every main action, selected states, the brand (D3). */
-    tanzeem: '#226836',
-    deep: '#154a27',
+    /** Deep emerald: the green header, chosen states, links and the brand (Iqraa redesign). */
+    emerald: '#1e563b',
+    deep: '#163f2c',
     /** The page colour after Isha. */
-    night: '#0c2a17',
-    leaf: '#e5f0e8',
-    cloud: '#f7fbf9',
-    mist: '#dbe7e6',
-    /** Mushaf gilt. Quran moments and decoration only; never body text. */
-    gilt: '#b8913a',
-    /** Terracotta for unread counts and errors. White text needs the deeper `red[700]`. */
-    alert: '#c4563f',
-    ink: '#16201a',
+    night: '#0b1f16',
+    /** Emerald tint: chosen pills, tonal buttons, section tags. */
+    leaf: '#e8f5ee',
+    /** Soft surfaces: muted cards, tracks, the search pill. */
+    cloud: '#f8fafc',
+    mist: '#e2e8f0',
+    /** Charcoal: the main call to action on every screen (pill buttons). */
+    charcoal: '#111827',
+    /** Portion amber. Quran portions, Ramadan and decoration; never body text on white. */
+    gilt: '#f59e0b',
+    /** Red for unread counts and errors. White text needs the deeper `red[700]`. */
+    alert: '#ef4444',
+    ink: '#111827',
   },
+  /** Emerald ramp (style guide: Emerald 50 to 900). */
   green: {
-    50: '#f2f8f4',
-    100: '#e5f0e8',
-    200: '#c6dfcd',
-    300: '#8fd3a5',
-    400: '#5fb87d',
-    500: '#3d9e5c',
-    600: '#2d8048',
-    700: '#226836',
-    800: '#154a27',
-    900: '#0f3a20',
-    950: '#0c2a17',
-    975: '#06160c',
+    50: '#f3faf6',
+    100: '#e8f5ee',
+    200: '#a7f3d0',
+    300: '#6ee7b7',
+    400: '#34d399',
+    500: '#10b981',
+    600: '#3b8861',
+    700: '#327a56',
+    800: '#1e563b',
+    900: '#163f2c',
+    950: '#0f3022',
+    975: '#071a12',
   },
-  /** Green-tinted greys, so neutrals sit with the brand green. */
+  /** Slate greys, as in the style guide. */
   grey: {
-    50: '#f7fbf9',
-    100: '#eef4f1',
-    200: '#dfe8e3',
-    300: '#c5d2ca',
-    400: '#9fb3a6',
-    500: '#6f7f75',
-    600: '#56635b',
-    700: '#4a5a50',
-    800: '#2c3a31',
-    900: '#16201a',
+    50: '#f8fafc',
+    100: '#f1f5f9',
+    200: '#e2e8f0',
+    300: '#cbd5e1',
+    400: '#94a3b8',
+    450: '#7d8aa0',
+    500: '#64748b',
+    600: '#475569',
+    700: '#334155',
+    800: '#1e293b',
+    900: '#111827',
   },
   /** Night surfaces, lighter as they rise. */
   night: {
-    surface: '#123520',
-    raised: '#184228',
-    muted: '#0f301c',
-    border: '#24543a',
-    text: '#eaf3ed',
-    textSecondary: '#c4d6ca',
-    textMuted: '#a6bdae',
+    surface: '#11291e',
+    raised: '#163426',
+    muted: '#0e241a',
+    border: '#24473a',
+    text: '#ecf5f0',
+    textSecondary: '#c6d8ce',
+    textMuted: '#a7bfb2',
   },
   red: {
-    100: '#fbe7e2',
-    300: '#f0a38f',
-    600: '#c4563f',
-    700: '#b4472f',
-    800: '#963a26',
-    900: '#6e2a1b',
-    950: '#3a150d',
+    50: '#fef2f2',
+    100: '#fee2e2',
+    300: '#fca5a5',
+    600: '#dc2626',
+    700: '#b91c1c',
+    800: '#991b1b',
+    900: '#7f1d1d',
+    950: '#450a0a',
   },
+  /** Portion amber (style guide: Amber 50 to 700). */
   gold: {
-    100: '#fbf1d6',
-    300: '#e4c46d',
-    500: '#b8913a',
-    700: '#7a5a10',
-    800: '#6b4e0e',
-    900: '#4a3608',
-    950: '#2a1f05',
+    50: '#fffbeb',
+    100: '#fef3c7',
+    300: '#fcd34d',
+    500: '#f59e0b',
+    700: '#b45309',
+    800: '#92400e',
+    900: '#78350f',
+    950: '#451a03',
   },
   white: '#ffffff',
   black: '#000000',
@@ -149,18 +159,21 @@ export type SpacingToken = keyof typeof spacing;
 /** Horizontal gutter of a screen. */
 export const screenGutter = spacing.lg;
 
-/** Corners (D6, D8 to D13): tags 8, chips and small buttons 12, fields 14, buttons 16, section cards 18, cards 22, dialogs 26, sheets 28. */
+/**
+ * Corners (D17): tags, chips, buttons and fields are pills; thumbnails 8 and 12; tiles 16;
+ * small cards 18; cards 20; dialogs 26; sheets 28.
+ */
 export const radii = {
   none: 0,
   sm: 8,
   md: 12,
-  field: 14,
   lg: 16,
   section: 18,
-  card: 22,
+  card: 20,
   xl: 24,
   dialog: 26,
   sheet: 28,
+  field: 999,
   pill: 999,
 } as const;
 export type RadiusToken = keyof typeof radii;
@@ -171,12 +184,12 @@ export type RadiusToken = keyof typeof radii;
  */
 export const elevation = {
   none: undefined,
-  /** Resting cards (D11): two soft layers in green-black. */
-  low: '0px 1px 2px rgba(10, 30, 18, 0.06), 0px 8px 22px rgba(10, 30, 18, 0.07)',
-  /** The main button's soft green shadow (D8). */
-  medium: '0px 6px 16px rgba(34, 104, 54, 0.22)',
-  /** Floating: sheets, the tab bar and map cards. */
-  high: '0px 14px 34px rgba(10, 30, 18, 0.18)',
+  /** Resting cards (D17): a whisper of charcoal under a hairline border. */
+  low: '0px 6px 24px -4px rgba(17, 24, 39, 0.06), 0px 1px 2px rgba(17, 24, 39, 0.03)',
+  /** Picture cards and the main pill button. */
+  medium: '0px 8px 20px -4px rgba(17, 24, 39, 0.14)',
+  /** Floating: sheets, the tab dock and map cards. */
+  high: '0px 10px 30px rgba(17, 24, 39, 0.12), 0px 1px 3px rgba(17, 24, 39, 0.05)',
 } as const;
 export type ElevationToken = keyof typeof elevation;
 

@@ -22,12 +22,6 @@ function emulateForcedColors(active: boolean) {
   );
 }
 
-/** The gap on the label's icon side, whichever physical side that is. */
-function startMargin(el: HTMLElement): number {
-  const style = getComputedStyle(el);
-  return Math.max(parseFloat(style.marginLeft) || 0, parseFloat(style.marginRight) || 0);
-}
-
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -65,7 +59,7 @@ describe('forced colours (A-07)', () => {
   });
 
   it('keeps the hero pattern otherwise', () => {
-    renderThemed(<HeroHeader title="Home" />);
+    renderThemed(<HeroHeader title="Home" pattern />);
     expect(screen.getByTestId('hero-pattern')).toBeTruthy();
   });
 
@@ -78,8 +72,8 @@ describe('forced colours (A-07)', () => {
       );
       const box = screen.getByRole('searchbox').parentElement as HTMLElement;
       expect(box.style.borderTopWidth).toBe('1px');
-      if (mode === 'light')
-        expect(box.style.borderTopColor).toMatch(/transparent|rgba\(0, 0, 0, 0\)/);
+      // D17: a visible hairline in light mode too.
+      expect(box.style.borderTopColor).not.toMatch(/^$|transparent|rgba\(0, 0, 0, 0\)/);
     },
   );
 });
@@ -117,21 +111,24 @@ describe('TabBar landmarks and badge (A-08, A-10)', () => {
     expect(nav.contains(screen.getByRole('tablist', { name: 'Main menu' }))).toBe(true);
   });
 
+  // D17 draws icon tabs without a visible label, so a badge can no longer cover one (A-10).
+  // The name and the count stay in the tab's accessible name.
   it.each(matrix.filter((c) => c.textSize === 3))(
-    "starts the chosen tab's label clear of the badge in $name",
+    'keeps the badge in the name and draws no label to cover in $name',
     ({ mode, locale, textSize }) => {
       renderThemed(<TabBar items={items} activeKey="home" onChange={() => {}} />, {
         mode,
         locale,
         textSize,
       });
-      // The badge reaches 12 past the icon's end edge.
-      expect(startMargin(screen.getByText('Home'))).toBeGreaterThan(12);
+      expect(screen.queryByText('Home')).toBeNull();
+      expect(screen.getByRole('tab', { name: /^Home, / })).toBeTruthy();
     },
   );
 
-  it('keeps the usual gap when the chosen tab has no badge', () => {
+  it('marks the chosen tab with a dot as well as colour', () => {
     renderThemed(<TabBar items={items} activeKey="nearby" onChange={() => {}} />);
-    expect(startMargin(screen.getByText('Nearby'))).toBeLessThan(12);
+    expect(screen.getByTestId('tab-dot-nearby')).toBeTruthy();
+    expect(screen.queryByTestId('tab-dot-home')).toBeNull();
   });
 });

@@ -51,19 +51,19 @@ describe('brand tokens meet WCAG AA for body text', () => {
     expect(contrastRatio(colors.brand.ink, colors.brand.cloud)).toBeGreaterThanOrEqual(AA);
   });
 
-  it('white text on Tanzeem green', () => {
-    expect(contrastRatio(colors.white, colors.brand.tanzeem)).toBeGreaterThanOrEqual(AA);
+  it('white text on deep emerald', () => {
+    expect(contrastRatio(colors.white, colors.brand.emerald)).toBeGreaterThanOrEqual(AA);
   });
 
-  it('Tanzeem green text on cloud', () => {
-    expect(contrastRatio(colors.brand.tanzeem, colors.brand.cloud)).toBeGreaterThanOrEqual(AA);
+  it('deep emerald text on cloud', () => {
+    expect(contrastRatio(colors.brand.emerald, colors.brand.cloud)).toBeGreaterThanOrEqual(AA);
   });
 
   it('gilt on cloud fails body text contrast, which is why gilt is decoration only', () => {
     expect(contrastRatio(colors.brand.gilt, colors.brand.cloud)).toBeLessThan(AA);
   });
 
-  it('white on the raw alert terracotta fails, which is why danger fills use the deeper red', () => {
+  it('white on the raw alert red fails, which is why danger fills use the deeper red', () => {
     expect(contrastRatio(colors.white, colors.brand.alert)).toBeLessThan(AA);
     expect(contrastRatio(colors.white, colors.red[700])).toBeGreaterThanOrEqual(AA);
   });
@@ -95,7 +95,8 @@ describe.each(colorModes)('semantic colours in %s mode', (mode) => {
   it('never uses gilt for text or fills', () => {
     const gold = colors.brand.gilt.toLowerCase();
     for (const [name, value] of Object.entries(set)) {
-      if (name === 'decoration') continue;
+      // The amber bar beside "filling fast" is a decoration too: the words carry the meaning.
+      if (name === 'decoration' || name === 'progressWarn') continue;
       expect(String(value).toLowerCase(), name).not.toBe(gold);
     }
     for (const p of contrastPairs(mode)) {
@@ -112,8 +113,10 @@ describe('semantic colours across modes', () => {
   });
 
   it('keeps the brand colours in light mode', () => {
-    expect(semanticColors.light.background).toBe(colors.brand.cloud);
-    expect(semanticColors.light.accent).toBe(colors.brand.tanzeem);
+    expect(semanticColors.light.background).toBe(colors.white);
+    expect(semanticColors.light.surfaceMuted).toBe(colors.brand.cloud);
+    expect(semanticColors.light.cta).toBe(colors.brand.charcoal);
+    expect(semanticColors.light.accent).toBe(colors.brand.emerald);
     expect(semanticColors.light.text).toBe(colors.brand.ink);
   });
 
@@ -219,17 +222,18 @@ describe('spacing, radii, elevation and motion', () => {
       expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
   });
 
-  it('has increasing radii ending in a pill', () => {
+  it('has increasing radii ending in a pill, with fields drawn as pills (D17)', () => {
     const values = Object.values(radii);
     for (let i = 1; i < values.length; i++)
-      expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
+      expect(values[i] as number).toBeGreaterThanOrEqual(values[i - 1] as number);
     expect(radii.pill).toBeGreaterThanOrEqual(999);
+    expect(radii.field).toBe(radii.pill);
   });
 
   it('has no shadow at level none and a shadow string above it', () => {
     expect(elevation.none).toBeUndefined();
     for (const level of ['low', 'medium', 'high'] as const)
-      expect(elevation[level]).toMatch(/^0px \d+px \d+px rgba\(/);
+      expect(elevation[level]).toMatch(/^0px \d+px \d+px (-?\d+px )?rgba\(/);
   });
 
   it('has motion durations that grow, starting at zero', () => {

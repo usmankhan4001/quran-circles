@@ -46,15 +46,15 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
   const c = theme.colors;
   const isToggle = selected !== undefined;
   const on = selected === true;
-  // D10: a chosen chip fills solid green with white text and a tick.
-  const textColor = disabled ? 'disabledText' : on ? 'textOnAccent' : 'text';
+  // D17: a chosen chip takes the emerald tint, an emerald outline and a tick.
+  const textColor = disabled ? 'disabledText' : on ? 'textOnAccentSubtle' : 'text';
   const fg = c[textColor];
   return (
     <View
       style={[
         styles.pill,
         {
-          backgroundColor: disabled ? c.disabledBackground : on ? c.accent : c.surface,
+          backgroundColor: disabled ? c.disabledBackground : on ? c.accentSubtle : c.surface,
           borderColor: disabled ? c.disabledBackground : on ? c.accent : c.borderStrong,
         },
       ]}
@@ -68,7 +68,7 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
         style={({ pressed }) => [
           styles.main,
           { paddingEnd: onRemove ? spacing.xs : spacing.lg },
-          pressed ? { backgroundColor: on ? c.accentPressed : c.surfaceMuted } : undefined,
+          pressed ? { backgroundColor: c.surfaceMuted } : undefined,
         ]}
       >
         {on ? (

@@ -261,14 +261,14 @@ describe.each(matrix)('drawing details in $name', (combo) => {
 });
 
 describe('HeroHeader shapes', () => {
-  it('draws the eight-point pattern by default and leaves it out on request or in high contrast', () => {
-    const { unmount } = renderThemed(<HeroHeader title="Home" />);
+  it('draws the eight-point pattern only on request (D17), and never in high contrast', () => {
+    const { unmount } = renderThemed(<HeroHeader title="Home" pattern />);
     expect(screen.getByTestId('hero-pattern')).toBeTruthy();
     unmount();
-    const off = renderThemed(<HeroHeader title="Home" pattern={false} />);
+    const off = renderThemed(<HeroHeader title="Home" />);
     expect(screen.queryByTestId('hero-pattern')).toBeNull();
     off.unmount();
-    renderThemed(<HeroHeader title="Home" />, { mode: 'highContrast' });
+    renderThemed(<HeroHeader title="Home" pattern />, { mode: 'highContrast' });
     expect(screen.queryByTestId('hero-pattern')).toBeNull();
   });
 
@@ -292,15 +292,14 @@ describe('TabBar sizing', () => {
     { key: 'more', label: 'More' },
   ];
 
-  it('the chosen tab does not shrink, so its label is not cut', () => {
+  it('shares the width equally between tabs (D17)', () => {
     renderThemed(<TabBar items={items} activeKey="journey" onChange={() => {}} />);
-    const chosen = screen.getByTestId('tab-journey');
-    expect(chosen.style.flexShrink).toBe('0');
-    expect(chosen.textContent).toBe('My Journey');
-    expect(screen.getByTestId('tab-home').style.flexGrow).toBe('1');
+    for (const key of ['home', 'journey', 'more'])
+      expect(screen.getByTestId(`tab-${key}`).style.flexGrow).toBe('1');
+    expect(screen.getByTestId('tab-journey').getAttribute('aria-label')).toBe('My Journey');
   });
 
-  it('a badge sits on the icon, apart from the label, and after the label when there is no icon', () => {
+  it('a badge sits on the icon, and after the label when there is no icon', () => {
     renderThemed(
       <TabBar
         items={[items[0]!, { key: 'more', label: 'More', badge: { count: 2 } }]}
@@ -310,9 +309,6 @@ describe('TabBar sizing', () => {
     );
     const home = screen.getByTestId('tab-home');
     expect(home.getAttribute('aria-label')).toContain('Home');
-    // The icon box holds the badge; the label is its sibling, not under the badge.
-    const label = screen.getByText('Home');
-    expect(label.parentElement?.contains(screen.getByTestId('icon-home'))).toBe(true);
     expect(screen.getByTestId('icon-home').parentElement?.textContent).toBe('1');
     expect(screen.getByTestId('tab-more').textContent).toBe('More2');
   });

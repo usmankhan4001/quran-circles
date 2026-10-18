@@ -28,12 +28,13 @@ describe('MainTabs', () => {
 
   it('labels each tab in English and marks the active one', () => {
     renderTabs('en', 'places');
-    // Each tab keeps its name for a screen reader; only the chosen one also shows it.
+    // Each tab keeps its name for a screen reader; the dock shows icons only (D17), with a dot
+    // under the chosen one.
     for (const name of ['Today', 'Updates', 'Places', 'Account']) {
       expect(screen.getByLabelText(name)).toBeTruthy();
     }
-    expect(screen.getByText('Places')).toBeTruthy();
-    expect(screen.queryByText('Updates')).toBeNull();
+    expect(screen.queryByText('Places')).toBeNull();
+    expect(screen.getByTestId('tab-dot-places')).toBeTruthy();
     for (const g of ['calendar', 'pin', 'bell', 'user']) {
       expect(screen.getAllByTestId(`icon-${g}`).length).toBeGreaterThan(0);
     }

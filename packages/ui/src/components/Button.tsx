@@ -6,10 +6,11 @@ import { Text, type TextColor } from './Text';
 import { Touchable } from './Touchable';
 
 /**
- * D8: `primary` solid green with a soft shadow, `secondary` leaf tint, `outline` a green
- * outline, `tertiary` text only, `danger` solid terracotta for destructive actions.
+ * D17 pills: `primary` charcoal (the one main action of a screen), `emerald` solid green,
+ * `secondary` emerald tint, `outline` white with a hairline border and charcoal text,
+ * `tertiary` text only, `danger` soft red with a red outline for careful actions.
  */
-export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'tertiary' | 'danger';
+export type ButtonVariant = 'primary' | 'emerald' | 'secondary' | 'outline' | 'tertiary' | 'danger';
 export type ButtonSize = 'regular' | 'large';
 
 export interface ButtonProps {
@@ -23,6 +24,8 @@ export interface ButtonProps {
   loading?: boolean;
   fullWidth?: boolean;
   icon?: IconName;
+  /** An icon after the label, such as the forward arrow on "My registration". Mirrors in Urdu. */
+  trailingIcon?: IconName;
   accessibilityLabel?: string;
   accessibilityHint?: string;
   testID?: string;
@@ -37,6 +40,7 @@ const styles = StyleSheet.create({
   },
   full: { alignSelf: 'stretch' },
   gap: { marginEnd: spacing.sm },
+  trail: { marginStart: spacing.sm },
 });
 
 export function Button({
@@ -48,6 +52,7 @@ export function Button({
   loading,
   fullWidth,
   icon,
+  trailingIcon,
   accessibilityLabel,
   accessibilityHint,
   testID,
@@ -59,21 +64,32 @@ export function Button({
     ButtonVariant,
     { bg: string; pressed: string; fg: TextColor; border: string }
   > = {
-    primary: { bg: c.accent, pressed: c.accentPressed, fg: 'textOnAccent', border: c.accent },
+    primary: { bg: c.cta, pressed: c.ctaPressed, fg: 'textOnCta', border: c.cta },
+    emerald: { bg: c.accent, pressed: c.accentPressed, fg: 'textOnAccent', border: c.accent },
     secondary: {
       bg: c.accentSubtle,
       pressed: c.border,
       fg: 'textOnAccentSubtle',
       border: c.accentSubtle,
     },
-    outline: { bg: c.surface, pressed: c.accentSubtle, fg: 'textAccent', border: c.accent },
+    outline: {
+      bg: c.surface,
+      pressed: c.surfaceMuted,
+      fg: 'text',
+      border: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+    },
     tertiary: {
       bg: 'transparent',
       pressed: c.accentSubtle,
       fg: 'textAccent',
       border: 'transparent',
     },
-    danger: { bg: c.danger, pressed: c.dangerPressed, fg: 'textOnDanger', border: c.danger },
+    danger: {
+      bg: c.dangerSubtle,
+      pressed: c.surfaceMuted,
+      fg: 'textOnDangerSubtle',
+      border: c.textDanger,
+    },
   };
   const p = palette[variant];
   const fgKey: TextColor = off ? 'disabledText' : p.fg;
@@ -100,7 +116,7 @@ export function Button({
             : pressed
               ? p.pressed
               : p.bg,
-          borderWidth: variant === 'outline' ? 1.5 : 2,
+          borderWidth: variant === 'outline' || variant === 'danger' ? 1 : 0,
           borderColor: off ? (variant === 'outline' ? c.disabledText : 'transparent') : p.border,
           boxShadow:
             variant === 'primary' && !off && theme.mode === 'light' ? elevation.medium : undefined,
@@ -117,9 +133,14 @@ export function Button({
           <Icon name={icon} color={fg} size={20} />
         </View>
       ) : null}
-      <Text variant={size === 'large' ? 'bodyLarge' : 'label'} color={fgKey} align="center">
+      <Text variant="label" color={fgKey} align="center">
         {label}
       </Text>
+      {trailingIcon && !loading ? (
+        <View style={styles.trail}>
+          <Icon name={trailingIcon} color={fg} size={18} />
+        </View>
+      ) : null}
     </Touchable>
   );
 }

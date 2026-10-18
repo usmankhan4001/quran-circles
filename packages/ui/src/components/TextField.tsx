@@ -40,26 +40,21 @@ export interface TextFieldProps {
 }
 
 const styles = StyleSheet.create({
-  // D9: an outlined field with the label small at the top, inside the border. The label sits
-  // over the input so the whole box stays one touch target.
-  field: { position: 'relative' },
+  // D17: the label sits above a pill-shaped field; focus turns the edge emerald on a pale green
+  // fill.
   labelRow: {
-    position: 'absolute',
-    top: spacing.sm,
-    start: spacing.lg - 2,
-    end: spacing.lg - 2,
     flexDirection: 'row',
     alignItems: 'baseline',
     flexWrap: 'wrap',
-    zIndex: 1,
+    marginBottom: spacing.xs + spacing.xxs,
   },
   hint: { marginStart: spacing.sm },
   input: {
     borderRadius: radii.field,
-    paddingHorizontal: spacing.lg - 2,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.lg + spacing.xxs,
+    paddingVertical: spacing.sm,
   },
-  multiline: { minHeight: 120, textAlignVertical: 'top' },
+  multiline: { minHeight: 120, textAlignVertical: 'top', borderRadius: radii.card },
   message: { marginTop: spacing.xs },
 });
 
@@ -91,7 +86,6 @@ export function TextField({
   const readOnly = Boolean(disabled || loading);
   const dir = contentDirection ?? theme.direction;
   const type = theme.type('body');
-  const labelSpace = Math.round(theme.type('caption').lineHeight + spacing.sm);
   const borderColor = error ? c.danger : focused ? c.focus : c.borderStrong;
   const message = error ?? helper;
   // `aria-*` props the native typings do not list are used by the web target only.
@@ -103,12 +97,9 @@ export function TextField({
   };
   return (
     <View testID={testID ? `${testID}-field` : undefined}>
-      <View style={styles.field}>
+      <View>
         <View style={styles.labelRow} pointerEvents="none">
-          <Text
-            variant="caption"
-            color={error ? 'textDanger' : focused ? 'textAccent' : 'textSecondary'}
-          >
+          <Text variant="label" color={error ? 'textDanger' : 'text'}>
             {label}
           </Text>
           <Text variant="caption" color="textSecondary" style={styles.hint}>
@@ -141,13 +132,16 @@ export function TextField({
             styles.input,
             type,
             {
-              // Room for the label above the text; Nastaliq needs more (D9: 66 tall in Urdu).
-              minHeight: theme.locale === 'ur' ? 66 : 60,
-              paddingTop: labelSpace,
+              // Nastaliq needs more room than Latin text.
+              minHeight: theme.locale === 'ur' ? 60 : 52,
               borderWidth: error || focused ? 2 : 1,
               borderColor,
               color: readOnly ? c.disabledText : c.text,
-              backgroundColor: readOnly ? c.disabledBackground : c.surface,
+              backgroundColor: readOnly
+                ? c.disabledBackground
+                : focused && !error && theme.mode === 'light'
+                  ? c.accentSubtle
+                  : c.surface,
               textAlign: textAlignStart(dir),
             },
             multiline ? styles.multiline : undefined,

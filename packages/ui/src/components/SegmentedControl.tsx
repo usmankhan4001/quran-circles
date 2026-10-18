@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
-import { minTouchTarget, radii, spacing } from '../tokens';
+import { elevation, minTouchTarget, radii, spacing } from '../tokens';
 import { Text } from './Text';
 import { Touchable } from './Touchable';
 
@@ -21,11 +21,11 @@ export interface SegmentedControlProps<T extends string> {
 }
 
 const styles = StyleSheet.create({
-  // D10: segments sit in a grey track; the chosen one fills green.
+  // D17: segments sit in a soft pill track; the chosen one is a white pill with charcoal text.
   group: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderRadius: radii.lg,
+    borderRadius: radii.pill,
     overflow: 'hidden',
     padding: spacing.xs,
   },
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
   },
 });
 
@@ -66,7 +66,7 @@ export function SegmentedControl<T extends string>({
       {options.map((option) => {
         const selected = option.value === value;
         const off = Boolean(disabled || option.disabled);
-        const textColor = off ? 'disabledText' : selected ? 'textOnAccent' : 'textSecondary';
+        const textColor = off ? 'disabledText' : selected ? 'text' : 'textMuted';
         return (
           <Touchable
             key={option.value}
@@ -81,10 +81,13 @@ export function SegmentedControl<T extends string>({
                 backgroundColor: selected
                   ? off
                     ? c.disabledBackground
-                    : c.accent
+                    : c.surfaceRaised
                   : pressed
-                    ? c.accentSubtle
+                    ? c.border
                     : 'transparent',
+                borderWidth: selected && theme.mode === 'highContrast' ? 2 : 0,
+                borderColor: c.borderStrong,
+                boxShadow: selected && !off && theme.mode === 'light' ? elevation.low : undefined,
               },
             ]}
           >

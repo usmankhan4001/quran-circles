@@ -24,40 +24,37 @@ export interface TabBarProps {
   testID?: string;
 }
 
-// The chosen tab takes the width its label needs, so the label is not cut; the others share
-// what is left.
-const chosen = { flexGrow: 0, flexShrink: 0, paddingHorizontal: spacing.lg } as const;
-const other = { flexGrow: 1, flexShrink: 1, flexBasis: 0 } as const;
+// Every tab shares the width equally (inline, so the share is plain to see and test).
+const share = { flexGrow: 1, flexShrink: 1, flexBasis: 0 } as const;
 
 const styles = StyleSheet.create({
-  // D12: a floating bar. The chosen tab is a green pill with its label; the others show the
-  // icon, and every tab keeps its name for screen readers.
+  // D17: a white floating dock of icons. The chosen icon turns charcoal and gains a dot under it
+  // (so the choice is not shown by colour alone); every tab keeps its name for screen readers.
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.sm,
-    padding: 6,
+    marginHorizontal: spacing.xl + spacing.sm,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radii.pill,
     borderWidth: 1,
   },
   tab: {
-    flexDirection: 'row',
     minHeight: 52,
     minWidth: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
     borderRadius: radii.pill,
   },
-  label: { marginStart: spacing.xs + 2, flexShrink: 1 },
-  // The badge reaches past the icon's end by 12, and grows with the text size; the label of the
-  // chosen tab starts clear of it, so the count never covers the label (A-10).
-  labelAfterBadge: { marginStart: 12 + spacing.xs },
+  textTab: { paddingHorizontal: spacing.sm },
   iconWrap: { minHeight: 28, alignItems: 'center', justifyContent: 'center' },
-  // On the icon's top end corner, clear of the label.
+  dot: { width: 4, height: 4, borderRadius: 2, marginTop: 4 },
+  dotSpace: { height: 4, marginTop: 4 },
+  // On the icon's top end corner.
   badge: { position: 'absolute', top: -6, end: -12 },
   badgeInline: { marginStart: spacing.xs },
+  textRow: { flexDirection: 'row', alignItems: 'center' },
 });
 
 export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID }: TabBarProps) {
@@ -76,14 +73,14 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
           styles.bar,
           {
             backgroundColor: c.surfaceRaised,
-            borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
+            borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
             boxShadow: theme.mode === 'light' ? elevation.high : undefined,
           },
         ]}
       >
         {items.map((item) => {
           const selected = item.key === activeKey;
-          const color = selected ? c.textOnAccent : c.textSecondary;
+          const color = selected ? c.text : c.textMuted;
           const extra = item.badge ? badgeLabel(theme, item.badge) : undefined;
           return (
             <Touchable
@@ -95,11 +92,9 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
               onPress={() => onChange(item.key)}
               style={({ pressed }) => [
                 styles.tab,
-                selected ? chosen : other,
-                {
-                  backgroundColor: selected ? c.accent : pressed ? c.surfaceMuted : 'transparent',
-                  boxShadow: selected && theme.mode === 'light' ? elevation.medium : undefined,
-                },
+                share,
+                item.icon ? null : styles.textTab,
+                { backgroundColor: pressed ? c.surfaceMuted : 'transparent' },
               ]}
             >
               {item.icon ? (
@@ -111,26 +106,35 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
                     </View>
                   ) : null}
                 </View>
-              ) : null}
-              {/* Without an icon the label is the only thing to see, so it always shows. */}
-              {selected || !item.icon ? (
-                <Text
-                  variant="caption"
-                  color={selected ? 'textOnAccent' : 'textSecondary'}
-                  align="center"
-                  strong={selected}
-                  numberOfLines={1}
-                  decorative
-                  style={[styles.label, item.badge && item.icon ? styles.labelAfterBadge : null]}
-                >
-                  {item.label}
-                </Text>
-              ) : null}
-              {item.badge && !item.icon ? (
-                <View style={styles.badgeInline}>
-                  <Badge {...item.badge} decorative />
+              ) : (
+                // Without an icon the label is the only thing to see, so it shows.
+                <View style={styles.textRow}>
+                  <Text
+                    variant="caption"
+                    color={selected ? 'text' : 'textMuted'}
+                    align="center"
+                    strong={selected}
+                    numberOfLines={1}
+                    decorative
+                  >
+                    {item.label}
+                  </Text>
+                  {item.badge ? (
+                    <View style={styles.badgeInline}>
+                      <Badge {...item.badge} decorative />
+                    </View>
+                  ) : null}
                 </View>
-              ) : null}
+              )}
+              {selected ? (
+                <View
+                  aria-hidden
+                  testID={`tab-dot-${item.key}`}
+                  style={[styles.dot, { backgroundColor: c.text }]}
+                />
+              ) : (
+                <View aria-hidden style={styles.dotSpace} />
+              )}
             </Touchable>
           );
         })}

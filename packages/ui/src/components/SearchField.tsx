@@ -1,7 +1,7 @@
 import { StyleSheet, TextInput, View } from 'react-native';
 import { textAlignStart } from '../direction';
 import { useTheme } from '../theme';
-import { elevation, radii, spacing } from '../tokens';
+import { radii, spacing } from '../tokens';
 import { Icon } from './Icon';
 import { IconButton } from './IconButton';
 
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, minWidth: 0, minHeight: 48, marginStart: spacing.sm, borderWidth: 0 },
 });
 
-/** The search field (D9): pill-shaped, 52 tall, with a clear button once something is typed. */
+/** The search field (D9, D17): a soft grey pill, 52 tall, with a clear button once something is typed. */
 export function SearchField({
   accessibilityLabel,
   value,
@@ -48,16 +48,14 @@ export function SearchField({
       style={[
         styles.box,
         {
-          backgroundColor: c.surface,
-          // In light mode the edge is transparent: it shows only in forced colours (Windows
-          // high contrast), where the field would otherwise have no edge at all (A-07).
+          // D17: a soft grey pill with a hairline edge (which forced colours also paint, A-07).
+          backgroundColor: c.surfaceMuted,
           borderWidth: 1,
-          borderColor: theme.mode === 'light' ? 'transparent' : c.borderStrong,
-          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          borderColor: theme.mode === 'light' ? c.border : c.borderStrong,
         },
       ]}
     >
-      <Icon name="search" size={20} color={c.textAccent} />
+      <Icon name="search" size={20} color={c.textMuted} />
       <TextInput
         testID={testID}
         role="searchbox"

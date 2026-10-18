@@ -189,8 +189,9 @@ describe('Button', () => {
   });
 
   it.each([
-    ['primary', 'accent', 'textOnAccent'],
-    ['danger', 'danger', 'textOnDanger'],
+    ['primary', 'cta', 'textOnCta'],
+    ['emerald', 'accent', 'textOnAccent'],
+    ['danger', 'dangerSubtle', 'textOnDangerSubtle'],
   ] as const)('%s uses the %s fill and %s label', (variant, bg, fg) => {
     renderThemed(<Button label="Go" variant={variant} />, { mode: 'dark' });
     const b = screen.getByRole('button');

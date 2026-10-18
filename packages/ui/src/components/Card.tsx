@@ -38,8 +38,13 @@ export function Card({
   const base = {
     padding: spacing[padding],
     backgroundColor: variant === 'flat' ? c.surfaceMuted : c.surface,
-    // Whisper-thin hairline border pairs with soft shadow in light mode; strong border for outlined/HC.
-    borderColor: variant === 'outlined' || isHighContrast ? c.borderStrong : c.border,
+    // D17: a whisper-thin hairline with a soft shadow by day; strong border for outlined and HC.
+    borderColor:
+      variant === 'outlined' || isHighContrast
+        ? c.borderStrong
+        : variant === 'flat'
+          ? c.surfaceMuted
+          : c.hairline,
     boxShadow: variant === 'raised' && theme.mode === 'light' ? elevation.low : undefined,
   };
   if (!onPress) {

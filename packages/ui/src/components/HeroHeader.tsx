@@ -17,6 +17,8 @@ export interface HeroHeaderProps {
   backLabel?: string;
   /** `IconButton`s with `variant="onHero"`, at the end of the top row. */
   actions?: ReactNode;
+  /** At the start of the top row, such as the area picker (D17). */
+  leading?: ReactNode;
   /** Content inside the green, under the title: a next-circle card, a switch, a search field. */
   children?: ReactNode;
   /**
@@ -25,7 +27,7 @@ export interface HeroHeaderProps {
    * for sheets and short headers.
    */
   shape?: 'fade' | 'rounded';
-  /** The faint eight-point pattern behind the title. On by default. */
+  /** The faint eight-point pattern behind the title. Off by default since D17. */
   pattern?: boolean;
   testID?: string;
 }
@@ -44,7 +46,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 48 },
   grow: { flex: 1 },
   titles: { marginTop: spacing.sm, gap: spacing.xxs },
-  giltRule: { width: 32, height: 3, borderRadius: radii.pill, marginTop: spacing.xs },
   body: { marginTop: spacing.lg },
   pattern: {
     position: 'absolute',
@@ -84,22 +85,24 @@ export function HeroHeader({
   onBack,
   backLabel,
   actions,
+  leading,
   children,
   shape = 'fade',
-  pattern = true,
+  pattern = false,
   testID,
 }: HeroHeaderProps) {
   const theme = useTheme();
   const forced = useForcedColors();
   const c = theme.colors;
-  const hasTop = Boolean(onBack || actions);
+  const hasTop = Boolean(onBack || actions || leading);
   // The fade needs a CSS gradient, so it is drawn on the web; native keeps the solid green with
   // rounded corners until the kit gains a gradient view. High contrast keeps solid colours.
   const fade = shape === 'fade' && Platform.OS === 'web' && theme.mode !== 'highContrast';
   const look = fade
     ? {
         backgroundColor: c.hero,
-        backgroundImage: `linear-gradient(180deg, ${c.hero} 0%, ${c.hero} 40%, ${c.heroEnd} 72%, ${c.background} 100%)`,
+        // D17: deep emerald, through the mid green and a pale green, into the page.
+        backgroundImage: `linear-gradient(180deg, ${c.hero} 0%, ${c.heroEnd} 48%, color-mix(in srgb, ${c.heroEnd} 60%, ${c.background}) 78%, ${c.background} 100%)`,
         paddingBottom: spacing.xxl,
       }
     : {
@@ -122,6 +125,7 @@ export function HeroHeader({
               onPress={onBack}
             />
           ) : null}
+          {leading}
           <View style={styles.grow} />
           {actions}
         </View>
@@ -142,9 +146,6 @@ export function HeroHeader({
             <Text variant="body" color="textOnHero">
               {subtitle}
             </Text>
-          ) : null}
-          {title && theme.mode !== 'highContrast' && !forced ? (
-            <View aria-hidden style={[styles.giltRule, { backgroundColor: c.decoration }]} />
           ) : null}
         </View>
       ) : null}

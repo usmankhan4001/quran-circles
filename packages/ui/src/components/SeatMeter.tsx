@@ -13,8 +13,9 @@ export interface SeatMeterProps {
 }
 
 const styles = StyleSheet.create({
+  top: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   track: {
-    height: 8,
+    height: 6,
     borderRadius: radii.pill,
     borderWidth: 1,
     overflow: 'hidden',
@@ -37,15 +38,28 @@ export function SeatMeter({ taken, capacity, testID }: SeatMeterProps) {
       : left === 1
         ? theme.t('ui.seatsLeftOne')
         : theme.t('ui.seatsLeft', { count: formatNumber(left, theme.locale) });
-  const tone = left === 0 ? c.danger : ratio >= 0.8 ? c.warning : c.accent;
+  const tone = left === 0 ? c.danger : ratio >= 0.8 ? c.progressWarn : c.progress;
+  // D17: the places left in green (amber when nearly full) on the start side, taken / capacity
+  // on the end side.
+  const labelColor = !hasLimit
+    ? 'textSecondary'
+    : left === 0
+      ? 'textDanger'
+      : ratio >= 0.8
+        ? 'textWarning'
+        : 'textSuccess';
   return (
     <View testID={testID}>
-      <Text
-        variant="caption"
-        color={!hasLimit ? 'textSecondary' : left === 0 ? 'textDanger' : 'textSecondary'}
-      >
-        {label}
-      </Text>
+      <View style={styles.top}>
+        <Text variant="caption" color={labelColor} strong={hasLimit}>
+          {label}
+        </Text>
+        {hasLimit ? (
+          <Text variant="caption" color="textMuted" lang="en" direction="ltr" decorative>
+            {`${formatNumber(Math.min(taken, capacity), theme.locale)} / ${formatNumber(capacity, theme.locale)}`}
+          </Text>
+        ) : null}
+      </View>
       {hasLimit ? (
         <View
           role="progressbar"
@@ -53,7 +67,7 @@ export function SeatMeter({ taken, capacity, testID }: SeatMeterProps) {
           aria-valuemin={0}
           aria-valuemax={capacity}
           aria-valuenow={Math.min(taken, capacity)}
-          style={[styles.track, { backgroundColor: c.surfaceMuted, borderColor: c.border }]}
+          style={[styles.track, { backgroundColor: c.border, borderColor: c.border }]}
         >
           <View style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: tone }]} />
         </View>

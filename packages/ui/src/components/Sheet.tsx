@@ -66,18 +66,18 @@ export function SheetPanel({
           : undefined,
       ]}
     >
-      {/* D13: the sheet opens with the app's green header. */}
-      <View style={[styles.top, { backgroundColor: c.hero }]}>
-        <View style={[styles.handle, { backgroundColor: c.heroGlassPressed }]} aria-hidden />
+      {/* D17: a clean white sheet with a grab handle, the title and a round close button. */}
+      <View style={styles.top}>
+        <View style={[styles.handle, { backgroundColor: c.border }]} aria-hidden />
         <View style={styles.header}>
           <View style={styles.title}>
-            <Text variant="title3" color="textOnHero" heading={2}>
+            <Text variant="title3" heading={2}>
               {title}
             </Text>
           </View>
           <IconButton
             icon="close"
-            variant="onHero"
+            variant="tonal"
             accessibilityLabel={closeLabel ?? theme.t('ui.close')}
             onPress={onClose}
           />

@@ -133,6 +133,16 @@ The remaining screens were drawn in the chosen styles (Q1 lists, O3 sheets, admi
 - Admin app and console: https://claude.ai/artifact/9orj7uMZstU7Pq88PrjBY1. Covers today's registrants, changing or cancelling a time, venues and circles, venue and circle editors with approval, sign-in, account, coordinator invites, bulk import check and exports.
 - Posters use the Tanzeem green (D3) and Figtree / Nastaliq (D4), not the emerald, DM Sans and Gulzar in `poster-direction.md`; that file needs updating to match.
 
+### D17. Iqraa redesign (owner push, 2026-10-18)
+
+The owner pushed a new look with an 8-page showcase (`apps/console/showcase.html`, `apps/console/src/showcase/`) and asked for the apps to be redeveloped to match it. Where it differs, it replaces D3 and D8 to D14:
+
+- Colour: deep emerald `#1e563b` (header, chosen states, links), the emerald ramp from the style guide, portion amber `#f59e0b` (decoration, with amber 700/800 for text), charcoal `#111827` for the one main action, slate greys, white pages.
+- Shapes: pill buttons (charcoal primary, emerald, emerald tint, white outline, soft red careful), pill chips (chosen = emerald tint, emerald edge and tick), pill fields with the label above, white cards radius 20 with a hairline and a whisper shadow, white sheets with a grab handle and a round close button.
+- Navigation: a white floating dock of icons; the chosen icon turns charcoal with a dot under it (not colour alone); every tab keeps its name for screen readers.
+- Header: deep emerald fading through mid and pale green into the page; no eight-point pattern by default.
+- Kept: Figtree, Mehr Nastaliq and KFGQPC (the showcase's Plus Jakarta Sans, Noto Nastaliq and Amiri are web stand-ins; Amiri was rejected in D4), the kit's own line icons, four text sizes, 48 dp targets and the contrast minimums.
+
 ## Open questions
 
 - Update `poster-direction.md` to the D3 colours and D4 type.

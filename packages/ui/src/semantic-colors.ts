@@ -6,7 +6,7 @@ export const colorModes: readonly ColorMode[] = ['light', 'dark', 'highContrast'
 
 /**
  * Meaning-based colours. Components use these, never raw palette values.
- * `light` is the day look (D3), `dark` is the night green after Isha, and `highContrast` is a
+ * `light` is the day look (D17), `dark` is the night green after Isha, and `highContrast` is a
  * light theme with black text, white surfaces and strong borders.
  */
 export interface SemanticColors {
@@ -48,8 +48,15 @@ export interface SemanticColors {
   warningSubtle: string;
   textOnWarningSubtle: string;
 
+  /** The main call to action (charcoal pill, D17): one per screen. */
+  cta: string;
+  ctaPressed: string;
+  textOnCta: string;
+
   /** Hairlines and dividers. Decorative: never the only cue that something is a control. */
   border: string;
+  /** The faintest hairline, around white cards. Decorative. */
+  hairline: string;
   /** Outlines of inputs, switches and chips. At least 3:1 against the surface. */
   borderStrong: string;
   focus: string;
@@ -67,65 +74,77 @@ export interface SemanticColors {
   heroGlass: string;
   heroGlassPressed: string;
 
+  /** Bars that show how full or how far along something is. The words beside them carry the meaning. */
+  progress: string;
+  progressWarn: string;
+
   /** Mushaf gilt. Decoration and Quran moments only (rules, ornaments, progress). Never used for text. */
   decoration: string;
 }
 
 const light: SemanticColors = {
-  background: colors.brand.cloud,
+  background: colors.white,
   surface: colors.white,
   surfaceRaised: colors.white,
-  surfaceMuted: colors.grey[100],
-  scrim: 'rgba(10, 30, 18, 0.45)',
+  surfaceMuted: colors.grey[50],
+  scrim: 'rgba(17, 24, 39, 0.45)',
 
   text: colors.brand.ink,
-  textSecondary: colors.grey[700],
-  textMuted: colors.grey[600],
-  textAccent: colors.brand.tanzeem,
+  textSecondary: colors.grey[600],
+  textMuted: colors.grey[500],
+  textAccent: colors.brand.emerald,
   textDanger: colors.red[700],
-  textSuccess: colors.brand.tanzeem,
+  textSuccess: colors.green[700],
   textWarning: colors.gold[700],
 
-  accent: colors.brand.tanzeem,
+  accent: colors.brand.emerald,
   accentPressed: colors.brand.deep,
   textOnAccent: colors.white,
   accentSubtle: colors.brand.leaf,
-  textOnAccentSubtle: colors.brand.deep,
+  textOnAccentSubtle: colors.brand.emerald,
 
-  success: colors.brand.tanzeem,
+  success: colors.green[700],
   textOnSuccess: colors.white,
   successSubtle: colors.brand.leaf,
-  textOnSuccessSubtle: colors.brand.deep,
+  textOnSuccessSubtle: colors.brand.emerald,
 
   danger: colors.red[700],
   dangerPressed: colors.red[800],
   textOnDanger: colors.white,
-  dangerSubtle: colors.red[100],
-  textOnDangerSubtle: colors.red[900],
+  dangerSubtle: colors.red[50],
+  textOnDangerSubtle: colors.red[800],
 
   warning: colors.gold[700],
   textOnWarning: colors.white,
   warningSubtle: colors.gold[100],
   textOnWarningSubtle: colors.gold[800],
 
+  cta: colors.brand.charcoal,
+  ctaPressed: colors.grey[800],
+  textOnCta: colors.white,
+
   border: colors.grey[200],
-  borderStrong: colors.grey[500],
-  focus: colors.brand.deep,
+  hairline: colors.grey[100],
+  borderStrong: colors.grey[450],
+  focus: colors.brand.emerald,
 
   skeleton: colors.grey[200],
   disabledBackground: colors.grey[200],
-  disabledText: colors.grey[600],
+  disabledText: colors.grey[500],
 
-  hero: colors.brand.tanzeem,
+  hero: colors.brand.emerald,
   textOnHero: colors.white,
-  heroEnd: colors.green[500],
+  heroEnd: colors.green[700],
   heroGlass: 'rgba(255, 255, 255, 0.16)',
   heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
+
+  progress: colors.green[500],
+  progressWarn: colors.gold[500],
 
   decoration: colors.brand.gilt,
 };
 
-/** Night (D2, D6): the night green page after Isha, lighter green surfaces, gilt for highlights. */
+/** Night (D2, D6): a deep emerald page after Isha, lighter surfaces, amber for highlights. */
 const dark: SemanticColors = {
   background: colors.brand.night,
   surface: colors.night.surface,
@@ -144,12 +163,12 @@ const dark: SemanticColors = {
   accent: colors.green[300],
   accentPressed: colors.green[200],
   textOnAccent: colors.green[975],
-  accentSubtle: colors.green[800],
+  accentSubtle: colors.green[900],
   textOnAccentSubtle: colors.green[100],
 
   success: colors.green[300],
   textOnSuccess: colors.green[975],
-  successSubtle: colors.green[800],
+  successSubtle: colors.green[900],
   textOnSuccessSubtle: colors.green[100],
 
   danger: colors.red[300],
@@ -163,7 +182,12 @@ const dark: SemanticColors = {
   warningSubtle: colors.gold[900],
   textOnWarningSubtle: colors.gold[100],
 
+  cta: colors.green[100],
+  ctaPressed: colors.white,
+  textOnCta: colors.brand.charcoal,
+
   border: colors.night.border,
+  hairline: colors.night.border,
   borderStrong: colors.grey[400],
   focus: colors.gold[300],
 
@@ -171,11 +195,14 @@ const dark: SemanticColors = {
   disabledBackground: colors.night.border,
   disabledText: colors.night.textSecondary,
 
-  hero: colors.green[800],
+  hero: colors.green[900],
   textOnHero: colors.white,
-  heroEnd: colors.green[700],
+  heroEnd: colors.green[800],
   heroGlass: 'rgba(255, 255, 255, 0.16)',
   heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
+
+  progress: colors.green[300],
+  progressWarn: colors.gold[300],
 
   decoration: colors.brand.gilt,
 };
@@ -190,18 +217,18 @@ const highContrast: SemanticColors = {
   text: colors.black,
   textSecondary: colors.grey[900],
   textMuted: colors.grey[800],
-  textAccent: colors.green[800],
+  textAccent: colors.green[950],
   textDanger: colors.red[900],
-  textSuccess: colors.green[800],
+  textSuccess: colors.green[950],
   textWarning: colors.gold[900],
 
-  accent: colors.green[800],
+  accent: colors.green[950],
   accentPressed: colors.green[975],
   textOnAccent: colors.white,
   accentSubtle: colors.brand.leaf,
   textOnAccentSubtle: colors.green[975],
 
-  success: colors.green[800],
+  success: colors.green[950],
   textOnSuccess: colors.white,
   successSubtle: colors.brand.leaf,
   textOnSuccessSubtle: colors.green[975],
@@ -217,7 +244,12 @@ const highContrast: SemanticColors = {
   warningSubtle: colors.gold[100],
   textOnWarningSubtle: colors.gold[950],
 
+  cta: colors.black,
+  ctaPressed: colors.grey[800],
+  textOnCta: colors.white,
+
   border: colors.black,
+  hairline: colors.black,
   borderStrong: colors.black,
   focus: colors.green[975],
 
@@ -230,6 +262,9 @@ const highContrast: SemanticColors = {
   heroEnd: colors.green[975],
   heroGlass: 'rgba(255, 255, 255, 0.16)',
   heroGlassPressed: 'rgba(255, 255, 255, 0.32)',
+
+  progress: colors.green[950],
+  progressWarn: colors.gold[900],
 
   decoration: colors.brand.gilt,
 };
@@ -286,6 +321,8 @@ export function contrastPairs(mode: ColorMode): ContrastPair[] {
     ['textOnWarning', 'warning'],
     ['textOnWarningSubtle', 'warningSubtle'],
     ['textOnHero', 'hero'],
+    ['textOnCta', 'cta'],
+    ['textOnCta', 'ctaPressed'],
   ];
   for (const [fg, bg] of filled) {
     pairs.push({ name: `${fg} on ${bg}`, foreground: c[fg], background: c[bg], min: textMin });
