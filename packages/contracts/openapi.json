@@ -442,7 +442,7 @@
                     "examples": [
                       "+923001234567"
                     ],
-                    "description": "E.164, for example +923001234567"
+                    "description": "A Pakistani mobile number in E.164: +923 followed by nine digits"
                   },
                   "locale": {
                     "default": "ur",
@@ -14755,7 +14755,12 @@
                             "anyOf": [
                               {
                                 "type": "string",
-                                "format": "uri"
+                                "maxLength": 2048,
+                                "format": "uri",
+                                "examples": [
+                                  "https://meet.example.org/circle"
+                                ],
+                                "description": "An https link"
                               },
                               {
                                 "type": "null"
@@ -15012,7 +15017,12 @@
                     "anyOf": [
                       {
                         "type": "string",
-                        "format": "uri"
+                        "maxLength": 2048,
+                        "format": "uri",
+                        "examples": [
+                          "https://meet.example.org/circle"
+                        ],
+                        "description": "An https link"
                       },
                       {
                         "type": "null"
@@ -15096,7 +15106,12 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uri"
+                          "maxLength": 2048,
+                          "format": "uri",
+                          "examples": [
+                            "https://meet.example.org/circle"
+                          ],
+                          "description": "An https link"
                         },
                         {
                           "type": "null"
@@ -15327,7 +15342,12 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uri"
+                          "maxLength": 2048,
+                          "format": "uri",
+                          "examples": [
+                            "https://meet.example.org/circle"
+                          ],
+                          "description": "An https link"
                         },
                         {
                           "type": "null"
@@ -15583,7 +15603,12 @@
                     "anyOf": [
                       {
                         "type": "string",
-                        "format": "uri"
+                        "maxLength": 2048,
+                        "format": "uri",
+                        "examples": [
+                          "https://meet.example.org/circle"
+                        ],
+                        "description": "An https link"
                       },
                       {
                         "type": "null"
@@ -15669,7 +15694,12 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uri"
+                          "maxLength": 2048,
+                          "format": "uri",
+                          "examples": [
+                            "https://meet.example.org/circle"
+                          ],
+                          "description": "An https link"
                         },
                         {
                           "type": "null"
@@ -15921,7 +15951,12 @@
                       "anyOf": [
                         {
                           "type": "string",
-                          "format": "uri"
+                          "maxLength": 2048,
+                          "format": "uri",
+                          "examples": [
+                            "https://meet.example.org/circle"
+                          ],
+                          "description": "An https link"
                         },
                         {
                           "type": "null"
@@ -16231,7 +16266,12 @@
                                     "anyOf": [
                                       {
                                         "type": "string",
-                                        "format": "uri"
+                                        "maxLength": 2048,
+                                        "format": "uri",
+                                        "examples": [
+                                          "https://meet.example.org/circle"
+                                        ],
+                                        "description": "An https link"
                                       },
                                       {
                                         "type": "null"
@@ -17020,7 +17060,12 @@
                               "anyOf": [
                                 {
                                   "type": "string",
-                                  "format": "uri"
+                                  "maxLength": 2048,
+                                  "format": "uri",
+                                  "examples": [
+                                    "https://meet.example.org/circle"
+                                  ],
+                                  "description": "An https link"
                                 },
                                 {
                                   "type": "null"
@@ -17421,7 +17466,12 @@
                               "anyOf": [
                                 {
                                   "type": "string",
-                                  "format": "uri"
+                                  "maxLength": 2048,
+                                  "format": "uri",
+                                  "examples": [
+                                    "https://meet.example.org/circle"
+                                  ],
+                                  "description": "An https link"
                                 },
                                 {
                                   "type": "null"
@@ -17927,7 +17977,12 @@
                               "anyOf": [
                                 {
                                   "type": "string",
-                                  "format": "uri"
+                                  "maxLength": 2048,
+                                  "format": "uri",
+                                  "examples": [
+                                    "https://meet.example.org/circle"
+                                  ],
+                                  "description": "An https link"
                                 },
                                 {
                                   "type": "null"
@@ -21783,7 +21838,12 @@
                     "anyOf": [
                       {
                         "type": "string",
-                        "format": "uri"
+                        "maxLength": 2048,
+                        "format": "uri",
+                        "examples": [
+                          "https://meet.example.org/circle"
+                        ],
+                        "description": "An https link"
                       },
                       {
                         "type": "null"

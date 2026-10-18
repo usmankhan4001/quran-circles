@@ -2,6 +2,7 @@ import {
   buildDeepLink,
   posterLanguagesOf,
   posterLocaleOf,
+  stripUnsafeText,
   type PosterFormat,
   type RendererRenderedFile,
   type RendererRenderResponse,
@@ -46,16 +47,24 @@ const pick = (
   locale: PosterLocale,
 ): string | null => (value ? (locale === 'ur' ? (value.ur ?? value.en) : value.en) : null);
 
+/**
+ * Second guard (SEC-08): the contract already refuses control, bidi and invisible format characters
+ * in the fields and the snapshot (`SafeText`); whatever reaches a block is stripped of them too, so
+ * only the template's own isolates (decision 0012) can change the direction of printed text.
+ */
+const clean = (value: string | null): string | null =>
+  value === null ? null : stripUnsafeText(value);
+
 function blocksOf(request: RenderRequest): PosterBlock[] {
   const { session, fields } = request;
   return posterLanguagesOf(request.language).map((locale) => ({
     locale,
-    title: fields.title[locale] ?? '',
+    title: stripUnsafeText(fields.title[locale] ?? ''),
     when: formatWhen(session, locale),
     // An Urdu poster of a venue with no Urdu name prints the English name, isolated (mixed text).
-    venue: pick(session.venue.name, locale) ?? session.venue.name.en,
-    area: pick(session.venue.area, locale),
-    details: fields.details?.[locale] ?? null,
+    venue: stripUnsafeText(pick(session.venue.name, locale) ?? session.venue.name.en),
+    area: clean(pick(session.venue.area, locale)),
+    details: clean(fields.details?.[locale] ?? null),
   }));
 }
 

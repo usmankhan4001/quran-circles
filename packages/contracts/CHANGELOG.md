@@ -1,5 +1,17 @@
 # Contract changelog
 
+## Unreleased
+
+- **SEC-01 (messaging lane):** `DeviceRegister` refuses a `webpush` token unless it is a `PushSubscription` JSON (`endpoint`, `keys.p256dh`, `keys.auth`) whose endpoint is `https:` on a known push service (`fcm.googleapis.com`, `updates.push.services.mozilla.com` and `*.push.services.mozilla.com`, `*.notify.windows.com`, `web.push.apple.com` and `*.push.apple.com`), default port, no user info, no IP literal: issue `{ path: 'token', code: 'custom' }`, so `devices.register` answers `validation_failed`. FCM and APNs tokens are unchanged. New exports `WEB_PUSH_HOSTS`, `WEB_PUSH_HOST_SUFFIXES`, `isAllowedWebPushEndpoint`, `WebPushSubscriptionToken`, `parseWebPushToken`; the worker applies the same check before every send. No endpoint, field or error code changes; OpenAPI is unchanged (the check is a refinement).
+
+### Stricter input validation (security review SEC-04, SEC-08, SEC-09)
+
+No endpoint, field, error code or scope action changes; inputs that were accepted before can now be refused with `validation_failed`.
+
+- **Names and place text (SEC-08).** New shared refinement `SafeText(min, max, { multiline? })` in `common.ts` refuses C0 and C1 controls and DEL, the bidi marks and controls (LRM, RLM, ALM, U+202A to U+202E, U+2066 to U+2069), and invisible format characters (zero-width space and joiner, U+2028/U+2029, U+2060 to U+2064, U+206A to U+206F, BOM, U+FFF9 to U+FFFB); ZWNJ (U+200C) stays allowed for Urdu. Line text also refuses tab and line breaks; long text keeps them. Issue code `custom`, message `SAFE_TEXT_MESSAGE`. Used by `PersonName`, `LocalizedInput` (now one line: venue, circle and session names and titles, update titles), `LocalizedLongInput` (multiline), the new `LocalizedAddressInput` (venue `address`, multiline, 500), circle `teacherName`, lesson `Portion.title`, attendance drop-in `name`, `PosterFields` (replaces its own check, same characters plus the invisible ones; one line) and the venue and area names in `PosterSourceSnapshot`. Helpers `isSafeText` and `stripUnsafeText` (the poster renderer strips as a second guard).
+- **Links (SEC-09).** New `HttpsUrl`: `https://` with a domain name, at most 2048 characters, no user info; `http:`, `javascript:`, `data:`, `file:` and every other scheme, IP addresses and `localhost` are refused. Used by every `onlineLink` (`CircleCreate`, `CircleUpdate`, `AdminCircle`, `CircleInfo`).
+- **Sign-in numbers (SEC-04, owner decision).** New `PakistaniMobilePhone` (`+923` and nine digits) for `RequestCodeBody.phone` only. A well-formed number elsewhere, or a Pakistani landline, gets issue code `phone_not_pakistan_mobile` (`PHONE_NOT_PAKISTAN_MOBILE`); a malformed one keeps `invalid_format`. Every other phone field (invites, role assignments, venue `contactPhone`, people) stays `PhoneE164`. `issuesFromZod` now reports a custom refinement's own `params.code` (new `issueCodeOf`); servers that build issues by hand must use it to surface that code.
+
 ## 1.0.0-rc.5 (2026-10-17)
 
 Posters (WP16), from the change request `docs/engineering/change-requests/2026-10-17-poster-renderer.md`, accepted with the choices listed there. Database migration 0010 goes with it. Additive only: no endpoint, field, error code or scope action is removed or renamed, and no new error code. Also fixes a mock bug (below).

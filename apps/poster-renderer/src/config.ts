@@ -4,14 +4,22 @@ const optional = z.string().trim().min(1).optional();
 
 /** Everything the renderer reads from the environment. No value here is a secret except the token. */
 export const RendererEnv = z.object({
-  APP_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
+  /**
+   * Fails closed (SEC-11): unset or empty means `production`, as in the API's auth config. Only an
+   * explicit `development` or `test` runs without a token.
+   */
+  APP_ENV: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.enum(['development', 'test', 'staging', 'production']).default('production'),
+  ),
   /** The port for `/render`, `/templates` and `/healthz`. */
   RENDERER_PORT: z.coerce.number().int().min(0).max(65535).default(8090),
   /** Address to listen on. Inside the compose network this is the container's own interface. */
   RENDERER_HOST: z.string().trim().min(1).default('0.0.0.0'),
   /**
-   * Shared bearer token the api and the worker send. Required outside development and test, so a
-   * service that can reach the renderer on the network still cannot use it without the token.
+   * Shared bearer token the api and the worker send. Required unless `APP_ENV` is exactly
+   * `development` or `test`, so a service that can reach the renderer on the network still cannot
+   * use it without the token.
    */
   RENDERER_TOKEN: z.string().trim().min(24).optional(),
   /** Renders running at once (one browser page each). */
@@ -53,13 +61,13 @@ export function parseRendererEnv(env: Record<string, string | undefined>): Rende
   if (value.PUBLIC_WEB_BASE && !/^https:\/\/[^\s/]+\/?$/.test(value.PUBLIC_WEB_BASE)) {
     throw new RendererConfigError('Invalid renderer environment: PUBLIC_WEB_BASE');
   }
-  const deployed = value.APP_ENV === 'production' || value.APP_ENV === 'staging';
-  if (deployed && !value.RENDERER_TOKEN) {
+  const local = value.APP_ENV === 'development' || value.APP_ENV === 'test';
+  if (!local && !value.RENDERER_TOKEN) {
     throw new RendererConfigError(
-      'Invalid renderer environment: RENDERER_TOKEN is required in staging and production',
+      'Invalid renderer environment: RENDERER_TOKEN is required unless APP_ENV is development or test',
     );
   }
-  if (deployed && !value.PUBLIC_WEB_BASE) {
+  if (!local && !value.PUBLIC_WEB_BASE) {
     // Without it QR codes carry the app scheme, which a phone camera without the app cannot open.
     throw new RendererConfigError(
       'Invalid renderer environment: PUBLIC_WEB_BASE is required in staging and production',

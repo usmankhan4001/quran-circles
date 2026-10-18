@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import {
   DayOfWeek,
+  HttpsUrl,
   InstantUtc,
   Localized,
   LocalDate,
   LocalTime,
   PageQuery,
   QueryBool,
+  SafeText,
   Uuid,
   pageOf,
 } from '../common';
@@ -31,7 +33,7 @@ export const Portion = z.discriminatedUnion('kind', [
     fromAyah: z.number().int().min(1).max(286),
     toAyah: z.number().int().min(1).max(286),
   }),
-  z.object({ kind: z.literal('lesson'), title: z.string().trim().min(1).max(200) }),
+  z.object({ kind: z.literal('lesson'), title: SafeText(1, 200) }),
 ]);
 export type Portion = z.infer<typeof Portion>;
 
@@ -49,7 +51,7 @@ export const CircleInfo = z.object({
   id: Uuid,
   name: Localized,
   teacherName: z.string().nullable(),
-  onlineLink: z.url().nullable(),
+  onlineLink: HttpsUrl.nullable(),
 });
 export type CircleInfo = z.infer<typeof CircleInfo>;
 

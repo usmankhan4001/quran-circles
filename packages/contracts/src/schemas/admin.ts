@@ -1,16 +1,19 @@
 import { z } from 'zod';
 import {
+  HttpsUrl,
   InstantUtc,
   Latitude,
   LocalDate,
   LocalTime,
   Localized,
+  LocalizedAddressInput,
   LocalizedInput,
   LocalizedLongInput,
   Longitude,
   PageQuery,
   PersonName,
   PhoneE164,
+  SafeText,
   Uuid,
   pageOf,
 } from '../common';
@@ -129,7 +132,7 @@ export const VenueCreate = z.object({
   cityId: Uuid,
   areaId: Uuid,
   name: LocalizedInput,
-  address: LocalizedInput,
+  address: LocalizedAddressInput,
   lat: Latitude,
   lng: Longitude,
   contactPhone: PhoneE164.nullable().default(null),
@@ -140,7 +143,7 @@ export type VenueCreate = z.infer<typeof VenueCreate>;
 export const VenueUpdate = z.object({
   areaId: Uuid.optional(),
   name: LocalizedInput.optional(),
-  address: LocalizedInput.optional(),
+  address: LocalizedAddressInput.optional(),
   lat: Latitude.optional(),
   lng: Longitude.optional(),
   contactPhone: PhoneE164.nullable().optional(),
@@ -162,7 +165,7 @@ export const AdminCircle = z.object({
   description: Localized.nullable(),
   language: Locale,
   section: Section,
-  onlineLink: z.url().nullable(),
+  onlineLink: HttpsUrl.nullable(),
   status: CircleStatus,
   createdAt: InstantUtc,
   approvedAt: InstantUtc.nullable(),
@@ -174,19 +177,19 @@ export const CircleCreate = z.object({
   venueId: Uuid,
   name: LocalizedInput,
   /** The teacher is an optional name, not an account. */
-  teacherName: z.string().trim().min(2).max(80).nullable().default(null),
+  teacherName: SafeText(2, 80).nullable().default(null),
   description: LocalizedLongInput.nullable().default(null),
   language: Locale,
   section: Section.default('family'),
-  onlineLink: z.url().nullable().default(null),
+  onlineLink: HttpsUrl.nullable().default(null),
 });
 export const CircleUpdate = z.object({
   name: LocalizedInput.optional(),
-  teacherName: z.string().trim().min(2).max(80).nullable().optional(),
+  teacherName: SafeText(2, 80).nullable().optional(),
   description: LocalizedLongInput.nullable().optional(),
   language: Locale.optional(),
   section: Section.optional(),
-  onlineLink: z.url().nullable().optional(),
+  onlineLink: HttpsUrl.nullable().optional(),
   /**
    * Archive a published circle, or publish an archived one again. Approving a pending circle
    * stays `adminCircles.decide`; this cannot move a circle in or out of pending, rejected or draft.
@@ -282,7 +285,7 @@ export const OccurrenceView = z.object({ occurrence: AdminOccurrence });
 export const AttendanceEntry = z.object({
   registrationId: Uuid.nullable().default(null),
   /** Optional name for drop-ins the coordinator knows. */
-  name: z.string().trim().min(1).max(80).nullable().default(null),
+  name: SafeText(1, 80).nullable().default(null),
   count: z.number().int().min(1).max(50).default(1),
 });
 export const AttendancePut = z.object({

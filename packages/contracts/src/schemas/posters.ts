@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DayOfWeek, InstantUtc, LocalDate, LocalTime, Uuid } from '../common';
+import { DayOfWeek, InstantUtc, LocalDate, LocalTime, SafeText, Uuid } from '../common';
 import {
   Locale,
   PosterAccent,
@@ -22,7 +22,8 @@ import {
 
 // Session snapshot -------------------------------------------------------------------------------
 
-const SnapshotText = z.string().trim().min(1).max(160);
+/** Venue and area names, under the same rule as the names they copy (`SafeText`). */
+const SnapshotText = SafeText(1, 160);
 const SnapshotLocalized = z.object({ en: SnapshotText, ur: SnapshotText.nullable() });
 
 /**
@@ -58,17 +59,10 @@ export const PosterTemplateKey = z
   .meta({ examples: ['cloud'], description: 'Lower case letters, digits, - and _; at most 40' });
 export type PosterTemplateKey = z.infer<typeof PosterTemplateKey>;
 
-// Control characters and explicit bidi controls are refused: they could hide or reorder text on a
-// printed poster. Isolation is the renderer's job (decision 0012).
-// eslint-disable-next-line no-control-regex
-const FORBIDDEN = /[\u0000-\u0008\u000b-\u001f\u007f‎‏‪-‮⁦-⁩]/;
-const fieldText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .min(1)
-    .max(max)
-    .refine((v) => !FORBIDDEN.test(v), { message: 'control characters are not allowed' });
+// Control characters, explicit bidi controls and invisible format characters are refused
+// (`SafeText`): they could hide or reorder text on a printed poster. Isolation is the renderer's
+// job (decision 0012). Each field is one line.
+const fieldText = (max: number) => SafeText(1, max);
 
 export const POSTER_TITLE_MAX = 80;
 export const POSTER_DETAILS_MAX = 140;

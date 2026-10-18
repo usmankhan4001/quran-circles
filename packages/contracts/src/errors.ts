@@ -71,9 +71,21 @@ export const makeApiError = (
   error: { code, messageKey: errorMessageKey(code), requestId, ...extra },
 });
 
+/**
+ * The code a Zod issue is reported with: Zod's own code, except a custom refinement that names its
+ * own code in `params.code` (for example `phone_not_pakistan_mobile`).
+ */
+export const issueCodeOf = (issue: z.core.$ZodIssue): string => {
+  if (issue.code === 'custom') {
+    const own: unknown = issue.params?.['code'];
+    if (typeof own === 'string' && own.length > 0) return own;
+  }
+  return issue.code;
+};
+
 /** Turns a Zod error into issues, at most 20, for `validation_failed` and per-row import results. */
 export const issuesFromZod = (error: z.ZodError): ValidationIssue[] =>
-  error.issues.map((i) => ({ path: i.path.join('.'), code: i.code })).slice(0, 20);
+  error.issues.map((i) => ({ path: i.path.join('.'), code: issueCodeOf(i) })).slice(0, 20);
 
 /** Errors every endpoint can return, so endpoints list only their own domain errors. */
 export const COMMON_ERRORS = [

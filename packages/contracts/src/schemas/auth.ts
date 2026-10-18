@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import { InstantUtc, PhoneE164, Uuid } from '../common';
+import { InstantUtc, PakistaniMobilePhone, Uuid } from '../common';
 import { Locale, OtpChannel } from '../enums';
 import { Me } from './people';
 
 export const RequestCodeBody = z.object({
-  phone: PhoneE164,
+  /** Sign-in codes go to Pakistani mobile numbers only (SEC-04). */
+  phone: PakistaniMobilePhone,
   /** The language of the message that carries the code. */
   locale: Locale.default('ur'),
   /** WhatsApp is the default. SMS is the fallback until the sender number is verified. */
