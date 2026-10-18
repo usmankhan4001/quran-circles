@@ -1,0 +1,98 @@
+{
+  "_note": "Headlines are drafts. Urdu needs native proofreading before upload. Screens come from the running user app (web build, mock API, demo data); see README.",
+  "brand": {
+    "background_top": "#1E563B",
+    "background_bottom": "#0F3524",
+    "accent": "#E9B949",
+    "text": "#FFFFFF"
+  },
+  "screens": [
+    {
+      "file": "01-home.png",
+      "en": {
+        "title": "Your next Quran circle, one tap away",
+        "sub": "Its time, masjid and portion on your home screen"
+      },
+      "ur": {
+        "title": "آپ کا اگلا قرآنی حلقہ، بس ایک ٹیپ دور",
+        "sub": "وقت، مسجد اور آج کا حصہ، سب سے پہلے"
+      }
+    },
+    {
+      "file": "02-nearby.png",
+      "en": {
+        "title": "Find circles at masjids near you",
+        "sub": "Filter by city, area, section and day"
+      },
+      "ur": {
+        "title": "اپنے قریب کی مساجد میں حلقے تلاش کریں",
+        "sub": "شہر، علاقے، حصے اور دن کے لحاظ سے"
+      }
+    },
+    {
+      "file": "03-session.png",
+      "en": {
+        "title": "Know the schedule before you go",
+        "sub": "Every session with the para it covers"
+      },
+      "ur": {
+        "title": "جانے سے پہلے شیڈول جان لیں",
+        "sub": "ہر نشست اور اس میں پڑھا جانے والا پارہ"
+      }
+    },
+    {
+      "file": "04-reserve-seat.png",
+      "en": {
+        "title": "Reserve your seat in seconds",
+        "sub": "Sign in with a code on WhatsApp or SMS"
+      },
+      "ur": {
+        "title": "چند لمحوں میں اپنی نشست محفوظ کریں",
+        "sub": "واٹس ایپ یا ایس ایم ایس کوڈ سے سائن اِن"
+      }
+    },
+    {
+      "file": "05-quran.png",
+      "en": {
+        "title": "Read along with your circle",
+        "sub": "Tonight's portion, your place and your Hifz"
+      },
+      "ur": {
+        "title": "اپنے حلقے کے ساتھ تلاوت کریں",
+        "sub": "آج کا حصہ، آپ کی جگہ اور آپ کا حفظ"
+      }
+    },
+    {
+      "file": "06-prayer-schedule.png",
+      "en": {
+        "title": "Prayer times where you are",
+        "sub": "Today's five prayers and the next one"
+      },
+      "ur": {
+        "title": "آپ کے شہر کے اوقاتِ نماز",
+        "sub": "آج کی پانچوں نمازیں اور اگلی نماز"
+      }
+    },
+    {
+      "file": "07-journey.png",
+      "en": {
+        "title": "Your seats and masjids in one place",
+        "sub": "Registrations, passes and the masjids you follow"
+      },
+      "ur": {
+        "title": "آپ کی نشستیں اور مساجد ایک جگہ",
+        "sub": "رجسٹریشن، پاس اور آپ کی پسندیدہ مساجد"
+      }
+    }
+  ],
+  "feature_graphic": {
+    "en": {
+      "title": "Find a Quran circle near you",
+      "sub": "Register, read along and keep your journey"
+    },
+    "ur": {
+      "title": "اپنے قریب قرآنی حلقہ تلاش کریں",
+      "sub": "رجسٹر کریں، ساتھ پڑھیں، سفر جاری رکھیں"
+    }
+  }
+}

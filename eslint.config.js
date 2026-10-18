@@ -19,7 +19,15 @@ const appPackages = [
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/coverage/**', '**/.expo/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/coverage/**',
+      '**/.expo/**',
+      // One-off store asset generator scripts, run by hand (tools/store-assets/README.md).
+      'tools/store-assets/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
