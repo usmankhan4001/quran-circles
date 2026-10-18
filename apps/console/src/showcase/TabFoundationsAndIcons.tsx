@@ -54,7 +54,9 @@ export function TabFoundationsAndIcons() {
     <div>
       <div className="wb-section-header">
         <div>
-          <div className="wb-eyebrow">Part 1 · Foundations, Tri-Script Typography & Phosphor Icons</div>
+          <div className="wb-eyebrow">
+            Part 1 · Foundations, Tri-Script Typography & Phosphor Icons
+          </div>
           <h1 className="wb-h1">Design Tokens & Phosphor Icon Architecture</h1>
           <p className="wb-desc">
             Replacing all ad-hoc SVG paths with <strong>Phosphor Icons v2.1.1</strong> across{' '}
@@ -352,7 +354,14 @@ export function TabFoundationsAndIcons() {
           <div className="spec-sublabel">
             C. Al-Shamela Girih Corner Rosette + Rub el Hizb StarNumber Medallions
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <AyahMedallion number={1} size={32} />
               <AyahMedallion number={18} size={32} />

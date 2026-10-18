@@ -336,7 +336,15 @@ function ConsoleShell({
         </header>
 
         {/* Body */}
-        <div style={{ padding: '18px 22px', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div
+          style={{
+            padding: '18px 22px',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 16,
+          }}
+        >
           {children}
         </div>
       </div>
@@ -464,7 +472,9 @@ export function ArtboardsConsole() {
          ====================================================================== */}
       <div className="artboard-col">
         <div className="artboard-caption" style={{ width: 1140 }}>
-          <span>01. Console — Venues & Circle Sessions Management (`VenuesPage` + `SessionsPage`)</span>
+          <span>
+            01. Console — Venues & Circle Sessions Management (`VenuesPage` + `SessionsPage`)
+          </span>
           <span>1140 × 720 · Desktop Web App</span>
         </div>
 
@@ -702,8 +712,7 @@ export function ArtboardsConsole() {
                                 fontWeight: 700,
                                 padding: '2px 8px',
                                 borderRadius: 6,
-                                background:
-                                  row.program === 'Weekly Halqa' ? '#E8F5EE' : '#FEF3C7',
+                                background: row.program === 'Weekly Halqa' ? '#E8F5EE' : '#FEF3C7',
                                 color: row.program === 'Weekly Halqa' ? '#1E563B' : '#92400E',
                                 marginBottom: 3,
                               }}
@@ -729,7 +738,12 @@ export function ArtboardsConsole() {
                                 fontWeight: 700,
                               }}
                             >
-                              <PhIcon name="book-open-text" weight="fill" size={12} color="#D97706" />
+                              <PhIcon
+                                name="book-open-text"
+                                weight="fill"
+                                size={12}
+                                color="#D97706"
+                              />
                               <span>{row.portion}</span>
                             </span>
                           </td>
@@ -982,11 +996,19 @@ export function ArtboardsConsole() {
                   <span>Save & Publish Circle Update</span>
                 </button>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <button type="button" className="iq-pill-cta" style={{ height: 32, fontSize: 11 }}>
+                  <button
+                    type="button"
+                    className="iq-pill-cta"
+                    style={{ height: 32, fontSize: 11 }}
+                  >
                     <PhIcon name="ticket" size={13} />
                     <span>Registrations</span>
                   </button>
-                  <button type="button" className="iq-pill-cta" style={{ height: 32, fontSize: 11 }}>
+                  <button
+                    type="button"
+                    className="iq-pill-cta"
+                    style={{ height: 32, fontSize: 11 }}
+                  >
                     <PhIcon name="qr-code" size={13} />
                     <span>A4 QR Poster</span>
                   </button>
@@ -1003,7 +1025,8 @@ export function ArtboardsConsole() {
       <div className="artboard-col">
         <div className="artboard-caption" style={{ width: 1140 }}>
           <span>
-            02. Console — Coordinators, Registrations & Daily Ayah Curation (`CoordinatorsPage` + `DailyAyahsPage` + `RegistrationsPage`)
+            02. Console — Coordinators, Registrations & Daily Ayah Curation (`CoordinatorsPage` +
+            `DailyAyahsPage` + `RegistrationsPage`)
           </span>
           <span>1140 × 720 · Desktop Web App</span>
         </div>
@@ -1172,7 +1195,9 @@ export function ArtboardsConsole() {
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
                   <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>
                     + Assign Coordinator Scope
                   </span>
@@ -1271,7 +1296,9 @@ export function ArtboardsConsole() {
               }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
                   <div>
                     <div style={{ fontSize: 13.5, fontWeight: 800, color: '#111827' }}>
                       Daily Ayah Curation (`DailyAyahsPage`)
@@ -1471,7 +1498,10 @@ export function ArtboardsConsole() {
                         status: 'Waitlisted',
                       },
                     ].map((r) => (
-                      <tr key={r.phone} style={{ borderBottom: '1px solid #F1F5F9', fontSize: 11.5 }}>
+                      <tr
+                        key={r.phone}
+                        style={{ borderBottom: '1px solid #F1F5F9', fontSize: 11.5 }}
+                      >
                         <td style={{ padding: '7px 8px', fontWeight: 700 }}>{r.name}</td>
                         <td style={{ padding: '7px 8px', fontFamily: 'monospace', fontSize: 11 }}>
                           {r.phone}
@@ -1501,7 +1531,8 @@ export function ArtboardsConsole() {
               </div>
 
               <div style={{ fontSize: 10.5, color: '#64748B', marginTop: 8 }}>
-                🔒 Personal numbers visible only to scoped Masjid/City coordinators; every CSV export writes an immutable audit entry.
+                🔒 Personal numbers visible only to scoped Masjid/City coordinators; every CSV
+                export writes an immutable audit entry.
               </div>
             </div>
           </div>
@@ -1514,7 +1545,8 @@ export function ArtboardsConsole() {
       <div className="artboard-col">
         <div className="artboard-caption" style={{ width: 1140 }}>
           <span>
-            03. Console — CSV Bulk Import, Batch QR Posters & Audit Trail (`ImportPage` + `PostersPage` + `AuditPage`)
+            03. Console — CSV Bulk Import, Batch QR Posters & Audit Trail (`ImportPage` +
+            `PostersPage` + `AuditPage`)
           </span>
           <span>1140 × 720 · Desktop Web App</span>
         </div>
@@ -1576,7 +1608,8 @@ export function ArtboardsConsole() {
                     </span>
                   </div>
                   <div style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-                    All-or-nothing atomic commit · Checked in browser & verified against server scope
+                    All-or-nothing atomic commit · Checked in browser & verified against server
+                    scope
                   </div>
                 </div>
               </div>
@@ -1700,7 +1733,9 @@ export function ArtboardsConsole() {
                         <span>{r.status}</span>
                       </span>
                     </td>
-                    <td style={{ padding: '7px 10px', color: '#64748B', fontSize: 11 }}>{r.note}</td>
+                    <td style={{ padding: '7px 10px', color: '#64748B', fontSize: 11 }}>
+                      {r.note}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1857,7 +1892,8 @@ export function ArtboardsConsole() {
               </div>
 
               <div style={{ fontSize: 10.5, color: '#64748B', marginTop: 8 }}>
-                QR Target: Direct Session Registration Pass · Templates: Tanzeem Emerald & Classic Parchment
+                QR Target: Direct Session Registration Pass · Templates: Tanzeem Emerald & Classic
+                Parchment
               </div>
             </div>
 
@@ -1976,7 +2012,8 @@ export function ArtboardsConsole() {
               </div>
 
               <div style={{ fontSize: 10.5, color: '#64748B', marginTop: 8 }}>
-                Zero PII stored in audit log rows · Filterable by City, Masjid, Entity Type & PKT Date Range
+                Zero PII stored in audit log rows · Filterable by City, Masjid, Entity Type & PKT
+                Date Range
               </div>
             </div>
           </div>

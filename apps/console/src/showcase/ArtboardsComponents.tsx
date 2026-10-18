@@ -29,11 +29,16 @@ export function ArtboardsComponents() {
           <span>520 × 812</span>
         </div>
 
-        <div
-          className="ios-artboard"
-          style={{ width: 520, borderRadius: 24, padding: 28 }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16, borderBottom: '1px solid #F1F5F9' }}>
+        <div className="ios-artboard" style={{ width: 520, borderRadius: 24, padding: 28 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingBottom: 16,
+              borderBottom: '1px solid #F1F5F9',
+            }}
+          >
             <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>
               Quran Circles · Design System
             </span>
@@ -49,10 +54,26 @@ export function ArtboardsComponents() {
           </div>
 
           {/* Primary Emerald Grid */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginTop: 18, marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#111827',
+              marginTop: 18,
+              marginBottom: 8,
+            }}
+          >
             Primary Emerald
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderRadius: 14, overflow: 'hidden', border: '1px solid #F1F5F9' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              borderRadius: 14,
+              overflow: 'hidden',
+              border: '1px solid #F1F5F9',
+            }}
+          >
             {greenScale.map((s) => (
               <div
                 key={s.label}
@@ -67,16 +88,34 @@ export function ArtboardsComponents() {
                 }}
               >
                 <span style={{ fontSize: 10.5, fontWeight: 700 }}>{s.label}</span>
-                <span style={{ fontSize: 10, opacity: 0.85, fontFamily: 'monospace' }}>{s.hex}</span>
+                <span style={{ fontSize: 10, opacity: 0.85, fontFamily: 'monospace' }}>
+                  {s.hex}
+                </span>
               </div>
             ))}
           </div>
 
           {/* Secondary Amber & Ink Grid */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginTop: 16, marginBottom: 8 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#111827',
+              marginTop: 16,
+              marginBottom: 8,
+            }}
+          >
             Secondary Portion Amber & Charcoal CTA
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderRadius: 14, overflow: 'hidden', border: '1px solid #F1F5F9' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              borderRadius: 14,
+              overflow: 'hidden',
+              border: '1px solid #F1F5F9',
+            }}
+          >
             {amberScale.map((s) => (
               <div
                 key={s.label}
@@ -91,13 +130,23 @@ export function ArtboardsComponents() {
                 }}
               >
                 <span style={{ fontSize: 10.5, fontWeight: 700 }}>{s.label}</span>
-                <span style={{ fontSize: 10, opacity: 0.85, fontFamily: 'monospace' }}>{s.hex}</span>
+                <span style={{ fontSize: 10, opacity: 0.85, fontFamily: 'monospace' }}>
+                  {s.hex}
+                </span>
               </div>
             ))}
           </div>
 
           {/* Tri-Script Typography */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginTop: 20, marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#111827',
+              marginTop: 20,
+              marginBottom: 10,
+            }}
+          >
             Tri-Script Typography (Plus Jakarta Sans · Amiri Quran · Nastaliq)
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -110,11 +159,21 @@ export function ArtboardsComponents() {
               </div>
             </div>
 
-            <div style={{ padding: 14, borderRadius: 14, background: '#F8FAFC', textAlign: 'right' }}>
+            <div
+              style={{ padding: 14, borderRadius: 14, background: '#F8FAFC', textAlign: 'right' }}
+            >
               <div style={{ fontFamily: 'var(--font-quran)', fontSize: 20, color: '#111827' }}>
-                وَٱصْبِرْ نَفْسَكَ مَعَ ٱلَّذِينَ يَدْعُونَ رَبَّهُم <AyahMedallion number={28} size={26} />
+                وَٱصْبِرْ نَفْسَكَ مَعَ ٱلَّذِينَ يَدْعُونَ رَبَّهُم{' '}
+                <AyahMedallion number={28} size={26} />
               </div>
-              <div style={{ fontFamily: 'var(--font-urdu)', fontSize: 14, color: '#475569', marginTop: 4 }}>
+              <div
+                style={{
+                  fontFamily: 'var(--font-urdu)',
+                  fontSize: 14,
+                  color: '#475569',
+                  marginTop: 4,
+                }}
+              >
                 ہفتہ وار حلقہ تفسیر القرآن — بعد نماز مغرب، جامع مسجد النور
               </div>
             </div>
@@ -131,9 +190,24 @@ export function ArtboardsComponents() {
 
         <div
           className="ios-artboard"
-          style={{ width: 520, borderRadius: 24, padding: 28, display: 'flex', flexDirection: 'column', gap: 18 }}
+          style={{
+            width: 520,
+            borderRadius: 24,
+            padding: 28,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 18,
+          }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, borderBottom: '1px solid #F1F5F9' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingBottom: 14,
+              borderBottom: '1px solid #F1F5F9',
+            }}
+          >
             <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>
               Components & Phosphor Icons
             </span>
@@ -152,7 +226,12 @@ export function ArtboardsComponents() {
               <button
                 type="button"
                 className="iq-pill-cta"
-                style={{ height: 42, background: '#1E563B', color: '#FFFFFF', borderColor: '#1E563B' }}
+                style={{
+                  height: 42,
+                  background: '#1E563B',
+                  color: '#FFFFFF',
+                  borderColor: '#1E563B',
+                }}
               >
                 <PhIcon name="book-open" weight="fill" size={14} /> Open Portion
               </button>
@@ -162,7 +241,12 @@ export function ArtboardsComponents() {
               <button
                 type="button"
                 className="iq-pill-cta"
-                style={{ height: 40, color: '#DC2626', borderColor: '#FECACA', background: '#FEF2F2' }}
+                style={{
+                  height: 40,
+                  color: '#DC2626',
+                  borderColor: '#FECACA',
+                  background: '#FEF2F2',
+                }}
               >
                 Release Seat
               </button>
@@ -215,24 +299,63 @@ export function ArtboardsComponents() {
             <div style={{ fontSize: 12, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
               SeatMeter Capacity Bars (Available · Filling Fast · Waitlist)
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 14, borderRadius: 16, background: '#F8FAFC' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                padding: 14,
+                borderRadius: 16,
+                background: '#F8FAFC',
+              }}
+            >
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 11.5,
+                    marginBottom: 4,
+                  }}
+                >
                   <span style={{ fontWeight: 700, color: '#059669' }}>22 seats available</span>
                   <span style={{ color: '#64748B' }}>18 / 40</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 999, background: '#E2E8F0' }}>
-                  <div style={{ width: '45%', height: '100%', borderRadius: 999, background: '#10B981' }} />
+                  <div
+                    style={{
+                      width: '45%',
+                      height: '100%',
+                      borderRadius: 999,
+                      background: '#10B981',
+                    }}
+                  />
                 </div>
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, color: '#D97706' }}>Filling fast · 3 seats left</span>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontSize: 11.5,
+                    marginBottom: 4,
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: '#D97706' }}>
+                    Filling fast · 3 seats left
+                  </span>
                   <span style={{ color: '#64748B' }}>27 / 30</span>
                 </div>
                 <div style={{ height: 6, borderRadius: 999, background: '#E2E8F0' }}>
-                  <div style={{ width: '90%', height: '100%', borderRadius: 999, background: '#F59E0B' }} />
+                  <div
+                    style={{
+                      width: '90%',
+                      height: '100%',
+                      borderRadius: 999,
+                      background: '#F59E0B',
+                    }}
+                  />
                 </div>
               </div>
             </div>

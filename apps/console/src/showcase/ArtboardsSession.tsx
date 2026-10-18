@@ -1,11 +1,7 @@
 import React from 'react';
 import { PhIcon } from './icons';
 
-export function ArtboardsSession({
-  onNavigatePage,
-}: {
-  onNavigatePage: (page: string) => void;
-}) {
+export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: string) => void }) {
   return (
     <div className="artboard-row">
       {/* ======================================================================
@@ -49,7 +45,9 @@ export function ArtboardsSession({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <button
                     type="button"
                     onClick={() => onNavigatePage('home')}
@@ -119,10 +117,17 @@ export function ArtboardsSession({
           </div>
 
           {/* Clean White Sheet Content */}
-          <div style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div
+            style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: 14 }}
+          >
             {/* Venue & Ustadh Card */}
-            <div className="iq-white-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div
+              className="iq-white-card"
+              style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div
                     style={{
@@ -152,7 +157,9 @@ export function ArtboardsSession({
 
               <div style={{ height: 1, background: '#F1F5F9' }} />
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div
                     style={{
@@ -185,12 +192,27 @@ export function ArtboardsSession({
 
             {/* SeatMeter Capacity */}
             <div className="iq-white-card" style={{ padding: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8 }}>
-                <span style={{ fontWeight: 700, color: '#111827' }}>22 seats available tonight</span>
-                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>18 / 40 reserved</span>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: 12,
+                  marginBottom: 8,
+                }}
+              >
+                <span style={{ fontWeight: 700, color: '#111827' }}>
+                  22 seats available tonight
+                </span>
+                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>
+                  18 / 40 reserved
+                </span>
               </div>
-              <div style={{ height: 6, borderRadius: 999, background: '#F1F5F9', overflow: 'hidden' }}>
-                <div style={{ width: '45%', height: '100%', borderRadius: 999, background: '#10B981' }} />
+              <div
+                style={{ height: 6, borderRadius: 999, background: '#F1F5F9', overflow: 'hidden' }}
+              >
+                <div
+                  style={{ width: '45%', height: '100%', borderRadius: 999, background: '#10B981' }}
+                />
               </div>
             </div>
 
@@ -217,7 +239,16 @@ export function ArtboardsSession({
                     }}
                   >
                     <span style={{ fontWeight: 600, color: '#334155' }}>{occ.d}</span>
-                    <span style={{ fontWeight: 700, color: '#B45309', background: '#FFFBEB', padding: '3px 8px', borderRadius: 999, fontSize: 11 }}>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: '#B45309',
+                        background: '#FFFBEB',
+                        padding: '3px 8px',
+                        borderRadius: 999,
+                        fontSize: 11,
+                      }}
+                    >
                       {occ.p}
                     </span>
                   </div>
@@ -293,15 +324,39 @@ export function ArtboardsSession({
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 24,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#111827',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
               <PhIcon name="caret-left" weight="bold" size={14} /> Back
             </span>
             <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>Reserve Seat</span>
             <span style={{ width: 40 }} />
           </div>
 
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: '#111827',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.25,
+            }}
+          >
             Reserve your place for tonight&apos;s circle
           </div>
           <div style={{ fontSize: 12.5, color: '#64748B', marginTop: 6, marginBottom: 24 }}>
@@ -324,7 +379,9 @@ export function ArtboardsSession({
                 border: '1px solid #E2E8F0',
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>2 Seats Reserved</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+                2 Seats Reserved
+              </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span
                   style={{
@@ -407,7 +464,14 @@ export function ArtboardsSession({
 
           {/* 6-Digit OTP Verification Row */}
           <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 12,
+                marginBottom: 8,
+              }}
+            >
               <span style={{ fontWeight: 600, color: '#111827' }}>6-Digit SMS Code</span>
               <span style={{ color: '#10B981', fontWeight: 600 }}>Resend in 0:42</span>
             </div>
@@ -450,7 +514,10 @@ export function ArtboardsSession({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>9:41</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -471,7 +538,13 @@ export function ArtboardsSession({
             </div>
 
             <div className="iq-white-card" style={{ padding: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                }}
+              >
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>
                     Tafseer Surah Al-Kahf
@@ -558,13 +631,25 @@ export function ArtboardsSession({
           </div>
 
           <nav className="iq-floating-nav">
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('home')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('home')}
+            >
               <PhIcon name="house" weight="regular" size={20} />
             </button>
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('nearby')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('nearby')}
+            >
               <PhIcon name="compass" weight="regular" size={20} />
             </button>
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('quran')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('quran')}
+            >
               <PhIcon name="book-open" weight="regular" size={20} />
             </button>
             <button type="button" className="iq-nav-icon-btn active">

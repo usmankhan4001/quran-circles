@@ -1,11 +1,7 @@
 import React from 'react';
 import { PhIcon } from './icons';
 
-export function ArtboardsNearby({
-  onNavigatePage,
-}: {
-  onNavigatePage: (page: string) => void;
-}) {
+export function ArtboardsNearby({ onNavigatePage }: { onNavigatePage: (page: string) => void }) {
   const sessions = [
     {
       title: 'Tafseer Surah Al-Kahf',
@@ -48,7 +44,10 @@ export function ArtboardsNearby({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>9:41</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -57,8 +56,17 @@ export function ArtboardsNearby({
             </div>
           </div>
 
-          <div style={{ padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+          <div
+            style={{
+              padding: '0 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div
+              style={{ fontSize: 20, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}
+            >
               Nearby Circles
             </div>
             {/* Segmented List / Map Pill */}
@@ -187,7 +195,9 @@ export function ArtboardsNearby({
           </div>
 
           {/* Vertical SessionCard Stack */}
-          <div style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div
+            style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', gap: 12 }}
+          >
             {sessions.map((s) => (
               <div
                 key={s.title}
@@ -195,7 +205,14 @@ export function ArtboardsNearby({
                 style={{ padding: 16, cursor: 'pointer' }}
                 onClick={() => onNavigatePage('session')}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 6,
+                  }}
+                >
                   <span style={{ fontSize: 11, fontWeight: 700, color: '#1E563B' }}>
                     {s.section} · {s.dist}
                   </span>
@@ -228,25 +245,35 @@ export function ArtboardsNearby({
                   }}
                 >
                   <span style={{ color: '#334155', fontWeight: 600 }}>{s.when}</span>
-                  <span style={{ color: '#111827', fontWeight: 700 }}>
-                    {s.seats} →
-                  </span>
+                  <span style={{ color: '#111827', fontWeight: 700 }}>{s.seats} →</span>
                 </div>
               </div>
             ))}
           </div>
 
           <nav className="iq-floating-nav">
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('home')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('home')}
+            >
               <PhIcon name="house" weight="regular" size={20} />
             </button>
             <button type="button" className="iq-nav-icon-btn active">
               <PhIcon name="compass" weight="fill" size={20} />
             </button>
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('quran')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('quran')}
+            >
               <PhIcon name="book-open" weight="regular" size={20} />
             </button>
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('session')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('session')}
+            >
               <PhIcon name="bookmarks" weight="regular" size={20} />
             </button>
             <button type="button" className="iq-nav-icon-btn">
@@ -268,11 +295,21 @@ export function ArtboardsNearby({
         <div className="ios-artboard" style={{ padding: 0 }}>
           {/* Full-Screen Vector Map Canvas */}
           <div style={{ position: 'relative', width: '100%', height: 812 }}>
-            <svg width="375" height="812" viewBox="0 0 375 812" preserveAspectRatio="xMidYMid slice">
+            <svg
+              width="375"
+              height="812"
+              viewBox="0 0 375 812"
+              preserveAspectRatio="xMidYMid slice"
+            >
               <rect width="375" height="812" fill="#EDF6F1" />
               <rect x="20" y="90" width="130" height="110" rx="20" fill="#D8ECE1" />
               <rect x="220" y="260" width="140" height="140" rx="24" fill="#D8ECE1" />
-              <path d="M -10 380 Q 170 310, 385 350" stroke="#BAE6FD" strokeWidth="24" fill="none" />
+              <path
+                d="M -10 380 Q 170 310, 385 350"
+                stroke="#BAE6FD"
+                strokeWidth="24"
+                fill="none"
+              />
               <g stroke="#FFFFFF" strokeWidth="8">
                 <line x1="0" y1="180" x2="375" y2="180" />
                 <line x1="0" y1="450" x2="375" y2="450" />
@@ -284,21 +321,63 @@ export function ArtboardsNearby({
               <g transform="translate(155, 220)">
                 <circle r="28" fill="#1E563B" fillOpacity="0.18" />
                 <rect x="-34" y="-16" width="68" height="28" rx="14" fill="#111827" />
-                <text x="0" y="2" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="700" fontFamily="Plus Jakarta Sans">
+                <text
+                  x="0"
+                  y="2"
+                  textAnchor="middle"
+                  fill="#FFFFFF"
+                  fontSize="11"
+                  fontWeight="700"
+                  fontFamily="Plus Jakarta Sans"
+                >
                   7:30 PM
                 </text>
               </g>
 
               {/* Secondary Masjid Pins */}
               <g transform="translate(260, 310)">
-                <rect x="-30" y="-14" width="60" height="24" rx="12" fill="#FFFFFF" stroke="#1E563B" strokeWidth="1.5" />
-                <text x="0" y="2" textAnchor="middle" fill="#1E563B" fontSize="10.5" fontWeight="700" fontFamily="Plus Jakarta Sans">
+                <rect
+                  x="-30"
+                  y="-14"
+                  width="60"
+                  height="24"
+                  rx="12"
+                  fill="#FFFFFF"
+                  stroke="#1E563B"
+                  strokeWidth="1.5"
+                />
+                <text
+                  x="0"
+                  y="2"
+                  textAnchor="middle"
+                  fill="#1E563B"
+                  fontSize="10.5"
+                  fontWeight="700"
+                  fontFamily="Plus Jakarta Sans"
+                >
                   4:45 PM
                 </text>
               </g>
               <g transform="translate(105, 430)">
-                <rect x="-30" y="-14" width="60" height="24" rx="12" fill="#FFFFFF" stroke="#1E563B" strokeWidth="1.5" />
-                <text x="0" y="2" textAnchor="middle" fill="#1E563B" fontSize="10.5" fontWeight="700" fontFamily="Plus Jakarta Sans">
+                <rect
+                  x="-30"
+                  y="-14"
+                  width="60"
+                  height="24"
+                  rx="12"
+                  fill="#FFFFFF"
+                  stroke="#1E563B"
+                  strokeWidth="1.5"
+                />
+                <text
+                  x="0"
+                  y="2"
+                  textAnchor="middle"
+                  fill="#1E563B"
+                  fontSize="10.5"
+                  fontWeight="700"
+                  fontFamily="Plus Jakarta Sans"
+                >
                   9:00 PM
                 </text>
               </g>
@@ -356,11 +435,27 @@ export function ArtboardsNearby({
                 boxShadow: '0 16px 40px rgba(0,0,0,0.14)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 6,
+                }}
+              >
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#059669' }}>
                   Jamia Masjid Al-Noor · 0.8 km
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#B45309', background: '#FFFBEB', padding: '2px 8px', borderRadius: 999 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#B45309',
+                    background: '#FFFBEB',
+                    padding: '2px 8px',
+                    borderRadius: 999,
+                  }}
+                >
                   Al-Kahf : 1–31
                 </span>
               </div>
@@ -382,16 +477,28 @@ export function ArtboardsNearby({
             </div>
 
             <nav className="iq-floating-nav">
-              <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('home')}>
+              <button
+                type="button"
+                className="iq-nav-icon-btn"
+                onClick={() => onNavigatePage('home')}
+              >
                 <PhIcon name="house" weight="regular" size={20} />
               </button>
               <button type="button" className="iq-nav-icon-btn active">
                 <PhIcon name="compass" weight="fill" size={20} />
               </button>
-              <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('quran')}>
+              <button
+                type="button"
+                className="iq-nav-icon-btn"
+                onClick={() => onNavigatePage('quran')}
+              >
                 <PhIcon name="book-open" weight="regular" size={20} />
               </button>
-              <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('session')}>
+              <button
+                type="button"
+                className="iq-nav-icon-btn"
+                onClick={() => onNavigatePage('session')}
+              >
                 <PhIcon name="bookmarks" weight="regular" size={20} />
               </button>
               <button type="button" className="iq-nav-icon-btn">
@@ -433,11 +540,23 @@ export function ArtboardsNearby({
               boxShadow: '0 -12px 36px rgba(0,0,0,0.15)',
             }}
           >
-            <div style={{ width: 36, height: 4, borderRadius: 999, background: '#E2E8F0', margin: '0 auto' }} />
+            <div
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 999,
+                background: '#E2E8F0',
+                margin: '0 auto',
+              }}
+            />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 17, fontWeight: 800, color: '#111827' }}>Filter Circles</span>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: '#64748B', cursor: 'pointer' }}>
+              <span style={{ fontSize: 17, fontWeight: 800, color: '#111827' }}>
+                Filter Circles
+              </span>
+              <span
+                style={{ fontSize: 12.5, fontWeight: 600, color: '#64748B', cursor: 'pointer' }}
+              >
                 Reset all
               </span>
             </div>
@@ -470,7 +589,9 @@ export function ArtboardsNearby({
                     }}
                   >
                     <span>{b.l}</span>
-                    {b.sel && <PhIcon name="check-circle" weight="fill" size={15} color="#10B981" />}
+                    {b.sel && (
+                      <PhIcon name="check-circle" weight="fill" size={15} color="#10B981" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -551,11 +672,7 @@ export function ArtboardsNearby({
               </div>
             </div>
 
-            <button
-              type="button"
-              className="iq-pill-cta dark"
-              style={{ marginTop: 'auto' }}
-            >
+            <button type="button" className="iq-pill-cta dark" style={{ marginTop: 'auto' }}>
               Show 14 Matching Circles
             </button>
           </div>

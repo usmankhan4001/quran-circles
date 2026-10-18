@@ -230,7 +230,13 @@ function Totals({
     <Card variant="flat">
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {stat(t('admin.registrants.stat.people'), totals.people, 'people', false, true)}
-        {stat(t('admin.registrants.stat.registrations'), totals.registrations, 'registrations', false, false)}
+        {stat(
+          t('admin.registrants.stat.registrations'),
+          totals.registrations,
+          'registrations',
+          false,
+          false,
+        )}
         {stat(t('admin.registrants.stat.waitlisted'), totals.waitlisted, 'waitlisted', true, false)}
       </View>
     </Card>

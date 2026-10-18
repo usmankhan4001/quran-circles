@@ -267,12 +267,7 @@ function objectArt(name: IconName, size: number, tint: string) {
               },
             ]}
           />
-          <Ring
-            d={size * 0.24}
-            color={tint}
-            w={thin}
-            style={[abs, { top: size * 0.26 }]}
-          />
+          <Ring d={size * 0.24} color={tint} w={thin} style={[abs, { top: size * 0.26 }]} />
           {line({ width: size * 0.36, height: thin, bottom: size * 0.06 })}
         </>
       );
@@ -424,7 +419,7 @@ function objectArt(name: IconName, size: number, tint: string) {
     case 'filter':
       return (
         <>
-          {[0.26, 0.5, 0.74].map((top, i) => (
+          {[0.26, 0.5, 0.74].map((top) => (
             <View
               key={top}
               style={[

@@ -39,10 +39,7 @@ export function Card({
     padding: spacing[padding],
     backgroundColor: variant === 'flat' ? c.surfaceMuted : c.surface,
     // Whisper-thin hairline border pairs with soft shadow in light mode; strong border for outlined/HC.
-    borderColor:
-      variant === 'outlined' || isHighContrast
-        ? c.borderStrong
-        : c.border,
+    borderColor: variant === 'outlined' || isHighContrast ? c.borderStrong : c.border,
     boxShadow: variant === 'raised' && theme.mode === 'light' ? elevation.low : undefined,
   };
   if (!onPress) {

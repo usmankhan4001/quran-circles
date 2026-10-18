@@ -151,23 +151,19 @@ function Everything() {
 describe.each(matrix.filter((c) => c.textSize === 0 || c.textSize === 3))(
   'axe in $name',
   (combo) => {
-    it(
-      'finds no accessibility violations in the full kit',
-      async () => {
-        const { container } = renderThemed(<Everything />, combo);
-        expect(screen.getAllByRole('button').length).toBeGreaterThan(10);
-        // Colour contrast needs real layout and painting, which jsdom lacks. It is proved from the
-        // token pairs in tokens.test.ts instead.
-        const results = await axe.run(container, {
-          rules: { 'color-contrast': { enabled: false } },
-        });
-        const summary = results.violations.map(
-          (v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 90)).join(' | ')}`,
-        );
-        expect(summary).toEqual([]);
-      },
-      20000,
-    );
+    it('finds no accessibility violations in the full kit', async () => {
+      const { container } = renderThemed(<Everything />, combo);
+      expect(screen.getAllByRole('button').length).toBeGreaterThan(10);
+      // Colour contrast needs real layout and painting, which jsdom lacks. It is proved from the
+      // token pairs in tokens.test.ts instead.
+      const results = await axe.run(container, {
+        rules: { 'color-contrast': { enabled: false } },
+      });
+      const summary = results.violations.map(
+        (v) => `${v.id}: ${v.nodes.map((n) => n.html.slice(0, 90)).join(' | ')}`,
+      );
+      expect(summary).toEqual([]);
+    }, 20000);
   },
 );
 

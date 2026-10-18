@@ -112,8 +112,24 @@ export function ArtboardsHome({
                 padding: 18,
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: '#059669', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: '#059669',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
                   <PhIcon name="check-circle" weight="fill" size={14} />
                   Your next circle · in 1h 45m
                 </span>
@@ -132,14 +148,27 @@ export function ArtboardsHome({
                 </span>
               </div>
 
-              <div
-                style={{ cursor: 'pointer' }}
-                onClick={() => onNavigatePage('session')}
-              >
-                <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', letterSpacing: '-0.015em' }}>
+              <div style={{ cursor: 'pointer' }} onClick={() => onNavigatePage('session')}>
+                <div
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 800,
+                    color: '#111827',
+                    letterSpacing: '-0.015em',
+                  }}
+                >
                   Tafseer Surah Al-Kahf
                 </div>
-                <div style={{ fontSize: 12, color: '#64748B', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: '#64748B',
+                    marginTop: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
                   <PhIcon name="map-pin" weight="regular" size={13} />
                   <span>Jamia Masjid Al-Noor, Gulberg III · 0.8 km</span>
                 </div>
@@ -156,7 +185,15 @@ export function ArtboardsHome({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ fontSize: 24, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+                    <span
+                      style={{
+                        fontSize: 24,
+                        fontWeight: 800,
+                        color: '#111827',
+                        letterSpacing: '-0.02em',
+                        fontVariantNumeric: 'tabular-nums',
+                      }}
+                    >
                       7:30
                     </span>
                     <span style={{ fontSize: 12.5, fontWeight: 700, color: '#64748B' }}>PM</span>
@@ -181,7 +218,14 @@ export function ArtboardsHome({
               </div>
 
               {/* Dual Action Buttons (Directions + My Registration) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.15fr', gap: 8, marginTop: 14 }}>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1.15fr',
+                  gap: 8,
+                  marginTop: 14,
+                }}
+              >
                 <button
                   type="button"
                   className="iq-pill-cta"
@@ -275,10 +319,23 @@ export function ArtboardsHome({
                       boxShadow: p.a ? '0 2px 6px rgba(0,0,0,0.04)' : 'none',
                     }}
                   >
-                    <div style={{ fontSize: 10.5, fontWeight: p.a ? 700 : 500, color: p.a ? '#1E563B' : '#64748B' }}>
+                    <div
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: p.a ? 700 : 500,
+                        color: p.a ? '#1E563B' : '#64748B',
+                      }}
+                    >
                       {p.n}
                     </div>
-                    <div style={{ fontSize: 10, fontWeight: p.a ? 700 : 500, color: p.a ? '#111827' : '#94A3B8', marginTop: 1 }}>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: p.a ? 700 : 500,
+                        color: p.a ? '#111827' : '#94A3B8',
+                        marginTop: 1,
+                      }}
+                    >
                       {p.t}
                     </div>
                   </div>
@@ -309,17 +366,23 @@ export function ArtboardsHome({
                   >
                     <img src={c.img} alt={c.masjid} loading="lazy" />
                     <div className="iq-photo-shade">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <div
+                        style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}
+                      >
                         <span className="iq-photo-tag">{c.dist}</span>
                       </div>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 700, color: '#A7F3D0' }}>
                           {c.section}
                         </div>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, marginTop: 1 }}>
+                        <div
+                          style={{ fontSize: 12.5, fontWeight: 700, lineHeight: 1.2, marginTop: 1 }}
+                        >
                           {c.title}
                         </div>
-                        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.82)', marginTop: 2 }}>
+                        <div
+                          style={{ fontSize: 10, color: 'rgba(255,255,255,0.82)', marginTop: 2 }}
+                        >
                           {c.masjid}
                         </div>
                       </div>
@@ -403,7 +466,10 @@ export function ArtboardsHome({
           </div>
 
           <div className="ios-artboard" style={{ paddingTop: 14 }}>
-            <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 4 }}>
+            <div
+              className="iq-status-row"
+              style={{ padding: '0 20px', color: '#111827', marginBottom: 4 }}
+            >
               <span>9:41</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -472,7 +538,12 @@ export function ArtboardsHome({
                 }}
                 onClick={() => onNavigatePage('nearby')}
               >
-                <svg width="100%" height="118" viewBox="0 0 335 118" preserveAspectRatio="xMidYMid slice">
+                <svg
+                  width="100%"
+                  height="118"
+                  viewBox="0 0 335 118"
+                  preserveAspectRatio="xMidYMid slice"
+                >
                   <rect width="335" height="118" fill="#EFF7F3" />
                   <rect x="14" y="10" width="84" height="46" rx="10" fill="#DCEEE4" />
                   <rect x="220" y="16" width="95" height="54" rx="10" fill="#DCEEE4" />
@@ -530,7 +601,9 @@ export function ArtboardsHome({
                   وَٱصْبِرْ نَفْسَكَ مَعَ ٱلَّذِينَ يَدْعُونَ رَبَّهُم{' '}
                   <AyahMedallion number={28} size={26} />
                 </div>
-                <div style={{ fontSize: 12, color: '#475569', textAlign: 'center', lineHeight: 1.5 }}>
+                <div
+                  style={{ fontSize: 12, color: '#475569', textAlign: 'center', lineHeight: 1.5 }}
+                >
                   &ldquo;And keep yourself patiently with those who call upon their Lord in the
                   morning and the evening…&rdquo; · <span style={{ color: '#94A3B8' }}>18:28</span>
                 </div>
@@ -604,13 +677,25 @@ export function ArtboardsHome({
               <button type="button" className="iq-nav-icon-btn active">
                 <PhIcon name="house" weight="fill" size={20} />
               </button>
-              <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('nearby')}>
+              <button
+                type="button"
+                className="iq-nav-icon-btn"
+                onClick={() => onNavigatePage('nearby')}
+              >
                 <PhIcon name="compass" weight="regular" size={20} />
               </button>
-              <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('quran')}>
+              <button
+                type="button"
+                className="iq-nav-icon-btn"
+                onClick={() => onNavigatePage('quran')}
+              >
                 <PhIcon name="book-open" weight="regular" size={20} />
               </button>
-              <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('session')}>
+              <button
+                type="button"
+                className="iq-nav-icon-btn"
+                onClick={() => onNavigatePage('session')}
+              >
                 <PhIcon name="bookmarks" weight="regular" size={20} />
               </button>
               <button type="button" className="iq-nav-icon-btn">
@@ -663,9 +748,19 @@ export function ArtboardsHome({
                 gap: 14,
               }}
             >
-              <div style={{ width: 36, height: 4, borderRadius: 999, background: '#E2E8F0', margin: '0 auto' }} />
+              <div
+                style={{
+                  width: 36,
+                  height: 4,
+                  borderRadius: 999,
+                  background: '#E2E8F0',
+                  margin: '0 auto',
+                }}
+              />
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
                 <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
                   Choose Your Area
                 </span>
@@ -700,7 +795,9 @@ export function ArtboardsHome({
                 }}
               >
                 <PhIcon name="magnifying-glass" weight="regular" size={16} color="#64748B" />
-                <span style={{ fontSize: 13, color: '#64748B' }}>Search city or neighbourhood…</span>
+                <span style={{ fontSize: 13, color: '#64748B' }}>
+                  Search city or neighbourhood…
+                </span>
               </div>
 
               <button type="button" className="iq-pill-cta">
@@ -762,9 +859,7 @@ export function ArtboardsHome({
                         </div>
                       </div>
                     </div>
-                    {idx === 0 && (
-                      <PhIcon name="check" weight="bold" size={15} color="#10B981" />
-                    )}
+                    {idx === 0 && <PhIcon name="check" weight="bold" size={15} color="#10B981" />}
                   </div>
                 ))}
               </div>

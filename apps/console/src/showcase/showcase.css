@@ -1,16 +1,16 @@
 :root {
-  --iq-green-deep: #1E563B;
-  --iq-green-mid: #3B8861;
-  --iq-green-soft: #E8F5EE;
-  --iq-green-check: #10B981;
-  --iq-amber: #F59E0B;
-  --iq-amber-soft: #FEF3C7;
+  --iq-green-deep: #1e563b;
+  --iq-green-mid: #3b8861;
+  --iq-green-soft: #e8f5ee;
+  --iq-green-check: #10b981;
+  --iq-amber: #f59e0b;
+  --iq-amber-soft: #fef3c7;
   --iq-ink: #111827;
-  --iq-ink-sub: #64748B;
-  --iq-ink-muted: #94A3B8;
-  --iq-border: #F1F5F9;
-  --iq-pill-border: #E2E8F0;
-  --iq-surface-soft: #F8FAFC;
+  --iq-ink-sub: #64748b;
+  --iq-ink-muted: #94a3b8;
+  --iq-border: #f1f5f9;
+  --iq-pill-border: #e2e8f0;
+  --iq-surface-soft: #f8fafc;
 
   --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-quran: 'Amiri Quran', 'Amiri', serif;
@@ -24,7 +24,7 @@
 }
 
 body {
-  background-color: #14181D;
+  background-color: #14181d;
   color: var(--iq-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -38,7 +38,7 @@ body {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 250px 1fr;
-  background: #14181D;
+  background: #14181d;
 }
 
 @media (max-width: 1100px) {
@@ -49,10 +49,10 @@ body {
 
 /* Left Figma-Style Layer & Screen Sidebar */
 .figma-sidebar {
-  background: #1C2127;
+  background: #1c2127;
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   padding: 20px 14px;
-  color: #E2E8F0;
+  color: #e2e8f0;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -65,7 +65,7 @@ body {
 .figma-project-title {
   font-size: 13.5px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -74,7 +74,7 @@ body {
 
 .figma-project-sub {
   font-size: 11px;
-  color: #94A3B8;
+  color: #94a3b8;
   padding: 0 6px;
   margin-top: 3px;
 }
@@ -84,7 +84,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #64748B;
+  color: #64748b;
   padding: 0 8px;
   margin-bottom: 6px;
 }
@@ -93,7 +93,7 @@ body {
   width: 100%;
   border: none;
   background: transparent;
-  color: #CBD5E1;
+  color: #cbd5e1;
   font-family: var(--font-sans);
   font-size: 12.5px;
   font-weight: 500;
@@ -109,12 +109,12 @@ body {
 
 .figma-nav-btn:hover {
   background: rgba(255, 255, 255, 0.05);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .figma-nav-btn.active {
   background: rgba(59, 136, 97, 0.22);
-  color: #6EE7B7;
+  color: #6ee7b7;
   font-weight: 600;
 }
 
@@ -123,7 +123,7 @@ body {
   flex-direction: column;
   gap: 2px;
   font-size: 11.5px;
-  color: #94A3B8;
+  color: #94a3b8;
   padding-left: 6px;
 }
 
@@ -138,12 +138,12 @@ body {
 
 .figma-layer-item:hover {
   background: rgba(255, 255, 255, 0.04);
-  color: #E2E8F0;
+  color: #e2e8f0;
 }
 
 .figma-layer-item.highlight {
   background: rgba(59, 136, 97, 0.16);
-  color: #A7F3D0;
+  color: #a7f3d0;
 }
 
 /* Main Dark Artboard Stage */
@@ -153,7 +153,7 @@ body {
 }
 
 .figma-stage-banner {
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 16px;
   padding: 18px 26px;
   margin-bottom: 32px;
@@ -173,7 +173,7 @@ body {
 
 .figma-stage-banner p {
   font-size: 13px;
-  color: #64748B;
+  color: #64748b;
   margin-top: 2px;
 }
 
@@ -194,7 +194,7 @@ body {
 .artboard-caption {
   font-size: 12px;
   font-weight: 600;
-  color: #94A3B8;
+  color: #94a3b8;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -207,11 +207,13 @@ body {
 .ios-artboard {
   width: 375px;
   min-height: 812px;
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 38px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 28px 70px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   padding-bottom: 92px;
@@ -219,15 +221,9 @@ body {
 
 /* 1. IQRAA EMERALD GRADIENT HEADER */
 .iq-hero-gradient {
-  background: linear-gradient(
-    180deg,
-    #1F573C 0%,
-    #327A56 48%,
-    #77B293 78%,
-    #FFFFFF 100%
-  );
+  background: linear-gradient(180deg, #1f573c 0%, #327a56 48%, #77b293 78%, #ffffff 100%);
   padding: 14px 20px 58px;
-  color: #FFFFFF;
+  color: #ffffff;
   position: relative;
 }
 
@@ -250,7 +246,7 @@ body {
 .iq-location-trigger {
   border: none;
   background: transparent;
-  color: #FFFFFF;
+  color: #ffffff;
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
@@ -268,8 +264,8 @@ body {
 }
 
 .iq-season-pill {
-  background: #FFFFFF;
-  color: #1E563B;
+  background: #ffffff;
+  color: #1e563b;
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.02em;
@@ -287,7 +283,7 @@ body {
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.16);
-  color: #FFFFFF;
+  color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +298,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #FBBF24;
+  background: #fbbf24;
 }
 
 .iq-hero-center {
@@ -315,7 +311,7 @@ body {
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .iq-hero-sub {
@@ -331,10 +327,12 @@ body {
 /* 2. FLOATING 4-ICON SHORTCUT TRAY */
 .iq-shortcut-tray {
   margin: -42px 20px 0;
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 22px;
   padding: 16px 12px;
-  box-shadow: 0 12px 32px -4px rgba(17, 24, 39, 0.07), 0 2px 6px rgba(17, 24, 39, 0.03);
+  box-shadow:
+    0 12px 32px -4px rgba(17, 24, 39, 0.07),
+    0 2px 6px rgba(17, 24, 39, 0.03);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
@@ -357,7 +355,7 @@ body {
   width: 46px;
   height: 46px;
   border-radius: 16px;
-  background: #FFF9EB;
+  background: #fff9eb;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -399,7 +397,7 @@ body {
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 600;
-  color: #64748B;
+  color: #64748b;
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -408,9 +406,9 @@ body {
 
 /* 4. CONTINUE READING / NEXT CIRCLE CARD (Iqraa Pure White Card) */
 .iq-white-card {
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 20px;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #f1f5f9;
   box-shadow: 0 6px 24px -4px rgba(17, 24, 39, 0.04);
   padding: 18px;
 }
@@ -430,7 +428,7 @@ body {
 
 .iq-card-sub {
   font-size: 12px;
-  color: #64748B;
+  color: #64748b;
   margin-top: 2px;
 }
 
@@ -446,7 +444,7 @@ body {
 
 .iq-transliteration {
   font-size: 11.5px;
-  color: #94A3B8;
+  color: #94a3b8;
   text-align: center;
   margin-bottom: 16px;
 }
@@ -455,8 +453,8 @@ body {
   width: 100%;
   height: 40px;
   border-radius: 999px;
-  border: 1px solid #E2E8F0;
-  background: #FFFFFF;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
   color: #111827;
   font-family: var(--font-sans);
   font-size: 12.5px;
@@ -471,14 +469,14 @@ body {
 }
 
 .iq-pill-cta:hover {
-  background: #F8FAFC;
-  border-color: #CBD5E1;
+  background: #f8fafc;
+  border-color: #cbd5e1;
 }
 
 .iq-pill-cta.dark {
   background: #111827;
   border-color: #111827;
-  color: #FFFFFF;
+  color: #ffffff;
   height: 46px;
   font-size: 13.5px;
 }
@@ -527,7 +525,7 @@ body {
   flex-direction: column;
   justify-content: space-between;
   padding: 10px 12px 12px;
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
 .iq-photo-tag {
@@ -549,9 +547,9 @@ body {
 }
 
 .iq-mini-card {
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 18px;
-  border: 1px solid #F1F5F9;
+  border: 1px solid #f1f5f9;
   box-shadow: 0 4px 16px rgba(17, 24, 39, 0.03);
   padding: 14px;
   display: flex;
@@ -562,7 +560,7 @@ body {
 
 /* 7. STREAK / DAYS READ (Iqraa Minimal 7-Day Row) */
 .iq-streak-box {
-  background: #F8FAFC;
+  background: #f8fafc;
   border-radius: 18px;
   padding: 16px 14px;
   display: grid;
@@ -582,7 +580,7 @@ body {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #E2E8F0;
+  background: #e2e8f0;
   color: transparent;
   display: flex;
   align-items: center;
@@ -591,7 +589,7 @@ body {
 }
 
 .iq-streak-dot.done {
-  background: #D1FAE5;
+  background: #d1fae5;
   color: #059669;
 }
 
@@ -608,10 +606,12 @@ body {
   left: 34px;
   right: 34px;
   height: 56px;
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 999px;
-  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.12), 0 1px 3px rgba(17, 24, 39, 0.05);
-  border: 1px solid #F1F5F9;
+  box-shadow:
+    0 10px 30px rgba(17, 24, 39, 0.12),
+    0 1px 3px rgba(17, 24, 39, 0.05);
+  border: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: space-around;
@@ -628,7 +628,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94A3B8;
+  color: #94a3b8;
   cursor: pointer;
 }
 
@@ -654,7 +654,6 @@ body {
   font-family: var(--font-sans);
   font-size: 9.5px;
   font-weight: 700;
-  color: #1E563B;
+  color: #1e563b;
   line-height: 1;
 }
-

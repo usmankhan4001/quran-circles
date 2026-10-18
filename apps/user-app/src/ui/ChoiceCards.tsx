@@ -82,8 +82,7 @@ export function ChoiceCards<T extends string>({
                       ? elevation.medium
                       : elevation.low
                     : undefined,
-                transform:
-                  pressed && !off && !theme.reduceMotion ? [{ scale: 0.98 }] : undefined,
+                transform: pressed && !off && !theme.reduceMotion ? [{ scale: 0.98 }] : undefined,
               },
             ]}
           >

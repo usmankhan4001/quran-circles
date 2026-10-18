@@ -245,7 +245,10 @@ a {
   font-size: var(--type-label-size);
   font-weight: 600;
   border-inline-start: 3px solid transparent;
-  transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
 }
 .nav-link:hover {
   background: color-mix(in srgb, var(--c-sidebar-text) 12%, transparent);
@@ -1142,7 +1145,9 @@ html[dir='rtl'] .field-box-select::after {
   border: 1px solid var(--c-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-low);
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
 }
 html[data-theme='dark'] .stat {
   border-color: var(--card-edge);
@@ -1257,7 +1262,10 @@ html[data-theme='dark'] .table-card {
   border: 1px solid var(--c-border);
   border-radius: var(--radius-pill);
   color: var(--c-text-muted);
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
 }
 .search:hover {
   border-color: var(--c-border-strong);
@@ -1519,7 +1527,9 @@ html[lang='ur'] .ayah-preview-ref {
   font-weight: 600;
   text-decoration: none;
   border-block-end: 3px solid transparent;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease;
 }
 .session-tab:hover {
   color: var(--c-text);

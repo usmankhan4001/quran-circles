@@ -11,14 +11,7 @@ import { ArtboardsConsole } from './ArtboardsConsole';
 import { ArtboardsComponents } from './ArtboardsComponents';
 
 export type FigmaPageId =
-  | 'home'
-  | 'nearby'
-  | 'session'
-  | 'quran'
-  | 'admin'
-  | 'admin-manage'
-  | 'console'
-  | 'styleguide';
+  'home' | 'nearby' | 'session' | 'quran' | 'admin' | 'admin-manage' | 'console' | 'styleguide';
 
 interface FigmaPageMeta {
   id: FigmaPageId;
@@ -140,10 +133,7 @@ const FIGMA_PAGES: FigmaPageMeta[] = [
       'Clean white Figma style-guide sheets covering Primary Emerald & Portion Amber ramps, Tri-Script Typography (Latin, Uthmani, Nastaliq), pill buttons, inputs, SeatMeter, and Phosphor Icons.',
     badge: '@qc/ui · Global Style Guide',
     icon: 'palette',
-    layers: [
-      'Style Guide 01 — Colors & Typography',
-      'Style Guide 02 — @qc/ui & Phosphor Icons',
-    ],
+    layers: ['Style Guide 01 — Colors & Typography', 'Style Guide 02 — @qc/ui & Phosphor Icons'],
   },
 ];
 
@@ -178,10 +168,7 @@ export function ShowcaseApp() {
     }
   };
 
-  const renderGroup = (
-    group: FigmaPageMeta['appGroup'],
-    label: string,
-  ) => {
+  const renderGroup = (group: FigmaPageMeta['appGroup'], label: string) => {
     const pages = FIGMA_PAGES.filter((p) => p.appGroup === group);
     return (
       <div key={group}>
@@ -225,10 +212,7 @@ export function ShowcaseApp() {
           <div className="figma-nav-group-label">Artboards in Page</div>
           <div className="figma-layer-tree">
             {currentMeta.layers.map((layer, idx) => (
-              <div
-                key={layer}
-                className={`figma-layer-item ${idx === 0 ? 'highlight' : ''}`}
-              >
+              <div key={layer} className={`figma-layer-item ${idx === 0 ? 'highlight' : ''}`}>
                 <PhIcon name="hash" weight="bold" size={13} />
                 <span>{layer}</span>
               </div>
@@ -260,24 +244,12 @@ export function ShowcaseApp() {
           </div>
         </div>
 
-        {activePage === 'home' && (
-          <ArtboardsHome filter="all" onNavigatePage={handleNavigate} />
-        )}
-        {activePage === 'nearby' && (
-          <ArtboardsNearby onNavigatePage={handleNavigate} />
-        )}
-        {activePage === 'session' && (
-          <ArtboardsSession onNavigatePage={handleNavigate} />
-        )}
-        {activePage === 'quran' && (
-          <ArtboardsQuran onNavigatePage={handleNavigate} />
-        )}
-        {activePage === 'admin' && (
-          <ArtboardsAdmin onNavigatePage={handleNavigate} />
-        )}
-        {activePage === 'admin-manage' && (
-          <ArtboardsAdminManage onNavigatePage={handleNavigate} />
-        )}
+        {activePage === 'home' && <ArtboardsHome filter="all" onNavigatePage={handleNavigate} />}
+        {activePage === 'nearby' && <ArtboardsNearby onNavigatePage={handleNavigate} />}
+        {activePage === 'session' && <ArtboardsSession onNavigatePage={handleNavigate} />}
+        {activePage === 'quran' && <ArtboardsQuran onNavigatePage={handleNavigate} />}
+        {activePage === 'admin' && <ArtboardsAdmin onNavigatePage={handleNavigate} />}
+        {activePage === 'admin-manage' && <ArtboardsAdminManage onNavigatePage={handleNavigate} />}
         {activePage === 'console' && <ArtboardsConsole />}
         {activePage === 'styleguide' && <ArtboardsComponents />}
       </main>

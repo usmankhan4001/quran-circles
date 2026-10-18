@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { PhIcon, GirihWatermarkSvg, VenueArchArtSvg, AyahMedallion } from './icons';
 
 export function TabDomainCards() {
-  const [nextState, setNextState] = useState<'registered' | 'nearby' | 'dora' | 'live'>('registered');
+  const [nextState, setNextState] = useState<'registered' | 'nearby' | 'dora' | 'live'>(
+    'registered',
+  );
   const [readTodayDone, setReadTodayDone] = useState(false);
   const [goalMetDone, setGoalMetDone] = useState(false);
 
@@ -42,7 +44,8 @@ export function TabDomainCards() {
           <p className="wb-desc">
             Inspecting all 12 domain-specific cards from <code>apps/user-app/src/components/</code>{' '}
             and <code>apps/user-app/src/ui/</code> with live state toggles—including replacing the
-            rotated-rectangle <code>MapPreviewCard</code> and geometric-block <code>PictureCard</code>.
+            rotated-rectangle <code>MapPreviewCard</code> and geometric-block{' '}
+            <code>PictureCard</code>.
           </p>
         </div>
       </div>
@@ -81,7 +84,14 @@ export function TabDomainCards() {
               <GirihWatermarkSvg />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 8,
+              }}
+            >
               <span
                 style={{
                   fontSize: 11,
@@ -128,13 +138,29 @@ export function TabDomainCards() {
               </span>
             </div>
 
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, marginBottom: 4 }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 20,
+                fontWeight: 800,
+                marginBottom: 4,
+              }}
+            >
               {nextState === 'dora'
                 ? 'Nightly Dora-e-Quran — Juz 15 (Al-Isra)'
                 : 'Tafseer Surah Al-Kahf & Reflections'}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#D1FAE5', marginBottom: 14 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                fontSize: 12.5,
+                color: '#D1FAE5',
+                marginBottom: 14,
+              }}
+            >
               <PhIcon name="map-pin" weight="fill" size={15} />
               <span>Jamia Masjid Al-Noor, Main Blvd Gulberg III</span>
             </div>
@@ -155,7 +181,14 @@ export function TabDomainCards() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 28,
+                    fontWeight: 800,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
                   {nextState === 'dora' ? '9:00' : '7:30'}
                 </span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: '#A7F3D0' }}>PM</span>
@@ -237,7 +270,8 @@ export function TabDomainCards() {
           </div>
 
           <div className="spec-sublabel">
-            PictureCard (&ldquo;Near You&rdquo; 172px Horizontal Mosque Cards with Architectural Art)
+            PictureCard (&ldquo;Near You&rdquo; 172px Horizontal Mosque Cards with Architectural
+            Art)
           </div>
           <div className="qc-picture-row">
             {picturePlaces.map((p) => (
@@ -250,12 +284,25 @@ export function TabDomainCards() {
                   </span>
                 </div>
                 <div className="qc-picture-body">
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#111827', lineHeight: 1.25 }}>
+                  <div
+                    style={{ fontSize: 12.5, fontWeight: 700, color: '#111827', lineHeight: 1.25 }}
+                  >
                     {p.title}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 11,
+                      color: '#64748B',
+                      marginTop: 2,
+                    }}
+                  >
                     <PhIcon name={p.sectionIcon} weight="duotone" size={13} color="#186A4B" />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span
+                      style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
                       {p.venue}
                     </span>
                   </div>
@@ -268,7 +315,12 @@ export function TabDomainCards() {
             MapPreviewCard (Vector Street Cartography Replacing the 2 Rotated Rectangles!)
           </div>
           <div className="qc-map-preview-card">
-            <svg width="100%" height="156" viewBox="0 0 500 156" preserveAspectRatio="xMidYMid slice">
+            <svg
+              width="100%"
+              height="156"
+              viewBox="0 0 500 156"
+              preserveAspectRatio="xMidYMid slice"
+            >
               <rect width="500" height="156" fill="#EBF5F0" />
               {/* Parks & Green Blocks */}
               <rect x="20" y="14" width="110" height="65" rx="12" fill="#D5EDE2" />
@@ -310,7 +362,10 @@ export function TabDomainCards() {
 
             <div className="qc-map-caption-bar">
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div className="ph-catalog-icon-box" style={{ width: 34, height: 34, borderRadius: 10 }}>
+                <div
+                  className="ph-catalog-icon-box"
+                  style={{ width: 34, height: 34, borderRadius: 10 }}
+                >
                   <PhIcon name="map-trifold" weight="duotone" size={18} color="#186A4B" />
                 </div>
                 <div>
@@ -352,22 +407,46 @@ export function TabDomainCards() {
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#B45309', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                <PhIcon name="sparkle" weight="fill" size={13} /> Read Tonight&apos;s Portion (Feature 4)
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: '#B45309',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                <PhIcon name="sparkle" weight="fill" size={13} /> Read Tonight&apos;s Portion
+                (Feature 4)
               </span>
               <span className="qc-badge qc-badge-amber">Tonight · 7:30 PM</span>
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, color: '#111827' }}>
+              <div
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: 17,
+                  fontWeight: 800,
+                  color: '#111827',
+                }}
+              >
                 Surah Al-Kahf · Ayahs 1 to 31
               </div>
               <div style={{ fontSize: 12.5, color: '#64748B', marginTop: 2 }}>
                 Set by Ustadh Ahmad for tonight&apos;s circle at Jamia Masjid Al-Noor
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: 2,
+              }}
+            >
               <span style={{ fontSize: 11.5, color: '#92400E', fontWeight: 600 }}>
-                <PhIcon name="check-circle" weight="duotone" size={14} /> Reading any ayah counts toward your week
+                <PhIcon name="check-circle" weight="duotone" size={14} /> Reading any ayah counts
+                toward your week
               </span>
               <button type="button" className="qc-btn qc-btn-primary qc-btn-sm">
                 <PhIcon name="book-open" weight="bold" size={14} />
@@ -392,7 +471,15 @@ export function TabDomainCards() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 28, height: 3, borderRadius: 2, background: '#FFB04D' }} />
-                <span style={{ fontSize: 11, fontWeight: 800, color: '#186A4B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: '#186A4B',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                  }}
+                >
                   Ayah of the Day
                 </span>
               </div>
@@ -406,12 +493,22 @@ export function TabDomainCards() {
               يُرِيدُونَ وَجْهَهُۥ <AyahMedallion number={28} size={28} />
             </div>
 
-            <div style={{ fontSize: 13.5, color: '#334155', lineHeight: 1.55, fontStyle: 'italic' }}>
+            <div
+              style={{ fontSize: 13.5, color: '#334155', lineHeight: 1.55, fontStyle: 'italic' }}
+            >
               &ldquo;And keep yourself patiently with those who call upon their Lord in the morning
               and the evening, seeking His countenance…&rdquo;
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #EDF2F7' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: 6,
+                borderTop: '1px solid #EDF2F7',
+              }}
+            >
               <span style={{ fontSize: 12, fontWeight: 700, color: '#64748B' }}>
                 Surah Al-Kahf (18:28)
               </span>
@@ -451,14 +548,30 @@ export function TabDomainCards() {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: '#64748B',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Your Reading Rhythm (Private · No Guilt Streaks)
                 </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, fontWeight: 800, color: '#111827', marginTop: 2 }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 19,
+                    fontWeight: 800,
+                    color: '#111827',
+                    marginTop: 2,
+                  }}
+                >
                   {readTodayDone ? '5 of 7 days this week' : '4 of 7 days this week'}
                 </div>
                 <div style={{ fontSize: 12, color: '#64748B' }}>
-                  {readTodayDone ? '15 days read this month' : '14 days read this month'} · Daily goal: 4 pages
+                  {readTodayDone ? '15 days read this month' : '14 days read this month'} · Daily
+                  goal: 4 pages
                 </div>
               </div>
 
@@ -544,7 +657,15 @@ export function TabDomainCards() {
               <PhIcon name="users-three" weight="duotone" size={26} color="#186A4B" />
             </div>
             <div>
-              <div style={{ fontSize: 10.5, fontWeight: 800, color: '#186A4B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: '#186A4B',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
                 Read Together Today (National Solidarity)
               </div>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#103A2A' }}>

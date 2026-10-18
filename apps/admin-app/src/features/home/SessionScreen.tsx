@@ -188,7 +188,14 @@ function OccurrenceCard({
             {notes.join(' · ')}
           </Text>
         ) : null}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingTop: spacing.xxs }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: spacing.sm,
+            paddingTop: spacing.xxs,
+          }}
+        >
           {canMark ? (
             <Button
               testID={`occurrence-${o.id}-attendance`}

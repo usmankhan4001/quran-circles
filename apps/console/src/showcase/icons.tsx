@@ -59,58 +59,304 @@ export function PhIcon({
 export interface IconMappingEntry {
   qcToken: string;
   phSlug: string;
-  category: 'Navigation' | 'Quran & Worship' | 'Circles & Venues' | 'Facilities' | 'Actions & Status' | 'Admin & Console';
+  category:
+    | 'Navigation'
+    | 'Quran & Worship'
+    | 'Circles & Venues'
+    | 'Facilities'
+    | 'Actions & Status'
+    | 'Admin & Console';
   defaultWeight: PhWeight;
   usage: string;
 }
 
 export const PHOSPHOR_ICON_CATALOG: IconMappingEntry[] = [
   // Navigation
-  { qcToken: 'home', phSlug: 'house', category: 'Navigation', defaultWeight: 'duotone', usage: 'Home tab (fill when active)' },
-  { qcToken: 'nearby', phSlug: 'compass', category: 'Navigation', defaultWeight: 'duotone', usage: 'Nearby / Discover circles tab' },
-  { qcToken: 'quran', phSlug: 'book-open-text', category: 'Navigation', defaultWeight: 'duotone', usage: 'Quran & Mushaf reader tab' },
-  { qcToken: 'journey', phSlug: 'bookmarks', category: 'Navigation', defaultWeight: 'duotone', usage: 'My Journey & saved circles tab' },
-  { qcToken: 'profile', phSlug: 'user-circle', category: 'Navigation', defaultWeight: 'duotone', usage: 'User profile & settings' },
+  {
+    qcToken: 'home',
+    phSlug: 'house',
+    category: 'Navigation',
+    defaultWeight: 'duotone',
+    usage: 'Home tab (fill when active)',
+  },
+  {
+    qcToken: 'nearby',
+    phSlug: 'compass',
+    category: 'Navigation',
+    defaultWeight: 'duotone',
+    usage: 'Nearby / Discover circles tab',
+  },
+  {
+    qcToken: 'quran',
+    phSlug: 'book-open-text',
+    category: 'Navigation',
+    defaultWeight: 'duotone',
+    usage: 'Quran & Mushaf reader tab',
+  },
+  {
+    qcToken: 'journey',
+    phSlug: 'bookmarks',
+    category: 'Navigation',
+    defaultWeight: 'duotone',
+    usage: 'My Journey & saved circles tab',
+  },
+  {
+    qcToken: 'profile',
+    phSlug: 'user-circle',
+    category: 'Navigation',
+    defaultWeight: 'duotone',
+    usage: 'User profile & settings',
+  },
   // Quran & Worship
-  { qcToken: 'mosque', phSlug: 'mosque', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Masjid / Venue identity & Prayer strip' },
-  { qcToken: 'qibla', phSlug: 'navigation-arrow', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Qibla direction & bearing' },
-  { qcToken: 'fajr', phSlug: 'sun-horizon', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Fajr & Maghrib horizon prayer icon' },
-  { qcToken: 'dhuhr', phSlug: 'sun', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Dhuhr zenith sun prayer icon' },
-  { qcToken: 'asr', phSlug: 'cloud-sun', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Asr afternoon prayer icon' },
-  { qcToken: 'isha', phSlug: 'moon-stars', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Isha night prayer & Ramadan mode' },
-  { qcToken: 'audio', phSlug: 'waveform', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Reciter audio & tilawah playback' },
-  { qcToken: 'memorise', phSlug: 'brain', category: 'Quran & Worship', defaultWeight: 'duotone', usage: 'Hifz / Memorisation tracker' },
+  {
+    qcToken: 'mosque',
+    phSlug: 'mosque',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Masjid / Venue identity & Prayer strip',
+  },
+  {
+    qcToken: 'qibla',
+    phSlug: 'navigation-arrow',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Qibla direction & bearing',
+  },
+  {
+    qcToken: 'fajr',
+    phSlug: 'sun-horizon',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Fajr & Maghrib horizon prayer icon',
+  },
+  {
+    qcToken: 'dhuhr',
+    phSlug: 'sun',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Dhuhr zenith sun prayer icon',
+  },
+  {
+    qcToken: 'asr',
+    phSlug: 'cloud-sun',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Asr afternoon prayer icon',
+  },
+  {
+    qcToken: 'isha',
+    phSlug: 'moon-stars',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Isha night prayer & Ramadan mode',
+  },
+  {
+    qcToken: 'audio',
+    phSlug: 'waveform',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Reciter audio & tilawah playback',
+  },
+  {
+    qcToken: 'memorise',
+    phSlug: 'brain',
+    category: 'Quran & Worship',
+    defaultWeight: 'duotone',
+    usage: 'Hifz / Memorisation tracker',
+  },
   // Circles & Venues
-  { qcToken: 'pin', phSlug: 'map-pin', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Venue location & map markers' },
-  { qcToken: 'route', phSlug: 'path', category: 'Circles & Venues', defaultWeight: 'regular', usage: 'Directions to Masjid CTA' },
-  { qcToken: 'calendar', phSlug: 'calendar-blank', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Session occurrences & schedule' },
-  { qcToken: 'clock', phSlug: 'clock', category: 'Circles & Venues', defaultWeight: 'regular', usage: 'Start time & duration' },
-  { qcToken: 'people', phSlug: 'users-three', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Community readers & mixed section' },
-  { qcToken: 'brothers', phSlug: 'user', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Brothers section tag' },
-  { qcToken: 'sisters', phSlug: 'sparkle', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Sisters section tag' },
-  { qcToken: 'families', phSlug: 'users-four', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Families section tag' },
-  { qcToken: 'online', phSlug: 'video-camera', category: 'Circles & Venues', defaultWeight: 'duotone', usage: 'Online / Hybrid circle stream' },
+  {
+    qcToken: 'pin',
+    phSlug: 'map-pin',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Venue location & map markers',
+  },
+  {
+    qcToken: 'route',
+    phSlug: 'path',
+    category: 'Circles & Venues',
+    defaultWeight: 'regular',
+    usage: 'Directions to Masjid CTA',
+  },
+  {
+    qcToken: 'calendar',
+    phSlug: 'calendar-blank',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Session occurrences & schedule',
+  },
+  {
+    qcToken: 'clock',
+    phSlug: 'clock',
+    category: 'Circles & Venues',
+    defaultWeight: 'regular',
+    usage: 'Start time & duration',
+  },
+  {
+    qcToken: 'people',
+    phSlug: 'users-three',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Community readers & mixed section',
+  },
+  {
+    qcToken: 'brothers',
+    phSlug: 'user',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Brothers section tag',
+  },
+  {
+    qcToken: 'sisters',
+    phSlug: 'sparkle',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Sisters section tag',
+  },
+  {
+    qcToken: 'families',
+    phSlug: 'users-four',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Families section tag',
+  },
+  {
+    qcToken: 'online',
+    phSlug: 'video-camera',
+    category: 'Circles & Venues',
+    defaultWeight: 'duotone',
+    usage: 'Online / Hybrid circle stream',
+  },
   // Facilities
-  { qcToken: 'wudu', phSlug: 'drop', category: 'Facilities', defaultWeight: 'duotone', usage: 'Wudu / Ablution area available' },
-  { qcToken: 'parking', phSlug: 'car-profile', category: 'Facilities', defaultWeight: 'duotone', usage: 'On-site parking available' },
-  { qcToken: 'wheelchair', phSlug: 'wheelchair', category: 'Facilities', defaultWeight: 'duotone', usage: 'Step-free wheelchair access' },
-  { qcToken: 'ac', phSlug: 'wind', category: 'Facilities', defaultWeight: 'duotone', usage: 'Air-conditioned prayer hall' },
-  { qcToken: 'sistersArea', phSlug: 'door-open', category: 'Facilities', defaultWeight: 'duotone', usage: 'Dedicated Sisters entrance & hall' },
+  {
+    qcToken: 'wudu',
+    phSlug: 'drop',
+    category: 'Facilities',
+    defaultWeight: 'duotone',
+    usage: 'Wudu / Ablution area available',
+  },
+  {
+    qcToken: 'parking',
+    phSlug: 'car-profile',
+    category: 'Facilities',
+    defaultWeight: 'duotone',
+    usage: 'On-site parking available',
+  },
+  {
+    qcToken: 'wheelchair',
+    phSlug: 'wheelchair',
+    category: 'Facilities',
+    defaultWeight: 'duotone',
+    usage: 'Step-free wheelchair access',
+  },
+  {
+    qcToken: 'ac',
+    phSlug: 'wind',
+    category: 'Facilities',
+    defaultWeight: 'duotone',
+    usage: 'Air-conditioned prayer hall',
+  },
+  {
+    qcToken: 'sistersArea',
+    phSlug: 'door-open',
+    category: 'Facilities',
+    defaultWeight: 'duotone',
+    usage: 'Dedicated Sisters entrance & hall',
+  },
   // Actions & Status
-  { qcToken: 'search', phSlug: 'magnifying-glass', category: 'Actions & Status', defaultWeight: 'regular', usage: 'Search masjids, surahs, areas' },
-  { qcToken: 'filter', phSlug: 'sliders-horizontal', category: 'Actions & Status', defaultWeight: 'regular', usage: 'Filter bottom sheet trigger' },
-  { qcToken: 'bell', phSlug: 'bell-ringing', category: 'Actions & Status', defaultWeight: 'duotone', usage: 'Coordinator updates & reminders' },
-  { qcToken: 'share', phSlug: 'share-network', category: 'Actions & Status', defaultWeight: 'regular', usage: 'Share circle or ayah card' },
-  { qcToken: 'phone', phSlug: 'phone-call', category: 'Actions & Status', defaultWeight: 'regular', usage: 'Contact coordinator' },
-  { qcToken: 'check', phSlug: 'check-circle', category: 'Actions & Status', defaultWeight: 'fill', usage: 'Registered / Goal met / Verified' },
-  { qcToken: 'warning', phSlug: 'warning-circle', category: 'Actions & Status', defaultWeight: 'fill', usage: 'Waitlist / Room change alert' },
-  { qcToken: 'offline', phSlug: 'cloud-slash', category: 'Actions & Status', defaultWeight: 'duotone', usage: 'Offline saved schedule banner' },
+  {
+    qcToken: 'search',
+    phSlug: 'magnifying-glass',
+    category: 'Actions & Status',
+    defaultWeight: 'regular',
+    usage: 'Search masjids, surahs, areas',
+  },
+  {
+    qcToken: 'filter',
+    phSlug: 'sliders-horizontal',
+    category: 'Actions & Status',
+    defaultWeight: 'regular',
+    usage: 'Filter bottom sheet trigger',
+  },
+  {
+    qcToken: 'bell',
+    phSlug: 'bell-ringing',
+    category: 'Actions & Status',
+    defaultWeight: 'duotone',
+    usage: 'Coordinator updates & reminders',
+  },
+  {
+    qcToken: 'share',
+    phSlug: 'share-network',
+    category: 'Actions & Status',
+    defaultWeight: 'regular',
+    usage: 'Share circle or ayah card',
+  },
+  {
+    qcToken: 'phone',
+    phSlug: 'phone-call',
+    category: 'Actions & Status',
+    defaultWeight: 'regular',
+    usage: 'Contact coordinator',
+  },
+  {
+    qcToken: 'check',
+    phSlug: 'check-circle',
+    category: 'Actions & Status',
+    defaultWeight: 'fill',
+    usage: 'Registered / Goal met / Verified',
+  },
+  {
+    qcToken: 'warning',
+    phSlug: 'warning-circle',
+    category: 'Actions & Status',
+    defaultWeight: 'fill',
+    usage: 'Waitlist / Room change alert',
+  },
+  {
+    qcToken: 'offline',
+    phSlug: 'cloud-slash',
+    category: 'Actions & Status',
+    defaultWeight: 'duotone',
+    usage: 'Offline saved schedule banner',
+  },
   // Admin & Console
-  { qcToken: 'attendance', phSlug: 'clipboard-text', category: 'Admin & Console', defaultWeight: 'duotone', usage: 'Coordinator attendance headcount' },
-  { qcToken: 'megaphone', phSlug: 'megaphone', category: 'Admin & Console', defaultWeight: 'duotone', usage: 'Post update to circle followers' },
-  { qcToken: 'poster', phSlug: 'file-pdf', category: 'Admin & Console', defaultWeight: 'duotone', usage: 'Generate WhatsApp / A4 masjid poster' },
-  { qcToken: 'import', phSlug: 'file-csv', category: 'Admin & Console', defaultWeight: 'duotone', usage: 'Bulk CSV schedule import' },
-  { qcToken: 'audit', phSlug: 'shield-check', category: 'Admin & Console', defaultWeight: 'duotone', usage: 'Console audit log & verification' },
+  {
+    qcToken: 'attendance',
+    phSlug: 'clipboard-text',
+    category: 'Admin & Console',
+    defaultWeight: 'duotone',
+    usage: 'Coordinator attendance headcount',
+  },
+  {
+    qcToken: 'megaphone',
+    phSlug: 'megaphone',
+    category: 'Admin & Console',
+    defaultWeight: 'duotone',
+    usage: 'Post update to circle followers',
+  },
+  {
+    qcToken: 'poster',
+    phSlug: 'file-pdf',
+    category: 'Admin & Console',
+    defaultWeight: 'duotone',
+    usage: 'Generate WhatsApp / A4 masjid poster',
+  },
+  {
+    qcToken: 'import',
+    phSlug: 'file-csv',
+    category: 'Admin & Console',
+    defaultWeight: 'duotone',
+    usage: 'Bulk CSV schedule import',
+  },
+  {
+    qcToken: 'audit',
+    phSlug: 'shield-check',
+    category: 'Admin & Console',
+    defaultWeight: 'duotone',
+    usage: 'Console audit log & verification',
+  },
 ];
 
 /**
@@ -164,7 +410,13 @@ export function MosqueSkylineSvg({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       preserveAspectRatio="xMidYBottom slice"
     >
-      <g stroke="#186A4B" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" opacity="0.22">
+      <g
+        stroke="#186A4B"
+        strokeWidth="1.15"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity="0.22"
+      >
         <line x1="0" y1="108" x2="400" y2="108" />
         {/* Left Minaret */}
         <rect x="44" y="42" width="12" height="66" />
@@ -241,8 +493,7 @@ export function VenueArchArtSvg({
     { bg1: '#0F2E22', bg2: '#1D5C42', accent: '#F59E0B', dome: '#D1FAE5' },
     { bg1: '#1E3A34', bg2: '#2A7B62', accent: '#FBBF24', dome: '#ECFDF5' },
   ];
-  const idx =
-    seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palettes.length;
+  const idx = seed.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % palettes.length;
   const p = palettes[idx]!;
   const gradId = `venue-grad-${seed.replace(/[^a-zA-Z0-9]/g, '')}`;
 

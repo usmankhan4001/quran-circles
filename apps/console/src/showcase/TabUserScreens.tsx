@@ -132,7 +132,12 @@ const USER_SCREENS: ScreenSpecMeta[] = [
     icon: 'brain',
     summary:
       'Dedicated Hifz & revision companion: active Surah progress ring, ayah-by-ayah hide/reveal toggle for self-testing, audio loop range (e.g. Ayah 1–5 × 5x), and revision queue.',
-    components: ['Hifz Progress Card', 'Ayah Hide/Reveal Toggle', 'Audio Loop Control', 'Revision List'],
+    components: [
+      'Hifz Progress Card',
+      'Ayah Hide/Reveal Toggle',
+      'Audio Loop Control',
+      'Revision List',
+    ],
   },
   {
     id: 'journey',
@@ -167,8 +172,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
   const [activeScreen, setActiveScreen] = useState<UserScreenId>('home');
   const [nearbyView, setNearbyView] = useState<'list' | 'map'>('list');
   const [showFilterSheet, setShowFilterSheet] = useState(false);
-  const [sessionFooterState, setSessionFooterState] = useState<'register' | 'waitlist' | 'registered'>('register');
-  const [quranSubTab, setQuranSubTab] = useState<'mushaf' | 'surahs' | 'prayer' | 'qibla'>('mushaf');
+  const [sessionFooterState, setSessionFooterState] = useState<
+    'register' | 'waitlist' | 'registered'
+  >('register');
+  const [quranSubTab, setQuranSubTab] = useState<'mushaf' | 'surahs' | 'prayer' | 'qibla'>(
+    'mushaf',
+  );
   const [regStep, setRegStep] = useState<'form' | 'otp' | 'confirmed'>('form');
   const [hideAyahWords, setHideAyahWords] = useState(false);
 
@@ -191,7 +200,15 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
       <div className="explorer-layout">
         {/* LEFT COLUMN: 10-SCREEN SELECTOR */}
         <div className="screen-selector-list">
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', padding: '6px 10px', textTransform: 'uppercase' }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#64748B',
+              padding: '6px 10px',
+              textTransform: 'uppercase',
+            }}
+          >
             All 10 User App Screens
           </div>
           {USER_SCREENS.map((scr) => {
@@ -223,7 +240,13 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     <PhIcon name={scr.icon} weight={active ? 'fill' : 'duotone'} size={17} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: active ? '#103A2A' : '#111827' }}>
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        color: active ? '#103A2A' : '#111827',
+                      }}
+                    >
                       {scr.title}
                     </div>
                     <div style={{ fontSize: 10.5, color: '#64748B' }}>
@@ -231,7 +254,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     </div>
                   </div>
                 </div>
-                <PhIcon name="caret-right" weight="bold" size={14} color={active ? '#186A4B' : '#CBD5E1'} />
+                <PhIcon
+                  name="caret-right"
+                  weight="bold"
+                  size={14}
+                  color={active ? '#186A4B' : '#CBD5E1'}
+                />
               </button>
             );
           })}
@@ -270,10 +298,28 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: '#186A4B', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          color: '#186A4B',
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
                         14 Ramadan 1447 AH
                       </div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: '#111827', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: 22,
+                          fontWeight: 800,
+                          color: '#111827',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                        }}
+                      >
                         {rtl ? 'لاہور کے حلقے' : 'Lahore'}
                         <PhIcon name="caret-down" weight="bold" size={14} color="#186A4B" />
                       </div>
@@ -300,43 +346,108 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   {/* 2. Lead NextCircleCard (Hero Card sitting on the mist header) */}
-                  <div className="qc-hero-emerald" style={{ position: 'relative', zIndex: 2, padding: 16 }}>
+                  <div
+                    className="qc-hero-emerald"
+                    style={{ position: 'relative', zIndex: 2, padding: 16 }}
+                  >
                     <div className="qc-hero-girih">
                       <GirihWatermarkSvg />
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 10.5, fontWeight: 800, color: '#A7F3D0', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          color: '#A7F3D0',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                        }}
+                      >
                         <PhIcon name="check-circle" weight="fill" size={12} /> Your Next Circle
                       </span>
-                      <span style={{ fontSize: 10.5, background: 'rgba(255,255,255,0.16)', padding: '2px 8px', borderRadius: 999, fontWeight: 700 }}>
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          background: 'rgba(255,255,255,0.16)',
+                          padding: '2px 8px',
+                          borderRadius: 999,
+                          fontWeight: 700,
+                        }}
+                      >
                         In 2h 15m
                       </span>
                     </div>
-                    <div
-                      onClick={() => setActiveScreen('session')}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800 }}>
+                    <div onClick={() => setActiveScreen('session')} style={{ cursor: 'pointer' }}>
+                      <div
+                        style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800 }}
+                      >
                         Tafseer Surah Al-Kahf
                       </div>
-                      <div style={{ fontSize: 11.5, color: '#D1FAE5', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          color: '#D1FAE5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          marginTop: 2,
+                        }}
+                      >
                         <PhIcon name="map-pin" weight="fill" size={13} />
                         Jamia Masjid Al-Noor, Gulberg III
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 10 }}>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800 }}>
+                      <div
+                        style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 10 }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 24,
+                            fontWeight: 800,
+                          }}
+                        >
                           7:30
                         </span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#A7F3D0' }}>PM</span>
-                        <span style={{ fontSize: 11.5, color: '#D1FAE5' }}>· Today after Maghrib</span>
+                        <span style={{ fontSize: 11.5, color: '#D1FAE5' }}>
+                          · Today after Maghrib
+                        </span>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: 6, margin: '10px 0 12px' }}>
-                      <span style={{ background: '#FFF3E0', color: '#92400E', padding: '3px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span
+                        style={{
+                          background: '#FFF3E0',
+                          color: '#92400E',
+                          padding: '3px 9px',
+                          borderRadius: 999,
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                        }}
+                      >
                         <PhIcon name="book-open-text" weight="fill" size={12} /> Al-Kahf 1–31
                       </span>
-                      <span style={{ background: 'rgba(255,255,255,0.16)', color: '#FFF', padding: '3px 9px', borderRadius: 999, fontSize: 10.5, fontWeight: 700 }}>
+                      <span
+                        style={{
+                          background: 'rgba(255,255,255,0.16)',
+                          color: '#FFF',
+                          padding: '3px 9px',
+                          borderRadius: 999,
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                        }}
+                      >
                         Brothers
                       </span>
                     </div>
@@ -345,7 +456,11 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                       <button
                         type="button"
                         className="qc-btn qc-btn-sm"
-                        style={{ background: 'rgba(255,255,255,0.14)', color: '#FFF', border: '1px solid rgba(255,255,255,0.24)' }}
+                        style={{
+                          background: 'rgba(255,255,255,0.14)',
+                          color: '#FFF',
+                          border: '1px solid rgba(255,255,255,0.24)',
+                        }}
                         onClick={() => setActiveScreen('venue')}
                       >
                         <PhIcon name="path" weight="bold" size={14} /> Directions
@@ -362,7 +477,14 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 </div>
 
                 {/* Main Stack inside HomeScreen */}
-                <div style={{ padding: '4px 16px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div
+                  style={{
+                    padding: '4px 16px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 14,
+                  }}
+                >
                   {/* 3. SearchButton + Filter Button Row */}
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
@@ -410,9 +532,27 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   {/* 4. PrayerStrip (5 Daily Prayers) */}
-                  <div className="qc-prayer-strip" onClick={() => { setActiveScreen('quran'); setQuranSubTab('prayer'); }} style={{ cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: '#186A4B', marginBottom: 6 }}>
-                      <span><PhIcon name="mosque" weight="duotone" size={13} /> Next: Maghrib in 24m</span>
+                  <div
+                    className="qc-prayer-strip"
+                    onClick={() => {
+                      setActiveScreen('quran');
+                      setQuranSubTab('prayer');
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#186A4B',
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span>
+                        <PhIcon name="mosque" weight="duotone" size={13} /> Next: Maghrib in 24m
+                      </span>
                       <span style={{ color: '#64748B' }}>Lahore</span>
                     </div>
                     <div className="qc-prayer-row">
@@ -424,9 +564,16 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                         { n: 'Isha', t: '7:55', ic: 'moon-stars', a: false },
                       ].map((p) => (
                         <div key={p.n} className={`qc-prayer-pill ${p.a ? 'active' : ''}`}>
-                          <PhIcon name={p.ic} weight={p.a ? 'fill' : 'duotone'} size={15} color={p.a ? '#186A4B' : '#64748B'} />
+                          <PhIcon
+                            name={p.ic}
+                            weight={p.a ? 'fill' : 'duotone'}
+                            size={15}
+                            color={p.a ? '#186A4B' : '#64748B'}
+                          />
                           <span style={{ fontSize: 10, fontWeight: p.a ? 800 : 600 }}>{p.n}</span>
-                          <span style={{ fontSize: 9.5, color: p.a ? '#186A4B' : '#94A3B8' }}>{p.t}</span>
+                          <span style={{ fontSize: 9.5, color: p.a ? '#186A4B' : '#94A3B8' }}>
+                            {p.t}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -446,15 +593,22 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 800, color: '#B45309', textTransform: 'uppercase' }}>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          color: '#B45309',
+                          textTransform: 'uppercase',
+                        }}
+                      >
                         Tonight&apos;s Circle Portion
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#111827', marginTop: 2 }}>
+                      <div
+                        style={{ fontSize: 14, fontWeight: 800, color: '#111827', marginTop: 2 }}
+                      >
                         Surah Al-Kahf · Ayahs 1–31
                       </div>
-                      <div style={{ fontSize: 11, color: '#64748B' }}>
-                        Masjid Al-Noor · 7:30 PM
-                      </div>
+                      <div style={{ fontSize: 11, color: '#64748B' }}>Masjid Al-Noor · 7:30 PM</div>
                     </div>
                     <button
                       type="button"
@@ -470,23 +624,54 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                   {/* 6. Near You Horizontal PictureCard Carousel */}
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span
+                        style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800 }}
+                      >
                         Quran Circles Near You
                       </span>
                       <button
                         type="button"
                         onClick={() => setActiveScreen('nearby')}
-                        style={{ border: 'none', background: 'none', color: '#186A4B', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          color: '#186A4B',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
                       >
                         See all 14 →
                       </button>
                     </div>
                     <div className="qc-picture-row">
                       {[
-                        { seed: 'm1', title: 'Sisters Tajweed Circle', sub: 'Jamia Fatima · Sat 4:45 PM', dist: '1.2 km' },
-                        { seed: 'm2', title: 'Youth Seerah & Quran', sub: 'DHA Phase 4 · Fri 8:15 PM', dist: '2.0 km' },
-                        { seed: 'm3', title: 'Fajr Tadabbur Halqa', sub: 'Model Town Masjid · Daily', dist: '2.6 km' },
+                        {
+                          seed: 'm1',
+                          title: 'Sisters Tajweed Circle',
+                          sub: 'Jamia Fatima · Sat 4:45 PM',
+                          dist: '1.2 km',
+                        },
+                        {
+                          seed: 'm2',
+                          title: 'Youth Seerah & Quran',
+                          sub: 'DHA Phase 4 · Fri 8:15 PM',
+                          dist: '2.0 km',
+                        },
+                        {
+                          seed: 'm3',
+                          title: 'Fajr Tadabbur Halqa',
+                          sub: 'Model Town Masjid · Daily',
+                          dist: '2.6 km',
+                        },
                       ].map((c) => (
                         <div
                           key={c.seed}
@@ -509,14 +694,29 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                   {/* 7. Secondary Program Card (Dora-e-Quran Intensive) */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 6, textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#64748B',
+                        marginBottom: 6,
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       Also this season · Dora-e-Quran
                     </div>
                     <div className="qc-session-card" onClick={() => setActiveScreen('session')}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                        }}
+                      >
                         <div>
                           <span className="qc-badge qc-badge-amber" style={{ marginBottom: 6 }}>
-                            <PhIcon name="moon-stars" weight="fill" size={12} /> Dora-e-Quran · Juz 15
+                            <PhIcon name="moon-stars" weight="fill" size={12} /> Dora-e-Quran · Juz
+                            15
                           </span>
                           <div style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>
                             Complete Ramadan Tarawih Tafseer
@@ -531,11 +731,28 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   {/* 8. MapPreviewCard */}
-                  <div className="qc-map-preview-card" style={{ height: 132 }} onClick={() => { setActiveScreen('nearby'); setNearbyView('map'); }}>
-                    <svg width="100%" height="132" viewBox="0 0 380 132" preserveAspectRatio="xMidYMid slice">
+                  <div
+                    className="qc-map-preview-card"
+                    style={{ height: 132 }}
+                    onClick={() => {
+                      setActiveScreen('nearby');
+                      setNearbyView('map');
+                    }}
+                  >
+                    <svg
+                      width="100%"
+                      height="132"
+                      viewBox="0 0 380 132"
+                      preserveAspectRatio="xMidYMid slice"
+                    >
                       <rect width="380" height="132" fill="#EBF5F0" />
                       <rect x="16" y="10" width="90" height="50" rx="10" fill="#D5EDE2" />
-                      <path d="M 0 95 Q 140 65, 380 85" stroke="#BAE6FD" strokeWidth="12" fill="none" />
+                      <path
+                        d="M 0 95 Q 140 65, 380 85"
+                        stroke="#BAE6FD"
+                        strokeWidth="12"
+                        fill="none"
+                      />
                       <g stroke="#FFFFFF" strokeWidth="5">
                         <line x1="0" y1="40" x2="380" y2="40" />
                         <line x1="120" y1="0" x2="100" y2="132" />
@@ -546,8 +763,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     </svg>
                     <div className="qc-map-caption-bar" style={{ padding: '8px 12px' }}>
                       <div>
-                        <div style={{ fontSize: 12, fontWeight: 700 }}>14 Circles on the Lahore Map</div>
-                        <div style={{ fontSize: 10.5, color: '#64748B' }}>Tap to explore by neighbourhood</div>
+                        <div style={{ fontSize: 12, fontWeight: 700 }}>
+                          14 Circles on the Lahore Map
+                        </div>
+                        <div style={{ fontSize: 10.5, color: '#64748B' }}>
+                          Tap to explore by neighbourhood
+                        </div>
                       </div>
                       <PhIcon name="arrow-up-right" weight="bold" size={16} color="#186A4B" />
                     </div>
@@ -555,14 +776,31 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                   {/* 9. AyahOfTheDayCard */}
                   <div className="qc-session-card" style={{ cursor: 'default' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <span style={{ fontSize: 10.5, fontWeight: 800, color: '#186A4B', textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: 6,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          color: '#186A4B',
+                          textTransform: 'uppercase',
+                        }}
+                      >
                         Ayah of the Day
                       </span>
-                      <span style={{ fontSize: 10.5, color: '#64748B' }}>Surah Al-Kahf · 18:28</span>
+                      <span style={{ fontSize: 10.5, color: '#64748B' }}>
+                        Surah Al-Kahf · 18:28
+                      </span>
                     </div>
                     <div className="qc-arabic-verse" style={{ fontSize: 19 }}>
-                      وَٱصْبِرْ نَفْسَكَ مَعَ ٱلَّذِينَ يَدْعُونَ رَبَّهُم <AyahMedallion number={28} size={24} />
+                      وَٱصْبِرْ نَفْسَكَ مَعَ ٱلَّذِينَ يَدْعُونَ رَبَّهُم{' '}
+                      <AyahMedallion number={28} size={24} />
                     </div>
                     <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>
                       &ldquo;And keep yourself patiently with those who call upon their Lord…&rdquo;
@@ -570,10 +808,26 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   {/* 10. DaysReadCard + CommunityTodayCard + HomeShortcuts */}
-                  <div className="qc-session-card" style={{ background: '#F3FBF7', borderColor: '#BFE8D6' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    className="qc-session-card"
+                    style={{ background: '#F3FBF7', borderColor: '#BFE8D6' }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <div>
-                        <div style={{ fontSize: 10.5, fontWeight: 800, color: '#186A4B', textTransform: 'uppercase' }}>
+                        <div
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                            color: '#186A4B',
+                            textTransform: 'uppercase',
+                          }}
+                        >
                           Your Reading · 4 of 7 Days This Week
                         </div>
                         <div style={{ fontSize: 12, color: '#103A2A', marginTop: 2 }}>
@@ -586,7 +840,15 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                   {/* 11. HomeShortcuts ("Also in the app") */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748B', marginBottom: 6, textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: '#64748B',
+                        marginBottom: 6,
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       Also in the App
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
@@ -594,7 +856,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                         { label: 'Quran', icon: 'book-open-text', target: 'quran' as UserScreenId },
                         { label: 'Prayer', icon: 'mosque', target: 'quran' as UserScreenId },
                         { label: 'Hifz', icon: 'brain', target: 'memorisation' as UserScreenId },
-                        { label: 'Updates', icon: 'bell-ringing', target: 'updates' as UserScreenId, badge: '2' },
+                        {
+                          label: 'Updates',
+                          icon: 'bell-ringing',
+                          target: 'updates' as UserScreenId,
+                          badge: '2',
+                        },
                       ].map((sc) => (
                         <button
                           key={sc.label}
@@ -614,7 +881,9 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                           }}
                         >
                           <PhIcon name={sc.icon} weight="duotone" size={20} color="#186A4B" />
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#111827' }}>{sc.label}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#111827' }}>
+                            {sc.label}
+                          </span>
                           {sc.badge && (
                             <span className="qc-icon-btn-badge" style={{ top: 4, right: 6 }}>
                               {sc.badge}
@@ -632,8 +901,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 SCREEN 2: NEARBYSCREEN (LIST / MAP + FILTER SHEET)
                ============================================================== */}
             {activeScreen === 'nearby' && (
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
+              >
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800 }}>
                     Nearby Circles
                   </div>
@@ -663,16 +936,32 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                 {/* Horizontal Chip Filter Bar */}
                 <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-                  <button type="button" className="qc-chip selected" onClick={() => setShowFilterSheet(true)}>
+                  <button
+                    type="button"
+                    className="qc-chip selected"
+                    onClick={() => setShowFilterSheet(true)}
+                  >
                     <PhIcon name="map-pin" weight="fill" size={13} /> Lahore · Gulberg
                   </button>
-                  <button type="button" className="qc-chip" onClick={() => setShowFilterSheet(true)}>
+                  <button
+                    type="button"
+                    className="qc-chip"
+                    onClick={() => setShowFilterSheet(true)}
+                  >
                     Day: Any <PhIcon name="caret-down" weight="bold" size={11} />
                   </button>
-                  <button type="button" className="qc-chip" onClick={() => setShowFilterSheet(true)}>
+                  <button
+                    type="button"
+                    className="qc-chip"
+                    onClick={() => setShowFilterSheet(true)}
+                  >
                     Brothers <PhIcon name="caret-down" weight="bold" size={11} />
                   </button>
-                  <button type="button" className="qc-chip removable" onClick={() => setShowFilterSheet(true)}>
+                  <button
+                    type="button"
+                    className="qc-chip removable"
+                    onClick={() => setShowFilterSheet(true)}
+                  >
                     <PhIcon name="sliders-horizontal" weight="bold" size={13} /> Filters (2)
                   </button>
                 </div>
@@ -680,15 +969,37 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 {nearbyView === 'list' ? (
                   <>
                     {/* Nearest PictureCard Row */}
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: '#64748B',
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       Closest to You
                     </div>
                     <div className="qc-picture-row">
                       {[
-                        { seed: 'n1', title: 'Masjid Al-Noor', sub: 'Today 7:30 PM', dist: '0.8 km' },
-                        { seed: 'n2', title: 'Jamia Fatima Hall', sub: 'Sat 4:45 PM', dist: '1.2 km' },
+                        {
+                          seed: 'n1',
+                          title: 'Masjid Al-Noor',
+                          sub: 'Today 7:30 PM',
+                          dist: '0.8 km',
+                        },
+                        {
+                          seed: 'n2',
+                          title: 'Jamia Fatima Hall',
+                          sub: 'Sat 4:45 PM',
+                          dist: '1.2 km',
+                        },
                       ].map((p) => (
-                        <div key={p.seed} className="qc-picture-card" style={{ width: 162 }} onClick={() => setActiveScreen('session')}>
+                        <div
+                          key={p.seed}
+                          className="qc-picture-card"
+                          style={{ width: 162 }}
+                          onClick={() => setActiveScreen('session')}
+                        >
                           <div className="qc-picture-art" style={{ height: 76 }}>
                             <VenueArchArtSvg seed={p.seed} height={76} />
                             <span className="qc-picture-dist">{p.dist}</span>
@@ -702,7 +1013,15 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     </div>
 
                     {/* Vertical SessionCards */}
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginTop: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: '#64748B',
+                        textTransform: 'uppercase',
+                        marginTop: 4,
+                      }}
+                    >
                       All 14 Matching Circles
                     </div>
                     {[
@@ -734,19 +1053,46 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                         dist: '2.1 km',
                       },
                     ].map((s) => (
-                      <div key={s.title} className="qc-session-card" onClick={() => setActiveScreen('session')}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <div
+                        key={s.title}
+                        className="qc-session-card"
+                        onClick={() => setActiveScreen('session')}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 6,
+                          }}
+                        >
                           <span className="qc-badge qc-badge-emerald">{s.sec}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#186A4B' }}>{s.dist}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#186A4B' }}>
+                            {s.dist}
+                          </span>
                         </div>
-                        <div style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>{s.title}</div>
+                        <div style={{ fontSize: 14.5, fontWeight: 800, color: '#111827' }}>
+                          {s.title}
+                        </div>
                         <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
                           <PhIcon name="map-pin" weight="regular" size={13} /> {s.venue}
                         </div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginTop: 6 }}>
-                          <PhIcon name="clock" weight="regular" size={13} color="#186A4B" /> {s.when}
+                        <div
+                          style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginTop: 6 }}
+                        >
+                          <PhIcon name="clock" weight="regular" size={13} color="#186A4B" />{' '}
+                          {s.when}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 8, borderTop: '1px solid #EDF2F7' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: 10,
+                            paddingTop: 8,
+                            borderTop: '1px solid #EDF2F7',
+                          }}
+                        >
                           <span className="qc-badge qc-badge-amber">{s.portion}</span>
                           <span style={{ fontSize: 11.5, fontWeight: 700, color: '#186A4B' }}>
                             {s.seats} →
@@ -757,12 +1103,30 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </>
                 ) : (
                   /* Interactive Map View Mode */
-                  <div style={{ borderRadius: 20, overflow: 'hidden', border: '1px solid #BFE8D6', position: 'relative', height: 500 }}>
-                    <svg width="100%" height="500" viewBox="0 0 360 500" preserveAspectRatio="xMidYMid slice">
+                  <div
+                    style={{
+                      borderRadius: 20,
+                      overflow: 'hidden',
+                      border: '1px solid #BFE8D6',
+                      position: 'relative',
+                      height: 500,
+                    }}
+                  >
+                    <svg
+                      width="100%"
+                      height="500"
+                      viewBox="0 0 360 500"
+                      preserveAspectRatio="xMidYMid slice"
+                    >
                       <rect width="360" height="500" fill="#EBF5F0" />
                       <rect x="20" y="30" width="120" height="90" rx="16" fill="#D5EDE2" />
                       <rect x="210" y="180" width="130" height="110" rx="16" fill="#D5EDE2" />
-                      <path d="M 0 260 Q 180 210, 360 245" stroke="#BAE6FD" strokeWidth="20" fill="none" />
+                      <path
+                        d="M 0 260 Q 180 210, 360 245"
+                        stroke="#BAE6FD"
+                        strokeWidth="20"
+                        fill="none"
+                      />
                       <g stroke="#FFFFFF" strokeWidth="7">
                         <line x1="0" y1="110" x2="360" y2="110" />
                         <line x1="0" y1="320" x2="360" y2="320" />
@@ -797,7 +1161,11 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                       <div style={{ fontSize: 12, color: '#64748B' }}>
                         Jamia Masjid Al-Noor · Today 7:30 PM
                       </div>
-                      <button type="button" className="qc-btn qc-btn-primary qc-btn-sm" style={{ width: '100%', marginTop: 10 }}>
+                      <button
+                        type="button"
+                        className="qc-btn qc-btn-primary qc-btn-sm"
+                        style={{ width: '100%', marginTop: 10 }}
+                      >
                         Open Circle Details →
                       </button>
                     </div>
@@ -813,8 +1181,21 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
               <div>
                 <div style={{ position: 'relative', height: 156 }}>
                   <VenueArchArtSvg seed="masjid-noor" height={156} />
-                  <div style={{ position: 'absolute', top: 12, left: 14, right: 14, display: 'flex', justifyContent: 'space-between' }}>
-                    <button type="button" className="qc-icon-btn glass" onClick={() => setActiveScreen('home')}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      left: 14,
+                      right: 14,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="qc-icon-btn glass"
+                      onClick={() => setActiveScreen('home')}
+                    >
                       <PhIcon name="arrow-left" weight="bold" size={18} />
                     </button>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -828,7 +1209,14 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
                 </div>
 
-                <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12,
+                  }}
+                >
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <span className="qc-badge qc-badge-emerald">
                       <PhIcon name="user" weight="duotone" size={13} /> Brothers
@@ -839,7 +1227,14 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: '#111827' }}>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 20,
+                        fontWeight: 800,
+                        color: '#111827',
+                      }}
+                    >
                       Tafseer Surah Al-Kahf & Reflections
                     </div>
                     <div style={{ fontSize: 13, color: '#475569', marginTop: 4, lineHeight: 1.5 }}>
@@ -851,7 +1246,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   {/* Clickable Venue Row */}
                   <div
                     className="qc-session-card"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 12 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: 12,
+                    }}
                     onClick={() => setActiveScreen('venue')}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -860,7 +1260,9 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                       </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 800 }}>Jamia Masjid Al-Noor</div>
-                        <div style={{ fontSize: 11.5, color: '#64748B' }}>Main Blvd, Gulberg III · 0.8 km</div>
+                        <div style={{ fontSize: 11.5, color: '#64748B' }}>
+                          Main Blvd, Gulberg III · 0.8 km
+                        </div>
                       </div>
                     </div>
                     <PhIcon name="caret-right" weight="bold" size={16} color="#94A3B8" />
@@ -868,18 +1270,42 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                   {/* Ustadh & Hybrid Stream Card */}
                   <div className="qc-session-card" style={{ padding: 12 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#FFF3E0', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12 }}>
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: '#FFF3E0',
+                            color: '#B45309',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 800,
+                            fontSize: 12,
+                          }}
+                        >
                           UA
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>Ustadh Ahmad Al-Azhari</div>
-                          <div style={{ fontSize: 11, color: '#64748B' }}>Lead Teacher · Hybrid Stream Available</div>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>
+                            Ustadh Ahmad Al-Azhari
+                          </div>
+                          <div style={{ fontSize: 11, color: '#64748B' }}>
+                            Lead Teacher · Hybrid Stream Available
+                          </div>
                         </div>
                       </div>
                       <button type="button" className="qc-btn qc-btn-secondary qc-btn-sm">
-                        <PhIcon name="video-camera" weight="duotone" size={14} color="#186A4B" /> Online
+                        <PhIcon name="video-camera" weight="duotone" size={14} color="#186A4B" />{' '}
+                        Online
                       </button>
                     </div>
                   </div>
@@ -887,19 +1313,34 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   {/* SeatMeter Registration Card */}
                   <div className="qc-session-card">
                     <div className="qc-seat-meter">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                        <span style={{ fontWeight: 700, color: '#186A4B' }}>22 seats remaining</span>
+                      <div
+                        style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}
+                      >
+                        <span style={{ fontWeight: 700, color: '#186A4B' }}>
+                          22 seats remaining
+                        </span>
                         <span style={{ color: '#64748B' }}>18 / 40 reserved</span>
                       </div>
                       <div className="qc-seat-bar">
-                        <div className="qc-seat-fill" style={{ width: '45%', background: '#239B73' }} />
+                        <div
+                          className="qc-seat-fill"
+                          style={{ width: '45%', background: '#239B73' }}
+                        />
                       </div>
                     </div>
                   </div>
 
                   {/* Upcoming Occurrences with Surah/Ayah Portions */}
                   <div className="qc-session-card">
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: '#64748B',
+                        textTransform: 'uppercase',
+                        marginBottom: 8,
+                      }}
+                    >
                       Upcoming Schedule & Portions
                     </div>
                     {[
@@ -907,7 +1348,17 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                       { date: 'Thu, 25 Oct · 7:30 PM', portion: 'Surah Al-Kahf · Ayah 32–59' },
                       { date: 'Thu, 1 Nov · 7:30 PM', portion: 'Surah Al-Kahf · Ayah 60–82' },
                     ].map((occ) => (
-                      <div key={occ.date} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid #F1F5F9', fontSize: 12 }}>
+                      <div
+                        key={occ.date}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '7px 0',
+                          borderBottom: '1px solid #F1F5F9',
+                          fontSize: 12,
+                        }}
+                      >
                         <span style={{ fontWeight: 600 }}>{occ.date}</span>
                         <span className="qc-badge qc-badge-amber">{occ.portion}</span>
                       </div>
@@ -929,7 +1380,17 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   {/* Sticky RegisterFooter Preview */}
-                  <div style={{ padding: 12, borderRadius: 18, background: '#FFFFFF', border: '1.5px solid #186A4B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div
+                    style={{
+                      padding: 12,
+                      borderRadius: 18,
+                      background: '#FFFFFF',
+                      border: '1.5px solid #186A4B',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <div>
                       <div style={{ fontSize: 11, color: '#64748B' }}>Tonight · 7:30 PM</div>
                       <div style={{ fontSize: 13.5, fontWeight: 800, color: '#186A4B' }}>
@@ -963,10 +1424,23 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
               <div>
                 <VenueArchArtSvg seed="masjid-noor" height={140} />
                 <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}
+                  >
                     <div>
                       <span className="qc-badge qc-badge-emerald">Verified Masjid</span>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, marginTop: 4 }}>
+                      <div
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: 20,
+                          fontWeight: 800,
+                          marginTop: 4,
+                        }}
+                      >
                         Jamia Masjid Al-Noor
                       </div>
                       <div style={{ fontSize: 12, color: '#64748B' }}>
@@ -988,14 +1462,30 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
 
                   <div className="qc-session-card">
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: 8 }}>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 800,
+                        color: '#64748B',
+                        textTransform: 'uppercase',
+                        marginBottom: 8,
+                      }}
+                    >
                       Masjid Facilities
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      <span className="qc-badge qc-badge-emerald"><PhIcon name="drop" weight="duotone" size={13} /> Wudu Area</span>
-                      <span className="qc-badge qc-badge-emerald"><PhIcon name="car-profile" weight="duotone" size={13} /> 80-Car Parking</span>
-                      <span className="qc-badge qc-badge-emerald"><PhIcon name="door-open" weight="duotone" size={13} /> Sisters Gate #2</span>
-                      <span className="qc-badge qc-badge-emerald"><PhIcon name="wheelchair" weight="duotone" size={13} /> Ramp Access</span>
+                      <span className="qc-badge qc-badge-emerald">
+                        <PhIcon name="drop" weight="duotone" size={13} /> Wudu Area
+                      </span>
+                      <span className="qc-badge qc-badge-emerald">
+                        <PhIcon name="car-profile" weight="duotone" size={13} /> 80-Car Parking
+                      </span>
+                      <span className="qc-badge qc-badge-emerald">
+                        <PhIcon name="door-open" weight="duotone" size={13} /> Sisters Gate #2
+                      </span>
+                      <span className="qc-badge qc-badge-emerald">
+                        <PhIcon name="wheelchair" weight="duotone" size={13} /> Ramp Access
+                      </span>
                     </div>
                   </div>
 
@@ -1003,11 +1493,23 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     3 Circles Hosted at Masjid Al-Noor
                   </div>
                   {[
-                    { t: 'Tafseer Surah Al-Kahf', w: 'Thu · After Maghrib (7:30 PM)', s: 'Brothers' },
+                    {
+                      t: 'Tafseer Surah Al-Kahf',
+                      w: 'Thu · After Maghrib (7:30 PM)',
+                      s: 'Brothers',
+                    },
                     { t: 'Sisters Morning Tadabbur', w: 'Sat · 10:00 AM', s: 'Sisters' },
-                    { t: 'After-Fajr Daily Tilawah', w: 'Daily · After Fajr (5:10 AM)', s: 'Mixed' },
+                    {
+                      t: 'After-Fajr Daily Tilawah',
+                      w: 'Daily · After Fajr (5:10 AM)',
+                      s: 'Mixed',
+                    },
                   ].map((c) => (
-                    <div key={c.t} className="qc-session-card" onClick={() => setActiveScreen('session')}>
+                    <div
+                      key={c.t}
+                      className="qc-session-card"
+                      onClick={() => setActiveScreen('session')}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontWeight: 800, fontSize: 13.5 }}>{c.t}</span>
                         <span className="qc-badge qc-badge-emerald">{c.s}</span>
@@ -1025,7 +1527,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
             {activeScreen === 'registration' && (
               <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button type="button" className="qc-icon-btn" style={{ width: 34, height: 34 }} onClick={() => setActiveScreen('session')}>
+                  <button
+                    type="button"
+                    className="qc-icon-btn"
+                    style={{ width: 34, height: 34 }}
+                    onClick={() => setActiveScreen('session')}
+                  >
                     <PhIcon name="arrow-left" weight="bold" size={16} />
                   </button>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800 }}>
@@ -1035,31 +1542,69 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
 
                 {/* Step Switcher for Demo */}
                 <div className="qc-segmented" style={{ alignSelf: ' flex-start' }}>
-                  <button type="button" className={`qc-seg-btn ${regStep === 'form' ? 'active' : ''}`} onClick={() => setRegStep('form')}>
+                  <button
+                    type="button"
+                    className={`qc-seg-btn ${regStep === 'form' ? 'active' : ''}`}
+                    onClick={() => setRegStep('form')}
+                  >
                     1. Seats & Phone
                   </button>
-                  <button type="button" className={`qc-seg-btn ${regStep === 'otp' ? 'active' : ''}`} onClick={() => setRegStep('otp')}>
+                  <button
+                    type="button"
+                    className={`qc-seg-btn ${regStep === 'otp' ? 'active' : ''}`}
+                    onClick={() => setRegStep('otp')}
+                  >
                     2. OTP CodeField
                   </button>
-                  <button type="button" className={`qc-seg-btn ${regStep === 'confirmed' ? 'active' : ''}`} onClick={() => setRegStep('confirmed')}>
+                  <button
+                    type="button"
+                    className={`qc-seg-btn ${regStep === 'confirmed' ? 'active' : ''}`}
+                    onClick={() => setRegStep('confirmed')}
+                  >
                     3. Seat Pass
                   </button>
                 </div>
 
                 {regStep === 'form' && (
-                  <div className="qc-session-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div
+                    className="qc-session-card"
+                    style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+                  >
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#186A4B' }}>TONIGHT · 7:30 PM</div>
-                      <div style={{ fontSize: 15, fontWeight: 800 }}>Tafseer Surah Al-Kahf · Masjid Al-Noor</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#186A4B' }}>
+                        TONIGHT · 7:30 PM
+                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 800 }}>
+                        Tafseer Surah Al-Kahf · Masjid Al-Noor
+                      </div>
                     </div>
                     <div>
-                      <div className="qc-field-label" style={{ marginBottom: 6 }}>How many seats?</div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 14, background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                      <div className="qc-field-label" style={{ marginBottom: 6 }}>
+                        How many seats?
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 14px',
+                          borderRadius: 14,
+                          background: '#F8FAFC',
+                          border: '1px solid #E2E8F0',
+                        }}
+                      >
                         <span style={{ fontSize: 13, fontWeight: 700 }}>Brothers Hall Seats</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <span className="qc-icon-btn" style={{ width: 28, height: 28 }}>-</span>
+                          <span className="qc-icon-btn" style={{ width: 28, height: 28 }}>
+                            -
+                          </span>
                           <span style={{ fontWeight: 800 }}>2</span>
-                          <span className="qc-icon-btn" style={{ width: 28, height: 28, background: '#186A4B', color: '#FFF' }}>+</span>
+                          <span
+                            className="qc-icon-btn"
+                            style={{ width: 28, height: 28, background: '#186A4B', color: '#FFF' }}
+                          >
+                            +
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1070,45 +1615,86 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                         <input type="text" defaultValue="+92 300 419 8821" />
                       </div>
                     </div>
-                    <button type="button" className="qc-btn qc-btn-primary" onClick={() => setRegStep('otp')}>
+                    <button
+                      type="button"
+                      className="qc-btn qc-btn-primary"
+                      onClick={() => setRegStep('otp')}
+                    >
                       Send 6-Digit Verification Code →
                     </button>
                   </div>
                 )}
 
                 {regStep === 'otp' && (
-                  <div className="qc-session-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div
+                    className="qc-session-card"
+                    style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+                  >
                     <div style={{ fontSize: 14, fontWeight: 800 }}>Enter 6-Digit SMS Code</div>
                     <div style={{ fontSize: 12, color: '#64748B' }}>
                       Sent to +92 300 419 8821 · Auto-fills on arrival
                     </div>
                     <div className="qc-otp-row" style={{ justifyContent: 'center' }}>
                       {['4', '8', '2', '9', '1', '6'].map((d, i) => (
-                        <div key={i} className="qc-otp-cell filled" style={{ width: 42, height: 48 }}>
+                        <div
+                          key={i}
+                          className="qc-otp-cell filled"
+                          style={{ width: 42, height: 48 }}
+                        >
                           {d}
                         </div>
                       ))}
                     </div>
-                    <button type="button" className="qc-btn qc-btn-emerald" onClick={() => setRegStep('confirmed')}>
+                    <button
+                      type="button"
+                      className="qc-btn qc-btn-emerald"
+                      onClick={() => setRegStep('confirmed')}
+                    >
                       <PhIcon name="check-circle" weight="fill" size={16} /> Confirm Reservation
                     </button>
                   </div>
                 )}
 
                 {regStep === 'confirmed' && (
-                  <div className="qc-hero-emerald" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                  <div
+                    className="qc-hero-emerald"
+                    style={{
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 10,
+                    }}
+                  >
                     <PhIcon name="check-circle" weight="fill" size={42} color="#34D399" />
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800 }}>
+                    <div
+                      style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800 }}
+                    >
                       2 Seats Confirmed!
                     </div>
                     <div style={{ fontSize: 12, color: '#D1FAE5' }}>
                       Jamia Masjid Al-Noor · Tonight 7:30 PM (After Maghrib)
                     </div>
-                    <div style={{ background: '#FFFFFF', color: '#111827', padding: 14, borderRadius: 16, width: '100%', marginTop: 4 }}>
+                    <div
+                      style={{
+                        background: '#FFFFFF',
+                        color: '#111827',
+                        padding: 14,
+                        borderRadius: 16,
+                        width: '100%',
+                        marginTop: 4,
+                      }}
+                    >
                       <PhIcon name="qr-code" weight="regular" size={64} color="#103A2A" />
-                      <div style={{ fontSize: 12, fontWeight: 800, marginTop: 4 }}>PASS #QC-8841 · 2 BROTHERS</div>
+                      <div style={{ fontSize: 12, fontWeight: 800, marginTop: 4 }}>
+                        PASS #QC-8841 · 2 BROTHERS
+                      </div>
                     </div>
-                    <button type="button" className="qc-btn qc-btn-white-hero qc-btn-sm" style={{ width: '100%' }}>
+                    <button
+                      type="button"
+                      className="qc-btn qc-btn-white-hero qc-btn-sm"
+                      style={{ width: '100%' }}
+                    >
                       <PhIcon name="calendar-plus" weight="bold" size={15} /> Add to Calendar
                     </button>
                   </div>
@@ -1120,8 +1706,13 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 SCREEN 6: QURANPRAYERSCREEN (MUSHAF / SURAHS / PRAYER / QIBLA)
                ============================================================== */}
             {activeScreen === 'quran' && (
-              <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div className="qc-segmented" style={{ width: '100%', justifyContent: 'space-between' }}>
+              <div
+                style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}
+              >
+                <div
+                  className="qc-segmented"
+                  style={{ width: '100%', justifyContent: 'space-between' }}
+                >
                   {(['mushaf', 'surahs', 'prayer', 'qibla'] as const).map((tab) => (
                     <button
                       key={tab}
@@ -1165,12 +1756,25 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                         alignItems: 'center',
                       }}
                     >
-                      <span style={{ fontSize: 11, color: '#A7F3D0', fontWeight: 700 }}>Juz 15 · Makki</span>
-                      <span style={{ fontFamily: 'var(--font-quran)', fontSize: 20 }}>سُورَةُ الكَهْفِ</span>
-                      <span style={{ fontSize: 11, color: '#A7F3D0', fontWeight: 700 }}>110 Ayahs</span>
+                      <span style={{ fontSize: 11, color: '#A7F3D0', fontWeight: 700 }}>
+                        Juz 15 · Makki
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-quran)', fontSize: 20 }}>
+                        سُورَةُ الكَهْفِ
+                      </span>
+                      <span style={{ fontSize: 11, color: '#A7F3D0', fontWeight: 700 }}>
+                        110 Ayahs
+                      </span>
                     </div>
 
-                    <div style={{ textAlign: 'center', fontFamily: 'var(--font-quran)', fontSize: 19, color: '#103A2A' }}>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontFamily: 'var(--font-quran)',
+                        fontSize: 19,
+                        color: '#103A2A',
+                      }}
+                    >
                       بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
                     </div>
 
@@ -1184,10 +1788,19 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     </div>
 
                     {/* Active Verse Translation Card */}
-                    <div style={{ padding: 10, borderRadius: 12, background: '#F3FBF7', border: '1px solid #BFE8D6', fontSize: 12, color: '#103A2A' }}>
-                      <strong>18:1–2 (Tonight&apos;s Circle Portion):</strong> &ldquo;[All] praise is
-                      [due] to Allah, who has sent down upon His Servant the Book and has not made
-                      therein any deviance…&rdquo;
+                    <div
+                      style={{
+                        padding: 10,
+                        borderRadius: 12,
+                        background: '#F3FBF7',
+                        border: '1px solid #BFE8D6',
+                        fontSize: 12,
+                        color: '#103A2A',
+                      }}
+                    >
+                      <strong>18:1–2 (Tonight&apos;s Circle Portion):</strong> &ldquo;[All] praise
+                      is [due] to Allah, who has sent down upon His Servant the Book and has not
+                      made therein any deviance…&rdquo;
                     </div>
 
                     {/* Dark-Emerald Floating Reciter Audio Pill (Qurani Reference) */}
@@ -1220,8 +1833,12 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                           <PhIcon name="play" weight="fill" size={14} />
                         </button>
                         <div>
-                          <div style={{ fontSize: 11.5, fontWeight: 700 }}>Mishary Rashid Alafasy</div>
-                          <div style={{ fontSize: 10, color: '#A7F3D0' }}>Surah Al-Kahf · Ayah 2 · 1.0x</div>
+                          <div style={{ fontSize: 11.5, fontWeight: 700 }}>
+                            Mishary Rashid Alafasy
+                          </div>
+                          <div style={{ fontSize: 10, color: '#A7F3D0' }}>
+                            Surah Al-Kahf · Ayah 2 · 1.0x
+                          </div>
                         </div>
                       </div>
                       <PhIcon name="waveform" weight="duotone" size={20} color="#FFB04D" />
@@ -1233,11 +1850,26 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {[
                       { num: 1, en: 'Al-Fatihah', ar: 'الفاتحة', ayahs: '7 Ayahs · Makki' },
-                      { num: 18, en: 'Al-Kahf (Tonight’s Circle)', ar: 'الكهف', ayahs: '110 Ayahs · Makki' },
+                      {
+                        num: 18,
+                        en: 'Al-Kahf (Tonight’s Circle)',
+                        ar: 'الكهف',
+                        ayahs: '110 Ayahs · Makki',
+                      },
                       { num: 36, en: 'Ya-Sin', ar: 'يس', ayahs: '83 Ayahs · Makki' },
                       { num: 67, en: 'Al-Mulk', ar: 'الملك', ayahs: '30 Ayahs · Makki' },
                     ].map((s) => (
-                      <div key={s.num} className="qc-session-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12 }} onClick={() => setQuranSubTab('mushaf')}>
+                      <div
+                        key={s.num}
+                        className="qc-session-card"
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: 12,
+                        }}
+                        onClick={() => setQuranSubTab('mushaf')}
+                      >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <AyahMedallion number={s.num} size={32} />
                           <div>
@@ -1245,21 +1877,45 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                             <div style={{ fontSize: 11, color: '#64748B' }}>{s.ayahs}</div>
                           </div>
                         </div>
-                        <span style={{ fontFamily: 'var(--font-quran)', fontSize: 20, color: '#186A4B' }}>{s.ar}</span>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-quran)',
+                            fontSize: 20,
+                            color: '#186A4B',
+                          }}
+                        >
+                          {s.ar}
+                        </span>
                       </div>
                     ))}
                   </div>
                 )}
 
                 {quranSubTab === 'prayer' && (
-                  <div className="qc-session-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ fontSize: 14, fontWeight: 800 }}>Lahore Prayer Schedule · 14 Ramadan</div>
+                  <div
+                    className="qc-session-card"
+                    style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                  >
+                    <div style={{ fontSize: 14, fontWeight: 800 }}>
+                      Lahore Prayer Schedule · 14 Ramadan
+                    </div>
                     {[
                       { n: 'Fajr', adhan: '4:42 AM', iqamah: '5:05 AM', ic: 'sun-horizon' },
                       { n: 'Dhuhr', adhan: '12:15 PM', iqamah: '1:30 PM', ic: 'sun' },
                       { n: 'Asr', adhan: '4:35 PM', iqamah: '5:00 PM', ic: 'cloud-sun' },
-                      { n: 'Maghrib (Next)', adhan: '6:28 PM', iqamah: '6:31 PM', ic: 'sun-horizon', active: true },
-                      { n: 'Isha & Tarawih', adhan: '7:55 PM', iqamah: '8:15 PM', ic: 'moon-stars' },
+                      {
+                        n: 'Maghrib (Next)',
+                        adhan: '6:28 PM',
+                        iqamah: '6:31 PM',
+                        ic: 'sun-horizon',
+                        active: true,
+                      },
+                      {
+                        n: 'Isha & Tarawih',
+                        adhan: '7:55 PM',
+                        iqamah: '8:15 PM',
+                        ic: 'moon-stars',
+                      },
                     ].map((w) => (
                       <div
                         key={w.n}
@@ -1286,11 +1942,35 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 )}
 
                 {quranSubTab === 'qibla' && (
-                  <div className="qc-session-card" style={{ textAlign: 'center', padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 150, height: 150, borderRadius: '50%', border: '6px solid #E1F5EC', background: '#F3FBF7', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div
+                    className="qc-session-card"
+                    style={{
+                      textAlign: 'center',
+                      padding: 24,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 150,
+                        height: 150,
+                        borderRadius: '50%',
+                        border: '6px solid #E1F5EC',
+                        background: '#F3FBF7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        position: 'relative',
+                      }}
+                    >
                       <PhIcon name="compass" weight="duotone" size={88} color="#186A4B" />
                     </div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800 }}>
+                    <div
+                      style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800 }}
+                    >
                       260.4° West-Southwest
                     </div>
                     <div style={{ fontSize: 12, color: '#64748B' }}>
@@ -1310,19 +1990,36 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   Hifz & Revision Companion
                 </div>
                 <div className="qc-hero-emerald" style={{ padding: 16 }}>
-                  <div style={{ fontSize: 10.5, fontWeight: 800, color: '#A7F3D0', textTransform: 'uppercase' }}>
+                  <div
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: 800,
+                      color: '#A7F3D0',
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     Current Goal · Surah Al-Mulk (67)
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 800, marginTop: 4 }}>
                     22 of 30 Ayahs Memorised (73%)
                   </div>
-                  <div className="qc-seat-bar" style={{ background: 'rgba(255,255,255,0.2)', marginTop: 8 }}>
+                  <div
+                    className="qc-seat-bar"
+                    style={{ background: 'rgba(255,255,255,0.2)', marginTop: 8 }}
+                  >
                     <div className="qc-seat-fill" style={{ width: '73%', background: '#FFB04D' }} />
                   </div>
                 </div>
 
                 <div className="qc-session-card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 8,
+                    }}
+                  >
                     <span style={{ fontSize: 12, fontWeight: 800, color: '#186A4B' }}>
                       Self-Test Mode · Ayah 23
                     </span>
@@ -1335,7 +2032,13 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                       {hideAyahWords ? 'Reveal Words' : 'Hide Middle Words'}
                     </button>
                   </div>
-                  <div className="qc-arabic-verse" style={{ filter: hideAyahWords ? 'blur(4px)' : 'none', transition: 'filter 0.2s' }}>
+                  <div
+                    className="qc-arabic-verse"
+                    style={{
+                      filter: hideAyahWords ? 'blur(4px)' : 'none',
+                      transition: 'filter 0.2s',
+                    }}
+                  >
                     قُلْ هُوَ ٱلَّذِىٓ أَنشَأَكُمْ وَجَعَلَ لَكُمُ ٱلسَّمْعَ وَٱلْأَبْصَـٰرَ
                     وَٱلْأَفْـِٔدَةَ <AyahMedallion number={23} size={26} />
                   </div>
@@ -1351,20 +2054,35 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800 }}>
                   My Journey
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: '#64748B',
+                    textTransform: 'uppercase',
+                  }}
+                >
                   Upcoming Reserved Seats (1)
                 </div>
                 <div className="qc-session-card" style={{ borderColor: '#239B73' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span className="qc-badge qc-badge-emerald">Pass #QC-8841 · 2 Seats</span>
-                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#186A4B' }}>Tonight 7:30 PM</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 700, color: '#186A4B' }}>
+                      Tonight 7:30 PM
+                    </span>
                   </div>
                   <div style={{ fontSize: 15, fontWeight: 800, marginTop: 6 }}>
                     Tafseer Surah Al-Kahf
                   </div>
-                  <div style={{ fontSize: 12, color: '#64748B' }}>Jamia Masjid Al-Noor, Gulberg III</div>
+                  <div style={{ fontSize: 12, color: '#64748B' }}>
+                    Jamia Masjid Al-Noor, Gulberg III
+                  </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                    <button type="button" className="qc-btn qc-btn-secondary qc-btn-sm" onClick={() => setActiveScreen('venue')}>
+                    <button
+                      type="button"
+                      className="qc-btn qc-btn-secondary qc-btn-sm"
+                      onClick={() => setActiveScreen('venue')}
+                    >
                       Directions
                     </button>
                     <button type="button" className="qc-btn qc-btn-danger qc-btn-sm">
@@ -1373,12 +2091,22 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                   </div>
                 </div>
 
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginTop: 4 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: '#64748B',
+                    textTransform: 'uppercase',
+                    marginTop: 4,
+                  }}
+                >
                   Followed Masjids & Circles (2)
                 </div>
                 <div className="qc-session-card">
                   <div style={{ fontSize: 13.5, fontWeight: 800 }}>Jamia Masjid Al-Noor</div>
-                  <div style={{ fontSize: 11.5, color: '#64748B' }}>Receives Daily Ayah & room updates</div>
+                  <div style={{ fontSize: 11.5, color: '#64748B' }}>
+                    Receives Daily Ayah & room updates
+                  </div>
                 </div>
               </div>
             )}
@@ -1407,13 +2135,26 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                     unread: false,
                   },
                 ].map((u) => (
-                  <div key={u.title} className="qc-session-card" style={{ borderLeft: u.unread ? '4px solid #186A4B' : undefined }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#64748B' }}>
+                  <div
+                    key={u.title}
+                    className="qc-session-card"
+                    style={{ borderLeft: u.unread ? '4px solid #186A4B' : undefined }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: 11,
+                        color: '#64748B',
+                      }}
+                    >
                       <span style={{ fontWeight: 700, color: '#186A4B' }}>{u.masjid}</span>
                       <span>{u.time}</span>
                     </div>
                     <div style={{ fontSize: 14, fontWeight: 800, marginTop: 4 }}>{u.title}</div>
-                    <div style={{ fontSize: 12, color: '#475569', marginTop: 4, lineHeight: 1.45 }}>{u.body}</div>
+                    <div style={{ fontSize: 12, color: '#475569', marginTop: 4, lineHeight: 1.45 }}>
+                      {u.body}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1429,17 +2170,27 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
                 </div>
                 <div className="qc-session-card">
                   <div style={{ fontSize: 13.5, fontWeight: 800 }}>Usman Khan</div>
-                  <div style={{ fontSize: 12, color: '#64748B' }}>+92 300 419 8821 · Lahore, Pakistan</div>
+                  <div style={{ fontSize: 12, color: '#64748B' }}>
+                    +92 300 419 8821 · Lahore, Pakistan
+                  </div>
                 </div>
-                <div className="qc-session-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#186A4B' }}>Daily Quran Goal</div>
+                <div
+                  className="qc-session-card"
+                  style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, color: '#186A4B' }}>
+                    Daily Quran Goal
+                  </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <span className="qc-chip">2 Pages / day</span>
                     <span className="qc-chip selected">4 Pages / day</span>
                     <span className="qc-chip">15 Mins / day</span>
                   </div>
                 </div>
-                <div className="qc-session-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  className="qc-session-card"
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <span style={{ fontSize: 13, fontWeight: 700 }}>App Language</span>
                   <span className="qc-badge qc-badge-emerald">English / اردو</span>
                 </div>
@@ -1452,28 +2203,50 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
             <div className="phone-sheet-backdrop" onClick={() => setShowFilterSheet(false)}>
               <div className="phone-sheet-panel" onClick={(e) => e.stopPropagation()}>
                 <div className="phone-sheet-handle" />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <span
+                    style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800 }}
+                  >
                     Filter Quran Circles
                   </span>
-                  <button type="button" className="qc-btn qc-btn-ghost qc-btn-sm" onClick={() => setShowFilterSheet(false)}>
+                  <button
+                    type="button"
+                    className="qc-btn qc-btn-ghost qc-btn-sm"
+                    onClick={() => setShowFilterSheet(false)}
+                  >
                     Done
                   </button>
                 </div>
-                <div className="spec-sublabel" style={{ marginBottom: 6 }}>Prayer Time Band</div>
+                <div className="spec-sublabel" style={{ marginBottom: 6 }}>
+                  Prayer Time Band
+                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   <span className="qc-chip">After Fajr</span>
                   <span className="qc-chip">After Asr</span>
                   <span className="qc-chip selected">After Maghrib</span>
                   <span className="qc-chip">After Isha</span>
                 </div>
-                <div className="spec-sublabel" style={{ marginBottom: 6 }}>Section</div>
+                <div className="spec-sublabel" style={{ marginBottom: 6 }}>
+                  Section
+                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
                   <span className="qc-chip selected">Brothers</span>
                   <span className="qc-chip">Sisters</span>
                   <span className="qc-chip">Families</span>
                 </div>
-                <button type="button" className="qc-btn qc-btn-primary" style={{ width: '100%' }} onClick={() => setShowFilterSheet(false)}>
+                <button
+                  type="button"
+                  className="qc-btn qc-btn-primary"
+                  style={{ width: '100%' }}
+                  onClick={() => setShowFilterSheet(false)}
+                >
                   Apply Filters (14 Circles)
                 </button>
               </div>
@@ -1550,10 +2323,18 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {activeScreen === 'nearby' && (
                 <>
-                  <button type="button" className="qc-btn qc-btn-secondary qc-btn-sm" onClick={() => setNearbyView(nearbyView === 'list' ? 'map' : 'list')}>
+                  <button
+                    type="button"
+                    className="qc-btn qc-btn-secondary qc-btn-sm"
+                    onClick={() => setNearbyView(nearbyView === 'list' ? 'map' : 'list')}
+                  >
                     Toggle List / Map View
                   </button>
-                  <button type="button" className="qc-btn qc-btn-primary qc-btn-sm" onClick={() => setShowFilterSheet(!showFilterSheet)}>
+                  <button
+                    type="button"
+                    className="qc-btn qc-btn-primary qc-btn-sm"
+                    onClick={() => setShowFilterSheet(!showFilterSheet)}
+                  >
                     Toggle FiltersSheet Drawer
                   </button>
                 </>
@@ -1574,8 +2355,8 @@ export function TabUserScreens({ rtl }: { rtl: boolean }) {
               )}
               {activeScreen !== 'nearby' && activeScreen !== 'session' && (
                 <span style={{ fontSize: 12, color: '#64748B' }}>
-                  Click any card, tab, or button inside the phone simulator to navigate between screens
-                  and states.
+                  Click any card, tab, or button inside the phone simulator to navigate between
+                  screens and states.
                 </span>
               )}
             </div>

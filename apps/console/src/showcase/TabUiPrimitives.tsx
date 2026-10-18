@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PhIcon, AyahMedallion } from './icons';
+import { PhIcon } from './icons';
 
 export function TabUiPrimitives() {
   const [switchA, setSwitchA] = useState(true);
@@ -34,7 +34,9 @@ export function TabUiPrimitives() {
     <div>
       <div className="wb-section-header">
         <div>
-          <div className="wb-eyebrow">Part 2 · Complete @qc/ui Component Library (All 31 Exports)</div>
+          <div className="wb-eyebrow">
+            Part 2 · Complete @qc/ui Component Library (All 31 Exports)
+          </div>
           <h1 className="wb-h1">Interactive Primitive Matrix — Every Variant & State</h1>
           <p className="wb-desc">
             Every single component exported in <code>packages/ui/src/index.ts</code> redesigned to
@@ -55,7 +57,9 @@ export function TabUiPrimitives() {
             <span className="spec-code-tag">Button · IconButton · GlassButton</span>
           </div>
 
-          <div className="spec-sublabel">Variants (Primary Charcoal, Emerald, Outlined Secondary, Ghost, Danger)</div>
+          <div className="spec-sublabel">
+            Variants (Primary Charcoal, Emerald, Outlined Secondary, Ghost, Danger)
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button type="button" className="qc-btn qc-btn-primary">
               <PhIcon name="calendar-check" weight="bold" size={16} />
@@ -217,7 +221,15 @@ export function TabUiPrimitives() {
           </div>
 
           <div className="spec-sublabel">CodeField (6-Digit OTP Verification Cells)</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
             <div className="qc-otp-row">
               <div className="qc-otp-cell filled">4</div>
               <div className="qc-otp-cell filled">8</div>
@@ -312,7 +324,15 @@ export function TabUiPrimitives() {
             <span className="spec-code-tag">Interactive Controls</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
             <div>
               <div className="spec-sublabel" style={{ marginBottom: 6 }}>
                 SegmentedControl (Nearby View Switcher)
@@ -366,7 +386,13 @@ export function TabUiPrimitives() {
                 <button
                   type="button"
                   className="qc-icon-btn"
-                  style={{ width: 30, height: 30, background: '#186A4B', color: '#FFF', borderColor: '#186A4B' }}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    background: '#186A4B',
+                    color: '#FFF',
+                    borderColor: '#186A4B',
+                  }}
                   onClick={() => setStepperVal(Math.min(5, stepperVal + 1))}
                 >
                   <PhIcon name="plus" weight="bold" size={14} />
@@ -422,7 +448,14 @@ export function TabUiPrimitives() {
 
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
             <label
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
               onClick={() => setCheckA(!checkA)}
             >
               <PhIcon
@@ -434,7 +467,14 @@ export function TabUiPrimitives() {
               Sisters Dedicated Hall
             </label>
             <label
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
               onClick={() => setCheckB(!checkB)}
             >
               <PhIcon
@@ -465,7 +505,9 @@ export function TabUiPrimitives() {
                 <span style={{ fontWeight: 600, color: '#186A4B' }}>
                   <PhIcon name="users" weight="duotone" size={14} /> 22 seats available
                 </span>
-                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>18 / 40 reserved</span>
+                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>
+                  18 / 40 reserved
+                </span>
               </div>
               <div className="qc-seat-bar">
                 <div className="qc-seat-fill" style={{ width: '45%', background: '#239B73' }} />
@@ -477,7 +519,9 @@ export function TabUiPrimitives() {
                 <span style={{ fontWeight: 700, color: '#B45309' }}>
                   <PhIcon name="fire" weight="duotone" size={14} /> Filling fast · Only 3 seats left
                 </span>
-                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>27 / 30 reserved</span>
+                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>
+                  27 / 30 reserved
+                </span>
               </div>
               <div className="qc-seat-bar">
                 <div className="qc-seat-fill" style={{ width: '90%', background: '#F5820B' }} />
@@ -487,9 +531,12 @@ export function TabUiPrimitives() {
             <div className="qc-seat-meter">
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                 <span style={{ fontWeight: 700, color: '#DC2626' }}>
-                  <PhIcon name="clock-countdown" weight="duotone" size={14} /> Circle Full · Waitlist Open (4 waiting)
+                  <PhIcon name="clock-countdown" weight="duotone" size={14} /> Circle Full ·
+                  Waitlist Open (4 waiting)
                 </span>
-                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>30 / 30 reserved</span>
+                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>
+                  30 / 30 reserved
+                </span>
               </div>
               <div className="qc-seat-bar">
                 <div className="qc-seat-fill" style={{ width: '100%', background: '#DC2626' }} />
@@ -539,7 +586,9 @@ export function TabUiPrimitives() {
             <span className="spec-code-tag">PrayerStrip · ListItem</span>
           </div>
 
-          <div className="spec-sublabel">PrayerStrip (Athar 5-Waqt Strip with Phosphor Celestial Icons)</div>
+          <div className="spec-sublabel">
+            PrayerStrip (Athar 5-Waqt Strip with Phosphor Celestial Icons)
+          </div>
           <div className="qc-prayer-strip">
             <div
               style={{
@@ -550,7 +599,16 @@ export function TabUiPrimitives() {
                 padding: '0 4px',
               }}
             >
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#186A4B', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  color: '#186A4B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
                 <PhIcon name="mosque" weight="duotone" size={15} /> Lahore · Next: Maghrib in 24m
               </span>
               <span style={{ fontSize: 11, color: '#64748B' }}>14 Ramadan 1447</span>
@@ -588,7 +646,9 @@ export function TabUiPrimitives() {
             </div>
           </div>
 
-          <div className="spec-sublabel">ListItem (Venue Row & Ustadh Row with Avatar + Chevron)</div>
+          <div className="spec-sublabel">
+            ListItem (Venue Row & Ustadh Row with Avatar + Chevron)
+          </div>
           <div
             style={{
               borderRadius: 16,
@@ -777,7 +837,10 @@ export function TabUiPrimitives() {
                 </div>
                 <div className="qc-skeleton" style={{ height: 14, width: '65%' }} />
                 <div className="qc-skeleton" style={{ height: 11, width: '90%' }} />
-                <div className="qc-skeleton" style={{ height: 28, width: '100%', borderRadius: 999 }} />
+                <div
+                  className="qc-skeleton"
+                  style={{ height: 28, width: '100%', borderRadius: 999 }}
+                />
               </div>
 
               <div

@@ -1,3 +1,4 @@
+import { View } from 'react-native';
 import { Button, Card, EmptyState, Text, radii, spacing, useTheme } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';

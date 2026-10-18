@@ -174,7 +174,9 @@ export function ArtboardsAdmin({
               </span>
             </div>
 
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', letterSpacing: '-0.015em' }}>
+            <div
+              style={{ fontSize: 17, fontWeight: 800, color: '#111827', letterSpacing: '-0.015em' }}
+            >
               Tafseer Surah Al-Kahf
             </div>
             <div
@@ -205,14 +207,24 @@ export function ArtboardsAdmin({
                 fontSize: 12,
               }}
             >
-              <span style={{ fontWeight: 700, color: '#1E563B', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: '#1E563B',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
                 <PhIcon name="users-three" weight="duotone" size={15} color="#1E563B" />
                 34 Checked In / 18 Reserved
               </span>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#64748B' }}>40 cap</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 8, marginTop: 12 }}>
+            <div
+              style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 8, marginTop: 12 }}
+            >
               <button
                 type="button"
                 className="iq-pill-cta"
@@ -232,7 +244,9 @@ export function ArtboardsAdmin({
           <div className="iq-section" style={{ paddingTop: 18 }}>
             <div className="iq-section-head">
               <span className="iq-section-title">Quick Actions</span>
-              <span style={{ fontSize: 11.5, color: '#64748B', fontWeight: 500 }}>Masjid Tools</span>
+              <span style={{ fontSize: 11.5, color: '#64748B', fontWeight: 500 }}>
+                Masjid Tools
+              </span>
             </div>
 
             <div className="iq-two-col">
@@ -385,7 +399,10 @@ export function ArtboardsAdmin({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:45</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -424,7 +441,9 @@ export function ArtboardsAdmin({
           {/* 1-Handed Live Headcount Stepper Card */}
           <div style={{ padding: '0 20px' }}>
             <div className="iq-white-card" style={{ padding: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
                 <span style={{ fontSize: 12.5, fontWeight: 700, color: '#111827' }}>
                   {count} Present Tonight
                 </span>
@@ -650,7 +669,10 @@ export function ArtboardsAdmin({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:45</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -749,7 +771,13 @@ export function ArtboardsAdmin({
           >
             {filteredRoster.map((r) => (
               <div key={r.code} className="iq-white-card" style={{ padding: '12px 14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>
@@ -842,7 +870,10 @@ export function ArtboardsAdmin({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:50</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />

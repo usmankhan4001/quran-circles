@@ -263,9 +263,7 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
             {
               backgroundColor: theme.colors.dangerSubtle,
               borderColor:
-                theme.mode === 'highContrast'
-                  ? theme.colors.borderStrong
-                  : theme.colors.border,
+                theme.mode === 'highContrast' ? theme.colors.borderStrong : theme.colors.border,
             },
           ]}
         >
@@ -318,9 +316,7 @@ function Confirmation({ registration, session }: { registration: Registration; s
             {
               backgroundColor: theme.colors.successSubtle,
               borderColor:
-                theme.mode === 'highContrast'
-                  ? theme.colors.borderStrong
-                  : theme.colors.border,
+                theme.mode === 'highContrast' ? theme.colors.borderStrong : theme.colors.border,
               boxShadow: theme.mode === 'light' ? elevation.low : undefined,
             },
           ]}

@@ -1,11 +1,7 @@
 import React from 'react';
 import { PhIcon, AyahMedallion, MosqueSkylineSvg } from './icons';
 
-export function ArtboardsQuran({
-  onNavigatePage,
-}: {
-  onNavigatePage: (page: string) => void;
-}) {
+export function ArtboardsQuran({ onNavigatePage }: { onNavigatePage: (page: string) => void }) {
   const surahList = [
     {
       num: 1,
@@ -75,7 +71,14 @@ export function ArtboardsQuran({
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: '#FFFFFF',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
                   Quran &amp; Portion
                 </div>
                 <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.86)', marginTop: 2 }}>
@@ -127,12 +130,32 @@ export function ArtboardsQuran({
                 boxShadow: '0 12px 32px -4px rgba(17, 24, 39, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#1E563B', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 6,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#1E563B',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <span
+                    style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }}
+                  />
                   Tonight&apos;s Circle Portion · 7:30 PM
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981' }}>12 / 31 Read</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981' }}>
+                  12 / 31 Read
+                </span>
               </div>
 
               <div className="iq-card-top-row" style={{ alignItems: 'center' }}>
@@ -140,9 +163,7 @@ export function ArtboardsQuran({
                   <div className="iq-card-title" style={{ fontSize: 15.5 }}>
                     Surah Al-Kahf : 1–31
                   </div>
-                  <div className="iq-card-sub">
-                    Jamia Masjid Al-Noor · Stopped at Ayah 12
-                  </div>
+                  <div className="iq-card-sub">Jamia Masjid Al-Noor · Stopped at Ayah 12</div>
                 </div>
                 <div
                   style={{
@@ -161,7 +182,11 @@ export function ArtboardsQuran({
                 <AyahMedallion number={12} size={24} /> نَحْنُ نَقُصُّ عَلَيْكَ نَبَأَهُم بِٱلْحَقِّ
               </div>
 
-              <button type="button" className="iq-pill-cta" style={{ height: 36, fontSize: 12, marginTop: 8 }}>
+              <button
+                type="button"
+                className="iq-pill-cta"
+                style={{ height: 36, fontSize: 12, marginTop: 8 }}
+              >
                 Continue Portion (Ayah 13) <span>→</span>
               </button>
             </div>
@@ -170,7 +195,9 @@ export function ArtboardsQuran({
           {/* Hifz & Memorisation 2-Col Cards (Exact Iqraa Screenshot 1 & 3 Hifz Section) */}
           <div className="iq-section" style={{ paddingTop: 14 }}>
             <div className="iq-section-head" style={{ marginBottom: 8 }}>
-              <span className="iq-section-title" style={{ fontSize: 15 }}>Hifz &amp; Revision</span>
+              <span className="iq-section-title" style={{ fontSize: 15 }}>
+                Hifz &amp; Revision
+              </span>
               <button type="button" className="iq-see-more">
                 14 Memorised <PhIcon name="caret-right" weight="bold" size={11} />
               </button>
@@ -178,11 +205,25 @@ export function ArtboardsQuran({
 
             <div className="iq-two-col">
               <div className="iq-mini-card" style={{ padding: 12, gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>Al-Kahf : 10</span>
-                  <span style={{ fontFamily: 'var(--font-quran)', fontSize: 14, color: '#64748B' }}>الكهف</span>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>
+                    Al-Kahf : 10
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-quran)', fontSize: 14, color: '#64748B' }}>
+                    الكهف
+                  </span>
                 </div>
-                <div style={{ fontFamily: 'var(--font-quran)', fontSize: 17, textAlign: 'center', color: '#111827', margin: '2px 0' }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-quran)',
+                    fontSize: 17,
+                    textAlign: 'center',
+                    color: '#111827',
+                    margin: '2px 0',
+                  }}
+                >
                   إِذْ أَوَى ٱلْفِتْيَةُ
                 </div>
                 <button type="button" className="iq-pill-cta" style={{ height: 30, fontSize: 11 }}>
@@ -191,11 +232,25 @@ export function ArtboardsQuran({
               </div>
 
               <div className="iq-mini-card" style={{ padding: 12, gap: 6 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>Al-Mulk : 30</span>
-                  <span style={{ fontFamily: 'var(--font-quran)', fontSize: 14, color: '#64748B' }}>الملك</span>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827' }}>
+                    Al-Mulk : 30
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-quran)', fontSize: 14, color: '#64748B' }}>
+                    الملك
+                  </span>
                 </div>
-                <div style={{ fontFamily: 'var(--font-quran)', fontSize: 17, textAlign: 'center', color: '#111827', margin: '2px 0' }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-quran)',
+                    fontSize: 17,
+                    textAlign: 'center',
+                    color: '#111827',
+                    margin: '2px 0',
+                  }}
+                >
                   تَبَـٰرَكَ ٱلَّذِى
                 </div>
                 <button type="button" className="iq-pill-cta" style={{ height: 30, fontSize: 11 }}>
@@ -207,15 +262,38 @@ export function ArtboardsQuran({
 
           {/* Segmented Tabs: Surahs | Juz | Bookmarks */}
           <div style={{ padding: '14px 20px 0' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 999, padding: 3 }}>
-                <span style={{ background: '#FFFFFF', color: '#111827', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 999, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{ display: 'flex', background: '#F1F5F9', borderRadius: 999, padding: 3 }}
+              >
+                <span
+                  style={{
+                    background: '#FFFFFF',
+                    color: '#111827',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: '4px 12px',
+                    borderRadius: 999,
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                  }}
+                >
                   Surahs (114)
                 </span>
-                <span style={{ color: '#64748B', fontSize: 11, fontWeight: 600, padding: '4px 11px' }}>
+                <span
+                  style={{ color: '#64748B', fontSize: 11, fontWeight: 600, padding: '4px 11px' }}
+                >
                   Juz (30)
                 </span>
-                <span style={{ color: '#64748B', fontSize: 11, fontWeight: 600, padding: '4px 11px' }}>
+                <span
+                  style={{ color: '#64748B', fontSize: 11, fontWeight: 600, padding: '4px 11px' }}
+                >
                   Saved (6)
                 </span>
               </div>
@@ -254,7 +332,9 @@ export function ArtboardsQuran({
                     <AyahMedallion number={s.num} size={26} />
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{s.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                          {s.name}
+                        </span>
                         {s.portion && (
                           <span
                             style={{
@@ -294,16 +374,28 @@ export function ArtboardsQuran({
           </div>
 
           <nav className="iq-floating-nav">
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('home')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('home')}
+            >
               <PhIcon name="house" weight="regular" size={20} />
             </button>
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('nearby')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('nearby')}
+            >
               <PhIcon name="compass" weight="regular" size={20} />
             </button>
             <button type="button" className="iq-nav-icon-btn active">
               <PhIcon name="book-open" weight="fill" size={20} />
             </button>
-            <button type="button" className="iq-nav-icon-btn" onClick={() => onNavigatePage('session')}>
+            <button
+              type="button"
+              className="iq-nav-icon-btn"
+              onClick={() => onNavigatePage('session')}
+            >
               <PhIcon name="bookmarks" weight="regular" size={20} />
             </button>
             <button type="button" className="iq-nav-icon-btn">
@@ -324,7 +416,10 @@ export function ArtboardsQuran({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, background: '#FAFAFA' }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>9:41</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -334,11 +429,25 @@ export function ArtboardsQuran({
           </div>
 
           {/* Exact Iqraa Screenshot 3 Top Bar: Back on Left, Search + Sun + Sliders on Right */}
-          <div style={{ padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div
+            style={{
+              padding: '0 20px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 14,
+            }}
+          >
             <button
               type="button"
               onClick={() => onNavigatePage('home')}
-              style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#111827', padding: 0 }}
+              style={{
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                color: '#111827',
+                padding: 0,
+              }}
             >
               <PhIcon name="caret-left" weight="bold" size={16} />
             </button>
@@ -364,21 +473,54 @@ export function ArtboardsQuran({
             <span>Al-Isra</span>
             <span>Al-Anbiya</span>
             <span>Maryam</span>
-            <span style={{ color: '#10B981', fontWeight: 700, borderBottom: '2px solid #10B981', paddingBottom: 8, marginBottom: -11 }}>
+            <span
+              style={{
+                color: '#10B981',
+                fontWeight: 700,
+                borderBottom: '2px solid #10B981',
+                paddingBottom: 8,
+                marginBottom: -11,
+              }}
+            >
               Al-Kahf
             </span>
           </div>
 
           {/* Surah Subheader + Circle Portion Pill (Exact Iqraa Screenshot 3 Proportions) */}
-          <div style={{ padding: '14px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div
+            style={{
+              padding: '14px 20px 10px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <span style={{ fontSize: 15.5, fontWeight: 800, color: '#111827' }}>
               Al-Kahf (Portion 1–31)
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 600, color: '#047857', background: '#ECFDF5', padding: '4px 9px', borderRadius: 6 }}>
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: '#047857',
+                  background: '#ECFDF5',
+                  padding: '4px 9px',
+                  borderRadius: 6,
+                }}
+              >
                 Masjid Al-Noor
               </span>
-              <span style={{ fontSize: 10.5, fontWeight: 600, color: '#64748B', background: '#F1F5F9', padding: '4px 9px', borderRadius: 6 }}>
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  color: '#64748B',
+                  background: '#F1F5F9',
+                  padding: '4px 9px',
+                  borderRadius: 6,
+                }}
+              >
                 Makkiyah
               </span>
             </div>
@@ -419,8 +561,24 @@ export function ArtboardsQuran({
                 In the Name of Allah—the Most Compassionate, Most Merciful.
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  gap: 14,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: '#111827',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
                   <PhIcon name="check-circle" weight="fill" size={16} color="#10B981" /> Mark
                 </span>
                 <PhIcon name="minus-square" weight="regular" size={17} color="#64748B" />
@@ -461,8 +619,24 @@ export function ArtboardsQuran({
                 made therein any deviance.
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 14 }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: '#111827', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  alignItems: 'center',
+                  gap: 14,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: '#111827',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
                   <PhIcon name="check-circle" weight="fill" size={16} color="#10B981" /> Mark
                 </span>
                 <PhIcon name="minus-square" weight="regular" size={17} color="#64748B" />
@@ -553,9 +727,24 @@ export function ArtboardsQuran({
             </div>
 
             <div className="iq-white-card" style={{ padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginBottom: 8 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
                 <AyahMedallion number={1} size={24} />
-                <span style={{ fontFamily: 'var(--font-quran)', fontSize: 20, color: '#111827', direction: 'rtl' }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-quran)',
+                    fontSize: 20,
+                    color: '#111827',
+                    direction: 'rtl',
+                  }}
+                >
                   ٱلْحَمْدُ لِلَّهِ ٱلَّذِىٓ أَنزَلَ عَلَىٰ عَبْدِهِ ٱلْكِتَـٰبَ
                 </span>
               </div>
@@ -569,7 +758,8 @@ export function ArtboardsQuran({
                   color: '#334155',
                 }}
               >
-                تعریف اللہ ہی کے لیے ہے جس نے اپنے بندے پر یہ کتاب نازل کی اور اس میں کوئی ٹیڑھ نہیں رکھی۔
+                تعریف اللہ ہی کے لیے ہے جس نے اپنے بندے پر یہ کتاب نازل کی اور اس میں کوئی ٹیڑھ نہیں
+                رکھی۔
               </div>
             </div>
           </div>
@@ -589,10 +779,27 @@ export function ArtboardsQuran({
               boxShadow: '0 -12px 32px rgba(0,0,0,0.16)',
             }}
           >
-            <div style={{ width: 38, height: 4, borderRadius: 99, background: '#E2E8F0', margin: '0 auto 14px' }} />
+            <div
+              style={{
+                width: 38,
+                height: 4,
+                borderRadius: 99,
+                background: '#E2E8F0',
+                margin: '0 auto 14px',
+              }}
+            />
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>Reader &amp; Portion Settings</span>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>
+                Reader &amp; Portion Settings
+              </span>
               <div
                 style={{
                   width: 28,
@@ -611,8 +818,12 @@ export function ArtboardsQuran({
             {/* Arabic Zoom Stepper (5 Steps from packages/content/src/quran/prefs.ts) */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>Arabic Script Size</span>
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: '#10B981' }}>Step 3 of 5 (115%)</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#111827' }}>
+                  Arabic Script Size
+                </span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: '#10B981' }}>
+                  Step 3 of 5 (115%)
+                </span>
               </div>
               <div
                 style={{
@@ -640,7 +851,15 @@ export function ArtboardsQuran({
                 >
                   A−
                 </button>
-                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 8px' }}>
+                <div
+                  style={{
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '0 8px',
+                  }}
+                >
                   {[1, 2, 3, 4, 5].map((step) => (
                     <div
                       key={step}
@@ -748,8 +967,12 @@ export function ArtboardsQuran({
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <PhIcon name="cloud-check" weight="fill" size={18} color="#10B981" />
                 <div>
-                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#111827' }}>Saved for Offline in Masjid</div>
-                  <div style={{ fontSize: 11, color: '#64748B' }}>Surah Al-Kahf text &amp; translation cached</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#111827' }}>
+                    Saved for Offline in Masjid
+                  </div>
+                  <div style={{ fontSize: 11, color: '#64748B' }}>
+                    Surah Al-Kahf text &amp; translation cached
+                  </div>
                 </div>
               </div>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#10B981' }}>Saved</span>
@@ -790,7 +1013,14 @@ export function ArtboardsQuran({
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: 20,
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <PhIcon name="caret-left" weight="bold" size={16} color="#111827" />
                 <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
@@ -801,20 +1031,55 @@ export function ArtboardsQuran({
             </div>
 
             <div style={{ position: 'relative', zIndex: 2 }}>
-              <div style={{ fontSize: 11.5, color: '#64748B', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  marginBottom: 6,
+                }}
+              >
                 <PhIcon name="calendar-blank" weight="regular" size={13} />
                 <span>Today, 14 Ramadan 1447 · Lahore</span>
               </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#111827',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 Maghrib 6:28 PM
               </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#10B981', marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: '#10B981',
+                  marginTop: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
                 <PhIcon name="hourglass-medium" weight="regular" size={13} />
                 <span>0:24:15 until adhan · 6 Circles after</span>
               </div>
             </div>
 
-            <div style={{ position: 'absolute', right: -30, bottom: -6, width: 220, height: 95, pointerEvents: 'none' }}>
+            <div
+              style={{
+                position: 'absolute',
+                right: -30,
+                bottom: -6,
+                width: 220,
+                height: 95,
+                pointerEvents: 'none',
+              }}
+            >
               <MosqueSkylineSvg />
             </div>
           </div>
@@ -835,7 +1100,9 @@ export function ArtboardsQuran({
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>{row.name}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>
+                    {row.name}
+                  </div>
                   {row.circles && (
                     <div
                       style={{
@@ -851,7 +1118,14 @@ export function ArtboardsQuran({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: '#111827',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
                     {row.time}
                   </span>
                   <PhIcon
@@ -866,9 +1140,27 @@ export function ArtboardsQuran({
 
             {/* Coordinator Portion Update Card Below Prayer List */}
             <div className="iq-white-card" style={{ padding: 14, marginTop: 4 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#1E563B', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 4,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: '#1E563B',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <span
+                    style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }}
+                  />
                   Jamia Masjid Al-Noor Update
                 </span>
                 <span style={{ fontSize: 10.5, color: '#94A3B8' }}>35m ago</span>

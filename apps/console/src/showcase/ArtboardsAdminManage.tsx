@@ -59,7 +59,10 @@ export function ArtboardsAdminManage({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:52</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -170,7 +173,9 @@ export function ArtboardsAdminManage({
                 boxShadow: '0 12px 30px -6px rgba(17, 24, 39, 0.08)',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: '#111827' }}>
                   Occurrence Portion Editor
                 </span>
@@ -222,7 +227,9 @@ export function ArtboardsAdminManage({
               {/* Ustadh & Prayer Anchor */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, color: '#64748B', marginBottom: 5 }}>
+                  <div
+                    style={{ fontSize: 11.5, fontWeight: 600, color: '#64748B', marginBottom: 5 }}
+                  >
                     Ustadh
                   </div>
                   <div
@@ -241,7 +248,9 @@ export function ArtboardsAdminManage({
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 11.5, fontWeight: 600, color: '#64748B', marginBottom: 5 }}>
+                  <div
+                    style={{ fontSize: 11.5, fontWeight: 600, color: '#64748B', marginBottom: 5 }}
+                  >
                     Prayer Anchor
                   </div>
                   <div
@@ -292,11 +301,7 @@ export function ArtboardsAdminManage({
                               ? '#FEE2E2'
                               : '#1E563B'
                             : 'transparent',
-                          color: active
-                            ? st === 'Cancelled'
-                              ? '#DC2626'
-                              : '#FFFFFF'
-                            : '#64748B',
+                          color: active ? (st === 'Cancelled' ? '#DC2626' : '#FFFFFF') : '#64748B',
                           fontSize: 12,
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -329,7 +334,10 @@ export function ArtboardsAdminManage({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:54</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -438,7 +446,10 @@ export function ArtboardsAdminManage({
 
           {/* Title & Body Composer Fields */}
           <div style={{ padding: '0 20px', flex: 1 }}>
-            <div className="iq-white-card" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div
+              className="iq-white-card"
+              style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}
+            >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
                   <span style={{ fontSize: 11.5, fontWeight: 600, color: '#64748B' }}>
@@ -493,7 +504,15 @@ export function ArtboardsAdminManage({
                   fontSize: 12,
                 }}
               >
-                <span style={{ fontWeight: 600, color: '#334155', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    color: '#334155',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
                   <PhIcon name="bell-ringing" weight="duotone" size={16} color="#1E563B" />
                   Send push notification immediately
                 </span>
@@ -509,7 +528,9 @@ export function ArtboardsAdminManage({
                     padding: 2,
                   }}
                 >
-                  <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#FFFFFF' }} />
+                  <span
+                    style={{ width: 16, height: 16, borderRadius: '50%', background: '#FFFFFF' }}
+                  />
                 </span>
               </div>
             </div>
@@ -534,7 +555,10 @@ export function ArtboardsAdminManage({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:56</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -571,7 +595,15 @@ export function ArtboardsAdminManage({
           </div>
 
           {/* Format Switcher & Language Switcher */}
-          <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+          <div
+            style={{
+              padding: '0 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              marginBottom: 14,
+            }}
+          >
             <div
               style={{
                 display: 'grid',
@@ -710,7 +742,15 @@ export function ArtboardsAdminManage({
             </div>
           </div>
 
-          <div style={{ padding: '14px 20px 0', display: 'flex', flexDirection: 'column', gap: 8, marginTop: 'auto' }}>
+          <div
+            style={{
+              padding: '14px 20px 0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              marginTop: 'auto',
+            }}
+          >
             <button type="button" className="iq-pill-cta dark">
               <PhIcon name="file-pdf" weight="duotone" size={17} />
               <span>Download Print PDF</span>
@@ -733,7 +773,10 @@ export function ArtboardsAdminManage({
         </div>
 
         <div className="ios-artboard" style={{ paddingTop: 14, paddingBottom: 24 }}>
-          <div className="iq-status-row" style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}>
+          <div
+            className="iq-status-row"
+            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
+          >
             <span>7:58</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -772,7 +815,14 @@ export function ArtboardsAdminManage({
           {/* Masjid Profile & GPS Pin Preview Card */}
           <div style={{ padding: '0 20px', marginBottom: 12 }}>
             <div className="iq-white-card" style={{ padding: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 10,
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div
                     style={{
@@ -816,7 +866,12 @@ export function ArtboardsAdminManage({
                   border: '1px solid #E2E8F0',
                 }}
               >
-                <svg width="100%" height="74" viewBox="0 0 310 74" preserveAspectRatio="xMidYMid slice">
+                <svg
+                  width="100%"
+                  height="74"
+                  viewBox="0 0 310 74"
+                  preserveAspectRatio="xMidYMid slice"
+                >
                   <rect width="310" height="74" fill="#EFF7F3" />
                   <rect x="12" y="8" width="90" height="36" rx="8" fill="#DCEEE4" />
                   <rect x="200" y="12" width="94" height="44" rx="8" fill="#DCEEE4" />
@@ -899,8 +954,13 @@ export function ArtboardsAdminManage({
 
           {/* Coordinator Scope & Language Settings */}
           <div style={{ padding: '0 20px', flex: 1 }}>
-            <div className="iq-white-card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div
+              className="iq-white-card"
+              style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
                 <div>
                   <div style={{ fontSize: 12.5, fontWeight: 700, color: '#111827' }}>
                     Tariq Mehmood · Masjid Coordinator
