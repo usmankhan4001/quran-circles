@@ -36,7 +36,10 @@ describe('admin web fonts', () => {
     const load = vi.fn(() => Promise.resolve([{}]));
     await loadFonts(appFontFamilies, page('en', load));
     await loadFonts(appFontFamilies, page('ur', load));
-    expect(load.mock.calls).toEqual([['400 1em "Plus Jakarta Sans"'], ['400 1em "Mehr Nastaliq Web"']]);
+    expect(load.mock.calls).toEqual([
+      ['400 1em "Plus Jakarta Sans"'],
+      ['400 1em "Mehr Nastaliq Web"'],
+    ]);
   });
 
   it('reports a face that fails, so FontGate draws with the fallback font', async () => {

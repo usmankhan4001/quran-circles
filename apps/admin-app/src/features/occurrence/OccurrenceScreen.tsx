@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import type { AdminOccurrence } from '@qc/contracts';
 import {
   Button,
@@ -11,7 +11,10 @@ import {
   Tag,
   Text,
   TextField,
+  minTouchTarget,
+  radii,
   spacing,
+  useTheme,
 } from '@qc/ui';
 import { ApiClientError } from '@qc/contracts';
 import { serverFieldErrors } from '../../api/errors';
@@ -22,8 +25,9 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
-import { formatInstantDate, formatInstantTime } from '../../lib/time';
+import { formatInstantDate, formatInstantTime, pkDayRange } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
+import { routes } from '../../navigation/routes';
 import { sessionAbilities } from '../../scope/principal';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { sessionNotAvailable, useSession } from '../home/useSession';
@@ -67,20 +71,42 @@ export function OccurrenceScreen({
   const { principal } = useWorkingScope();
   const session = useSession(sessionId);
 
-  const query = useQuery<AdminOccurrence>(async () => {
+  const query = useQuery<{ occurrence: AdminOccurrence; upcoming: AdminOccurrence[] }>(async () => {
     const res = await api.adminSessions.occurrences({
       params: { sessionId },
       query: { from: new Date(now.getTime() - 60 * DAY_MS).toISOString(), limit: 100 },
     });
     const found = res.items.find((o) => o.id === occurrenceId);
     if (!found) throw new ApiClientError(404, 'not_found', null);
-    return found;
+    const from = pkDayRange(now).from;
+    const upcoming = res.items.filter((o) => o.startsAt >= from).slice(0, 3);
+    return { occurrence: found, upcoming };
   }, [sessionId, occurrenceId]);
 
-  const allowed = session.data ? sessionAbilities(principal, session.data).editOccurrence : true;
+  const can = session.data ? sessionAbilities(principal, session.data) : null;
+  const allowed = can ? can.editOccurrence : true;
 
   return (
-    <Screen title={t('admin.occurrence.title')} onBack={nav.back} testID="occurrence">
+    <Screen
+      title={t('admin.occurrence.screenTitle')}
+      onBack={nav.back}
+      actions={
+        can?.changeSchedule ? (
+          <Pressable
+            testID="occurrence-weekly"
+            role="link"
+            accessibilityLabel={t('admin.home.changeTime')}
+            onPress={() => nav.push(routes.schedule(sessionId))}
+            hitSlop={spacing.md}
+          >
+            <Text variant="caption" color="textAccent" strong decorative>
+              {t('admin.occurrence.weekly')}
+            </Text>
+          </Pressable>
+        ) : undefined
+      }
+      testID="occurrence"
+    >
       {sessionNotAvailable(session) ? (
         <NotAvailable testID="occurrence-not-available" />
       ) : !allowed ? (
@@ -89,14 +115,115 @@ export function OccurrenceScreen({
         </Card>
       ) : (
         <QueryBoundary query={query} testID="occurrence-data" notFoundIsNotAvailable>
-          {(occurrence) => <OccurrenceFlow occurrence={occurrence} now={now} />}
+          {({ occurrence, upcoming }) => (
+            <View style={{ gap: spacing.lg }}>
+              <Upcoming
+                sessionId={sessionId}
+                current={occurrence.id}
+                items={
+                  upcoming.some((o) => o.id === occurrence.id)
+                    ? upcoming
+                    : [occurrence, ...upcoming.slice(0, 2)]
+                }
+              />
+              <OccurrenceFlow
+                key={occurrence.id}
+                occurrence={occurrence}
+                now={now}
+                teacher={session.data?.circle?.teacherName ?? null}
+              />
+            </View>
+          )}
         </QueryBoundary>
       )}
     </Screen>
   );
 }
 
-function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now: Date }) {
+/**
+ * D17 "Upcoming occurrences": the next dates as cards; the one being edited has an emerald edge and
+ * an "Editing" tag, the others an "Edit" link that opens their own editor.
+ */
+function Upcoming({
+  sessionId,
+  current,
+  items,
+}: {
+  sessionId: string;
+  current: string;
+  items: AdminOccurrence[];
+}) {
+  const { t, locale } = useT();
+  const { colors, mode } = useTheme();
+  const nav = useNavigation();
+  return (
+    <View style={{ gap: spacing.sm }} testID="occurrence-upcoming">
+      <Text variant="body" strong heading={2}>
+        {t('admin.occurrence.upcoming')}
+      </Text>
+      {items.map((o) => {
+        const on = o.id === current;
+        const title = [formatInstantDate(o.startsAt, locale), o.portionLabel]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          <Pressable
+            key={o.id}
+            testID={`occurrence-upcoming-${o.id}`}
+            role="button"
+            aria-current={on ? 'true' : undefined}
+            accessibilityLabel={`${title}, ${formatInstantTime(o.startsAt, locale)}`}
+            disabled={on}
+            onPress={() => nav.replace(routes.occurrence(sessionId, o.id))}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: spacing.sm,
+              minHeight: minTouchTarget + spacing.sm,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              borderRadius: radii.lg,
+              borderWidth: on ? 1.5 : 1,
+              borderColor: on
+                ? colors.accent
+                : mode === 'highContrast'
+                  ? colors.borderStrong
+                  : colors.hairline,
+              backgroundColor: on ? colors.accentSubtle : colors.surface,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text variant="caption" strong decorative>
+                {title}
+              </Text>
+              <Text variant="caption" color="textSecondary" decorative>
+                {formatInstantTime(o.startsAt, locale)}
+                {o.status === 'cancelled' ? ` · ${t('admin.home.cancelled')}` : ''}
+              </Text>
+            </View>
+            {on ? (
+              <Tag label={t('admin.occurrence.editing')} kind="ok" />
+            ) : (
+              <Text variant="caption" color="textSecondary" strong decorative>
+                {t('admin.occurrence.edit')}
+              </Text>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function OccurrenceFlow({
+  occurrence,
+  now,
+  teacher,
+}: {
+  occurrence: AdminOccurrence;
+  now: Date;
+  teacher: string | null;
+}) {
   const { t, locale } = useT();
   const api = useApi();
   const nav = useNavigation();
@@ -133,30 +260,24 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
 
   return (
     <View style={{ gap: spacing.lg }} testID="occurrence-form">
-      <Card variant="flat">
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: spacing.sm,
-          }}
-        >
-          <Text variant="label">
-            {formatInstantDate(occurrence.startsAt, locale)} ·{' '}
-            {formatInstantTime(occurrence.startsAt, locale)}
-          </Text>
-          {occurrence.status === 'cancelled' ? (
-            <Tag label={t('admin.home.cancelled')} kind="alert" />
-          ) : null}
-        </View>
-      </Card>
-
       <Card>
         <View style={{ gap: spacing.md }}>
-          <Text variant="title3" heading={2}>
-            {t('admin.occurrence.portion.title')}
-          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+            }}
+          >
+            <Text variant="body" strong heading={2}>
+              {t('admin.occurrence.portion.title')}
+            </Text>
+            <Text variant="caption" color="textAccent" strong>
+              {formatInstantDate(occurrence.startsAt, locale)}
+            </Text>
+          </View>
           <Select
             testID="occurrence-portion-kind"
             label={t('admin.occurrence.portion.kind')}
@@ -235,12 +356,57 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
               maxLength={200}
             />
           ) : null}
+          {/* Drawn in the artboard; set on the circle and the session, so read only here. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <View style={{ flexGrow: 1, flexBasis: 140 }}>
+              <TextField
+                testID="occurrence-teacher"
+                label={t('admin.occurrence.teacher')}
+                value={teacher ?? '—'}
+                onChangeText={() => undefined}
+                disabled
+              />
+            </View>
+            <View style={{ flexGrow: 1, flexBasis: 140 }}>
+              <TextField
+                testID="occurrence-time"
+                label={t('admin.occurrence.time')}
+                value={formatInstantTime(occurrence.startsAt, locale)}
+                onChangeText={() => undefined}
+                disabled
+              />
+            </View>
+          </View>
+          {!past ? (
+            <View style={{ gap: spacing.sm }}>
+              <Text variant="label">{t('admin.occurrence.status')}</Text>
+              <SegmentedControl
+                testID="occurrence-status"
+                accessibilityLabel={t('admin.occurrence.status')}
+                value={form.cancelled ? 'cancelled' : 'scheduled'}
+                onChange={(v) => patch({ cancelled: v === 'cancelled' })}
+                options={[
+                  { value: 'scheduled', label: t('admin.occurrence.scheduled') },
+                  { value: 'cancelled', label: t('admin.home.cancelled') },
+                ]}
+              />
+              {form.cancelled && occurrence.status !== 'cancelled' ? (
+                <Switch
+                  testID="occurrence-notify"
+                  label={t('admin.occurrence.cancel.notify')}
+                  description={t('admin.occurrence.cancel.help')}
+                  value={form.notify}
+                  onValueChange={(notify) => patch({ notify })}
+                />
+              ) : null}
+            </View>
+          ) : null}
         </View>
       </Card>
 
       <Card>
         <View style={{ gap: spacing.md }}>
-          <Text variant="title3" heading={2}>
+          <Text variant="body" strong heading={2}>
             {t('admin.occurrence.recap.title')}
           </Text>
           <TextField
@@ -266,28 +432,6 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
         </View>
       </Card>
 
-      {!past ? (
-        <Card variant="outlined">
-          <View style={{ gap: spacing.sm }}>
-            <Switch
-              testID="occurrence-cancelled"
-              label={t('admin.occurrence.cancel.this')}
-              description={t('admin.occurrence.cancel.help')}
-              value={form.cancelled}
-              onValueChange={(cancelled) => patch({ cancelled })}
-            />
-            {form.cancelled && occurrence.status !== 'cancelled' ? (
-              <Switch
-                testID="occurrence-notify"
-                label={t('admin.occurrence.cancel.notify')}
-                value={form.notify}
-                onValueChange={(notify) => patch({ notify })}
-              />
-            ) : null}
-          </View>
-        </Card>
-      ) : null}
-
       {shown.nothing ? (
         <Text variant="caption" color="textDanger" testID="occurrence-nothing">
           {t(shown.nothing)}
@@ -297,7 +441,8 @@ function OccurrenceFlow({ occurrence, now }: { occurrence: AdminOccurrence; now:
       <ScreenFooter>
         <Button
           testID="occurrence-save"
-          label={t('admin.common.save')}
+          label={t('admin.occurrence.save')}
+          trailingIcon="arrow-forward"
           size="large"
           fullWidth
           loading={save.status === 'running' && !confirming}

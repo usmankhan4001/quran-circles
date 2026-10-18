@@ -378,7 +378,7 @@
   "admin.schedule.error.effectiveFrom": "تاریخ اس طرح لکھیں: 2026-11-02۔",
   "admin.schedule.error.nothing": "کچھ نہیں بدلا۔",
   "admin.occurrence.title": "یہ تاریخ",
-  "admin.occurrence.portion.title": "اس تاریخ کا حصہ",
+  "admin.occurrence.portion.title": "حصے میں ترمیم",
   "admin.occurrence.portion.kind": "کیا پڑھا جائے گا",
   "admin.occurrence.portion.none": "مقرر نہیں",
   "admin.occurrence.portion.para": "پارہ",
@@ -558,5 +558,15 @@
   "admin.home.trendNone": "ابھی کوئی گنتی محفوظ نہیں",
   "admin.home.noLimit": "نشستوں کی کوئی حد نہیں",
   "admin.attendance.walkIn": "+5 بغیر اندراج",
-  "admin.attendance.noLimit": "نشستوں کی حد مقرر نہیں"
+  "admin.attendance.noLimit": "نشستوں کی حد مقرر نہیں",
+  "admin.occurrence.screenTitle": "شیڈول اور حصے",
+  "admin.occurrence.weekly": "ہفتہ وار",
+  "admin.occurrence.upcoming": "آنے والی تاریخیں",
+  "admin.occurrence.editing": "ترمیم جاری",
+  "admin.occurrence.edit": "ترمیم",
+  "admin.occurrence.teacher": "استاد",
+  "admin.occurrence.time": "وقت",
+  "admin.occurrence.status": "اس تاریخ کی حالت",
+  "admin.occurrence.scheduled": "طے شدہ",
+  "admin.occurrence.save": "تاریخ اور حصہ محفوظ کریں"
 }

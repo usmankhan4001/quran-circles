@@ -377,7 +377,7 @@
   "admin.schedule.error.effectiveFrom": "Enter a date like 2026-11-02.",
   "admin.schedule.error.nothing": "Nothing has changed.",
   "admin.occurrence.title": "This date",
-  "admin.occurrence.portion.title": "Portion for this date",
+  "admin.occurrence.portion.title": "Portion editor",
   "admin.occurrence.portion.kind": "What will be read",
   "admin.occurrence.portion.none": "Not set",
   "admin.occurrence.portion.para": "Para",
@@ -557,5 +557,15 @@
   "admin.home.trendNone": "No counts saved yet",
   "admin.home.noLimit": "No seat limit",
   "admin.attendance.walkIn": "+5 walk-in",
-  "admin.attendance.noLimit": "No seat limit set"
+  "admin.attendance.noLimit": "No seat limit set",
+  "admin.occurrence.screenTitle": "Schedule & portions",
+  "admin.occurrence.weekly": "Weekly",
+  "admin.occurrence.upcoming": "Upcoming dates",
+  "admin.occurrence.editing": "Editing",
+  "admin.occurrence.edit": "Edit",
+  "admin.occurrence.teacher": "Ustadh",
+  "admin.occurrence.time": "Time",
+  "admin.occurrence.status": "Status of this date",
+  "admin.occurrence.scheduled": "Scheduled",
+  "admin.occurrence.save": "Save date and portion"
 }

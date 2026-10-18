@@ -109,7 +109,7 @@ describe('OccurrenceScreen', () => {
   it('asks before cancelling one date, and says whether people will be told', async () => {
     const { backend, nav, occ } = await open();
     await screen.findByTestId('occurrence-form');
-    fireEvent.click(screen.getByTestId('occurrence-cancelled'));
+    fireEvent.click(screen.getByTestId('occurrence-status-cancelled'));
     fireEvent.click(screen.getByTestId('occurrence-save'));
     expect(await screen.findByText('Registered people will be told.')).toBeTruthy();
     expect(backend.callsTo('adminOccurrences.update')).toHaveLength(0);
@@ -125,7 +125,7 @@ describe('OccurrenceScreen', () => {
   it('can cancel quietly', async () => {
     const { backend } = await open();
     await screen.findByTestId('occurrence-form');
-    fireEvent.click(screen.getByTestId('occurrence-cancelled'));
+    fireEvent.click(screen.getByTestId('occurrence-status-cancelled'));
     fireEvent.click(screen.getByTestId('occurrence-notify'));
     fireEvent.click(screen.getByTestId('occurrence-save'));
     expect(await screen.findByText('No one will be told.')).toBeTruthy();
@@ -139,7 +139,7 @@ describe('OccurrenceScreen', () => {
     const { backend } = await open();
     backend.failWith('adminOccurrences.update', 'session_cancelled');
     await screen.findByTestId('occurrence-form');
-    fireEvent.click(screen.getByTestId('occurrence-cancelled'));
+    fireEvent.click(screen.getByTestId('occurrence-status-cancelled'));
     fireEvent.click(screen.getByTestId('occurrence-save'));
     fireEvent.click(await screen.findByTestId('occurrence-cancel-confirm-confirm'));
     expect(await screen.findByText('This session has been cancelled.')).toBeTruthy();
@@ -161,7 +161,7 @@ describe('OccurrenceScreen', () => {
     const { backend } = await open({ now: new Date('2027-03-20T00:00:00Z') });
     // The past is outside the 60-day window of the first date? Not here: Feb 15 is 33 days back.
     await screen.findByTestId('occurrence-form');
-    expect(screen.queryByTestId('occurrence-cancelled')).toBeNull();
+    expect(screen.queryByTestId('occurrence-status')).toBeNull();
     typeInto('occurrence-recap', 'A good session.');
     fireEvent.click(screen.getByTestId('occurrence-save'));
     await waitFor(() =>
@@ -180,7 +180,7 @@ describe('OccurrenceScreen', () => {
       },
     );
     await screen.findByTestId('occurrence-form');
-    expect(screen.getByText('اس تاریخ کا حصہ')).toBeTruthy();
+    expect(screen.getByText('حصے میں ترمیم')).toBeTruthy();
     const recap = screen.getByTestId('occurrence-recap');
     const field = recap.tagName === 'TEXTAREA' ? recap : (recap.querySelector('textarea') ?? recap);
     expect(field.closest('[dir]')?.getAttribute('dir')).toBe('rtl');
