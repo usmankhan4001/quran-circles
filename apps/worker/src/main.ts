@@ -8,6 +8,7 @@ import { LocalDiskPosterStorage } from './posters/storage';
 import { startRuntime } from './runtime';
 import { applyWhatsAppEvents } from './whatsapp/apply';
 import { createWebhookHandler, createWebhookServer } from './whatsapp/handler';
+import { createWhatsAppLimits } from './outbox/limits';
 import { countByStatus } from './outbox/repo';
 
 /**
@@ -51,6 +52,17 @@ export async function main(env: Record<string, string | undefined> = process.env
     missing: missingPoster,
   };
 
+  // SEC-02: the per-person daily cap and the city budgets, read per message from the settings
+  // table with the environment's values as defaults (`./outbox/limits` lists them).
+  const whatsappLimits = createWhatsAppLimits(
+    { db, logger, now: () => new Date() },
+    {
+      dailyCap: config.WHATSAPP_DAILY_CAP,
+      cityMonthlyBudget: config.WHATSAPP_CITY_MONTHLY_BUDGET,
+      budgetAlertPercent: config.WHATSAPP_BUDGET_ALERT_PERCENT,
+    },
+  );
+
   const runtime = await startRuntime({
     db,
     boss,
@@ -61,6 +73,8 @@ export async function main(env: Record<string, string | undefined> = process.env
       sms: messaging.sms,
       logger,
       now: () => new Date(),
+      limits: whatsappLimits.limits,
+      afterSend: whatsappLimits.afterSend,
     },
     logger,
     now: () => new Date(),

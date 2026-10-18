@@ -26,10 +26,15 @@ export interface ProcessorDeps {
   retry?: RetryPolicy;
   random?: () => number;
   /**
-   * Wave 4 seam: supplies the daily-cap and budget figures for the gate. Wave 2 leaves it unset,
-   * so no limit is applied.
+   * The daily-cap and city-budget figures for the gate (SEC-02). The worker always supplies them
+   * (`createWhatsAppLimits` in `./limits`); left unset, as some tests do, no limit is applied.
    */
   limits?: (row: OutboxRow, ctx: RecipientContext) => Promise<GateLimits | undefined>;
+  /**
+   * Runs after a row is marked sent, with the figures the gate saw, for the city budget alert. Its
+   * failure is logged, not thrown.
+   */
+  afterSend?: (row: OutboxRow, limits: GateLimits | undefined) => void | Promise<void>;
   /** Meta language codes if they differ from `en` and `ur`. */
   languageCodes?: Partial<Record<'en' | 'ur', string>>;
 }
@@ -41,7 +46,7 @@ export type ProcessOutcome =
   | { outcome: 'dead'; errorCode: string };
 
 type Step =
-  | { kind: 'sent'; providerMessageId?: string | undefined }
+  | { kind: 'sent'; providerMessageId?: string | undefined; limits?: GateLimits | undefined }
   | { kind: 'retry'; errorCode: string; hintMs?: number | undefined }
   | { kind: 'fail'; errorCode: string };
 
@@ -79,6 +84,16 @@ export async function processClaimedRow(
       ...(step.providerMessageId ? { providerMessageId: step.providerMessageId } : {}),
     });
     log(deps, 'outbox.sent', row);
+    if (deps.afterSend) {
+      try {
+        await deps.afterSend(row, step.limits);
+      } catch (error) {
+        deps.logger.error('outbox.after_send_failed', {
+          outboxId: row.id,
+          error: error instanceof Error ? error.name : 'unknown',
+        });
+      }
+    }
     return { outcome: 'sent' };
   }
   if (step.kind === 'fail') {
@@ -173,7 +188,7 @@ async function decide(deps: ProcessorDeps, row: OutboxRow): Promise<Step> {
       }),
     );
     if (result.status === 'ok')
-      return { kind: 'sent', providerMessageId: result.providerMessageId };
+      return { kind: 'sent', providerMessageId: result.providerMessageId, limits };
     if (result.status === 'transient_failure') {
       return { kind: 'retry', errorCode: result.code, hintMs: result.retryAfterMs };
     }

@@ -1,15 +1,22 @@
 import webpush from 'web-push';
-import { z } from 'zod';
-import type { PushPayload } from '@qc/contracts';
+import {
+  WebPushSubscriptionToken,
+  isAllowedWebPushEndpoint,
+  parseWebPushToken,
+  type PushPayload,
+} from '@qc/contracts';
 import { fetchWithTimeout, parseRetryAfter, type FetchLike } from '../http';
 import { pushDataStrings, type PushProvider, type PushSendResult, type PushTarget } from './push';
 
-/** A web push device token: the browser's PushSubscription, serialised as JSON. */
-export const WebPushSubscription = z.object({
-  endpoint: z.url(),
-  keys: z.object({ p256dh: z.string().min(1), auth: z.string().min(1) }),
-});
-export type WebPushSubscription = z.infer<typeof WebPushSubscription>;
+/**
+ * A web push device token: the browser's PushSubscription, serialised as JSON. The endpoint must
+ * be https on a known push service (`isAllowedWebPushEndpoint` in `@qc/contracts`, SEC-01).
+ */
+export const WebPushSubscription = WebPushSubscriptionToken;
+export type WebPushSubscription = WebPushSubscriptionToken;
+
+/** Web push requests give up after this long; the push services answer in well under a second. */
+export const WEB_PUSH_TIMEOUT_MS = 5_000;
 
 export interface WebPushOptions {
   /** `mailto:` or https contact for the push services, required by VAPID. */
@@ -17,6 +24,7 @@ export interface WebPushOptions {
   vapidPublicKey: string;
   vapidPrivateKey: string;
   fetch: FetchLike;
+  /** Defaults to `WEB_PUSH_TIMEOUT_MS`. */
   timeoutMs?: number;
 }
 
@@ -25,16 +33,24 @@ export interface WebPushOptions {
  * library's request builder; the request itself goes through the injected fetch.
  *
  * The page receives JSON `{ title, body, data, collapseKey }` in its service worker.
+ *
+ * SSRF defence (SEC-01), on top of the API's check at registration: a token whose endpoint is not
+ * https on a known push service is refused without a request and reported as `invalid_token`, so
+ * the worker revokes the device. Redirects are never followed (`redirect: 'manual'`, and any 3xx
+ * answer revokes the device too), and each request has a short timeout.
  */
 export class WebPushProvider implements PushProvider {
   constructor(private readonly options: WebPushOptions) {}
 
   async send(target: PushTarget, payload: PushPayload): Promise<PushSendResult> {
-    let subscription: WebPushSubscription;
-    try {
-      subscription = WebPushSubscription.parse(JSON.parse(target.token));
-    } catch {
-      return { status: 'invalid_token', code: 'webpush_bad_subscription' };
+    const subscription = parseWebPushToken(target.token);
+    if (!subscription) {
+      const endpoint = endpointOf(target.token);
+      const refused = endpoint !== null && !isAllowedWebPushEndpoint(endpoint);
+      return {
+        status: 'invalid_token',
+        code: refused ? 'webpush_endpoint_refused' : 'webpush_bad_subscription',
+      };
     }
     let details;
     try {
@@ -62,6 +78,10 @@ export class WebPushProvider implements PushProvider {
     } catch {
       return { status: 'permanent_failure', code: 'webpush_bad_request' };
     }
+    // The library sends to the subscription's endpoint; check what it will actually call.
+    if (!isAllowedWebPushEndpoint(details.endpoint)) {
+      return { status: 'invalid_token', code: 'webpush_endpoint_refused' };
+    }
     let response;
     try {
       response = await fetchWithTimeout(
@@ -76,14 +96,20 @@ export class WebPushProvider implements PushProvider {
             ]),
           ),
           body: details.body as Uint8Array,
+          redirect: 'manual',
         },
-        this.options.timeoutMs,
+        this.options.timeoutMs ?? WEB_PUSH_TIMEOUT_MS,
       );
     } catch {
       return { status: 'transient_failure', code: 'network_error' };
     }
     const status = response.status;
     if (status >= 200 && status < 300) return { status: 'ok' };
+    // A push service never redirects. `redirect: 'manual'` hands the 3xx back (status 0 where the
+    // runtime makes it opaque); following it could reach any host, so the device is revoked.
+    if (status === 0 || (status >= 300 && status < 400)) {
+      return { status: 'invalid_token', code: 'webpush_redirect_refused' };
+    }
     if (status === 404 || status === 410) return { status: 'invalid_token', code: 'webpush_gone' };
     if (status === 429 || status >= 500) {
       const hint = parseRetryAfter(response.headers.get('retry-after'));
@@ -95,4 +121,18 @@ export class WebPushProvider implements PushProvider {
     }
     return { status: 'permanent_failure', code: `webpush_http_${status}` };
   }
+}
+
+/** The `endpoint` string of a token that is JSON with one, else `null` (to name the refusal). */
+function endpointOf(token: string): string | null {
+  try {
+    const json: unknown = JSON.parse(token);
+    if (typeof json === 'object' && json !== null && 'endpoint' in json) {
+      const endpoint = (json as { endpoint: unknown }).endpoint;
+      return typeof endpoint === 'string' ? endpoint : null;
+    }
+  } catch {
+    // not JSON
+  }
+  return null;
 }

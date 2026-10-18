@@ -240,6 +240,11 @@ describe('recomputing when a session changes', () => {
       status: 'failed',
       lastErrorCode: 'occurrence_cancelled',
     });
+    // Withdrawn means finished: the push text is gone, the type and ids stay (SEC-06).
+    const withdrawn = (await reminders())[0]!.payload as { push: Record<string, unknown> };
+    expect(withdrawn).toMatchObject({ channel: 'push', redacted: true });
+    expect(Object.keys(withdrawn.push)).toEqual(['data']);
+    expect(withdrawn.push.data).toMatchObject({ type: 'reminder', occurrenceId: occurrence.id });
     await h.run();
     expect(h.push.sent).toHaveLength(0);
 
@@ -254,6 +259,11 @@ describe('recomputing when a session changes', () => {
       lastErrorCode: null,
     });
     expect(await reminders()).toHaveLength(1);
+    // A revived reminder gets its full payload back, so it can be sent.
+    expect(parsePayload((await reminders())[0]!.payload)).toMatchObject({
+      channel: 'push',
+      push: { title: 'Session reminder' },
+    });
   });
 
   it('withdraws reminders when the session is unpublished or cancelled', async () => {

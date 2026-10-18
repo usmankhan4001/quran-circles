@@ -6,10 +6,10 @@ import {
   randomBytes,
 } from 'node:crypto';
 import webpush from 'web-push';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PushPayload } from '@qc/contracts';
 import { bodyObject, createFakeFetch } from '../test/fake-fetch';
-import { HttpTimeoutError } from '../http';
+import { HttpTimeoutError, type FetchLike } from '../http';
 import { ApnsPushProvider } from './apns';
 import { FcmPushProvider, GoogleServiceAccountTokenSource, type AccessTokenSource } from './fcm';
 import { PushRouter, type PushProvider } from './push';
@@ -302,7 +302,7 @@ describe('web push provider', () => {
   const ecdh = createECDH('prime256v1');
   ecdh.generateKeys();
   const subscription = {
-    endpoint: 'https://push.example.test/send/abc123',
+    endpoint: 'https://fcm.googleapis.com/fcm/send/abc123',
     keys: {
       p256dh: ecdh.getPublicKey().toString('base64url'),
       auth: randomBytes(16).toString('base64url'),
@@ -329,6 +329,8 @@ describe('web push provider', () => {
     const request = fetch.requests[0]!;
     expect(request.url).toBe(subscription.endpoint);
     expect(request.init.method).toBe('POST');
+    // SEC-01: never follow a redirect to wherever it points.
+    expect(request.init.redirect).toBe('manual');
     const headers = request.init.headers!;
     expect(headers['Content-Encoding']).toBe('aes128gcm');
     expect(headers.TTL).toBe('3600');
@@ -351,6 +353,85 @@ describe('web push provider', () => {
   ])('status %i is %s', async (status, expected) => {
     const { provider } = make(() => ({ status }));
     expect((await provider.send(target, payload)).status).toBe(expected);
+  });
+
+  it.each([0, 301, 302, 303, 307, 308])(
+    'refuses a redirect (status %i) without following it, and revokes the device',
+    async (status) => {
+      const { provider, fetch } = make(() => ({
+        status,
+        headers: { location: 'http://169.254.169.254/latest/meta-data/' },
+      }));
+      expect(await provider.send(target, payload)).toEqual({
+        status: 'invalid_token',
+        code: 'webpush_redirect_refused',
+      });
+      expect(fetch.requests.map((r) => r.url)).toEqual([subscription.endpoint]);
+    },
+  );
+
+  it.each([
+    ['an internal service', 'http://poster-renderer:8090/render'],
+    ['the API container over https', 'https://api:3000/v1/auth/code'],
+    ['the cloud metadata address', 'https://169.254.169.254/latest/meta-data/'],
+    ['a private IPv4', 'https://10.1.2.3/push'],
+    ['an IPv6 literal', 'https://[fd00::1]/push'],
+    ['plain http on a push service', 'http://fcm.googleapis.com/fcm/send/abc'],
+    ['an unknown host', 'https://push.example.test/send/abc123'],
+    ['a look-alike host', 'https://fcm.googleapis.com.attacker.example/x'],
+    ['a non-default port', 'https://fcm.googleapis.com:8080/fcm/send/abc'],
+  ])('refuses an endpoint on %s without any request, and revokes the device', async (_n, url) => {
+    const { provider, fetch } = make(() => ({ status: 201 }));
+    const result = await provider.send(
+      { kind: 'webpush', token: JSON.stringify({ ...subscription, endpoint: url }) },
+      payload,
+    );
+    expect(result).toEqual({ status: 'invalid_token', code: 'webpush_endpoint_refused' });
+    expect(fetch.requests).toHaveLength(0);
+  });
+
+  it.each([
+    'https://updates.push.services.mozilla.com/wpush/v2/abc',
+    'https://wns2-bl2p.notify.windows.com/w/?token=abc',
+    'https://web.push.apple.com/QGx-abc',
+  ])('sends to the push service at %s', async (url) => {
+    const { provider, fetch } = make(() => ({ status: 201 }));
+    const result = await provider.send(
+      { kind: 'webpush', token: JSON.stringify({ ...subscription, endpoint: url }) },
+      payload,
+    );
+    expect(result).toEqual({ status: 'ok' });
+    expect(fetch.requests.map((r) => r.url)).toEqual([url]);
+  });
+
+  describe('timeout', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('gives up after five seconds by default, as a transient failure', async () => {
+      vi.useFakeTimers();
+      const hanging: FetchLike = (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')));
+        });
+      const provider = new WebPushProvider({
+        subject: 'mailto:ops@example.org',
+        vapidPublicKey: vapid.publicKey,
+        vapidPrivateKey: vapid.privateKey,
+        fetch: hanging,
+      });
+      const pending = provider.send(target, payload);
+      await vi.advanceTimersByTimeAsync(4_999);
+      let settled = false;
+      void pending.then(() => {
+        settled = true;
+      });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await pending).toEqual({ status: 'transient_failure', code: 'network_error' });
+    });
   });
 
   it('rejects a token that is not a subscription without calling the network', async () => {

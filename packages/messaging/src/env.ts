@@ -8,6 +8,7 @@ import { WebPushProvider } from './providers/webpush';
 import type { WhatsAppProvider } from './providers/whatsapp';
 import { WhatsAppCloudClient } from './providers/whatsapp-cloud';
 import {
+  DEFAULT_CODE_VALIDITY_MINUTES,
   ProviderCodeSender,
   TestCodeSender,
   type CodeDeliveryReport,
@@ -35,7 +36,17 @@ export const MessagingEnv = z.object({
   CODE_DELIVERY_MODE: z.enum(['test', 'live']).optional(),
   /** Try SMS when WhatsApp cannot deliver a code. Default true. */
   CODE_SMS_FALLBACK: z.stringbool().default(true),
-  CODE_VALIDITY_MINUTES: z.coerce.number().int().min(1).max(60).default(10),
+  /**
+   * Minutes a sign-in code works, as the code message states it. Must equal the API's code
+   * lifetime (`otp.ttlSeconds` in `apps/api/src/auth/config.ts`, 5 minutes), so the default is
+   * `DEFAULT_CODE_VALIDITY_MINUTES` (SEC-21).
+   */
+  CODE_VALIDITY_MINUTES: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(60)
+    .default(DEFAULT_CODE_VALIDITY_MINUTES),
 
   WHATSAPP_PHONE_NUMBER_ID: optional,
   WHATSAPP_ACCESS_TOKEN: optional,

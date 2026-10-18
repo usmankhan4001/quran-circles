@@ -6,6 +6,7 @@ import { POSTER_ENV_NAMES } from './config';
 import type { Clock, Db } from './db';
 import { createDispatcher, type SendJob, type SendQueue } from './outbox/dispatcher';
 import { processJob, type ProcessorDeps } from './outbox/processor';
+import { redactFinishedPayloads } from './outbox/repo';
 import { runOccurrenceTopUp } from './occurrences/top-up';
 import { runMorningAyah, type AyahJobSummary } from './ayah/morning';
 import { runAuthPurge } from './auth/purge';
@@ -113,7 +114,8 @@ export interface Runtime {
  * - a cron job queues the morning ayah push once a day (06:30 Pakistan time). A missed run is made
  *   up once on start, but only before noon Pakistan time; rows are idempotent per person and date;
  * - a cron job purges spent sign-in codes and expired or revoked sessions once a day (03:00 Pakistan
- *   time). A missed run is made up once on start; a second run deletes nothing more;
+ *   time), and redacts any finished outbox payload still holding personal fields (SEC-06). A missed
+ *   run is made up once on start; a second run deletes nothing more;
  * - `poster-render` workers render the posters the API queued (`renderPosters`): retry 3 with
  *   backoff for retryable renderer failures and for database or storage errors, expire after 120 s,
  *   then `poster-render-dead`, which fails the rows still queued so a person can regenerate.
@@ -304,6 +306,10 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     async () => {
       // `runAuthPurge` logs its one counts-only line per run.
       await authPurge();
+      // The same daily slot catches outbox payloads that finished without being redacted (rows
+      // finished before SEC-06, or by another path): counts only.
+      const redacted = await redactFinishedPayloads(options.db);
+      logger.info('outbox.payloads_redacted', { rows: redacted });
     },
   );
   if (options.scheduleAuthPurge ?? true) {

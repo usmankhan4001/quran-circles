@@ -13,6 +13,8 @@ export interface HttpRequestInit {
   headers?: Record<string, string>;
   body?: string | Uint8Array;
   signal?: AbortSignal;
+  /** `manual` hands a 3xx back instead of following it (web push, SEC-01). */
+  redirect?: 'follow' | 'manual' | 'error';
 }
 
 export type FetchLike = (url: string, init?: HttpRequestInit) => Promise<HttpResponseLike>;

@@ -14,6 +14,12 @@ import { buildWhatsAppRequest, type WhatsAppProvider } from './providers/whatsap
  * Codes never go through `message_outbox`: the outbox payload is stored, and a code is stored only
  * as a hash. The sender reports spend through `onDelivery`, which carries no phone number or code.
  */
+/**
+ * How long a sign-in code works, in minutes: the API's code lifetime (`otp.ttlSeconds`, 5 minutes,
+ * in `apps/api/src/auth/config.ts`). The message states it, so the two must agree (SEC-21).
+ */
+export const DEFAULT_CODE_VALIDITY_MINUTES = 5;
+
 export interface CodeSendRequest {
   /** E.164, for example +923000000001. */
   phone: string;
@@ -21,7 +27,10 @@ export interface CodeSendRequest {
   code: string;
   locale: Locale;
   channel: OtpChannel;
-  /** How long the code works, shown in the SMS text. Defaults to the sender's setting. */
+  /**
+   * How long the code works, shown in the message. Pass the real lifetime when the caller knows
+   * it; otherwise the sender's setting applies.
+   */
   minutes?: number;
 }
 
@@ -58,7 +67,7 @@ export interface ProviderCodeSenderOptions {
   sms?: SmsProvider;
   /** Send by SMS when WhatsApp fails or cannot reach the number. Defaults to true. */
   smsFallback?: boolean;
-  /** Minutes a code works, for the SMS wording. Defaults to 10. */
+  /** Minutes a code works, for the message wording. Defaults to `DEFAULT_CODE_VALIDITY_MINUTES`. */
   codeValidityMinutes?: number;
   languageCodes?: Partial<Record<Locale, string>>;
   logger?: Logger;
@@ -75,7 +84,8 @@ export class ProviderCodeSender implements CodeSender {
 
   async send(request: CodeSendRequest): Promise<CodeSendResult> {
     const log = this.options.logger ?? silentLogger;
-    const minutes = request.minutes ?? this.options.codeValidityMinutes ?? 10;
+    const minutes =
+      request.minutes ?? this.options.codeValidityMinutes ?? DEFAULT_CODE_VALIDITY_MINUTES;
     const report = (channel: OtpChannel, outcome: 'sent' | 'failed', fellBack: boolean): void =>
       this.options.onDelivery?.({ channel, outcome, fellBack, costCategory: 'authentication' });
 

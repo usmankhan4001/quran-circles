@@ -1,4 +1,4 @@
-import { and, eq, inArray, lte, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lte, ne, sql, type SQL } from 'drizzle-orm';
 import type { OutboxRowDraft } from '@qc/messaging';
 import { tables, type Db, type OutboxRow } from '../db';
 
@@ -14,6 +14,34 @@ import { tables, type Db, type OutboxRow } from '../db';
  * `nextAttemptAt` doubles as the lease while a row is `sending`: if the worker dies, the row is
  * reclaimed once the lease passes.
  */
+
+/**
+ * What a finished row keeps of its payload (SEC-06). Names (`variables.name`,
+ * `variables.inviterName`), session and venue wording, links and push text are personal or
+ * re-identifying and no longer needed once a row is `sent`, `delivered`, `failed` or `dead`: a
+ * finished row is never sent again (a withdrawn reminder that comes back gets a fresh payload).
+ * Kept for the audit trail and the console: the channel, the template key and locale of a template
+ * message, and a push's `data` (its type, deep link and ids), plus `redacted: true`. A payload that
+ * is already redacted or empty stays as it is, so applying this twice changes nothing.
+ */
+export function redactedPayload(): SQL {
+  const p = tables.messageOutbox.payload;
+  return sql`CASE
+    WHEN ${p}->'redacted' IS NOT NULL OR ${p} = '{}'::jsonb THEN ${p}
+    WHEN ${p}->>'channel' = 'push' THEN jsonb_build_object(
+      'channel', 'push',
+      'push', jsonb_build_object('data', COALESCE(${p}->'push'->'data', '{}'::jsonb)),
+      'redacted', true)
+    ELSE jsonb_strip_nulls(jsonb_build_object(
+      'channel', ${p}->'channel',
+      'template', ${p}->'template',
+      'locale', ${p}->'locale',
+      'redacted', true))
+  END`;
+}
+
+/** The statuses after which a row is never sent again. */
+export const FINISHED_STATUSES = ['sent', 'delivered', 'failed', 'dead'] as const;
 
 export interface ClaimOptions {
   now: Date;
@@ -66,7 +94,12 @@ export async function reclaimStale(
   const stale = and(eq(t.status, 'sending'), lte(t.nextAttemptAt, opts.now));
   const dead = await db
     .update(t)
-    .set({ status: 'dead', lastErrorCode: 'worker_lost', recipientPhoneE164: null })
+    .set({
+      status: 'dead',
+      lastErrorCode: 'worker_lost',
+      recipientPhoneE164: null,
+      payload: redactedPayload(),
+    })
     .where(and(stale, sql`${t.attempts} >= ${opts.maxAttempts}`))
     .returning({ id: t.id });
   const requeued = await db
@@ -83,8 +116,9 @@ export async function getRow(db: Db, id: string): Promise<OutboxRow | undefined>
 }
 
 /**
- * The send succeeded. Clears the recipient phone and stores the provider's message id in its own
- * column, where delivery reports without our callback data look the row up.
+ * The send succeeded. Clears the recipient phone, reduces the payload to what the audit trail needs
+ * (`redactedPayload`) and stores the provider's message id in its own column, where delivery
+ * reports without our callback data look the row up.
  */
 export async function markSent(
   db: Db,
@@ -99,6 +133,7 @@ export async function markSent(
       status: sql`CASE WHEN ${t.status} = 'sending' THEN 'sent' ELSE ${t.status} END`,
       sentAt: sql`COALESCE(${t.sentAt}, ${opts.now.toISOString()}::timestamptz)`,
       recipientPhoneE164: null,
+      payload: redactedPayload(),
       lastErrorCode: null,
       ...(opts.providerMessageId ? { providerMessageId: opts.providerMessageId } : {}),
     })
@@ -125,7 +160,12 @@ export async function markFailed(db: Db, id: string, errorCode: string): Promise
   const t = tables.messageOutbox;
   const rows = await db
     .update(t)
-    .set({ status: 'failed', lastErrorCode: errorCode, recipientPhoneE164: null })
+    .set({
+      status: 'failed',
+      lastErrorCode: errorCode,
+      recipientPhoneE164: null,
+      payload: redactedPayload(),
+    })
     .where(and(eq(t.id, id), eq(t.status, 'sending')))
     .returning({ id: t.id });
   return rows.length > 0;
@@ -136,7 +176,12 @@ export async function markDead(db: Db, id: string, errorCode: string): Promise<b
   const t = tables.messageOutbox;
   const rows = await db
     .update(t)
-    .set({ status: 'dead', lastErrorCode: errorCode, recipientPhoneE164: null })
+    .set({
+      status: 'dead',
+      lastErrorCode: errorCode,
+      recipientPhoneE164: null,
+      payload: redactedPayload(),
+    })
     .where(and(eq(t.id, id), eq(t.status, 'sending')))
     .returning({ id: t.id });
   return rows.length > 0;
@@ -174,6 +219,7 @@ export async function applyDeliveryReport(
         sentAt: sql`COALESCE(${t.sentAt}, ${report.at.toISOString()}::timestamptz)`,
         lastErrorCode: null,
         recipientPhoneE164: null,
+        payload: redactedPayload(),
       })
       .where(and(target, sql`${t.status} <> 'delivered'`))
       .returning({ id: t.id });
@@ -196,6 +242,7 @@ export async function applyDeliveryReport(
       status: 'failed',
       lastErrorCode: report.errorCode ?? 'wa_failed',
       recipientPhoneE164: null,
+      payload: redactedPayload(),
     })
     .where(and(target, inArray(t.status, ['sending', 'sent'])))
     .returning({ id: t.id });
@@ -210,4 +257,38 @@ export async function countByStatus(db: Db): Promise<Record<string, number>> {
     .from(t)
     .groupBy(t.status);
   return Object.fromEntries(rows.map((r) => [r.status, r.count]));
+}
+
+/**
+ * Redacts the payloads of finished rows that still hold the full one (SEC-06): rows finished
+ * before redaction existed, and rows another path finished. Runs in batches; returns how many rows
+ * changed. Idempotent.
+ */
+export async function redactFinishedPayloads(
+  db: Db,
+  opts: { batchSize?: number } = {},
+): Promise<number> {
+  const t = tables.messageOutbox;
+  const batchSize = opts.batchSize ?? 1000;
+  let total = 0;
+  for (;;) {
+    const due = db
+      .select({ id: t.id })
+      .from(t)
+      .where(
+        and(
+          inArray(t.status, [...FINISHED_STATUSES]),
+          isNull(sql`${t.payload}->'redacted'`),
+          ne(t.payload, sql`'{}'::jsonb`),
+        ),
+      )
+      .limit(batchSize);
+    const rows = await db
+      .update(t)
+      .set({ payload: redactedPayload() })
+      .where(and(inArray(t.id, due), inArray(t.status, [...FINISHED_STATUSES])))
+      .returning({ id: t.id });
+    total += rows.length;
+    if (rows.length < batchSize) return total;
+  }
 }

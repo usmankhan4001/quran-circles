@@ -236,13 +236,96 @@ export const Device = z.object({
 });
 export type Device = z.infer<typeof Device>;
 
-/** Registering the same token again just refreshes it. The token is never returned. */
-export const DeviceRegister = z.object({
-  platform: DevicePlatform,
-  provider: PushProvider,
-  token: z.string().min(8).max(4096),
-  locale: Locale,
+/**
+ * Web push services the worker may send to (SEC-01). A web push token is the browser's
+ * `PushSubscription` as JSON, and the worker POSTs to its `endpoint`, so an endpoint anywhere
+ * else would let a person make the worker call internal or arbitrary hosts. Exact hosts first,
+ * then suffixes, which need at least one label in front (`<x>.notify.windows.com`).
+ */
+export const WEB_PUSH_HOSTS = [
+  'fcm.googleapis.com',
+  'updates.push.services.mozilla.com',
+  'web.push.apple.com',
+] as const;
+export const WEB_PUSH_HOST_SUFFIXES = [
+  '.push.services.mozilla.com',
+  '.notify.windows.com',
+  '.push.apple.com',
+] as const;
+
+const HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * Whether `endpoint` is an `https:` URL on a known push service: default port, no user name or
+ * password, a host name (never an IP literal) that is on `WEB_PUSH_HOSTS` or ends with one of
+ * `WEB_PUSH_HOST_SUFFIXES`. The API checks it at registration and the worker again before sending.
+ */
+export function isAllowedWebPushEndpoint(endpoint: string): boolean {
+  if (endpoint.length > 2048) return false;
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:' || url.username !== '' || url.password !== '') return false;
+  if (url.port !== '' && url.port !== '443') return false;
+  const host = url.hostname;
+  // No IP literals: IPv6 keeps its brackets, and IPv4 (the URL parser normalises forms such as
+  // `0x7f.1`) ends in an all-numeric label.
+  if (host.startsWith('[')) return false;
+  const labels = host.split('.');
+  if (!labels.every((label) => HOST_LABEL.test(label))) return false;
+  if (/^[0-9]+$/.test(labels.at(-1) ?? '')) return false;
+  if ((WEB_PUSH_HOSTS as readonly string[]).includes(host)) return true;
+  return WEB_PUSH_HOST_SUFFIXES.some(
+    (suffix) => host.endsWith(suffix) && host.length > suffix.length,
+  );
+}
+
+/** A web push device token: the browser's `PushSubscription.toJSON()`, serialised as JSON. */
+export const WebPushSubscriptionToken = z.object({
+  endpoint: z.string().refine(isAllowedWebPushEndpoint, 'not an allowed web push endpoint'),
+  keys: z.object({
+    p256dh: z.string().min(1).max(256),
+    auth: z.string().min(1).max(256),
+  }),
 });
+export type WebPushSubscriptionToken = z.infer<typeof WebPushSubscriptionToken>;
+
+/** The subscription inside a web push token, or `null` when it is not JSON or not allowed. */
+export function parseWebPushToken(token: string): WebPushSubscriptionToken | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(token);
+  } catch {
+    return null;
+  }
+  const parsed = WebPushSubscriptionToken.safeParse(json);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * Registering the same token again just refreshes it. The token is never returned. A `webpush`
+ * token must be a subscription whose endpoint passes `isAllowedWebPushEndpoint` (issue on
+ * `token`, code `custom`, so the API answers `validation_failed`).
+ */
+export const DeviceRegister = z
+  .object({
+    platform: DevicePlatform,
+    provider: PushProvider,
+    token: z.string().min(8).max(4096),
+    locale: Locale,
+  })
+  .superRefine((value, ctx) => {
+    if (value.provider === 'webpush' && parseWebPushToken(value.token) === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['token'],
+        message: 'web push token must be a subscription on an allowed push service',
+      });
+    }
+  });
 
 // Bookmarks and reading position
 

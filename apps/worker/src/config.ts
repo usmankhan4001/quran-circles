@@ -2,6 +2,11 @@ import path from 'node:path';
 import { z } from 'zod';
 import { DEFAULT_OCCURRENCE_HORIZON_DAYS } from '@qc/db';
 import { MessagingEnv } from '@qc/messaging';
+import {
+  DEFAULT_WHATSAPP_BUDGET_ALERT_PERCENT,
+  DEFAULT_WHATSAPP_CITY_MONTHLY_BUDGET,
+  DEFAULT_WHATSAPP_DAILY_CAP,
+} from './outbox/limits';
 
 const optional = z.string().trim().min(1).optional();
 
@@ -32,6 +37,30 @@ export const WorkerEnv = MessagingEnv.extend({
   POSTER_STORAGE_DIR: optional,
   /** Poster jobs handled at once on this node. */
   WORKER_POSTER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+  /**
+   * WhatsApp template messages one person may get in a Pakistan day (SEC-02), when the console's
+   * setting `whatsapp_daily_cap_per_person` is not stored. Default 1, the product rule. Same range
+   * as the setting (0 to 5); 0 sends no WhatsApp at all.
+   */
+  WHATSAPP_DAILY_CAP: z.coerce.number().int().min(0).max(5).default(DEFAULT_WHATSAPP_DAILY_CAP),
+  /**
+   * Paid WhatsApp template messages one city may send in a Pakistan calendar month (SEC-02), when
+   * the setting `whatsapp_city_monthly_budget` gives none for the city. Counted in messages, not
+   * money, because Meta's per-message prices are not confirmed. Default 3000.
+   */
+  WHATSAPP_CITY_MONTHLY_BUDGET: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(10_000_000)
+    .default(DEFAULT_WHATSAPP_CITY_MONTHLY_BUDGET),
+  /** The share of a city's budget, in percent, at which `whatsapp.city_budget_near` is logged. */
+  WHATSAPP_BUDGET_ALERT_PERCENT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(DEFAULT_WHATSAPP_BUDGET_ALERT_PERCENT),
 });
 export type WorkerEnv = z.infer<typeof WorkerEnv>;
 

@@ -1,7 +1,7 @@
 import { generateKeyPairSync } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createFakeFetch } from './test/fake-fetch';
-import { MessagingConfigError, createMessaging } from './env';
+import { MessagingConfigError, MessagingEnv, createMessaging } from './env';
 
 const ok = () => createFakeFetch(() => ({ status: 200, body: { messages: [{ id: 'wamid.1' }] } }));
 const live = {
@@ -88,6 +88,11 @@ describe('createMessaging', () => {
       expect(error).toBeInstanceOf(MessagingConfigError);
       expect((error as Error).message).not.toContain(secret);
     }
+  });
+
+  it('defaults the stated code validity to the API code lifetime of 5 minutes (SEC-21)', () => {
+    expect(MessagingEnv.parse({}).CODE_VALIDITY_MINUTES).toBe(5);
+    expect(MessagingEnv.parse({ CODE_VALIDITY_MINUTES: '7' }).CODE_VALIDITY_MINUTES).toBe(7);
   });
 
   it('names invalid variables but not their values', () => {

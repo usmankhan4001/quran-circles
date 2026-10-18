@@ -26,6 +26,37 @@ describe('worker configuration', () => {
     }
   });
 
+  it('reads the WhatsApp limits, defaulting to one a day, 3000 a city a month and 80 %', () => {
+    expect(parseWorkerEnv(base)).toMatchObject({
+      WHATSAPP_DAILY_CAP: 1,
+      WHATSAPP_CITY_MONTHLY_BUDGET: 3000,
+      WHATSAPP_BUDGET_ALERT_PERCENT: 80,
+    });
+    expect(
+      parseWorkerEnv({
+        ...base,
+        WHATSAPP_DAILY_CAP: '0',
+        WHATSAPP_CITY_MONTHLY_BUDGET: '500',
+        WHATSAPP_BUDGET_ALERT_PERCENT: '90',
+      }),
+    ).toMatchObject({
+      WHATSAPP_DAILY_CAP: 0,
+      WHATSAPP_CITY_MONTHLY_BUDGET: 500,
+      WHATSAPP_BUDGET_ALERT_PERCENT: 90,
+    });
+    for (const [name, bad] of [
+      ['WHATSAPP_DAILY_CAP', '6'],
+      ['WHATSAPP_DAILY_CAP', '-1'],
+      ['WHATSAPP_DAILY_CAP', 'unlimited'],
+      ['WHATSAPP_CITY_MONTHLY_BUDGET', '-5'],
+      ['WHATSAPP_CITY_MONTHLY_BUDGET', '1.5'],
+      ['WHATSAPP_BUDGET_ALERT_PERCENT', '0'],
+      ['WHATSAPP_BUDGET_ALERT_PERCENT', '101'],
+    ] as const) {
+      expect(() => parseWorkerEnv({ ...base, [name]: bad })).toThrow(new RegExp(name));
+    }
+  });
+
   it('requires a database', () => {
     expect(() => parseWorkerEnv({})).toThrow(WorkerConfigError);
   });

@@ -19,7 +19,12 @@ import { PUSH_TYPE_PURPOSE, TEMPLATE_PURPOSE } from './purpose';
  * 3. Order: WhatsApp only for critical templates (codes, confirmations, critical changes) or for
  *    people with no working push device.
  * 4. Push needs at least one working device.
- * 5. Limits (daily cap, city budget) are applied when the worker supplies them. Wave 4 fills them in.
+ * 5. Limits (SEC-02), applied to WhatsApp when the worker supplies them: at most the daily cap of
+ *    template messages per person per day, and a monthly budget per city. The product rule names
+ *    no exemption, so critical templates (confirmations, critical changes) are capped and budgeted
+ *    like any other; being critical only lets them skip rule 3. Sign-in codes (cost category
+ *    `authentication`) are the one exception: they skip the city budget, so a city that ran out
+ *    can still sign in, but they still count toward and are stopped by the per-person cap.
  */
 
 export interface ConsentFact {
@@ -30,7 +35,7 @@ export interface ConsentFact {
   revokedAt: Date | null;
 }
 
-/** Wave 4 seam: figures the worker reads from settings and the outbox. All optional. */
+/** Figures the worker reads from settings and the outbox (SEC-02). All optional. */
 export interface GateLimits {
   /** `whatsapp_daily_cap_per_person`. `null` or absent: no cap. */
   whatsappDailyCap?: number | null;
@@ -38,6 +43,8 @@ export interface GateLimits {
   whatsappSentToday?: number;
   /** Remaining monthly budget for the message's city, in the settings' unit. `null`: no budget. */
   cityBudgetRemaining?: number | null;
+  /** The city's whole monthly budget, for the alert as it nears the limit. Not used by the gate. */
+  cityBudget?: number | null;
   /** What this message would cost against the budget. */
   estimatedCost?: number;
 }
@@ -153,13 +160,18 @@ export function evaluateGate(input: GateInput): GateDecision {
   }
 
   const limits = input.limits;
-  if (channel === 'whatsapp' && limits && !template_.critical) {
+  if (channel === 'whatsapp' && limits) {
     const cap = limits.whatsappDailyCap;
     if (cap !== null && cap !== undefined && (limits.whatsappSentToday ?? 0) >= cap) {
       return blocked('daily_cap');
     }
     const remaining = limits.cityBudgetRemaining;
-    if (remaining !== null && remaining !== undefined && (limits.estimatedCost ?? 0) > remaining) {
+    if (
+      template_.costCategory !== 'authentication' &&
+      remaining !== null &&
+      remaining !== undefined &&
+      (limits.estimatedCost ?? 0) > remaining
+    ) {
       return blocked('city_budget');
     }
   }

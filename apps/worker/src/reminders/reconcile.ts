@@ -1,7 +1,7 @@
 import { and, eq, gt, inArray, isNull, like, lte } from 'drizzle-orm';
 import { draftPushRow, type Logger } from '@qc/messaging';
 import { tables, type Clock, type Db } from '../db';
-import { insertIfNew } from '../outbox/repo';
+import { insertIfNew, redactedPayload } from '../outbox/repo';
 import { readSettings } from '../settings';
 import {
   buildReminderPush,
@@ -338,7 +338,8 @@ export async function reconcileReminders(opts: ReconcileOptions): Promise<Reconc
     else if (o.startsAt.getTime() <= now.getTime()) code = 'expired';
     const withdrawn = await db
       .update(out)
-      .set({ status: 'failed', lastErrorCode: code })
+      // A withdrawn reminder is finished (SEC-06); if it comes back it gets a fresh payload.
+      .set({ status: 'failed', lastErrorCode: code, payload: redactedPayload() })
       .where(and(eq(out.id, row.id), eq(out.status, 'queued')))
       .returning({ id: out.id });
     if (withdrawn.length > 0) summary.withdrawn++;

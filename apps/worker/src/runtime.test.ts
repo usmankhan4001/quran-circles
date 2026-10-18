@@ -26,7 +26,7 @@ import {
 import { LocalDiskPosterStorage, type PosterStorage } from './posters/storage';
 import { createTestDb, type TestDb } from './test/db';
 import { FAKE_RENDERER_TOKEN, FakeRenderer } from './test/fake-renderer';
-import { createHarness, pushDraft, type Harness } from './test/harness';
+import { createHarness, pushDraft, whatsappDraft, type Harness } from './test/harness';
 import {
   seedAuthSession,
   seedDevice,
@@ -380,7 +380,22 @@ describe('pg-boss runtime', () => {
     expect(await rt.authPurgeNow()).toEqual({ challenges: 1, sessions: 2 });
 
     await seedOtpChallenge(test.db, { expiresAt: new Date(now - 3 * day) });
+    // A confirmation that finished before payloads were redacted (SEC-06) still names the person.
+    const old = await h.queue_(
+      whatsappDraft(
+        'registration_confirmation:old:whatsapp',
+        'registration_confirmation',
+        user.id,
+        h.clock.now(),
+      ),
+    );
+    await test.db
+      .update(tables.messageOutbox)
+      .set({ status: 'sent', sentAt: h.clock.now() })
+      .where(eq(tables.messageOutbox.id, old.id));
     const done = () => Promise.resolve(h.logger.lines.filter((l) => l.event === 'auth.purged'));
+    const redactedLines = () =>
+      Promise.resolve(h.logger.lines.filter((l) => l.event === 'outbox.payloads_redacted'));
     await boss.send(AUTH_PURGE_QUEUE, {});
     const lines = await until(done, (l) => l.length === 2);
     expect(lines.map((l) => l.fields)).toEqual([
@@ -390,6 +405,15 @@ describe('pg-boss runtime', () => {
     const sessions = await test.db.select().from(tables.authSessions);
     expect(sessions.map((s) => s.id)).toEqual([live.id]);
     expect(await test.db.select().from(tables.otpChallenges)).toHaveLength(0);
+    expect((await until(redactedLines, (l) => l.length === 1)).map((l) => l.fields)).toEqual([
+      { rows: 1 },
+    ]);
+    expect((await h.row(old.id)).payload).toEqual({
+      channel: 'whatsapp',
+      template: 'registration_confirmation',
+      locale: 'en',
+      redacted: true,
+    });
   });
 
   it('stops cleanly: no further polling after stop', async () => {

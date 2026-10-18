@@ -269,7 +269,7 @@ const rows: Row[] = [
     }),
     expected: 'no_recipient',
   },
-  // Wave 4 seam: limits
+  // Limits (SEC-02)
   {
     name: 'daily cap reached blocks a non-critical WhatsApp message',
     input: base({
@@ -292,13 +292,45 @@ const rows: Row[] = [
     expected: 'allow',
   },
   {
-    name: 'the cap does not stop a critical template',
+    name: 'the cap stops a critical template too: the product rule names no exemption',
     input: base({
       template: 'session_changed',
       consents: [consent({ purpose: 'registration_updates' })],
-      limits: { whatsappDailyCap: 1, whatsappSentToday: 5 },
+      limits: { whatsappDailyCap: 1, whatsappSentToday: 1 },
+    }),
+    expected: 'daily_cap',
+  },
+  {
+    name: 'the cap stops a registration confirmation, even with push available',
+    input: base({
+      template: 'registration_confirmation',
+      consents: [consent({ purpose: 'registration_updates' })],
+      workingPushDevices: 2,
+      limits: { whatsappDailyCap: 2, whatsappSentToday: 2 },
+    }),
+    expected: 'daily_cap',
+  },
+  {
+    name: 'a critical template under the cap and within budget is sent',
+    input: base({
+      template: 'session_changed',
+      consents: [consent({ purpose: 'registration_updates' })],
+      limits: {
+        whatsappDailyCap: 1,
+        whatsappSentToday: 0,
+        cityBudgetRemaining: 1,
+        estimatedCost: 1,
+      },
     }),
     expected: 'allow',
+  },
+  {
+    name: 'a cap of 0 stops every WhatsApp template',
+    input: base({
+      template: 'coordinator_invite',
+      limits: { whatsappDailyCap: 0, whatsappSentToday: 0 },
+    }),
+    expected: 'daily_cap',
   },
   {
     name: 'city budget exhausted',
@@ -307,6 +339,86 @@ const rows: Row[] = [
       limits: { cityBudgetRemaining: 0, estimatedCost: 1 },
     }),
     expected: 'city_budget',
+  },
+  {
+    name: 'city budget exhausted stops a critical template (a confirmation) too',
+    input: base({
+      template: 'registration_confirmation',
+      consents: [consent({ purpose: 'registration_updates' })],
+      limits: {
+        whatsappDailyCap: 5,
+        whatsappSentToday: 0,
+        cityBudgetRemaining: 0,
+        estimatedCost: 1,
+      },
+    }),
+    expected: 'city_budget',
+  },
+  {
+    name: 'city budget exhausted stops a coordinator invitation',
+    input: base({
+      template: 'coordinator_invite',
+      limits: { cityBudgetRemaining: 0, estimatedCost: 1 },
+    }),
+    expected: 'city_budget',
+  },
+  {
+    name: 'a sign-in code skips the city budget',
+    input: base({
+      template: 'auth_code',
+      limits: {
+        whatsappDailyCap: 1,
+        whatsappSentToday: 0,
+        cityBudgetRemaining: 0,
+        estimatedCost: 1,
+      },
+    }),
+    expected: 'allow',
+  },
+  {
+    name: 'a sign-in code is still stopped by the per-person daily cap',
+    input: base({
+      template: 'auth_code',
+      limits: {
+        whatsappDailyCap: 1,
+        whatsappSentToday: 1,
+        cityBudgetRemaining: 100,
+        estimatedCost: 1,
+      },
+    }),
+    expected: 'daily_cap',
+  },
+  {
+    name: 'budget left is enough for the message',
+    input: base({
+      consents: [consent()],
+      limits: { cityBudgetRemaining: 1, estimatedCost: 1 },
+    }),
+    expected: 'allow',
+  },
+  {
+    name: 'no budget configured',
+    input: base({
+      consents: [consent()],
+      limits: { cityBudgetRemaining: null, estimatedCost: 1 },
+    }),
+    expected: 'allow',
+  },
+  {
+    name: 'limits never stop push, which costs nothing',
+    input: base({
+      channel: 'push',
+      template: null,
+      pushType: 'update',
+      workingPushDevices: 1,
+      limits: {
+        whatsappDailyCap: 0,
+        whatsappSentToday: 9,
+        cityBudgetRemaining: 0,
+        estimatedCost: 1,
+      },
+    }),
+    expected: 'allow',
   },
 ];
 

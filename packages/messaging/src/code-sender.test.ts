@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CodeDeliveryError,
+  DEFAULT_CODE_VALIDITY_MINUTES,
   ProviderCodeSender,
   TestCodeSender,
   type CodeDeliveryReport,
@@ -80,7 +81,7 @@ describe('provider code sender', () => {
     expect(sms.sent).toHaveLength(1);
     expect(sms.sent[0]!.to).toBe(PHONE);
     expect(sms.sent[0]!.body).toBe(
-      `${CODE} is your Quran Circles code. It works for 10 minutes. Do not share it.`,
+      `${CODE} is your Quran Circles code. It works for 5 minutes. Do not share it.`,
     );
     expect(reports).toEqual([
       { channel: 'sms', outcome: 'sent', fellBack: true, costCategory: 'authentication' },
@@ -93,6 +94,22 @@ describe('provider code sender', () => {
     expect(sms.sent[0]!.body).toContain(CODE);
     expect(sms.sent[0]!.body).toContain('5');
     expect(sms.sent[0]!.body).toContain('قرآن حلقے');
+  });
+
+  it('states the real code lifetime by default: 5 minutes, as the API expires codes (SEC-21)', async () => {
+    expect(DEFAULT_CODE_VALIDITY_MINUTES).toBe(5);
+    const { sender, sms } = setup();
+    await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' });
+    expect(sms.sent[0]!.body).toContain('It works for 5 minutes.');
+    expect(sms.sent[0]!.body).not.toContain('10 minutes');
+  });
+
+  it('takes the validity from its setting, and the caller wins over the setting', async () => {
+    const sms = new FakeSmsProvider();
+    const sender = new ProviderCodeSender({ sms, codeValidityMinutes: 3 });
+    await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms' });
+    await sender.send({ phone: PHONE, code: CODE, locale: 'en', channel: 'sms', minutes: 4 });
+    expect(sms.sent.map((m) => /works for (\d+) minutes/.exec(m.body)?.[1])).toEqual(['3', '4']);
   });
 
   it('goes straight to SMS when the caller asks for SMS', async () => {

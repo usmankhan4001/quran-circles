@@ -13,6 +13,11 @@ import {
 } from '@qc/messaging';
 import { tables, type Db } from '../db';
 import { createDispatcher, type SendJob, type SendQueue } from '../outbox/dispatcher';
+import {
+  DEFAULT_WHATSAPP_LIMITS,
+  createWhatsAppLimits,
+  type WhatsAppLimitsConfig,
+} from '../outbox/limits';
 import { processJob, type ProcessorDeps } from '../outbox/processor';
 import { insertIfNew } from '../outbox/repo';
 
@@ -53,7 +58,14 @@ export const NO_JITTER: RetryPolicy = {
   jitterRatio: 0,
 };
 
-export function createHarness(db: Db, opts: { retry?: RetryPolicy } = {}) {
+export function createHarness(
+  db: Db,
+  opts: {
+    retry?: RetryPolicy;
+    /** Apply the WhatsApp cap and city budgets, as `main.ts` does. Off unless given. */
+    limits?: Partial<WhatsAppLimitsConfig>;
+  } = {},
+) {
   const clock = new TestClock();
   const push = new FakePushProvider();
   const whatsapp = new FakeWhatsAppProvider();
@@ -71,6 +83,14 @@ export function createHarness(db: Db, opts: { retry?: RetryPolicy } = {}) {
     retry,
     random: () => 0.5,
   };
+  if (opts.limits) {
+    const limits = createWhatsAppLimits(
+      { db, logger, now: clock.now },
+      { ...DEFAULT_WHATSAPP_LIMITS, ...opts.limits },
+    );
+    deps.limits = limits.limits;
+    deps.afterSend = limits.afterSend;
+  }
   const dispatcher = createDispatcher({ db, queue, logger, now: clock.now, retry });
   return {
     db,
