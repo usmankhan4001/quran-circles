@@ -142,7 +142,9 @@ services:
         --admin-phone "$$QC_SCOPE_ADMIN"; echo "gate5: scope exit $$?";
         pnpm --filter @qc/load load --base-url http://qc-staging-api:3000
         --worker-url http://qc-staging-worker:8081 --admin-phone "$$QC_LOAD_ADMIN";
-        echo "gate5: load exit $$?"
+        echo "gate5: load exit $$?";
+        for f in tests/load/node_modules/.cache/qc-load/*.json; do
+        echo "gate5: report $$f"; cat "$$f"; echo; done
     environment:
       QC_ALLOW_REMOTE: staging
       QC_FIXED_CODE: ${AUTH_FIXED_CODE:?set AUTH_FIXED_CODE in the env file}
