@@ -1,5 +1,5 @@
-import { StyleSheet, View } from 'react-native';
-import { Icon, Text, spacing, useTheme } from '@qc/ui';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Icon, Text, radii, spacing, useTheme } from '@qc/ui';
 import type { VenueFacilities } from '@qc/contracts';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -15,7 +15,70 @@ const styles = StyleSheet.create({
   list: { gap: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 32 },
   label: { flex: 1 },
+  chips: { flexDirection: 'row', gap: spacing.sm },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs + spacing.xxs,
+    paddingVertical: spacing.xs + spacing.xxs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
 });
+
+/**
+ * The facilities a venue has, as small grey pills with a green tick (D17), for the session
+ * page. Only what is available is shown; the venue page keeps the full checklist.
+ */
+export function FacilityChips({ facilities }: { facilities: VenueFacilities }) {
+  const { t, l } = useI18n();
+  const theme = useTheme();
+  const c = theme.colors;
+  const notes = facilities.entranceNotes ? l(facilities.entranceNotes) : null;
+  const present = FACILITY_KEYS.filter((key) => facilities[key]);
+  return (
+    <View style={styles.list} testID="facilities">
+      {present.length === 0 ? (
+        <Text variant="body" color="textSecondary">
+          {t('facilities.noneListed')}
+        </Text>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chips}
+          role="list"
+        >
+          {present.map((key) => (
+            <View
+              key={key}
+              role="listitem"
+              testID={`facility-${key}`}
+              style={[
+                styles.chip,
+                {
+                  backgroundColor: c.surfaceMuted,
+                  borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
+                },
+              ]}
+            >
+              <Icon name="check" size={16} color={c.textAccent} />
+              <Text variant="caption" color="textSecondary" strong>
+                {t(`facilities.${key}`)}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+      {notes ? (
+        <Text variant="caption" color="textSecondary" lang={notes.lang}>
+          {notes.text}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
 /**
  * The fixed facilities checklist of a venue. Each line says "Available" or "Not listed" in

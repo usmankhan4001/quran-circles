@@ -33,7 +33,8 @@ describe('SessionScreen', () => {
     const lecture = SESSIONS.lecture;
     const view = await renderScreen(<SessionScreen sessionId={lecture.id} />);
     const left = lecture.registration.capacity! - lecture.registration.seatsTaken!;
-    expect(await view.findByText(`${left} seats left`)).toBeTruthy();
+    // The seat meter says the places left above its bar (D17).
+    expect(await view.findByText(`${left} places left`)).toBeTruthy();
   });
 
   it('offers the waiting list on a full session', async () => {
@@ -87,7 +88,8 @@ describe('SessionScreen', () => {
     const view = await renderScreen(<SessionScreen sessionId={s.id} />);
     await view.findByTestId('facilities');
     expect(view.getAllByText(s.circle!.name.en).length).toBeGreaterThan(0);
-    expect(view.getByText(`Teacher: ${s.circle!.teacherName}`)).toBeTruthy();
+    // The host row names the teacher, with the circle's name under it (D17).
+    expect(view.getByText(s.circle!.teacherName!)).toBeTruthy();
     if (s.circle!.onlineLink) {
       fireEvent.click(view.getByText(en['session.online']));
       await waitFor(() => expect(view.world.opened).toEqual([s.circle!.onlineLink]));
@@ -127,8 +129,9 @@ describe('SessionScreen', () => {
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
       expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
-      expect(view.getByText(words['session.register'])).toBeTruthy();
-      expect(view.getByText(words['venue.facilities.title'])).toBeTruthy();
+      // The dark pill offers a free seat (D17), and the facilities show as pills.
+      expect(view.getByTestId('register-button').textContent).toContain(words['session.reserve']);
+      expect(view.getByTestId('facilities')).toBeTruthy();
     });
   });
 });

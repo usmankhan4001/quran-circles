@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Button,
   Card,
   Checkbox,
   Icon,
-  ListItem,
   Select,
   Text,
   TextField,
   elevation,
+  minTouchTarget,
   radii,
   spacing,
   useTheme,
@@ -38,7 +38,15 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   group: { gap: spacing.sm },
   summary: { gap: spacing.xs },
-  summaryLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  pillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: minTouchTarget + spacing.xs,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+  },
   grow: { flex: 1 },
   alert: {
     gap: spacing.sm,
@@ -56,32 +64,30 @@ const styles = StyleSheet.create({
   },
 });
 
-/** The session in a few lines inside the green top of the sheet, so the person knows what they are joining. */
-function SheetSummary({ session }: { session: Session }) {
+/** The heading and the session in one line under it (D17), so the person knows what they join. */
+function FormHeading({ session, waitlist }: { session: Session; waitlist: boolean }) {
   const { t, l, locale } = useI18n();
-  const c = useTheme().colors;
+  const title = l(session.title);
   const venue = l(session.venue.name);
   const when = session.nextOccurrence
     ? describeOccurrence(session.nextOccurrence, session.timezone, locale)
     : describeSchedule(session, t, locale);
   return (
-    <View style={styles.summary} testID="registration-summary">
-      <View style={styles.summaryLine}>
-        <Icon name="pin" size={18} color={c.textOnHero} />
-        <View style={styles.grow}>
-          <Text variant="body" color="textOnHero" lang={venue.lang}>
-            {venue.text}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.summaryLine}>
-        <Icon name="clock" size={18} color={c.textOnHero} />
-        <View style={styles.grow}>
-          <Text variant="body" color="textOnHero">
-            {when}
-          </Text>
-        </View>
-      </View>
+    <View style={styles.summary}>
+      <Text variant="title1" heading={2}>
+        {waitlist ? t('registration.waitlistHeading') : t('registration.heading')}
+      </Text>
+      <Text variant="body" color="textSecondary" testID="registration-summary">
+        <Text variant="body" color="textSecondary" lang={title.lang}>
+          {title.text}
+        </Text>
+        {' · '}
+        <Text variant="body" color="textSecondary" lang={venue.lang}>
+          {venue.text}
+        </Text>
+        {' · '}
+        {when}
+      </Text>
     </View>
   );
 }
@@ -93,7 +99,7 @@ export function RegistrationScreen({
   sessionId: string;
   occurrenceId?: string;
 }) {
-  const { t, l } = useI18n();
+  const { t } = useI18n();
   const nav = useNav();
   const auth = useAuthState();
   const session = useSession(sessionId);
@@ -110,10 +116,9 @@ export function RegistrationScreen({
 
   return (
     <ScreenFrame
-      title={session.data ? l(session.data.title).text : t('registration.title')}
+      title={t('registration.topTitle')}
       onBack={() => nav.back()}
-      sheet
-      {...(session.data ? { hero: <SheetSummary session={session.data} /> } : {})}
+      plain
       testID="registration-screen"
     >
       <QueryBoundary query={session}>
@@ -162,9 +167,24 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
 
   return (
     <View style={styles.stack} testID="registration-form">
-      <Text variant="bodyLarge">
+      <FormHeading session={session} waitlist={waitlist} />
+      <Text variant="body">
         {waitlist ? t('registration.waitlistIntro') : t('registration.intro')}
       </Text>
+
+      <Stepper
+        label={t('registration.partySize.label')}
+        helper={t('registration.partySize.help')}
+        valueText={t('registration.confirmation.party', { count: flow.form.partySize })}
+        value={flow.form.partySize}
+        min={1}
+        max={MAX_PARTY_SIZE}
+        onChange={(partySize) => flow.setForm({ partySize })}
+        decreaseLabel={t('registration.partySize.decrease')}
+        increaseLabel={t('registration.partySize.increase')}
+        locale={locale}
+        testID="registration-party"
+      />
 
       {flow.needsName ? (
         <TextField
@@ -187,15 +207,30 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
         testID="registration-city"
       />
 
-      <View>
-        <Card padding="xs">
-          <ListItem
-            title={t('registration.area.label')}
-            subtitle={area ? l(area.name).text : t('registration.area.placeholder')}
-            onPress={() => setShowAreas(true)}
-            testID="registration-area"
-          />
-        </Card>
+      <View style={styles.group}>
+        <Text variant="label">{t('registration.area.label')}</Text>
+        <Pressable
+          role="button"
+          aria-label={`${t('registration.area.label')}, ${area ? l(area.name).text : t('registration.area.placeholder')}`}
+          onPress={() => setShowAreas(true)}
+          testID="registration-area"
+          style={({ pressed }) => [
+            styles.pillRow,
+            {
+              backgroundColor: pressed ? theme.colors.border : theme.colors.surfaceMuted,
+              borderColor:
+                theme.mode === 'highContrast' ? theme.colors.borderStrong : theme.colors.border,
+            },
+          ]}
+        >
+          <Icon name="pin" size={20} color={theme.colors.textSecondary} />
+          <View style={styles.grow}>
+            <Text variant="body" color={area ? 'text' : 'textSecondary'}>
+              {area ? l(area.name).text : t('registration.area.placeholder')}
+            </Text>
+          </View>
+          <Icon name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+        </Pressable>
         {flow.problems.area ? (
           <Text variant="caption" color="textDanger" testID="registration-area-problem">
             {t(flow.problems.area)}
@@ -231,20 +266,7 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
         ) : null}
       </View>
 
-      <Stepper
-        label={t('registration.partySize.label')}
-        helper={t('registration.partySize.help')}
-        value={flow.form.partySize}
-        min={1}
-        max={MAX_PARTY_SIZE}
-        onChange={(partySize) => flow.setForm({ partySize })}
-        decreaseLabel={t('registration.partySize.decrease')}
-        increaseLabel={t('registration.partySize.increase')}
-        locale={locale}
-        testID="registration-party"
-      />
-
-      <Card>
+      <Card variant="flat">
         <Checkbox
           label={t('registration.consent.whatsapp')}
           description={t('registration.consent.help')}
@@ -282,9 +304,14 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
       ) : null}
 
       <Button
-        label={waitlist ? t('registration.submitWaitlist') : t('registration.submit')}
+        label={
+          waitlist
+            ? t('registration.submitWaitlist')
+            : t('registration.confirmSeats', { count: flow.form.partySize })
+        }
         size="large"
         fullWidth
+        trailingIcon="arrow-forward"
         loading={flow.submitting}
         onPress={() => void flow.submit()}
         testID="registration-submit"

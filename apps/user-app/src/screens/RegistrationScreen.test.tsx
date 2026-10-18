@@ -1,16 +1,9 @@
-import { fireEvent } from '@testing-library/react';
+import { fireEvent, within } from '@testing-library/react';
 import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { AREA_SADDAR, CITY_RAWALPINDI, SESSIONS } from '../test/factories';
-import {
-  MATRIX,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
 import { RegistrationScreen } from './RegistrationScreen';
 
 const en = messages.en;
@@ -149,10 +142,16 @@ describe('RegistrationScreen', () => {
       });
       await view.findByTestId('registration-form');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
       const words = locale === 'ur' ? ur : en;
+      // A plain white top with back and the title in the middle (D17), not the green header.
+      const header = view.getByTestId('screen-header');
+      expect(within(header).getByText(words['registration.topTitle'])).toBeTruthy();
+      expect(within(header).getByLabelText(words['ui.back'])).toBeTruthy();
+      expect(view.getByText(words['registration.heading'])).toBeTruthy();
       expect(view.getByText(words['registration.consent.whatsapp'])).toBeTruthy();
-      expect(view.getByText(words['registration.submit'])).toBeTruthy();
+      expect(view.getByTestId('registration-submit').textContent).toBe(
+        words['registration.confirmSeats.one'],
+      );
     });
   });
 });

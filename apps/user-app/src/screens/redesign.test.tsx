@@ -47,7 +47,7 @@ function circleRequestsIn(...cityIds: string[]) {
 }
 
 describe('Home (H4)', () => {
-  it('holds the next circle in the green header, then search, map, pictures, ayah and the app row', async () => {
+  it('holds the next circle in the green header, then search, pictures, map and ayah (D17)', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
     const header = await view.findByTestId('screen-header');
@@ -55,11 +55,8 @@ describe('Home (H4)', () => {
     expect(view.getByTestId('home-search')).toBeTruthy();
     expect(await view.findByTestId('home-map')).toBeTruthy();
     expect(view.getByTestId('home-ayah')).toBeTruthy();
-    expect(view.getByTestId('home-also')).toBeTruthy();
-    expect(view.getByTestId('home-also-quran')).toBeTruthy();
-    expect(view.getByTestId('home-also-prayer')).toBeTruthy();
-    expect(view.getByTestId('home-also-qibla')).toBeTruthy();
-    expect(view.getByTestId('home-also-updates')).toBeTruthy();
+    // The drawings end Home with the reading cards: the old "Also in the app" row is gone.
+    expect(view.queryByTestId('home-also')).toBeNull();
   });
 
   it('opens Nearby from the search field, the filter button and the map card', async () => {
@@ -119,22 +116,21 @@ describe('Home (H4)', () => {
     expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
   });
 
-  it('goes to the right place from each tile of "Also in the app"', async () => {
+  it('opens Nearby from "See all" next to the circles near you', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
-    fireEvent.click(view.getByTestId('home-also-qibla'));
-    expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
-    fireEvent.click(view.getByTestId('home-also-updates'));
-    expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
+    fireEvent.click(await view.findByTestId('home-see-all'));
+    expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
   });
 });
 
 describe('Nearby (N2)', () => {
-  it('has the search and the Map / List switch inside the green header', async () => {
+  it('has the title, the search and the List / Map switch in its white header (D17)', async () => {
     const view = await renderScreen(<NearbyScreen />, { cityId: CITY_RAWALPINDI.id });
     const header = await view.findByTestId('screen-header');
     expect(within(header).getByTestId('nearby-search')).toBeTruthy();
     expect(within(header).getByTestId('nearby-view')).toBeTruthy();
+    expect(within(header).getByRole('heading', { name: en['nearby.heading'] })).toBeTruthy();
   });
 
   it('ends the list with "Ask for a circle near you" when the flag is on, which says it is coming soon', async () => {
@@ -290,11 +286,15 @@ describe('Registration (R2)', () => {
     return { world, view };
   }
 
-  it('opens as a sheet with a close button and the session in the green top', async () => {
+  it('opens full screen with a back button, a big heading and the session under it (D17)', async () => {
     const { world, view } = await open();
     const header = view.getByTestId('screen-header');
-    expect(within(header).getByTestId('registration-summary')).toBeTruthy();
-    fireEvent.click(view.getByTestId('sheet-close'));
+    expect(within(header).getByText(en['registration.topTitle'])).toBeTruthy();
+    expect(view.getByText(en['registration.heading'])).toBeTruthy();
+    expect(view.getByTestId('registration-summary').textContent).toContain(
+      SESSIONS.taraweeh.venue.name.en,
+    );
+    fireEvent.click(view.getByTestId('screen-back'));
     expect(world.nav.last()).toEqual({ type: 'back' });
   });
 

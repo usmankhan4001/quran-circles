@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import {
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   View,
@@ -11,6 +12,8 @@ import {
 import {
   Banner,
   HeroHeader,
+  Icon,
+  radii,
   IconButton,
   Text,
   minTouchTarget,
@@ -28,6 +31,13 @@ export interface ScreenPhoto {
   seed: string;
   /** Shares the page. Leave it out to show no share button. */
   onShare?: () => void;
+  /**
+   * `dark` (D17): the picture runs under the whole header with a dark fade, and the title sits
+   * over the picture instead of on the green. The page below stays white.
+   */
+  fade?: 'dark';
+  /** A line above the title on a dark-faded picture, such as the section tag and the schedule. */
+  overline?: ReactNode;
   testID?: string;
 }
 
@@ -50,9 +60,16 @@ export interface ScreenFrameProps {
    * dark fade, round glass back and share buttons on it, and the title over its lower edge.
    */
   photo?: ScreenPhoto;
+  /**
+   * A plain white top (D17): a back button, the title in the middle, no green. For a full-screen
+   * form such as registration.
+   */
+  plain?: boolean;
   children: ReactNode;
   /** Content kept below the scrolling area, for the main action of a form. */
   footer?: ReactNode;
+  /** The footer floats on the page with no bar behind it, as the session's dark pill (D17). */
+  floatingFooter?: boolean;
   /** False when the content scrolls by itself (a long list such as the Quran reader). */
   scroll?: boolean;
   /** Leaves out the page gutter, for content that runs edge to edge. */
@@ -62,6 +79,11 @@ export interface ScreenFrameProps {
 
 /** Height of the drawn place at the top of a session or venue (S1). */
 export const PHOTO_HEIGHT = 230;
+/** The glass back pill and share circle are drawn at 32 dp, with their touch area grown to 48. */
+const GLASS_SIZE = 32;
+const GLASS_SLOP = (minTouchTarget - GLASS_SIZE) / 2;
+/** Height of the picture under a dark-faded header (D17). */
+const PHOTO_HEIGHT_DARK = 215;
 /** Until the header has been measured, the compact row shows after this much scrolling. */
 const FALLBACK_HEADER_HEIGHT = 160;
 
@@ -95,6 +117,45 @@ const styles = StyleSheet.create({
   },
   photoTitles: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.xs },
   photoBody: { marginTop: spacing.md },
+  darkHeader: { minHeight: PHOTO_HEIGHT_DARK, overflow: 'hidden', position: 'relative' },
+  darkArt: { position: 'absolute', top: 0, start: 0, end: 0 },
+  fill: { position: 'absolute', top: 0, bottom: 0, start: 0, end: 0 },
+  darkContent: {
+    flex: 1,
+    minHeight: PHOTO_HEIGHT_DARK,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg + spacing.xs,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg + spacing.xxs,
+    gap: spacing.lg,
+  },
+  darkTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  glassPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: GLASS_SIZE,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+  },
+  glassRound: {
+    width: GLASS_SIZE,
+    height: GLASS_SIZE,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  floatingFooter: { paddingHorizontal: spacing.lg + spacing.xs, paddingTop: spacing.sm },
+  darkTitles: { gap: spacing.xs + spacing.xxs },
+  plainBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: minTouchTarget + spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  plainSide: { width: minTouchTarget },
+  plainTitle: { flex: 1 },
 });
 
 /**
@@ -189,6 +250,128 @@ function PhotoHeader({
 }
 
 /**
+ * The top of a session (D17): the drawn place under the whole header with a dark fade, glass
+ * back and share buttons on it, and the overline and title over its lower edge in white.
+ */
+function DarkPhotoHeader({
+  photo,
+  title,
+  onBack,
+  actions,
+}: {
+  photo: ScreenPhoto;
+  title: string;
+  onBack?: () => void;
+  actions?: ReactNode;
+}) {
+  const theme = useTheme();
+  const { t } = useI18n();
+  const c = theme.colors;
+  const web = Platform.OS === 'web' && theme.mode !== 'highContrast';
+  // Two fades stacked: light at the top for the buttons, deep at the foot for the title. Off the
+  // web (and in high contrast) one even scrim keeps the white text readable.
+  const fade: ViewStyle = web
+    ? ({
+        backgroundImage: `linear-gradient(180deg, ${c.scrim} 0%, transparent 45%, ${c.scrim} 100%), linear-gradient(180deg, transparent 35%, ${c.scrim} 100%), linear-gradient(180deg, transparent 55%, ${c.scrim} 100%)`,
+        backgroundColor: c.scrim,
+      } as ViewStyle)
+    : { backgroundColor: c.scrim };
+  return (
+    <View testID="screen-header" style={[styles.darkHeader, { backgroundColor: c.hero }]}>
+      <View style={styles.darkArt}>
+        <VenueArt
+          seed={photo.seed}
+          height={PHOTO_HEIGHT_DARK}
+          testID={photo.testID ?? 'screen-photo'}
+        />
+      </View>
+      <View aria-hidden pointerEvents="none" style={[styles.fill, fade]} />
+      <View style={styles.darkContent}>
+        <View style={styles.darkTop}>
+          {onBack ? (
+            <Pressable
+              role="button"
+              aria-label={t('ui.back')}
+              onPress={onBack}
+              hitSlop={GLASS_SLOP}
+              testID="screen-back"
+              style={({ pressed }) => [
+                styles.glassPill,
+                { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
+              ]}
+            >
+              <Icon name="chevron-back" size={14} color={c.textOnHero} />
+              <Text variant="caption" color="textOnHero" strong>
+                {t('ui.back')}
+              </Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            {actions}
+            {photo.onShare ? (
+              <Pressable
+                role="button"
+                aria-label={t('session.share')}
+                onPress={photo.onShare}
+                hitSlop={GLASS_SLOP}
+                testID="screen-share"
+                style={({ pressed }) => [
+                  styles.glassRound,
+                  { backgroundColor: pressed ? c.heroGlassPressed : c.heroGlass },
+                ]}
+              >
+                <Icon name="share" size={16} color={c.textOnHero} />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+        <View style={styles.darkTitles}>
+          {photo.overline}
+          <Text variant="title2" color="textOnHero" heading={1}>
+            {title}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** The plain white top of a full-screen form (D17): back, the title in the middle, a spacer. */
+function PlainHeader({
+  title,
+  onBack,
+  actions,
+}: {
+  title: string;
+  onBack?: () => void;
+  actions?: ReactNode;
+}) {
+  const { t } = useI18n();
+  return (
+    <View testID="screen-header" style={styles.plainBar}>
+      <View style={styles.plainSide}>
+        {onBack ? (
+          <IconButton
+            icon="chevron-back"
+            accessibilityLabel={t('ui.back')}
+            onPress={onBack}
+            testID="screen-back"
+          />
+        ) : null}
+      </View>
+      <View style={styles.plainTitle}>
+        <Text variant="title3" align="center" heading={1} numberOfLines={2}>
+          {title}
+        </Text>
+      </View>
+      <View style={styles.plainSide}>{actions}</View>
+    </View>
+  );
+}
+
+/**
  * The frame of every screen: the green header (B), an offline note when the server cannot be
  * reached, scrolling body, and an optional bar for the main action.
  *
@@ -205,8 +388,10 @@ export function ScreenFrame({
   hero,
   sheet,
   photo,
+  plain,
   children,
   footer,
+  floatingFooter,
   scroll = true,
   flush,
   testID,
@@ -229,7 +414,16 @@ export function ScreenFrame({
       />
     ) : null;
 
-  const header = photo ? (
+  const header = plain ? (
+    <PlainHeader title={title} {...(onBack ? { onBack } : {})} {...(actions ? { actions } : {})} />
+  ) : photo?.fade === 'dark' ? (
+    <DarkPhotoHeader
+      photo={photo}
+      title={title}
+      {...(onBack ? { onBack } : {})}
+      {...(actions ? { actions } : {})}
+    />
+  ) : photo ? (
     <PhotoHeader
       photo={photo}
       title={title}
@@ -257,7 +451,7 @@ export function ScreenFrame({
     <Banner kind="offline" title={t('ui.offlineTitle')} testID="offline-banner" />
   ) : null;
   // The header scrolls with the page, except on a sheet and when the content scrolls itself.
-  const scrollsAway = scroll && !sheet;
+  const scrollsAway = scroll && !sheet && !plain;
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
@@ -279,7 +473,7 @@ export function ScreenFrame({
   return (
     <View testID={testID} {...landmark} style={[styles.root, { backgroundColor: c.background }]}>
       {/* The status bar area is green too, so the header reaches the top edge. */}
-      <View style={{ backgroundColor: c.hero, paddingTop: insets.top }}>
+      <View style={{ backgroundColor: plain ? c.background : c.hero, paddingTop: insets.top }}>
         {sheet ? (
           <View style={[styles.handle, { backgroundColor: c.heroGlassPressed }]} aria-hidden />
         ) : null}
@@ -327,7 +521,19 @@ export function ScreenFrame({
       ) : (
         <View style={styles.root}>{children}</View>
       )}
-      {footer ? (
+      {footer && floatingFooter ? (
+        <View
+          style={[
+            styles.floatingFooter,
+            {
+              backgroundColor: c.background,
+              paddingBottom: spacing.lg + spacing.xxs + insets.bottom,
+            },
+          ]}
+        >
+          {footer}
+        </View>
+      ) : footer ? (
         <View
           style={[
             styles.footer,
