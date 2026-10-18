@@ -1,0 +1,71 @@
+# Staging reverse proxy behind Dokploy (Traefik) and a Cloudflare tunnel. TLS ends at Cloudflare
+# and Traefik, so this Caddy listens on plain HTTP :80 only and publishes no host port; Dokploy
+# domains route both staging names to it. Routes are the same as the production Caddyfile.
+#
+# The api and worker are reached by network aliases (qc-staging-api, qc-staging-worker) set in
+# infra/docker-compose.staging.yml: this container also sits on Dokploy's shared network, where a
+# bare `api` could resolve to another stack's container.
+#
+# The PWA and console builds are baked into the image (infra/docker/proxy-staging.Dockerfile).
+{
+	admin 127.0.0.1:2019
+	auto_https off
+	servers {
+		# Traefik (on Dokploy's private network) sits in front; keep its X-Forwarded-* headers.
+		trusted_proxies static private_ranges
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+}
+
+(api) {
+	handle_path /api/* {
+		request_body {
+			max_size 10MB
+		}
+		reverse_proxy qc-staging-api:3000
+	}
+}
+
+(spa) {
+	handle {
+		root * /srv/www/{args[0]}
+		@assets path /assets/* /_expo/static/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/* /_expo/static/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+http://{$QC_DOMAIN} {
+	import common
+	import api
+
+	handle /webhooks/whatsapp {
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy qc-staging-worker:8081
+	}
+
+	import spa app
+}
+
+http://{$QC_CONSOLE_DOMAIN} {
+	import common
+	header X-Frame-Options "DENY"
+	import api
+	import spa console
+}

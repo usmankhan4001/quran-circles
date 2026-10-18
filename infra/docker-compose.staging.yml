@@ -1,0 +1,51 @@
+# Staging override for Dokploy (Traefik + Cloudflare tunnel in front). Used together with the
+# production file, never alone:
+#
+#   docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.staging.yml \
+#     --env-file <staging env> up -d --build
+#
+# Differences from production, all in the proxy:
+# - No host ports and no TLS: Caddy serves plain HTTP on :80 and Dokploy domains route
+#   QC_DOMAIN and QC_CONSOLE_DOMAIN to it. Cloudflare and Traefik terminate TLS.
+# - The PWA and console builds are baked into the proxy image instead of a host directory.
+# - The proxy also joins Dokploy's shared network, so it reaches the api and the worker by
+#   unique aliases (see infra/caddy/Caddyfile.staging).
+# Postgres, the poster renderer, the api and the worker stay on the internal networks exactly as
+# in production. ACME_EMAIL is still required by the production file; any value works here.
+
+services:
+  proxy:
+    image: ${QC_IMAGE_REGISTRY:-qc-staging}/proxy:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/proxy-staging.Dockerfile
+      target: proxy-staging
+      args:
+        PUBLIC_API_URL: https://${QC_DOMAIN}/api
+    ports: !reset []
+    volumes: !override
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+      - dokploy-network
+
+  api:
+    networks: !override
+      edge:
+        aliases:
+          - qc-staging-api
+      backend: {}
+      render: {}
+
+  worker:
+    networks: !override
+      edge:
+        aliases:
+          - qc-staging-worker
+      backend: {}
+      render: {}
+
+networks:
+  dokploy-network:
+    external: true
