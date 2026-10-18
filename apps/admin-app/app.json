@@ -6,8 +6,18 @@
     "version": "0.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon/icon-1024.png",
     "newArchEnabled": true,
     "plugins": ["expo-router", "expo-secure-store"],
-    "web": { "bundler": "metro", "output": "single" }
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon/adaptive-foreground.png",
+        "backgroundColor": "#ffffff"
+      }
+    }
   }
 }

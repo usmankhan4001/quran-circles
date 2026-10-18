@@ -3,6 +3,10 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## App icon from the logo (2026-10-18)
+
+- `app.json` now sets `icon` (`assets/icon/icon-1024.png`) and an Android adaptive icon (`assets/icon/adaptive-foreground.png` on white), the same logo as the user app. Open question: whether the admin app should carry a distinguishing badge so coordinators can tell the two apps apart on one phone. Store build configuration: needs the human approval in the ownership map.
+
 ## Low-end budgets, third pass (2026-10-18): Today's sessions with the early `me`
 
 - **Early Today.** `boot/earlyToday.web.ts` (imported by `entry.ts` after the Today route; native is an empty module) runs on the Today path only and calls `startEarlyToday` (`features/home/earlyToday.ts`) with `peekEarlyMe()` (new in `auth/earlyMe.ts`: the early answer's token and body without consuming it; the body is read once and shared with `takeEarlyMe`), the saved working scope and the page language. It asks only for a signed-in staff member and only when `me` checks out against the contract's `Me` schema; the scope is chosen exactly as `WorkingScopeProvider` will (`pickWorkingScope(workingScopesOf(me), saved)`), and the request is Today's own (`adminSessions.list`, the scope filter, `TODAY_LIMIT` 50) through the contract client. `TodayScreen` takes it with `takeEarlyToday(me.id, filter)`: once, only for the same person and filter and under 60 s old; any mismatch or failure drops it and Today asks as before. Nothing is stored, refreshed or written.

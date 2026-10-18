@@ -55,7 +55,7 @@ function loadWorker(
   };
   const caches = {
     open: async () => cache,
-    keys: async () => ['qc-shell-v0', 'qc-shell-v1', 'qc-shell-v2'],
+    keys: async () => ['qc-shell-v0', 'qc-shell-v1', 'qc-shell-v2', 'qc-shell-v3'],
     delete: async (key: string) => {
       deleted.push(key);
       return true;
@@ -145,7 +145,7 @@ describe('service worker', () => {
       expect.arrayContaining(['/', '/boot.js', '/manifest.webmanifest', '/icons/icon-192.png']),
     );
     await worker.waitUntilOf('activate');
-    expect(worker.deleted).toEqual(['qc-shell-v0', 'qc-shell-v1']);
+    expect(worker.deleted).toEqual(['qc-shell-v0', 'qc-shell-v1', 'qc-shell-v2']);
   });
 
   it('never touches another origin, so API calls are never saved', () => {

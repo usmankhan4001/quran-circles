@@ -9,7 +9,8 @@
  * on the device; personal data is not stored here.
  */
 // v2 drops any shell that v1 may have saved from a non-page response (SEC-23).
-const VERSION = 'qc-shell-v2';
+// v3 replaces the placeholder icons with the Quran Circles logo.
+const VERSION = 'qc-shell-v3';
 const SHELL = [
   '/',
   '/boot.js',

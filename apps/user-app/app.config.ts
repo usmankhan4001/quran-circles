@@ -19,7 +19,7 @@ const config: ExpoConfig = {
   version: '0.1.0',
   orientation: 'portrait',
   userInterfaceStyle: 'automatic',
-  icon: './public/icons/icon-512.png',
+  icon: './public/icons/icon-1024.png',
   plugins: [
     'expo-router',
     'expo-localization',
@@ -37,7 +37,12 @@ const config: ExpoConfig = {
     favicon: './public/icons/icon-192.png',
   },
   ios: { supportsTablet: true },
-  android: { adaptiveIcon: { backgroundColor: '#064e3b' } },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: './public/icons/adaptive-foreground.png',
+      backgroundColor: '#ffffff',
+    },
+  },
 };
 
 export default config;

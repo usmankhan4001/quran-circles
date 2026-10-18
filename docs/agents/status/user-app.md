@@ -3,6 +3,14 @@
 Updated: 2026-10-18
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## App icon from the logo (2026-10-18)
+
+- The placeholder icons are replaced by the Quran Circles logo (the hand with the Quran, تنظیمِ اسلامی and the wordmark), generated with every inked pixel inside each platform's safe zone. Generator and the full set (iOS, Android legacy and adaptive, PWA, favicon, store icons): project files `store-assets/`.
+- `app.config.ts`: `icon` is `public/icons/icon-1024.png` (opaque, App Store size); Android adaptive icon uses `public/icons/adaptive-foreground.png` on white (was emerald `#064e3b`, which clashed with the white logo). Store build configuration: needs the human approval in the ownership map.
+- Manifest gains a 192 maskable icon. Web icons are palette PNGs to keep the service worker's precache small (192: 10 KB, 512: 36 KB).
+- `sw.js` shell version is `qc-shell-v3` so installed copies pick up the new icons; `sw.test.ts` updated (v0 to v2 deleted, v3 kept). 27 passing.
+- Not changed: `public/index.html` (the UI redesign is editing it). Its `apple-touch-icon` still points at `icon-192.png`, which now carries the logo.
+
 ## Low-end budgets, third pass (2026-10-18): one Home render, start frame, Nearby prefetch
 
 - **Home renders once.** On a web start at Home, `app/_layout.tsx` asks `needsStartData(app, 'home')` (`boot/startQueries.ts`: config or next occurrences missing from the cache) and, only then, waits up to 0.8 s (`START_DATA_WAIT_MS`, never rejects) for the start queries before the first render, so Home draws with its data instead of a skeleton then content. With the data cached (warm start) nothing waits.
