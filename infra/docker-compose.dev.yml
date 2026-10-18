@@ -8,8 +8,9 @@ services:
       POSTGRES_USER: qc
       POSTGRES_PASSWORD: qc
       POSTGRES_DB: qc
+    # Loopback only (SEC-18): reachable from this machine, not from the network it is on.
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - qc-pgdata:/var/lib/postgresql/data
     healthcheck:

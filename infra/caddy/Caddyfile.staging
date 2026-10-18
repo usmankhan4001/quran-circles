@@ -8,6 +8,10 @@
 # bare `api` could resolve to another stack's container.
 #
 # The PWA and console builds are baked into the image (infra/docker/proxy-staging.Dockerfile).
+#
+# Security headers and Content-Security-Policy (SEC-10) are the production ones; the reasons are
+# in infra/caddy/Caddyfile. Keep the two files' header and CSP lines identical (staging only adds
+# X-Robots-Tag and has no includeSubDomains on HSTS), so staging tests what production sends.
 {
 	admin 127.0.0.1:2019
 	auto_https off
@@ -23,14 +27,19 @@
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		X-Frame-Options "DENY"
 		X-Robots-Tag "noindex, nofollow"
 		-Server
 	}
 }
 
+(csp-data) {
+	header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+}
+
 (api) {
 	handle_path /api/* {
+		import csp-data
 		request_body {
 			max_size 10MB
 		}
@@ -52,9 +61,13 @@
 
 http://{$QC_DOMAIN} {
 	import common
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@app not path /api/* /webhooks/*
+	header @app Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.alquran.cloud https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob:; frame-src https://*.google.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	import api
 
 	handle /webhooks/whatsapp {
+		import csp-data
 		request_body {
 			max_size 1MB
 		}
@@ -66,7 +79,9 @@ http://{$QC_DOMAIN} {
 
 http://{$QC_CONSOLE_DOMAIN} {
 	import common
-	header X-Frame-Options "DENY"
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@console not path /api/*
+	header @console Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	import api
 	import spa console
 }

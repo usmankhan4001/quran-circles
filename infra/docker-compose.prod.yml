@@ -11,8 +11,15 @@
 # Networks: `edge` carries traffic from the proxy to the api and the worker and lets those two
 # reach Meta, Google and Apple. `backend` is internal (no route out). Postgres is only on
 # `backend` and publishes no port, so nothing outside this stack can reach it. `render` is internal
-# too and holds only the poster renderer and its two callers (api, worker): the renderer has no
-# route out and cannot reach Postgres, publishes no port and is never routed by Caddy.
+# too and holds only the poster renderer and its one caller, the worker: the renderer has no route
+# out and cannot reach Postgres, publishes no port and is never routed by Caddy. The api only queues
+# poster jobs through pg-boss, so it is not on `render` and has no renderer token (SEC-17).
+#
+# Database roles (SEC-12, infra/postgres/roles.sql): no service connects as the superuser `qc`.
+# On every `up`, the one-shot `db-roles` (as `qc`) creates or updates qc_migrator, qc_api and
+# qc_worker, their passwords, ownership and grants; then `migrate` runs as qc_migrator (owner of the
+# application schema), `pgboss-migrate` installs or upgrades pg-boss's schema as qc_worker (its
+# owner), and the api (qc_api) and the worker (qc_worker) start with read and write rights only.
 #
 # Poster files live in the `poster-files` volume, mounted at POSTER_STORAGE_DIR in the worker
 # (writes and deletes them) and read-only in the api (serves them). infra/backup/backup.sh
@@ -42,15 +49,29 @@ x-hardening: &hardening
 # stays unset in the container, so a provider default is never overridden by an empty string.
 x-messaging-shared: &messaging-shared
   APP_ENV: ${APP_ENV:?set APP_ENV in the env file}
-  DATABASE_URL: postgres://qc:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}@postgres:5432/qc
   PUBLIC_WEB_BASE: ${PUBLIC_WEB_BASE:?set PUBLIC_WEB_BASE in the env file}
 
-# Poster renderer client settings, the same for the api and the worker. The renderer gets the same
-# token. POSTER_STORAGE_DIR is where the poster-files volume is mounted (it exists in the image).
+# Poster renderer client settings for the worker, which calls the renderer. The renderer gets the
+# same token. POSTER_STORAGE_DIR is where the poster-files volume is mounted (it exists in the
+# image); the api sets it too, to serve the files.
 x-poster-client: &poster-client
   RENDERER_URL: http://poster-renderer:8090
   RENDERER_TOKEN: ${RENDERER_TOKEN:?set RENDERER_TOKEN in the env file}
   POSTER_STORAGE_DIR: /var/lib/qc/posters
+
+# One-shot services that run before the api and the worker on every `up`.
+x-one-shot: &one-shot
+  restart: 'no'
+  networks:
+    - backend
+  read_only: true
+  tmpfs:
+    - /tmp:size=16m
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  init: true
 
 services:
   proxy:
@@ -112,8 +133,12 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      pgboss-migrate:
+        condition: service_completed_successfully
     environment:
-      <<: [*messaging-shared, *poster-client]
+      <<: *messaging-shared
+      DATABASE_URL: postgres://qc_api:${POSTGRES_API_PASSWORD:?set POSTGRES_API_PASSWORD in the env file}@postgres:5432/qc
+      POSTER_STORAGE_DIR: /var/lib/qc/posters
       PORT: '3000'
       # Behind Caddy, which replaces X-Forwarded-For with the real client address.
       TRUST_PROXY: 'true'
@@ -138,7 +163,6 @@ services:
     networks:
       - edge
       - backend
-      - render
     <<: *hardening
     stop_grace_period: 15s
     healthcheck:
@@ -172,13 +196,20 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      pgboss-migrate:
+        condition: service_completed_successfully
     environment:
       <<: [*messaging-shared, *poster-client]
+      DATABASE_URL: postgres://qc_worker:${POSTGRES_WORKER_PASSWORD:?set POSTGRES_WORKER_PASSWORD in the env file}@postgres:5432/qc
       # Serves /healthz (internal) and /webhooks/whatsapp (routed by Caddy).
       WORKER_HTTP_PORT: '8081'
       WORKER_POLL_MS:
       WORKER_SEND_CONCURRENCY:
       OCCURRENCE_HORIZON_DAYS:
+      # WhatsApp spend limits (SEC-02); the console's settings override them.
+      WHATSAPP_DAILY_CAP:
+      WHATSAPP_CITY_MONTHLY_BUDGET:
+      WHATSAPP_BUDGET_ALERT_PERCENT:
       MESSAGING_MODE:
       CODE_DELIVERY_MODE:
       CODE_SMS_FALLBACK:
@@ -285,20 +316,70 @@ services:
           pids: 256
     logging: *logging
 
-  # One-shot: applies pending SQL migrations, then exits. `up` runs it before the api and the
-  # worker start, so a fresh server and every deploy get the current schema.
-  migrate:
-    image: ${QC_IMAGE_REGISTRY:-qc}/api:${QC_IMAGE_TAG:-local}
-    command: ['node', 'dist/migrate.mjs']
-    restart: 'no'
+  # One-shot, as the superuser `qc`: creates or updates the database roles, their passwords,
+  # ownership and grants (infra/postgres/roles.sql), then exits. Idempotent; runs on every `up`,
+  # so a new server, an existing database and a restored one all end up the same.
+  db-roles:
+    image: postgres:17.6-alpine@sha256:ef257d85f76e48da1c64832459b59fcaba1a4dac97bf5d7450c77753542eee94
+    # psql as qc runs roles.sql; ON_ERROR_STOP makes any failure stop `up`.
+    command:
+      [psql, -X, -q, -v, ON_ERROR_STOP=1, -h, postgres, -U, qc, -d, qc, -f, /etc/qc/roles.sql]
+    # The image's postgres user (uid 70); psql needs no root.
+    user: '70:70'
+    <<: *one-shot
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://qc:${POSTGRES_PASSWORD}@postgres:5432/qc
-    networks:
-      - backend
-    <<: *hardening
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+      POSTGRES_MIGRATOR_PASSWORD: ${POSTGRES_MIGRATOR_PASSWORD:?set POSTGRES_MIGRATOR_PASSWORD in the env file}
+      POSTGRES_API_PASSWORD: ${POSTGRES_API_PASSWORD:?set POSTGRES_API_PASSWORD in the env file}
+      POSTGRES_WORKER_PASSWORD: ${POSTGRES_WORKER_PASSWORD:?set POSTGRES_WORKER_PASSWORD in the env file}
+    volumes:
+      - ./postgres/roles.sql:/etc/qc/roles.sql:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128m
+    logging: *logging
+
+  # One-shot: applies pending SQL migrations as qc_migrator, then exits. `up` runs it before the
+  # api and the worker start, so a fresh server and every deploy get the current schema.
+  migrate:
+    image: ${QC_IMAGE_REGISTRY:-qc}/api:${QC_IMAGE_TAG:-local}
+    command: ['node', 'dist/migrate.mjs']
+    <<: *one-shot
+    depends_on:
+      db-roles:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgres://qc_migrator:${POSTGRES_MIGRATOR_PASSWORD:?set POSTGRES_MIGRATOR_PASSWORD in the env file}@postgres:5432/qc
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
+    logging: *logging
+
+  # One-shot: installs pg-boss's schema on a new database, or upgrades it after a pg-boss update, as
+  # qc_worker (the schema's owner), with pg-boss's own CLI (dist/pgboss.mjs in the worker image).
+  # Running it before the api and the worker means neither ever needs to change the schema at
+  # start-up; the api could not (it has no DDL rights). Worker images built before this step have
+  # no dist/pgboss.mjs; it is skipped for them, so `deploy.sh --rollback` to such a tag still works
+  # (the schema is installed by then).
+  pgboss-migrate:
+    image: ${QC_IMAGE_REGISTRY:-qc}/worker:${QC_IMAGE_TAG:-local}
+    command:
+      - sh
+      - -c
+      - if [ -f dist/pgboss.mjs ]; then exec node dist/pgboss.mjs migrate; fi; echo 'pgboss-migrate:' no dist/pgboss.mjs in this image, skipped
+    <<: *one-shot
+    depends_on:
+      db-roles:
+        condition: service_completed_successfully
+    environment:
+      PGBOSS_DATABASE_URL: postgres://qc_worker:${POSTGRES_WORKER_PASSWORD:?set POSTGRES_WORKER_PASSWORD in the env file}@postgres:5432/qc
     deploy:
       resources:
         limits:
@@ -312,9 +393,9 @@ services:
     environment:
       POSTGRES_USER: qc
       POSTGRES_DB: qc
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
       POSTGRES_INITDB_ARGS: --data-checksums
-    # No `ports:` on purpose. Backups run pg_dump inside this container (infra/backup/).
+    # No `ports:` on purpose. Backups run pg_dump inside this container (infra/backup/), as `qc`.
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:

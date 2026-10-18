@@ -35,11 +35,11 @@ Agents never receive production credentials. Nothing below goes into the reposit
 - [ ] **Server access** for the human who deploys: a non-root sudo user with SSH key login.
 - [ ] **Domain**: the public name (`QC_DOMAIN`) and the console name (`QC_CONSOLE_DOMAIN`), both with DNS A/AAAA records pointing at the VPS. Plus a staging pair (for example `staging.` and `console.staging.`).
 - [ ] **ACME contact address** (`ACME_EMAIL`) for Let's Encrypt.
-- [ ] **Second backup location**: an object store or another provider, with an rclone remote configured on the server (`QC_BACKUP_RCLONE_REMOTE`).
+- [ ] **Second backup location**: an object store or another provider, with an rclone remote configured on the server (`QC_BACKUP_RCLONE_REMOTE`). Make it **append-only** so an intruder on the server cannot erase it (SEC-19; see "Backups", "Append-only second location"): production's credentials can write but not delete, the bucket's lifecycle rules (or object lock) apply the retention, and `QC_BACKUP_REMOTE_PRUNE=0`. The staging host that runs restore tests gets separate read-only credentials.
 - [ ] **Backup key pair**: run `age-keygen -o backup-restore.agekey` on the owner's own machine. The public key (`age1...`) goes into `QC_BACKUP_AGE_RECIPIENT` on production. The private key stays offline with the owner and on the staging host only (`QC_BACKUP_AGE_IDENTITY`), never on production.
 - [ ] **Alert destination**: a webhook URL that accepts `{"text": "..."}` (for example an ntfy topic or a Slack incoming webhook) and the named human who receives it (`QC_ALERT_WEBHOOK_URL`).
 - [ ] **External uptime monitor** (any hosted checker) on `https://<QC_DOMAIN>/api/health`, alerting the same human. The on-server check cannot report the server itself going down.
-- [ ] **Secrets**, generated on the server: `POSTGRES_PASSWORD` (`openssl rand -hex 32`), `AUTH_SECRET` (`openssl rand -base64 48`), `WHATSAPP_VERIFY_TOKEN` (`openssl rand -hex 24`), `RENDERER_TOKEN` (`openssl rand -hex 32`).
+- [ ] **Secrets**, generated on the server: `POSTGRES_PASSWORD`, `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD` and `POSTGRES_WORKER_PASSWORD` (each its own `openssl rand -hex 32`), `AUTH_SECRET` (`openssl rand -base64 48`), `WHATSAPP_VERIFY_TOKEN` (`openssl rand -hex 24`), `RENDERER_TOKEN` (`openssl rand -hex 32`).
 - [ ] **Disk for poster files**: rendered posters are kept in the `poster-files` Docker volume on the VPS's own disk (decision for now; an object store can replace it later) and go into the encrypted backups. Allow for it when sizing the disk and the second backup location.
 - [ ] **Provider credentials** from the owner's accounts: WhatsApp Cloud API phone number ID, system-user access token and app secret (after Meta Business verification); FCM service account; APNs key, key ID, team ID, bundle ID; VAPID key pair (`npx web-push generate-vapid-keys`); later an SMS gateway.
 - [ ] **Recovery targets**: accept the recovery point and recovery time under "Restore", "Recovery targets", or ask for more.
@@ -94,7 +94,7 @@ QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh
 rclone ls "$(grep ^QC_BACKUP_RCLONE_REMOTE= /srv/qc/prod.env | cut -d= -f2)/daily"
 ```
 
-Then create the first national admin. `pnpm --filter @qc/db bootstrap-admin --phone <E.164> --yes` creates a pending national-admin invite for that number and prints only the invite id; the person then signs in with a code and accepts it as usual (see `packages/db/README.md`). It needs `DATABASE_URL` pointing at the production database, which publishes no port, so for now run it from a Node 22 container attached to the stack's internal network with the checkout mounted. Open item for the platform lane: bundle a `bootstrap-admin` runner into the `migrate` image so this becomes one `infra/scripts/compose.sh run` command.
+Then create the first national admin. `pnpm --filter @qc/db bootstrap-admin --phone <E.164> --yes` creates a pending national-admin invite for that number and prints only the invite id; the person then signs in with a code and accepts it as usual (see `packages/db/README.md`). It needs `DATABASE_URL` pointing at the production database as `qc_api` (it only inserts rows), which publishes no port, so for now run it from a Node 22 container attached to the stack's internal network with the checkout mounted. Open item for the platform lane: bundle a `bootstrap-admin` runner into the `migrate` image so this becomes one `infra/scripts/compose.sh run` command.
 
 Then insert the production poster templates (below, "Poster templates").
 
@@ -102,7 +102,7 @@ Then, in Meta's WhatsApp dashboard, set the callback URL to `https://<QC_DOMAIN>
 
 What `up` does: `postgres` starts and becomes healthy, `migrate` applies pending SQL migrations and exits, then `api` and `worker` start and must pass their health checks, then `proxy` (Caddy) starts and obtains certificates. `poster-renderer` starts alongside and must pass its health check too. Postgres publishes no port and sits on an internal network; only Caddy listens on the host.
 
-The poster renderer sits on its own internal network (`render`) with only the api and the worker: no published port, no route to the internet, no route to Postgres, never routed by Caddy. It needs `RENDERER_TOKEN` (the same value the api and the worker send). Rendered files go to the `poster-files` volume, which the worker writes and the api mounts read-only.
+The poster renderer sits on its own internal network (`render`) with only the worker, its one caller: no published port, no route to the internet, no route to Postgres, never routed by Caddy. The api only queues poster jobs through pg-boss, so it has neither the network nor the token (SEC-17). It needs `RENDERER_TOKEN` (the same value the worker sends). Rendered files go to the `poster-files` volume, which the worker writes and the api mounts read-only.
 
 ### Poster templates
 
@@ -150,6 +150,23 @@ QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh run --rm migrate node dist
 
 If the data is damaged, restore the `pre-deploy` backup instead (below).
 
+## Database roles
+
+No service connects as the Postgres superuser (SEC-12). `infra/postgres/roles.sql` defines the roles, and the one-shot `db-roles` service runs it as `qc` on every `up`, before the migrations:
+
+| Role          | Used by                                  | Rights                                                                                                     |
+| ------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `qc`          | `db-roles`, backups, restores, hand psql | Superuser (the image's bootstrap user)                                                                     |
+| `qc_migrator` | `migrate`, `dist/rollback.mjs`           | Owns the application schema (`public`) and the migration ledger                                            |
+| `qc_worker`   | worker, `pgboss-migrate`                 | Read and write on application tables; owns pg-boss's schema (pg-boss adds queue tables at run time)        |
+| `qc_api`      | api                                      | Read and write on application tables; sends pg-boss jobs. No DDL, no temporary tables, no migration ledger |
+
+None of them is a superuser, and none can create roles or databases. The script is idempotent and converges whatever it finds: a new database, an existing one whose objects all belong to `qc` (it hands them to `qc_migrator` and `qc_worker`), and a restored one (backups carry no owners or grants). Tables that later migrations create get the runtime grants automatically (default privileges). `qc_worker` holds `CREATE` on the database only until pg-boss is installed (pg-boss's installer runs `CREATE SCHEMA`); the next `up` takes it away.
+
+Order on `up`: `postgres` healthy, `db-roles`, then `migrate` (as `qc_migrator`) and `pgboss-migrate` (pg-boss's own CLI, as `qc_worker`: installs the schema on a new database or upgrades it after a pg-boss update), then the api and the worker. Passwords: `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD` (24+ characters, hex so they are safe in a URL); `db-roles` sets them on every run.
+
+Hand-run SQL as `qc`: `infra/scripts/compose.sh exec postgres psql -U qc -d qc`. A table created that way belongs to `qc` until the next `up` hands it to `qc_migrator`; schema changes belong in migrations anyway.
+
 ## Backups
 
 `backup.sh` runs nightly at 02:30 UTC from cron, and before every deploy.
@@ -158,11 +175,27 @@ If the data is damaged, restore the `pre-deploy` backup instead (below).
 - Poster files: the `poster-files` volume is archived with `tar` in a throwaway container (no network, read-only, the files' owner) and encrypted the same way, as a second file next to the dump.
 - Manifest: `<same name>.manifest` (plain text, counts only, never data): the exact row count of every public table, taken in the same snapshot `pg_dump` uses (so it is exact even while the app writes), and the number of files in the poster archive. `restore.sh` refuses a backup that does not match it.
 - Files: `/srv/qc/backups/daily/<project>-<UTC time>.dump.age`, `<same name>.posters.tar.age` and `<same name>.manifest`, each with a `.sha256`; Sunday copies in `weekly/`; labelled runs (`pre-deploy`, `pre-restore`) in `manual/`.
-- Retention: daily and labelled 14 days, weekly 8 weeks (`QC_BACKUP_RETENTION_DAYS`, `QC_BACKUP_WEEKLY_RETENTION_WEEKS`). The same retention is applied to the second location.
+- Retention: daily and labelled 14 days, weekly 8 weeks (`QC_BACKUP_RETENTION_DAYS`, `QC_BACKUP_WEEKLY_RETENTION_WEEKS`). The same retention is applied to the second location, by `backup.sh` or, for an append-only remote, by the bucket's lifecycle rules.
 - Second location: each new file is copied with rclone to `QC_BACKUP_RCLONE_REMOTE`.
+- Backups run as the superuser `qc` inside the postgres container and carry no owners or grants (`--no-owner --no-privileges`). After a restore, the next `up` (which `restore.sh` runs) gives the objects back to `qc_migrator` and `qc_worker` and restores the grants (`db-roles`, see "Database roles").
 - A failure exits non-zero and sends an alert. `monitoring/check.sh` also alerts when the last good backup is more than 26 hours old.
 
 Manual backup: `QC_ENV_FILE=/srv/qc/prod.env infra/backup/backup.sh manual-note` (label: a-z, 0-9, `-`).
+
+### Append-only second location (SEC-19)
+
+The production server holds the rclone credentials for the second location. With ordinary credentials, someone who takes over the server can delete every remote copy as well as the local ones. So the remote must refuse deletes from this server:
+
+- **Credentials that cannot delete.** For example a Backblaze B2 application key limited to the bucket with `listBuckets`, `listFiles` and `writeFiles` but **not** `deleteFiles`, or an S3 access key whose policy allows `s3:PutObject` and `s3:ListBucket` but not `s3:DeleteObject` or `s3:PutLifecycleConfiguration`. Versioning on, so an overwrite only adds a version.
+- **Or object lock** (S3 Object Lock in compliance mode, B2 Object Lock) with a default retention of at least the weekly retention, 8 weeks (56 days), so even the owner's own key cannot remove a copy early.
+- **Retention by the bucket**, not by the server: lifecycle rules that delete files (and old versions) under `daily/` and `manual/` after 14 days and under `weekly/` after 56 days, matching `QC_BACKUP_RETENTION_DAYS` and `QC_BACKUP_WEEKLY_RETENTION_WEEKS`. Set them in the provider's console with the owner's account, never with the server's key.
+- **`QC_BACKUP_REMOTE_PRUNE=0`** in the production env file, so `backup.sh` does not try to delete (it would fail and log a warning every night).
+- **Restore tests** on staging use separate read-only credentials (`listFiles`, `readFiles`; or `s3:GetObject`, `s3:ListBucket`).
+- Check once after setting up: from the production server, `rclone delete --dry-run` shows what it would do, then a real `rclone deletefile "$QC_BACKUP_RCLONE_REMOTE/daily/<one old file>"` must fail with a permission error.
+
+### Deleted accounts and backups
+
+Deleting an account removes or anonymises the person's data in the live database at once. Copies of it remain in the encrypted backups made before the deletion until those backups age out: at most 14 days for daily and labelled backups and 8 weeks for weekly copies, locally and in the second location (under object lock, no sooner than the lock allows). Backups are encrypted to a key the production server does not have, and they are only decrypted for a restore or the weekly restore test on staging. A restore from a backup older than a deletion brings that account back: the person must be deleted again before the stack is opened to users. Nothing records deletions today in a form that survives the restore (account deletion is not audited with an id), so this needs a deletion log kept outside the database; open item for api-core and the owner. The privacy notice must say that deleted data leaves backups within 8 weeks (owner and release lane; the text is not in this repository).
 
 ## Restore
 
@@ -225,8 +258,9 @@ These are the recovery point and recovery time as the setup stands. Nobody has a
 Edit the value in `/srv/qc/prod.env`, then `QC_ENV_FILE=/srv/qc/prod.env infra/scripts/compose.sh up -d` (only the containers whose environment changed are recreated).
 
 - `AUTH_SECRET`: everyone is signed out and signs in again.
-- `RENDERER_TOKEN`: one value for the api, the worker and the renderer; `up -d` recreates all three. Poster jobs that fail during the switch are retried by the worker.
-- `POSTGRES_PASSWORD`: change it in the database first: `infra/scripts/compose.sh exec postgres psql -U qc -d qc -c "ALTER ROLE qc PASSWORD '<new>'"`, then in the env file, then `up -d`.
+- `RENDERER_TOKEN`: one value for the worker and the renderer; `up -d` recreates both. Poster jobs that fail during the switch are retried by the worker.
+- `POSTGRES_PASSWORD` (the superuser `qc`): change it in the database first: `infra/scripts/compose.sh exec postgres psql -U qc -d qc -c "ALTER ROLE qc PASSWORD '<new>'"`, then in the env file, then `up -d`.
+- `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD`: change the value in the env file, then `up -d`. The `db-roles` step sets the new password before the services that use it are recreated.
 - WhatsApp, FCM, APNs, VAPID and SMS credentials: create the new credential in the provider's console, update the env file, `up -d`, then revoke the old one. A new VAPID key pair invalidates existing web push subscriptions.
 - Backup key: create a new age key pair, update `QC_BACKUP_AGE_RECIPIENT`. Keep the old private key until every backup made with it has aged out.
 

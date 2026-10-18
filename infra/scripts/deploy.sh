@@ -9,8 +9,9 @@
 #   2. Images <QC_IMAGE_REGISTRY>/api:<tag>, /worker:<tag> and /poster-renderer:<tag>: reused if
 #      present, pulled when QC_DEPLOY_PULL=1, otherwise built here from the checkout.
 #   3. Encrypted pre-deploy backup (infra/backup/backup.sh pre-deploy).
-#   4. `compose up -d --wait`: the migrate service applies pending migrations, then the api, the
-#      worker and the poster renderer restart on the new images and must report healthy.
+#   4. `compose up -d --wait`: db-roles brings the database roles and grants up to date, migrate
+#      applies pending migrations and pgboss-migrate pg-boss's, then the api, the worker and the
+#      poster renderer restart on the new images and must report healthy.
 #   5. The public health URL (https://<QC_DOMAIN>/api/health) must answer.
 #   On failure in 4 or 5 the previous images are started again and an alert is raised. Database
 #   migrations are NOT reverted automatically; see "Roll back" in infra/README.md.

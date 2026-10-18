@@ -1,13 +1,67 @@
-# Branch protection should require a code owner review. Paths below are the sensitive areas that
-# need a human approval; everything else is reviewed by reviewer agents plus a human spot check.
-# See docs/engineering/branches-and-review.md.
+# Code owners. Mirrors docs/engineering/ownership.md, "Human approval needed for": every path
+# below needs a human approval, and branch protection should require a code owner review (see
+# docs/engineering/branches-and-review.md). Paths not listed are reviewed by reviewer agents plus a
+# human spot check. Change this file together with ownership.md.
+#
+# GitHub uses the LAST matching line, so keep broad paths above narrower ones. There is one human
+# owner today; when lanes get human reviewers, replace the owner per section.
 
-/packages/contracts/        @usmankhan4001
-/packages/db/               @usmankhan4001
-/packages/messaging/        @usmankhan4001
-/apps/api/src/auth/         @usmankhan4001
-/apps/api/src/modules/auth/ @usmankhan4001
-/apps/worker/               @usmankhan4001
-/tools/migration/           @usmankhan4001
-/infra/                     @usmankhan4001
-/.github/                  @usmankhan4001
+# platform (WP0, WP10): all of it.
+/infra/                                       @usmankhan4001
+/.github/                                     @usmankhan4001
+/package.json                                 @usmankhan4001
+/pnpm-workspace.yaml                          @usmankhan4001
+/tsconfig.base.json                           @usmankhan4001
+/eslint.config.js                             @usmankhan4001
+/.prettierrc.json                             @usmankhan4001
+/.env.example                                 @usmankhan4001
+# Agent rules (CLAUDE.md) decide what every lane may do.
+/CLAUDE.md                                    @usmankhan4001
+
+# contracts (WP1): all of it, including migrations.
+/packages/contracts/                          @usmankhan4001
+/packages/db/                                 @usmankhan4001
+/docs/engineering/i18n-keys.md                @usmankhan4001
+
+# api-core (WP2): sensitive modules. Account deletion (me), personal data and exports
+# (registrations), bulk import, role assignment and anything returning phone numbers.
+/apps/api/src/modules/me/                     @usmankhan4001
+/apps/api/src/modules/registrations/          @usmankhan4001
+/apps/api/src/modules/import/                 @usmankhan4001
+/apps/api/src/modules/roles/                  @usmankhan4001
+/apps/api/src/modules/updates/                @usmankhan4001
+
+# auth-scopes (WP3): all of it.
+/apps/api/src/auth/                           @usmankhan4001
+/apps/api/src/modules/auth/                   @usmankhan4001
+
+# messaging (WP4, WP14): all of it (WhatsApp, push, the worker).
+/apps/worker/                                 @usmankhan4001
+/packages/messaging/                          @usmankhan4001
+
+# user-app and admin-app: store build configuration.
+/apps/user-app/app.config.ts                  @usmankhan4001
+/apps/user-app/eas.json                       @usmankhan4001
+/apps/admin-app/app.json                      @usmankhan4001
+/apps/admin-app/app.config.*                  @usmankhan4001
+/apps/admin-app/eas.json                      @usmankhan4001
+
+# console (WP7, WP15): bulk import and handover code.
+/apps/console/src/import/                     @usmankhan4001
+/apps/console/src/pages/ImportPage.tsx        @usmankhan4001
+/apps/console/src/pages/CoordinatorsPage.tsx  @usmankhan4001
+
+# content (WP8, WP18): anything that stores Quran text or translation.
+/packages/content/                            @usmankhan4001
+
+# data-migration (WP9): all of it.
+/tools/migration/                             @usmankhan4001
+
+# renderer (WP16): container and template changes.
+/apps/poster-renderer/                        @usmankhan4001
+
+# quality (WP12): security findings.
+/docs/security/                               @usmankhan4001
+
+# release (WP13): every release step.
+/docs/release/                                @usmankhan4001

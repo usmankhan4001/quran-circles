@@ -24,7 +24,9 @@
 #     manual/...-<label>.dump.age                          labelled runs, kept like daily
 #     last-success                                         UTC time of the last good backup
 # - With QC_BACKUP_RCLONE_REMOTE set, each new file is copied there with rclone and the same
-#   retention is applied to the remote.
+#   retention is applied to the remote. With QC_BACKUP_REMOTE_PRUNE=0 nothing is ever deleted
+#   there: for an append-only or object-locked remote (SEC-19), whose credentials on this server
+#   cannot delete, and where the bucket's own lifecycle rules apply the retention instead.
 #
 # Exit status is non-zero on any failure, and a failure raises an alert (QC_ALERT_WEBHOOK_URL).
 set -euo pipefail
@@ -58,6 +60,8 @@ recipient="$(env_get QC_BACKUP_AGE_RECIPIENT)"
 retention_days="$(env_get QC_BACKUP_RETENTION_DAYS 14)"
 weekly_weeks="$(env_get QC_BACKUP_WEEKLY_RETENTION_WEEKS 8)"
 remote="$(env_get QC_BACKUP_RCLONE_REMOTE)"
+remote_prune="$(env_get QC_BACKUP_REMOTE_PRUNE 1)"
+[[ "$remote_prune" == "0" || "$remote_prune" == "1" ]] || die "QC_BACKUP_REMOTE_PRUNE must be 0 or 1"
 
 [[ "$recipient" =~ ^age1[0-9a-z]{58}$ ]] ||
   die "QC_BACKUP_AGE_RECIPIENT must be an age public key (age1...); refusing to write an unencrypted backup"
@@ -190,9 +194,13 @@ if [[ -n "$remote" ]]; then
     rel="${file#"$backup_dir"/}"
     rclone copyto --no-traverse "$file" "$remote/$rel"
   done
-  rclone delete --min-age "${retention_days}d" "$remote/daily" || log "warning: remote daily prune failed"
-  rclone delete --min-age "${retention_days}d" "$remote/manual" || log "warning: remote manual prune failed"
-  rclone delete --min-age "$((weekly_weeks * 7))d" "$remote/weekly" || log "warning: remote weekly prune failed"
+  if [[ "$remote_prune" == "1" ]]; then
+    rclone delete --min-age "${retention_days}d" "$remote/daily" || log "warning: remote daily prune failed"
+    rclone delete --min-age "${retention_days}d" "$remote/manual" || log "warning: remote manual prune failed"
+    rclone delete --min-age "$((weekly_weeks * 7))d" "$remote/weekly" || log "warning: remote weekly prune failed"
+  else
+    log "backup: QC_BACKUP_REMOTE_PRUNE=0, the second location's lifecycle rules apply retention"
+  fi
 else
   log "backup: QC_BACKUP_RCLONE_REMOTE not set, no copy to a second location"
 fi

@@ -7,7 +7,8 @@
 #
 # Workspace packages export TypeScript source, so the build stage bundles each entry point with
 # esbuild into one file. The runtime images hold only those bundles (the api image also carries
-# the migration runners, dist/migrate.mjs and dist/rollback.mjs, and the SQL files), run as the
+# the migration runners, dist/migrate.mjs and dist/rollback.mjs, and the SQL files; the worker
+# image also carries pg-boss's CLI, dist/pgboss.mjs), run as the
 # unprivileged `node` user and have no package manager state.
 #
 # The base image is pinned by version and digest. To update: pull the new tag, read its digest
@@ -80,6 +81,8 @@ FROM runtime AS worker
 LABEL org.opencontainers.image.title="qc-worker" \
       org.opencontainers.image.description="Quran Circles worker (outbox, reminders, WhatsApp webhook)"
 COPY --from=build --chown=root:root /out/dist/worker.mjs /out/dist/worker.mjs.map /app/dist/
+# pg-boss's CLI, run by the `pgboss-migrate` one-shot service before the api and the worker start.
+COPY --from=build --chown=root:root /out/dist/pgboss.mjs /out/dist/pgboss.mjs.map /app/dist/
 
 EXPOSE 8081
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \

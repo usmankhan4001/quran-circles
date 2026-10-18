@@ -1,7 +1,53 @@
 # Status: platform
 
-Updated: 2026-10-18 (staging deployed on Dokploy)
+Updated: 2026-10-18 (security review fixes: SEC-10, 12, 14, 16 to 19; messaging env follow-ups)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
+
+## Security review fixes (2026-10-18)
+
+From `docs/security/review.md`. Edited only `infra/`, `.github/`, root `.env.example` and this file. Not committed (the orchestrator commits). No CI run (owner rule).
+
+### Done
+
+- **SEC-10 (headers)**, `infra/caddy/Caddyfile` and `Caddyfile.staging` (identical header lines): every response gets HSTS, `nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` (kept: the Maps key is restricted by referrer), `X-Frame-Options: DENY` (now the PWA too) and a Permissions-Policy (PWA keeps `geolocation=(self)`; the console gets `geolocation=()`). Content-Security-Policy by what is served:
+  - `/api/*` and `/webhooks/*`: `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`.
+  - PWA: `default-src 'self'`; `connect-src` adds `https://api.alquran.cloud` (the Quran text, `packages/content/src/quran/alquranCloud.ts`) and Google Maps; scripts, images, styles, fonts, frames and `worker-src blob:` from the Maps JavaScript API's documented allowlist (`*.googleapis.com`, `*.gstatic.com`, `*.google.com`, `*.ggpht.com`, `*.googleusercontent.com`, `fonts.googleapis.com`, `fonts.gstatic.com`); `style-src 'unsafe-inline'` (Expo's inline reset style, Maps' inline styles); `script-src 'unsafe-eval'` for Maps only; `object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`. No inline script anywhere. Web push needs nothing in the CSP.
+  - Console: `'self'` only (`script-src 'self'`, `style-src 'self'`, images and fonts `'self' data: blob:`, `connect-src 'self'`), plus the same `object-src`/`base-uri`/`form-action`/`frame-ancestors`.
+- **SEC-12 (database roles)**: new `infra/postgres/roles.sql`, run by a new one-shot `db-roles` service (postgres image, uid 70, read-only, no capabilities) as `qc` on every `up`. Roles `qc_migrator` (owns `public`, runs `migrate` and `rollback.mjs`), `qc_worker` (DML on app tables, owns the `pgboss` schema because pg-boss creates queue tables at run time), `qc_api` (DML on app tables and pg-boss's tables; no DDL, no temp tables, no `schema_migrations`). No superuser, CREATEDB or CREATEROLE; CONNECT revoked from PUBLIC. Idempotent and converging: hands existing objects owned by `qc` to the right owner (tables and partitions, views, free sequences, enums, domains, routines), re-grants after a restore (backups are `--no-owner --no-privileges`), default privileges cover future migrations and pg-boss's runtime tables. `qc_worker` holds CREATE on the database only until pg-boss is installed (its installer runs `CREATE SCHEMA`), and loses it on the next `up`. New one-shot `pgboss-migrate` (worker image, `dist/pgboss.mjs` = pg-boss's own CLI bundled by `bundle.sh`) installs or upgrades pg-boss's schema as `qc_worker` before the api and the worker start, so the api never needs DDL; it is skipped (with a log line) on older worker images so `deploy.sh --rollback` still works. Chain: postgres healthy, `db-roles`, `migrate` and `pgboss-migrate`, then api and worker. New required env names `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD` (24+ characters, refused otherwise).
+- **SEC-14**: `ci.yml` has `permissions: contents: read`, actions pinned to commit SHAs (checkout v4.4.0 `11d5960a…`, pnpm/action-setup v4.3.0 `b906affc…`, setup-node v4.4.0 `49933ea5…`, the commits the `v4` tags pointed to, from `git ls-remote`), `persist-credentials: false`. `CODEOWNERS` rewritten to mirror `ownership.md` "Human approval needed for", lane by lane, including `apps/poster-renderer/`, `apps/api/src/modules/me/` and `registrations/` (plus import, roles, updates), console import and handover files, `packages/content/`, `docs/security/`, `docs/release/`, store build config and the root config files.
+- **SEC-16**: documented only (compose comment on `poster-renderer` already states it; no safe small fix: enabling Chromium's sandbox needs a seccomp profile that allows user namespaces, renderer lane).
+- **SEC-17**: the api has no `RENDERER_URL`/`RENDERER_TOKEN` and is not on the `render` network (checked: nothing in `apps/api/src` reads `RENDERER_*`; it only queues through pg-boss). `POSTER_STORAGE_DIR` and the read-only volume stay.
+- **SEC-18**: dev Postgres published on `127.0.0.1:5432` only.
+- **SEC-19**: `backup.sh` has `QC_BACKUP_REMOTE_PRUNE` (default `1`; `0` = never delete in the second location). `infra/README.md` "Append-only second location": delete-less credentials (B2 key without `deleteFiles`, or an S3 policy without `DeleteObject`) or object lock (56+ days), retention by bucket lifecycle rules, `QC_BACKUP_REMOTE_PRUNE=0`, read-only credentials for the staging restore test, and a check that a delete from the server fails. "Deleted accounts and backups": deleted data stays in encrypted backups up to 14 days (daily) and 8 weeks (weekly), and a restore from before a deletion brings the account back.
+- **Messaging follow-ups**: worker gets `WHATSAPP_DAILY_CAP` (1), `WHATSAPP_CITY_MONTHLY_BUDGET` (3000), `WHATSAPP_BUDGET_ALERT_PERCENT` (80) by name; documented in `infra/ENV.md`, `infra/.env.example`, root `.env.example`. `CODE_VALIDITY_MINUTES` documented as default 5 (must equal the API's fixed 5 minutes; leave unset). `ENV.md` lists the API's limits as fixed in code: code lifetime and attempts, the auth rate limits, `codeCaps` (10 per number a day, 1,000 an hour and 10,000 a day globally), `inviteLimits` (100 per import, 200 per person a day) and `posterRateLimit` (10 a minute). None of them is env-configurable.
+
+### Checked
+
+- CSP in a real browser: both apps built (`expo export`, `vite build` with `/api`), served by Caddy 2.10.2 running the staging Caddyfile, `/api` proxied to the contract mock server, loaded in Chromium (Playwright). PWA home, nearby (list and map), Quran, profile, sign-in: **0 violations** (the first run found the blocked `api.alquran.cloud` fetch, now allowed); the Maps loader request is not blocked by the CSP (it then fails on the sandbox's network). Service worker registers. Console signed in (mock staff token) on 11 pages: renders, the only report is zod's start-up `Function('')` probe, which zod catches and falls back from. Builds deleted afterwards.
+- Roles on a throwaway Postgres 16 with the real migrations, dev seed and pg-boss 12.38 through the bundled CLI: (1) existing database owned by `qc` with pg-boss installed by `qc`: converged, migrate as `qc_migrator` no-op, worker creates queues (new partitions) and api sends; (2) new database: roles, migrate, pg-boss install as `qc_worker`, send and work, second run revokes the worker's CREATE; (3) restore: `pg_dump --no-owner --no-privileges`, restore as `qc`, swap, api refused, then `db-roles` converges and everything works again. The api is refused CREATE TABLE, ALTER TABLE, COPY TO PROGRAM, CREATE SCHEMA, temp tables, `schema_migrations`; the worker DROP TABLE and CREATE in public. Missing and short passwords stop the script (exit 3). Wrong password: `pgboss.mjs` exits 1 without echoing it.
+- `docker compose ... --env-file infra/.env.example config -q` passes for prod, prod + staging, and dev (no daemon here, so no images built). Caddy `validate` and `fmt` clean on both Caddyfiles. shellcheck 0.11 clean on all scripts; `bundle.sh` runs (five bundles). `npx prettier --check infra .github docs/agents/status/platform.md` clean. `pnpm format:check` fails only on 8 files in `apps/admin-app`, `apps/user-app` and `packages/ui` that other lanes are changing. `@qc/api` tests not run: nothing it reads changed.
+
+### Needs redeploying on staging (Dokploy)
+
+1. **Before deploying**, add three env vars in Dokploy, each `openssl rand -hex 32`: `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD`. Without them the compose file refuses to render and nothing changes.
+2. Deploy the compose service (after the commit is on `main`). This rebuilds `web` (new Caddyfile baked in) and the worker image (`dist/pgboss.mjs`), recreates the api (new `DATABASE_URL`, no `render` network or token) and the worker, and runs `db-roles`, `migrate`, `pgboss-migrate`. The existing staging database's objects move from `qc` to `qc_migrator`/`qc_worker`; nothing is dropped.
+3. Check: `db-roles` log ends with "up to date", `pgboss-migrate` says "already at version"; all services healthy; `curl -sI https://staging.doraquran.pk/` and `/api/health` and the console show the new headers; create and regenerate a poster in the console (api sends as `qc_api`, worker renders); open the PWA's Nearby map with the real Maps key and watch the browser console for CSP reports.
+4. Assumption to confirm: Dokploy resolves the relative bind mount `./postgres/roles.sql` in the git clone (Docker resolves it against `infra/`, the first compose file's directory). If `db-roles` fails with "No such file", tell me; the fallback is to bake the script into a small image.
+
+### Open
+
+- Whether Google Maps really needs `'unsafe-eval'`: try the staging map without it (edit both Caddyfiles); if the map works, drop it.
+- SEC-12 on production happens with the first production deploy; nothing else to do there.
+- `CODEOWNERS` has one human owner; add lane reviewers when there are any. Branch protection with "require code owner review" is a GitHub setting for the owner.
+
+### Change requests (other lanes; not done here)
+
+- **user-app (SEC-10, token storage)**: the PWA keeps the refresh token in localStorage (`apps/user-app/src/platform/stores.ts:21`). Move it out of script-readable storage where possible (memory plus a short-lived session, or sessionStorage as the console does), or accept the risk in writing now that the CSP blocks inline and third-party script.
+- **api-core (SEC-12, optional hardening)**: pass `migrate: false` in `posterSenderOptions` (`apps/api/src/modules/posters/sender.ts`) so the api never even tries pg-boss DDL; `pgboss-migrate` now installs and upgrades the schema before the api starts. No packages/db change is needed for the roles.
+- **console, user-app or contracts (cosmetic)**: `z.config({ jitless: true })` at start-up stops zod's eval probe, which shows as one CSP report per page load.
+- **api-core and owner (SEC-19)**: a restore from before an account deletion brings the account back, and nothing outside the database records deletions. Decide whether to keep a deletion log (ids only) outside the database so deletions can be re-applied after a restore.
+- **owner and release (SEC-19)**: the privacy notice must say deleted data leaves backups within 8 weeks.
+- **renderer (SEC-16)**: Chromium sandbox with a seccomp profile, later.
 
 ## Done (WP10, everything that needs no VPS)
 

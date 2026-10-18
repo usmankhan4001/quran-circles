@@ -12,6 +12,22 @@
 #
 # The worker's /healthz is deliberately not routed: it is checked inside the stack only.
 # No access log is written: request URIs can carry the webhook verify token in the query string.
+#
+# Security headers (SEC-10). Every response: HSTS, nosniff, Referrer-Policy, Permissions-Policy and
+# X-Frame-Options DENY. Content-Security-Policy differs by what is served:
+#   /api/* and /webhooks/*  JSON, CSV and downloads: nothing may load or frame them.
+#   PWA (QC_DOMAIN)         its own files; the Quran text from api.alquran.cloud
+#                           (packages/content); Google Maps for the Nearby map (the Maps
+#                           JavaScript API's documented allowlist: scripts, tiles, styles, fonts,
+#                           the worker it starts from a blob: URL, and its eval). Web push needs
+#                           nothing here: the push service talks to the browser, not to the page.
+#   console                 its own files only (fonts are bundled; downloads are blob: URLs). Zod's
+#                           start-up probe for eval is refused and logged once; zod falls back.
+# style-src keeps 'unsafe-inline' on the PWA: Expo's index.html has an inline reset style and
+# Google Maps sets inline styles. No site allows inline or third-party script beyond the above.
+# The PWA and the console call the api at /api on their own origin, so connect-src 'self' covers
+# it; an api on another origin would need adding here.
+# Referrer-Policy stays strict-origin-when-cross-origin: the Maps key is restricted by referrer.
 {
 	email {$ACME_EMAIL}
 	# The admin endpoint is used by `caddy reload` and the container health check only.
@@ -24,13 +40,19 @@
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		X-Frame-Options "DENY"
 		-Server
 	}
 }
 
+# CSP for responses that are data, not pages: the api and the webhook.
+(csp-data) {
+	header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+}
+
 (api) {
 	handle_path /api/* {
+		import csp-data
 		request_body {
 			max_size 10MB
 		}
@@ -56,9 +78,13 @@
 
 {$QC_DOMAIN} {
 	import common
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@app not path /api/* /webhooks/*
+	header @app Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.alquran.cloud https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob:; frame-src https://*.google.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	import api
 
 	handle /webhooks/whatsapp {
+		import csp-data
 		request_body {
 			max_size 1MB
 		}
@@ -70,7 +96,9 @@
 
 {$QC_CONSOLE_DOMAIN} {
 	import common
-	header X-Frame-Options "DENY"
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@console not path /api/*
+	header @console Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	import api
 	import spa console
 }

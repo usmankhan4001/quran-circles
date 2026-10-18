@@ -14,6 +14,9 @@
 #   aliases (see infra/caddy/Caddyfile.staging).
 # Postgres, the poster renderer, the api and the worker stay on the internal networks exactly as
 # in production. ACME_EMAIL is still required by the production file; any value works here.
+# The database roles are the production ones: the env needs POSTGRES_MIGRATOR_PASSWORD,
+# POSTGRES_API_PASSWORD and POSTGRES_WORKER_PASSWORD, and `db-roles` bind-mounts
+# infra/postgres/roles.sql from the checkout (Dokploy deploys from a git clone, so it is there).
 #
 # No YAML merge tags (!reset, !override): Dokploy re-serialises this file before deploying and
 # drops them, so everything here must work with plain Compose merging.
