@@ -6,9 +6,11 @@ This repository holds the whole V2 platform: one Postgres database, one API, bac
 
 ## Status
 
-The build runs in waves (0 to 7) with a quality gate between each. Waves 0 to 4 are built: contracts, every app and service, end-to-end tests and the Wave 4 features (posters, ayah of the day, session companion). **Wave 5, hardening, is in progress**: security review fixes, load tests, low-end phone budgets, accessibility and a restore drill. Staging runs at `staging.doraquran.pk`. Production has not been deployed.
+**Parked on 2026-10-18.** Start with [HANDOFF.md](HANDOFF.md): what runs where, the state of each wave and the open items.
 
-The live picture is in [`docs/agents/status/`](docs/agents/status/), one file per lane, with gate sign-offs in [`orchestrator.md`](docs/agents/status/orchestrator.md).
+The build runs in waves (0 to 7) with a quality gate between each. Waves 0 to 4 are built: contracts, every app and service, end-to-end tests and the Wave 4 features (posters, ayah of the day, session companion). Wave 5, hardening, is done apart from a full restore drill on a production server; the low-end phone check passed on 2026-10-18. The apps follow the owner's redesign (D17 in [`docs/design/redesign-decisions.md`](docs/design/redesign-decisions.md)). Staging runs at `staging.doraquran.pk` (user app) and `staging-console.doraquran.pk` (console). Production has not been created. The final state is tagged `v2-parked-2026-10-18`.
+
+The lane-by-lane picture is in [`docs/agents/status/`](docs/agents/status/), one file per lane, with gate sign-offs in [`orchestrator.md`](docs/agents/status/orchestrator.md).
 
 ## What is in it
 
@@ -57,7 +59,8 @@ flowchart LR
 | `tests/e2e`            | End-to-end tests against a real API, worker and Postgres (Playwright)     | integration                      |
 | `tests/load`           | Scope matrix runner and load tests                                        | quality                          |
 | `infra`                | Docker Compose, Caddy, backups, deploy scripts, monitoring                | platform                         |
-| `showcase`             | A static page that shows the screens for review                           | orchestrator                     |
+| `tools/store-assets`   | App icon and store screenshot generator (run by hand)                     | release                          |
+| `showcase`             | Wraps the `@qc/ui` component catalog into one page for review             | orchestrator                     |
 | `docs`                 | Product decisions, engineering rules, design, agent briefs and status     | orchestrator                     |
 
 Each app and package has its own short `README.md`.
@@ -96,16 +99,18 @@ To run the real API on a local Postgres, see [Getting started](docs/getting-star
 
 Start with the [documentation index](docs/README.md). The most useful pages for someone new:
 
+- [Handoff](HANDOFF.md): where the project stopped and what is left.
 - [Getting started](docs/getting-started.md): set up, run each app, run the tests.
 - [Architecture](docs/architecture.md): how the parts fit together and why.
 - [Deployment](docs/deployment.md): staging, production and backups.
 - [Contributing](CONTRIBUTING.md): lanes, ownership, branches and the checks a change must pass.
+- [Design](docs/design/README.md): the redesign decisions, the component kit and the screen specs.
 - [Product decisions](docs/product/decisions.md): what is being built. Do not re-decide these.
 - [Credits and licences](docs/credits-and-licences.md): fonts, the Quran text and the translations.
 
 ## Credits
 
-The apps bundle Figtree (SIL OFL 1.1), Mehr Nastaliq Web (CC BY-SA 4.0) and KFGQPC Uthmanic Script HAFS (KFGQPC free-use licence, unmodified). The Arabic Quran text comes from the Tanzil Project (CC BY 3.0) and the Urdu and English translations are by Sayyid Abul A'la Maududi, via Tanzil, for non-commercial use. Details are in [Credits and licences](docs/credits-and-licences.md).
+The apps bundle Plus Jakarta Sans (SIL OFL 1.1), Mehr Nastaliq Web (CC BY-SA 4.0) and KFGQPC Uthmanic Script HAFS (KFGQPC free-use licence, unmodified), and draw Phosphor icons (MIT). Posters use Figtree (SIL OFL 1.1). The Arabic Quran text comes from the Tanzil Project (CC BY 3.0) and the Urdu and English translations are by Sayyid Abul A'la Maududi, via Tanzil, for non-commercial use. Details are in [Credits and licences](docs/credits-and-licences.md).
 
 ## Licence
 

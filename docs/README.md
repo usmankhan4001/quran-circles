@@ -6,6 +6,7 @@ Everything written about Quran Circles V2, grouped by what you are trying to do.
 
 | Page                                            | What it covers                                                      |
 | ----------------------------------------------- | ------------------------------------------------------------------- |
+| [Handoff](../HANDOFF.md)                        | Where the project was parked, what runs where, open items           |
 | [Project README](../README.md)                  | What Quran Circles is, the layout of the repository, quick start    |
 | [Getting started](getting-started.md)           | Set up, run each app and service locally, run the tests             |
 | [Architecture](architecture.md)                 | How the parts fit together, with links to the decisions behind them |
@@ -43,25 +44,34 @@ The agent-facing copy of the product plan. Read-only for lanes; changes come fro
 
 Written and kept by the UI lane (WP21). Start with [design/README.md](design/README.md).
 
-| Page                                                  | What it covers                                 |
-| ----------------------------------------------------- | ---------------------------------------------- |
-| [principles.md](design/principles.md)                 | Design principles                              |
-| [rtl-urdu-guide.md](design/rtl-urdu-guide.md)         | Right-to-left layout and Urdu typography rules |
-| [accessibility.md](design/accessibility.md)           | Accessibility rules every screen follows       |
-| [microcopy.md](design/microcopy.md)                   | Voice and wording, in English and Urdu         |
-| [catalog.md](design/catalog.md)                       | The component catalog                          |
-| [redesign-decisions.md](design/redesign-decisions.md) | Decisions of the current UI redesign           |
-| [screens/](design/screens/)                           | One spec per screen                            |
-| [poster-direction.md](design/poster-direction.md)     | Visual direction for posters                   |
+| Page                                                  | What it covers                                    |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| [principles.md](design/principles.md)                 | Design principles                                 |
+| [rtl-urdu-guide.md](design/rtl-urdu-guide.md)         | Right-to-left layout and Urdu typography rules    |
+| [accessibility.md](design/accessibility.md)           | Accessibility rules every screen follows          |
+| [microcopy.md](design/microcopy.md)                   | Voice and wording, in English and Urdu            |
+| [catalog.md](design/catalog.md)                       | The component catalog                             |
+| [redesign-decisions.md](design/redesign-decisions.md) | The redesign, D1 to D17 (D17 is the current look) |
+| [redesign-handoff.md](design/redesign-handoff.md)     | What each app lane changed to match the redesign  |
+| [screens/](design/screens/)                           | One spec per screen                               |
+| [poster-direction.md](design/poster-direction.md)     | Visual direction for posters                      |
 
 ## Quality and security
 
-| Page                                                         | What it covers                                         |
-| ------------------------------------------------------------ | ------------------------------------------------------ |
-| [security/review.md](security/review.md)                     | The Wave 5 security review and its findings            |
-| [quality/accessibility-rtl.md](quality/accessibility-rtl.md) | Accessibility and right-to-left pass, with screenshots |
-| [quality/low-end-budgets.md](quality/low-end-budgets.md)     | Performance budgets on low-end Android phones          |
-| [quality/restore-drill.md](quality/restore-drill.md)         | Backup restore rehearsal and timings                   |
+| Page                                                             | What it covers                                         |
+| ---------------------------------------------------------------- | ------------------------------------------------------ |
+| [security/review.md](security/review.md)                         | The Wave 5 security review and its findings            |
+| [quality/accessibility-rtl.md](quality/accessibility-rtl.md)     | Accessibility and right-to-left pass, with screenshots |
+| [quality/low-end-budgets.md](quality/low-end-budgets.md)         | Performance budgets on low-end Android phones          |
+| [quality/low-end-phone-check.md](quality/low-end-phone-check.md) | The hands-on check on a real Android phone             |
+| [quality/restore-drill.md](quality/restore-drill.md)             | Backup restore rehearsal and timings                   |
+
+## Release
+
+| Page                                                    | What it covers                                        |
+| ------------------------------------------------------- | ----------------------------------------------------- |
+| [release/store-listing.md](release/store-listing.md)    | App Store and Google Play listing text (draft)        |
+| [`tools/store-assets`](../tools/store-assets/README.md) | How the app icons and store screenshots are generated |
 
 ## Agents: how the work is run
 

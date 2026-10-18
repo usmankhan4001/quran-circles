@@ -1,6 +1,6 @@
 # Infrastructure
 
-The production stack (WP10): Caddy, the api, the worker, Postgres and the poster renderer (WP16) in Docker Compose on one VPS, with encrypted nightly backups, a scripted restore, health checks and alerts. Nothing has been deployed yet: the VPS and the domain are still to come. Everything below is ready for a human to run once they are.
+The production stack (WP10): Caddy, the api, the worker, Postgres and the poster renderer (WP16) in Docker Compose on one VPS, with encrypted nightly backups, a scripted restore, health checks and alerts. Staging runs on Dokploy with the same Compose file plus `docker-compose.staging.yml` (see `docs/deployment.md`). Production has not been deployed: the VPS and the domain are still to come. Everything below is ready for a human to run once they are.
 
 | Path                                | What it is                                                                                       |
 | ----------------------------------- | ------------------------------------------------------------------------------------------------ |

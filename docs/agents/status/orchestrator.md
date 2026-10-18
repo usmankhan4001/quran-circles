@@ -53,3 +53,13 @@ None. All work is on branch `claude/peaceful-archimedes-ain95k`.
 - Licence decided by the owner (2026-10-18): proprietary to Tanzeem-e-Islami, not open source. Root `LICENSE`, `"license": "UNLICENSED"` in `package.json`.
 - Open for the platform lane: `infra/README.md` still opens with "Nothing has been deployed yet"; staging is now live.
 - Open for api-core: `apps/api/package.json` has no `dev` or `start` script; the docs use `pnpm exec tsx --env-file=../../.env src/index.ts` from `apps/api`.
+
+## Parked (2026-10-18)
+
+The owner parked the project. [`HANDOFF.md`](../../../HANDOFF.md) is the resume point: what runs where, the state of each wave and every open item. `main` is tagged `v2-parked-2026-10-18`.
+
+- Staging left running at `main` 8690ca4 (redesigned apps). Production not created.
+- Low-end phone check: Muhammad ran it on staging against the redesigned app on 2026-10-18 and reported all checks OK (phone model not recorded). Checklist `docs/quality/low-end-phone-check.md`.
+- Wave 5 open: only the full restore drill on a production server.
+- Tidy-up: `infra/README.md` no longer says nothing is deployed; the credits name Plus Jakarta Sans and Phosphor after D17; the store listing moved into `docs/release/` and the icon and screenshot generator into `tools/store-assets/` (lint-ignored, run by hand).
+- Still open from the documentation pass: `apps/api/package.json` has no `dev` or `start` script.
