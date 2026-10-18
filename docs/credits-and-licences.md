@@ -4,7 +4,7 @@ What Quran Circles uses that others made, and the terms it is used under. The ap
 
 ## The Quran Circles code
 
-No licence has been chosen for the code in this repository yet, so all rights are reserved by the owner. Nothing below is covered by the code's licence; each item keeps its own.
+The code in this repository is proprietary to Tanzeem-e-Islami, all rights reserved ([`LICENSE`](../LICENSE)). It is not open source. Nothing below is covered by that notice; each item keeps its own licence.
 
 ## Fonts
 

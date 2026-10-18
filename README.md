@@ -109,4 +109,4 @@ The apps bundle Figtree (SIL OFL 1.1), Mehr Nastaliq Web (CC BY-SA 4.0) and KFGQ
 
 ## Licence
 
-No licence has been chosen for the Quran Circles code yet, so all rights are reserved by the owner. The bundled fonts and texts keep their own licences.
+Proprietary. The Quran Circles code belongs to Tanzeem-e-Islami, all rights reserved; it is not open source and may not be copied, used or distributed without written permission. See [`LICENSE`](LICENSE). The bundled fonts and texts keep their own licences.
