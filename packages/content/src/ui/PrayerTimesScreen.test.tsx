@@ -77,9 +77,9 @@ describe.each(matrix)('PrayerTimesScreen in $name', (combo) => {
       expect(row.textContent).toContain(msg(L, `prayer.${prayer}`));
     }
     expect(screen.getByTestId('hijri-today').textContent).toContain('1448');
-    expect(screen.getByTestId('prayer-city').textContent).toBe(
-      msg(L, 'prayer.city', { city: msg(L, 'prayer.cityName.karachi') }),
-    );
+    // D17: the date line reads "Today, <Hijri date> · <city>", as on the artboard.
+    expect(screen.getByTestId('prayer-city').textContent).toBe(msg(L, 'prayer.cityName.karachi'));
+    expect(screen.getByTestId('next-prayer-time').textContent).toContain(msg(L, 'prayer.maghrib'));
     expect(screen.getByTestId('hijri-note').textContent).toBe(msg(L, 'prayer.hijriNote'));
   });
 
@@ -137,9 +137,7 @@ describe('PrayerTimesScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: msg('en', 'prayer.noCity.action') }));
     fireEvent.click(within(screen.getByTestId('city-sheet')).getByTestId('city-lahore'));
     expect(onPlace).toHaveBeenCalledWith('lahore');
-    expect(screen.getByTestId('prayer-city').textContent).toBe(
-      msg('en', 'prayer.city', { city: 'Lahore' }),
-    );
+    expect(screen.getByTestId('prayer-city').textContent).toBe('Lahore');
   });
 
   it('shows a skeleton until the saved city has been read', () => {
@@ -165,9 +163,7 @@ describe('PrayerTimesScreen', () => {
     const before = screen.getByTestId('time-fajr').textContent;
     fireEvent.click(screen.getByTestId('city-select'));
     fireEvent.click(screen.getByTestId('city-select-option-quetta'));
-    expect(screen.getByTestId('prayer-city').textContent).toBe(
-      msg('en', 'prayer.city', { city: 'Quetta' }),
-    );
+    expect(screen.getByTestId('prayer-city').textContent).toBe('Quetta');
     expect(screen.getByTestId('time-fajr').textContent).not.toBe(before);
   });
 
@@ -175,7 +171,7 @@ describe('PrayerTimesScreen', () => {
     const { services } = createTestServices({ now: AT_17_00 });
     renderContent(<Harness />, services, { hijriOffsetDays: offset });
     expect(screen.getByTestId('hijri-today').textContent).toBe(
-      `${msg('en', 'prayer.hijri')}: ${5 + offset} Jumada al-awwal 1448 AH`,
+      `${5 + offset} Jumada al-awwal 1448 AH`,
     );
     // The calendar rows use the same offset.
     expect(screen.getByTestId('day-2026-10-16').textContent).toContain(

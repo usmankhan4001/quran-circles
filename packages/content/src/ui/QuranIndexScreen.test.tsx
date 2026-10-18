@@ -17,8 +17,12 @@ const rgbOf = (hex: string) => {
   return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 };
 
-const search = (text: string) =>
+const search = (text: string) => {
+  // The search field opens from the round search button beside the tabs (D17).
+  if (!screen.queryByTestId('surah-search'))
+    fireEvent.click(screen.getByTestId('surah-search-toggle'));
   fireEvent.change(screen.getByTestId('surah-search'), { target: { value: text } });
+};
 
 describe.each(matrix)('QuranIndexScreen in $name', (combo) => {
   it('lists the surahs with the Arabic name in the Quran font, and opens one', () => {
@@ -51,7 +55,8 @@ describe.each(matrix)('QuranIndexScreen in $name', (combo) => {
     expect(arabic.textContent).toBe('البقرة');
     expect(arabic.getAttribute('lang')).toBe('ar');
     expect(getComputedStyle(arabic).fontFamily).toContain(fonts.quran);
-    expect(getComputedStyle(arabic).color).toBe(rgbOf(semanticColors[combo.mode].textAccent));
+    // D17: the Arabic name is in the text colour, on a white card with a hairline.
+    expect(getComputedStyle(arabic).color).toBe(rgbOf(semanticColors[combo.mode].text));
     // The star comes first in the row and the Arabic name last, in either direction.
     const order = star.compareDocumentPosition(arabic);
     expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -75,9 +80,13 @@ describe.each(matrix)('QuranIndexScreen in $name', (combo) => {
   it('has a labelled search box and the three tabs', () => {
     const { services } = createTestServices();
     renderContent(<QuranIndexScreen onOpen={vi.fn()} />, services, { combo });
-    expect(screen.getByLabelText(msg(combo.locale, 'quran.search'))).toBeTruthy();
-    for (const key of ['quran.tab.surah', 'quran.tab.juz', 'quran.tab.bookmarks']) {
-      expect(screen.getByRole('radio', { name: msg(combo.locale, key) })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: msg(combo.locale, 'quran.search') }));
+    expect(screen.getByRole('searchbox', { name: msg(combo.locale, 'quran.search') })).toBeTruthy();
+    // D17: compact tabs that carry their counts, such as "Surahs (114)".
+    for (const key of ['quran.tab.surah', 'quran.tab.juz', 'quran.tab.saved']) {
+      expect(
+        screen.getByRole('radio', { name: new RegExp(`^${msg(combo.locale, key)}`) }),
+      ).toBeTruthy();
     }
   });
 });
@@ -122,7 +131,7 @@ describe('QuranIndexScreen juz and bookmarks', () => {
     const { services } = createTestServices();
     const onOpen = vi.fn();
     renderContent(<QuranIndexScreen onOpen={onOpen} />, services);
-    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.tab.juz') }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Juz (30)' }));
     const row = screen.getByTestId('juz-row-2');
     expect(row.textContent).toContain('Juz 2');
     expect(row.textContent).toContain('Starts at Al-Baqarah, ayah 142');
@@ -201,7 +210,9 @@ describe('QuranIndexScreen juz and bookmarks', () => {
     await services.readingPosition.save(18, 10);
     const onOpen = vi.fn();
     renderContent(<QuranIndexScreen onOpen={onOpen} />, services);
-    fireEvent.click(await screen.findByRole('button', { name: msg('en', 'quran.continue') }));
+    fireEvent.click(
+      await screen.findByRole('button', { name: msg('en', 'quran.continueAt', { ayah: 10 }) }),
+    );
     expect(onOpen).toHaveBeenCalledWith({ kind: 'surah', id: 18, ayah: 10 });
   });
 });

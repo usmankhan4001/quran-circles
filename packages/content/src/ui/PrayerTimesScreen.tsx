@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import {
   Button,
@@ -10,8 +10,10 @@ import {
   Sheet,
   Skeleton,
   Text,
+  Icon,
   screenGutter,
   spacing,
+  useTheme,
 } from '@qc/ui';
 import { computeDay, PRAYER_NAMES, todayAt, type PrayerPlace } from '../prayer/calc';
 import { weekOf } from '../prayer/calendar';
@@ -32,6 +34,8 @@ import {
 } from './format';
 import { useNextPrayer } from './hooks';
 import { useContentI18n, type ContentI18n } from './i18n';
+import { useArtSize } from './art';
+import { WhiteCard } from './parts';
 
 export interface PrayerTimesScreenProps {
   /** The chosen city (an id from PAKISTAN_CITIES), or null before the person has chosen. */
@@ -41,6 +45,10 @@ export interface PrayerTimesScreenProps {
   onPlaceChange: (id: string) => void;
   calendarView: CalendarView;
   onCalendarViewChange: (view: CalendarView) => void;
+  /** The green header, drawn full width at the top so it scrolls away with the page. */
+  header?: ReactNode;
+  /** Shown under today's prayers, such as the latest update from the person's masjid. */
+  footer?: ReactNode;
   testID?: string;
 }
 
@@ -54,6 +62,8 @@ export function PrayerTimesScreen({
   onPlaceChange,
   calendarView,
   onCalendarViewChange,
+  header,
+  footer,
   testID,
 }: PrayerTimesScreenProps) {
   const i18n = useContentI18n();
@@ -87,51 +97,65 @@ export function PrayerTimesScreen({
     </Sheet>
   );
 
+  // The lead card sits half on the green fade (D17), as on the Quran half.
+  const body = {
+    paddingHorizontal: screenGutter,
+    marginTop: header ? -spacing.xxl : screenGutter,
+    gap: spacing.md,
+  } as const;
+
   if (!ready) {
     return (
-      <View style={{ padding: screenGutter }} testID={testID ? `${testID}-loading` : undefined}>
-        <Skeleton shape="block" height={140} announce />
+      <View style={{ flex: 1 }} testID={testID ? `${testID}-loading` : undefined}>
+        {header}
+        <View style={body}>
+          <Skeleton shape="block" height={140} announce />
+        </View>
       </View>
     );
   }
 
   if (!city) {
     return (
-      <View style={{ padding: screenGutter }} testID={testID}>
-        <EmptyState
-          title={i18n.t('prayer.noCity.title')}
-          description={i18n.t('prayer.noCity.body')}
-          action={{ label: i18n.t('prayer.noCity.action'), onPress: () => setPicking(true) }}
-          testID="no-city"
-        />
+      <ScrollView testID={testID} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+        {header}
+        <View style={body}>
+          <WhiteCard>
+            <EmptyState
+              title={i18n.t('prayer.noCity.title')}
+              description={i18n.t('prayer.noCity.body')}
+              action={{ label: i18n.t('prayer.noCity.action'), onPress: () => setPicking(true) }}
+              testID="no-city"
+            />
+          </WhiteCard>
+        </View>
         {chooser}
-      </View>
+      </ScrollView>
     );
   }
 
   return (
-    <ScrollView
-      testID={testID}
-      contentContainerStyle={{
-        padding: screenGutter,
-        paddingBottom: spacing.xxl,
-        gap: spacing.lg,
-      }}
-    >
-      <Select<string>
-        label={i18n.t('prayer.place.label')}
-        value={city.id}
-        options={PAKISTAN_CITIES.map((c) => ({ value: c.id, label: cityName(i18n, c) }))}
-        onChange={onPlaceChange}
-        testID="city-select"
-      />
-      <PlaceView
-        place={city}
-        cityLabel={cityName(i18n, city)}
-        calendarView={calendarView}
-        onCalendarViewChange={onCalendarViewChange}
-        i18n={i18n}
-      />
+    <ScrollView testID={testID} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+      {header}
+      <View style={body}>
+        <PlaceView
+          place={city}
+          cityLabel={cityName(i18n, city)}
+          calendarView={calendarView}
+          onCalendarViewChange={onCalendarViewChange}
+          i18n={i18n}
+          footer={footer}
+          citySelect={
+            <Select<string>
+              label={i18n.t('prayer.place.label')}
+              value={city.id}
+              options={PAKISTAN_CITIES.map((c) => ({ value: c.id, label: cityName(i18n, c) }))}
+              onChange={onPlaceChange}
+              testID="city-select"
+            />
+          }
+        />
+      </View>
     </ScrollView>
   );
 }
@@ -141,15 +165,22 @@ function PlaceView({
   cityLabel,
   calendarView,
   onCalendarViewChange,
+  citySelect,
+  footer,
   i18n,
 }: {
   place: PrayerPlace;
   cityLabel: string;
   calendarView: CalendarView;
   onCalendarViewChange: (view: CalendarView) => void;
+  citySelect: ReactNode;
+  footer: ReactNode;
   i18n: ContentI18n;
 }) {
   const { hijriOffsetDays } = useContent();
+  const theme = useTheme();
+  const c = theme.colors;
+  const size = useArtSize();
   const { next, countdown, now } = useNextPrayer(place);
   const today = todayAt(place, now);
   const dayKey = `${today.year}-${today.month}-${today.day}`;
@@ -157,67 +188,164 @@ function PlaceView({
   const todayTimes = useMemo(() => computeDay(place, today), [place, dayKey]);
   const hijriToday = hijriDate(today, hijriOffsetDays);
   const line = countdownLine(i18n, next.prayer, countdown);
+  const at = clockText(i18n, next.at, place);
 
   return (
     <>
-      <Card testID="next-prayer-card">
-        <Text variant="caption" color="textSecondary">
-          {next.tomorrow
-            ? `${i18n.t('prayer.next')} · ${i18n.t('prayer.next.tomorrow')}`
-            : i18n.t('prayer.next')}
-        </Text>
-        <View style={{ height: spacing.xs }} />
-        <Text variant="title2" heading={2} testID="next-prayer-countdown">
-          {line}
-        </Text>
-        <View style={{ height: spacing.sm }} />
-        {hijriToday ? (
-          <Text color="textSecondary" testID="hijri-today">
-            {`${i18n.t('prayer.hijri')}: ${hijriText(i18n, hijriToday)}`}
-          </Text>
-        ) : null}
-        <Text color="textSecondary" testID="prayer-city">
-          {i18n.t('prayer.city', { city: cityLabel })}
-        </Text>
-      </Card>
-
-      <Card variant="outlined" padding="none">
-        <View testID="today-times">
-          {PRAYER_NAMES.map((prayer, index) => {
-            const isNext = !next.tomorrow && next.prayer === prayer;
-            const time = clockText(i18n, todayTimes.times[prayer], place);
-            return (
-              <ListItem
-                key={prayer}
-                testID={`time-${prayer}`}
-                title={prayerName(i18n, prayer)}
-                {...(isNext ? { subtitle: i18n.t('prayer.badge.next'), selected: true } : {})}
-                trailing={<Text strong>{time}</Text>}
-                accessibilityLabel={`${prayerName(i18n, prayer)}, ${time}${isNext ? `, ${i18n.t('prayer.badge.next')}` : ''}`}
-                chevron={false}
-                divider={index < PRAYER_NAMES.length - 1}
-              />
-            );
-          })}
+      {/* The next prayer, as the top of the artboard: the date and city, the prayer and its
+          time large, and the time left in green. */}
+      <WhiteCard testID="next-prayer-card" padding={18} style={{ overflow: 'hidden' }}>
+        {/* The drawn masjid at the card's lower end, as the artboard's skyline. */}
+        <View
+          aria-hidden
+          pointerEvents="none"
+          style={{ position: 'absolute', end: 14, bottom: -6, opacity: 0.12 }}
+        >
+          <Icon name="masjid" size={88} color={c.textAccent} />
         </View>
-      </Card>
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 5,
+            marginBottom: 6,
+          }}
+        >
+          <Icon name="calendar" size={13} color={c.textSecondary} />
+          <Text variant="caption" color="textSecondary" style={size(11.5, 'caption')}>
+            {next.tomorrow
+              ? `${i18n.t('prayer.next')} · ${i18n.t('prayer.next.tomorrow')}`
+              : i18n.t('prayer.calendar.today')}
+            {hijriToday ? ', ' : ' · '}
+          </Text>
+          {hijriToday ? (
+            <Text
+              variant="caption"
+              color="textSecondary"
+              style={size(11.5, 'caption')}
+              testID="hijri-today"
+            >
+              {hijriText(i18n, hijriToday)}
+            </Text>
+          ) : null}
+          {hijriToday ? (
+            <Text variant="caption" color="textSecondary" style={size(11.5, 'caption')}>
+              {' · '}
+            </Text>
+          ) : null}
+          <Text
+            variant="caption"
+            color="textSecondary"
+            style={size(11.5, 'caption')}
+            testID="prayer-city"
+          >
+            {cityLabel}
+          </Text>
+        </View>
+        <Text
+          variant="title2"
+          heading={2}
+          style={[size(22, 'title2'), { fontWeight: '800', letterSpacing: -0.4 }]}
+          testID="next-prayer-time"
+        >
+          {`${prayerName(i18n, next.prayer)} ${at}`}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+          <Icon name="clock" size={13} color={c.textSuccess} />
+          <Text
+            variant="label"
+            color="textSuccess"
+            style={size(12, 'label')}
+            testID="next-prayer-countdown"
+          >
+            {line}
+          </Text>
+        </View>
+      </WhiteCard>
 
-      <Text variant="caption" color="textSecondary" testID="hijri-note">
-        {i18n.t('prayer.hijriNote')}
-      </Text>
+      <View testID="today-times" style={{ gap: 10, marginTop: 4 }}>
+        {PRAYER_NAMES.map((prayer) => {
+          const isNext = !next.tomorrow && next.prayer === prayer;
+          const time = clockText(i18n, todayTimes.times[prayer], place);
+          const name = prayerName(i18n, prayer);
+          return (
+            <View
+              key={prayer}
+              testID={`time-${prayer}`}
+              accessible
+              aria-label={`${name}, ${time}${isNext ? `, ${i18n.t('prayer.badge.next')}` : ''}`}
+            >
+              <WhiteCard
+                radius={16}
+                padding={0}
+                outlined={isNext}
+                style={{
+                  paddingVertical: 13,
+                  paddingHorizontal: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: spacing.sm,
+                }}
+              >
+                <View style={{ flexShrink: 1 }}>
+                  <Text strong decorative style={size(13.5, 'label')}>
+                    {name}
+                  </Text>
+                  {isNext ? (
+                    <Text
+                      variant="caption"
+                      color="textSuccess"
+                      strong
+                      decorative
+                      style={[size(11, 'caption'), { marginTop: 2 }]}
+                    >
+                      {i18n.t('prayer.badge.next')}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text
+                    strong
+                    decorative
+                    style={[size(13, 'label'), { fontVariant: ['tabular-nums'] }]}
+                  >
+                    {time}
+                  </Text>
+                  {/* The adhan speaker, as drawn. There is no adhan sound yet, so it is only
+                      a mark: green for the next prayer, grey otherwise. */}
+                  <View aria-hidden>
+                    <Icon name="bell" size={16} color={isNext ? c.progress : c.textMuted} />
+                  </View>
+                </View>
+              </WhiteCard>
+            </View>
+          );
+        })}
+      </View>
 
-      <CalendarSection
-        place={place}
-        today={today}
-        view={calendarView}
-        onViewChange={onCalendarViewChange}
-        hijriOffsetDays={hijriOffsetDays}
-        i18n={i18n}
-      />
+      {footer}
 
-      <Text variant="caption" color="textSecondary" testID="prayer-method">
-        {i18n.t('prayer.method')}
-      </Text>
+      <View style={{ marginTop: spacing.lg, gap: spacing.lg }}>
+        {citySelect}
+        <Text variant="caption" color="textSecondary" testID="hijri-note">
+          {i18n.t('prayer.hijriNote')}
+        </Text>
+
+        <CalendarSection
+          place={place}
+          today={today}
+          view={calendarView}
+          onViewChange={onCalendarViewChange}
+          hijriOffsetDays={hijriOffsetDays}
+          i18n={i18n}
+        />
+
+        <Text variant="caption" color="textSecondary" testID="prayer-method">
+          {i18n.t('prayer.method')}
+        </Text>
+      </View>
     </>
   );
 }

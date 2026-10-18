@@ -6,25 +6,17 @@ import type { ReaderRequest } from '../features/content/modules';
 import { useServices } from '../providers/services';
 
 /**
- * The Quran & Prayer tab. The reader and prayer times come from `@qc/content`; this screen
- * only mounts them under the app's header (which carries the profile button). Without the
- * package it says so plainly.
+ * The Quran & Prayer tab. The reader and prayer times come from `@qc/content`, and the module
+ * draws the whole page as on the showcase (D17): its own green header with the Quran / Waqt
+ * switch and the profile button, and a plain top bar in the reader. Without the package this
+ * screen says so plainly.
  */
 export function QuranPrayerScreen({ reader }: { reader?: ReaderRequest }) {
   const { t } = useI18n();
   const { content } = useServices();
   const Module = content.QuranPrayerScreen;
   if (Module) {
-    return (
-      <ScreenFrame
-        title={t('tabs.quranPrayer')}
-        actions={<ProfileButton />}
-        scroll={false}
-        testID="quran-screen"
-      >
-        <Module {...(reader ? { reader } : {})} />
-      </ScreenFrame>
-    );
+    return <Module {...(reader ? { reader } : {})} />;
   }
   return (
     <ScreenFrame title={t('tabs.quranPrayer')} actions={<ProfileButton />} testID="quran-screen">

@@ -64,15 +64,21 @@ describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
       expect(screen.queryByText(fakeUrdu(1, 1))).toBeNull();
     }
     expect(getComputedStyle(translation).fontFamily).not.toContain(fonts.quran);
-    expect(getComputedStyle(translation).color).toBe(rgbOf(semanticColors[combo.mode].text));
+    // D17: the translation is quieter than the Arabic, in the secondary text colour.
+    expect(getComputedStyle(translation).color).toBe(
+      rgbOf(semanticColors[combo.mode].textSecondary),
+    );
 
     // The Arabic follows the app's text size (four steps) at the reader's default zoom, and the
     // colour mode: the text colour is the theme's.
-    expect(parseFloat(ar.style.fontSize)).toBe(Math.round(28 * textScale[combo.textSize]));
+    // D17: the artboard sets the reader's Arabic at 21 px.
+    expect(parseFloat(ar.style.fontSize)).toBe(Math.round(21 * textScale[combo.textSize]));
     expect(getComputedStyle(ar).color).toBe(rgbOf(semanticColors[combo.mode].text));
 
     // The header and the controls speak the app language.
-    expect(screen.getByText(msg(combo.locale, 'quran.reader.jump'))).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: msg(combo.locale, 'quran.reader.settings') }),
+    ).toBeTruthy();
     expect(document.querySelector(`[dir="${combo.direction}"]`)).not.toBeNull();
   });
 });
@@ -139,8 +145,9 @@ describe('QuranReaderScreen', () => {
     open(t, { kind: 'surah', id: 1 });
     await screen.findByTestId('translation-1-1');
     fireEvent.click(screen.getByTestId('reader-settings'));
+    // D17: translation choice pills; "Arabic only" switches the translation off.
     fireEvent.click(
-      await screen.findByRole('switch', { name: msg('en', 'quran.translation.show') }),
+      await screen.findByRole('radio', { name: msg('en', 'quran.reader.arabicOnly') }),
     );
     await waitFor(() => expect(screen.queryByTestId('translation-1-1')).toBeNull());
     expect(arabicOf(1, 1)).toBeTruthy();
@@ -210,10 +217,12 @@ describe('QuranReaderScreen', () => {
     const t = createTestServices();
     open(t, { kind: 'surah', id: 18, ayah: 60 });
     const verse = await screen.findByTestId('verse-18-60');
-    // A bar at the start side marks the ayah the person asked for.
-    expect(verse.getAttribute('style')).toMatch(/border-(left|right)-width: 4px/);
-    expect(screen.getByTestId('verse-18-59').getAttribute('style')).toMatch(
-      /border-(left|right)-width: 0px/,
+    // D17: an emerald outline marks the ayah the person asked for.
+    expect(within(verse).getByTestId('verse-card-18-60').getAttribute('style')).toMatch(
+      /border-top-width: 1.5px/,
+    );
+    expect(screen.getByTestId('verse-card-18-59').getAttribute('style')).toMatch(
+      /border-top-width: 1px/,
     );
   });
 
@@ -222,7 +231,8 @@ describe('QuranReaderScreen', () => {
     open(t, { kind: 'surah', id: 18 });
     await screen.findByTestId('arabic-18-1');
 
-    fireEvent.click(screen.getByTestId('reader-jump'));
+    // The jump field is in the reading settings sheet (D17).
+    fireEvent.click(screen.getByTestId('reader-settings'));
     const input = await screen.findByTestId('jump-input');
     fireEvent.change(input, { target: { value: '999' } });
     fireEvent.click(screen.getByTestId('jump-go'));
@@ -243,7 +253,8 @@ describe('QuranReaderScreen', () => {
     const t = createTestServices();
     open(t, { kind: 'juz', id: 30 });
     await screen.findByTestId('arabic-78-1');
-    fireEvent.click(screen.getByTestId('reader-jump'));
+    // The jump field is in the reading settings sheet (D17).
+    fireEvent.click(screen.getByTestId('reader-settings'));
     const input = await screen.findByTestId('jump-input');
     fireEvent.change(input, { target: { value: '2:255' } });
     fireEvent.click(screen.getByTestId('jump-go'));
@@ -259,7 +270,9 @@ describe('QuranReaderScreen', () => {
     const t = createTestServices();
     open(t, { kind: 'juz', id: 30 });
     await screen.findByTestId('arabic-78-1');
-    expect(screen.getByText(msg('en', 'quran.juz.title', { number: 30 }))).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: msg('en', 'quran.juz.title', { number: 30 }) }),
+    ).toBeTruthy();
     expect(
       screen.getAllByText(msg('en', 'quran.surah.title', { name: 'An-Naba' })).length,
     ).toBeGreaterThan(0);

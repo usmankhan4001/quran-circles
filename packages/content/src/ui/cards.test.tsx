@@ -201,18 +201,25 @@ describe('ContinueReadingCard', () => {
     expect(place.textContent).not.toContain('Ya-Sin');
   });
 
-  it('on the Quran tab it stays hidden until something was read, then offers Continue', async () => {
+  it('on the Quran tab it offers the first surah until something was read, then Continue', async () => {
     const { services } = createTestServices();
     const onOpen = vi.fn();
     const view = renderContent(<ContinueReadingCard variant="tab" onOpen={onOpen} />, services);
     await act(async () => {
       await Promise.resolve();
     });
-    expect(view.container.textContent).toBe('');
+    // D17: the list always leads with a card; before any reading it starts at Al-Fatihah.
+    fireEvent.click(screen.getByTestId('continue-reading-start'));
+    expect(onOpen).toHaveBeenCalledWith({ surah: 1, ayah: 1 });
+    expect(view.container.textContent).toContain(msg('en', 'home.reading.start'));
     await act(async () => {
       await services.readingPosition.save(18, 10);
     });
-    const button = await screen.findByRole('button', { name: msg('en', 'quran.continue') });
+    // D17: an outline pill that names the ayah, with how far through the surah at the top.
+    const button = await screen.findByRole('button', {
+      name: msg('en', 'quran.continueAt', { ayah: 10 }),
+    });
+    expect(screen.getByTestId('lead-progress').textContent).toBe('10 / 110');
     fireEvent.click(button);
     expect(onOpen).toHaveBeenCalledWith({ surah: 18, ayah: 10 });
   });

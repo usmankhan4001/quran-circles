@@ -17,9 +17,13 @@ describe.each(matrix)('QuranPrayerTab in $name', (combo) => {
     const t = createTestServices({ now: AT_17_00 });
     renderContent(<QuranPrayerTab />, t.services, { combo });
     expect(await screen.findByTestId('surah-row-1')).toBeTruthy();
-    expect(screen.getByRole('heading', { name: msg(combo.locale, 'quran.title') })).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: msg(combo.locale, 'quran.hub.title') }),
+    ).toBeTruthy();
     expect(screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.quran') })).toBeTruthy();
-    expect(screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.prayer') })).toBeTruthy();
+    expect(
+      screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.prayerShort') }),
+    ).toBeTruthy();
   });
 });
 
@@ -28,7 +32,7 @@ describe('QuranPrayerTab', () => {
     const t = createTestServices({ now: AT_17_00 });
     const first = renderContent(<QuranPrayerTab />, t.services);
     await screen.findByTestId('surah-row-1');
-    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.tab.prayer') }));
+    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.tab.prayerShort') }));
     expect(await screen.findByText(msg('en', 'prayer.noCity.title'))).toBeTruthy();
     await waitFor(async () => expect((await t.services.viewState.load()).section).toBe('prayer'));
     first.unmount();
@@ -55,9 +59,7 @@ describe('QuranPrayerTab', () => {
     first.unmount();
 
     renderContent(<QuranPrayerTab />, t.services);
-    expect((await screen.findByTestId('prayer-city')).textContent).toBe(
-      msg('en', 'prayer.city', { city: 'Peshawar' }),
-    );
+    expect((await screen.findByTestId('prayer-city')).textContent).toBe('Peshawar');
     expect(screen.getByTestId('day-2026-10-31')).toBeTruthy();
   });
 
@@ -84,7 +86,9 @@ describe('QuranPrayerTab', () => {
     const t = createTestServices();
     await t.services.bookmarks.toggleAyah({ surah: 36, ayah: 7 });
     renderContent(<QuranPrayerTab />, t.services);
-    fireEvent.click(await screen.findByRole('radio', { name: msg('en', 'quran.tab.bookmarks') }));
+    fireEvent.click(
+      await screen.findByRole('radio', { name: new RegExp(`^${msg('en', 'quran.tab.saved')}`) }),
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Ya-Sin, ayah 7' }));
     expect(await screen.findByTestId('verse-36-7')).toBeTruthy();
   });

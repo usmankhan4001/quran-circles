@@ -89,7 +89,7 @@ describe('the Quran & Prayer package inside the app', () => {
     const view = await renderScreen(<QuranPrayerScreen />, { content });
     await view.findByTestId('section-switch');
     expect(view.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['tabs.quranPrayer']);
+    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['quran.hub.title']);
   });
 
   it("shows today's five prayers in the strip on Home once a city is chosen", async () => {
