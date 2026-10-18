@@ -464,6 +464,7 @@ export function HomeScreen() {
                 ]}
               >
                 <Text
+                  variant="eyebrow"
                   color="textAccent"
                   accessibilityLabel={hijriText}
                   numberOfLines={1}
