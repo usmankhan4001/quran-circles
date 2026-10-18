@@ -519,6 +519,48 @@ describe('invitation ceilings (SEC-03)', () => {
     }
   });
 
+  it('lets parallel invites and imports by one person take the last slots only once', async () => {
+    // The check and the insert run in one transaction under the inviter's advisory lock, so
+    // requests on different API processes count one after the other. (PGlite runs one transaction
+    // at a time anyway; on Postgres the lock is what keeps the count exact.)
+    const tight = await createHarness({
+      config: { inviteLimits: { perImport: 3, perActorPerDay: 4 } },
+    });
+    try {
+      await tight.reset();
+      const boss = await tight.nationalAdmin();
+      const row = () => ({
+        role: 'venue_coordinator',
+        venueId: tight.world.venueA1,
+        phone: newPhone(),
+      });
+      expect((await tight.api('adminRoles.invite', { as: boss, body: row() })).status).toBe(201);
+      expect((await tight.api('adminRoles.invite', { as: boss, body: row() })).status).toBe(201);
+      // Two slots left; five single invites and a two-row import arrive at once.
+      const answers = await Promise.all([
+        ...Array.from({ length: 5 }, () =>
+          tight.api('adminRoles.invite', { as: boss, body: row() }),
+        ),
+        tight.api('adminImport.coordinators', {
+          as: boss,
+          body: { dryRun: false, rows: [row(), row()] },
+        }),
+      ]);
+      const sent = await tight.db
+        .select()
+        .from(schema.coordinatorInvites)
+        .where(eq(schema.coordinatorInvites.invitedBy, boss.principal.userId!));
+      expect(sent).toHaveLength(4);
+      const refused = answers.filter((a) => a.status === 400);
+      expect(refused.length).toBeGreaterThanOrEqual(4);
+      for (const a of refused) {
+        expect(issuesOf(a)[0]?.code).toBe('invite_daily_limit');
+      }
+    } finally {
+      await tight.close();
+    }
+  });
+
   it('holds every role to the ceiling in its own scope, and refuses the rest as before', async () => {
     const tight = await createHarness({
       config: { inviteLimits: { perImport: 2, perActorPerDay: 2 } },

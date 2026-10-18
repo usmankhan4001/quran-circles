@@ -29,7 +29,10 @@ interface Counter {
   count: number;
 }
 
-/** Fixed-window counters in memory. Fine for one API process; swap the interface for more. */
+/**
+ * Fixed-window counters in memory. With several API processes (`API_PROCESSES`) the cluster primary
+ * keeps the one instance and the processes ask it (`shared-limits.ts`), so limits stay exact.
+ */
 export class MemoryRateLimiter implements RateLimiter {
   private readonly counters = new Map<string, Counter>();
   private lastSweep = 0;

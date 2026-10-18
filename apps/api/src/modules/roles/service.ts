@@ -152,6 +152,11 @@ const INVITE_WINDOW_MS = 24 * 60 * 60 * 1000;
  * Counts the invites they created in the window (`createdAt` is the request time); refuses with
  * `validation_failed`, issue `rows` / `invite_daily_limit` (`invite_daily_limit` on `phone` for a
  * single invite), when `adding` more would pass the ceiling. Nothing is written by the check.
+ *
+ * Inside a transaction it first takes a transaction-scoped advisory lock for the inviter, so two
+ * requests by the same person (on one API process or several) count one after the other and cannot
+ * both take the last invites: the second sees the first's rows once it commits. Outside one (a dry
+ * run) the lock is released at once and the answer is only a preview.
  */
 export async function assertInviteAllowance(
   db: Db,
@@ -161,6 +166,7 @@ export async function assertInviteAllowance(
   path: 'rows' | 'phone',
 ): Promise<void> {
   if (adding <= 0) return;
+  await db.execute(sql`select pg_advisory_xact_lock(hashtext(${`invite_allowance:${actorId}`}))`);
   const [row] = await db
     .select({ n: count() })
     .from(coordinatorInvites)
@@ -343,8 +349,9 @@ export async function createInvite(
   const replacesId = 'replacesAssignmentId' in body ? body.replacesAssignmentId : undefined;
   try {
     const invite = await db.transaction(async (tx) => {
-      await retireLapsedInvites(tx, body.phone, target, deps.now);
+      // The allowance first: it takes the inviter's lock before this request touches any row.
       await assertInviteAllowance(tx, actorId, 1, deps, 'phone');
+      await retireLapsedInvites(tx, body.phone, target, deps.now);
       const { user: existing, holds } = await roleHolder(tx, body.phone, target);
       if (holds) return fail('role_already_assigned');
       if (replacesId && !(await handoverAssignmentExists(tx, replacesId, target))) {
