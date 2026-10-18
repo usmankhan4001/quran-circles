@@ -18,6 +18,8 @@ import {
   Tag,
   Icon,
   iconNames,
+  phosphorSlugs,
+  resolveIcon,
 } from '../index';
 import { formatNumber } from '../numerals';
 import { semanticColors } from '../semantic-colors';
@@ -295,6 +297,61 @@ describe('style guide icons (D17)', () => {
     const { unmount } = renderThemed(<Icon name="arrow-forward" />, { locale: 'en' });
     expect(screen.getByTestId('icon-arrow-forward').style.transform).not.toContain('scaleX(-1)');
     unmount();
+  });
+});
+
+describe('Phosphor icons (D17)', () => {
+  const paths = (name: string) =>
+    [...screen.getByTestId(`icon-${name}`).querySelectorAll('path')].map((p) => ({
+      d: p.getAttribute('d'),
+      opacity: p.getAttribute('opacity'),
+    }));
+
+  it('draws the showcase names from the Phosphor set', () => {
+    for (const name of [
+      'house',
+      'compass',
+      'book-open-text',
+      'mosque',
+      'ticket',
+      'qr-code',
+    ] as const) {
+      expect(phosphorSlugs, name).toContain(name);
+      const { unmount } = renderThemed(<Icon name={name} />);
+      expect(paths(name).length, name).toBeGreaterThan(0);
+      unmount();
+    }
+  });
+
+  it('draws each kit name as its Phosphor glyph', () => {
+    const { unmount } = renderThemed(<Icon name="home" />);
+    const home = paths('home');
+    unmount();
+    renderThemed(<Icon name="house" />);
+    expect(paths('house')).toEqual(home);
+    expect(resolveIcon('chevron-forward')).toEqual({ slug: 'caret-right', weight: 'bold' });
+    expect(resolveIcon('masjid', 'duotone')).toEqual({ slug: 'mosque', weight: 'duotone' });
+  });
+
+  it('switches weight: fill differs from regular, duotone adds a faint back layer', () => {
+    const drawn = (weight: 'regular' | 'fill' | 'duotone') => {
+      const { unmount } = renderThemed(<Icon name="house" weight={weight} />);
+      const out = paths('house');
+      unmount();
+      return out;
+    };
+    const regular = drawn('regular');
+    expect(drawn('fill')).not.toEqual(regular);
+    const duo = drawn('duotone');
+    expect(duo.some((p) => p.opacity === '0.2')).toBe(true);
+    expect(duo.filter((p) => p.opacity === null).map((p) => p.d)).toEqual(regular.map((p) => p.d));
+  });
+
+  it('paints in the given colour, and mirrors the Phosphor arrows in right to left', () => {
+    renderThemed(<Icon name="caret-right" color="rgb(1, 2, 3)" />, { locale: 'ur' });
+    const box = screen.getByTestId('icon-caret-right');
+    expect(box.querySelector('svg')?.style.color).toBe('rgb(1, 2, 3)');
+    expect(box.style.transform).toContain('scaleX(-1)');
   });
 });
 

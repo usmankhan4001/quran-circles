@@ -47,6 +47,13 @@ export const flippingIcons: ReadonlySet<string> = new Set([
   'chevron-back',
   'arrow-forward',
   'arrow-back',
+  // Phosphor names (D17)
+  'caret-right',
+  'caret-left',
+  'arrow-right',
+  'arrow-left',
+  'arrow-up-right',
+  'paper-plane-tilt',
   'back',
   'forward',
   'next',

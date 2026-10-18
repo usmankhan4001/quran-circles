@@ -80,9 +80,22 @@ describe('icon mirroring', () => {
     }
   });
 
-  it('only the horizontal chevrons and arrows of the kit icons flip', () => {
+  it('only the horizontal chevrons, carets and arrows of the kit icons flip', () => {
     const flipping = iconNames.filter((n) => flippingIcons.has(n)).sort();
-    expect(flipping).toEqual(['arrow-back', 'arrow-forward', 'chevron-back', 'chevron-forward']);
+    expect(flipping).toEqual([
+      'arrow-back',
+      'arrow-forward',
+      'arrow-left',
+      'arrow-right',
+      'arrow-up-right',
+      'caret-left',
+      'caret-right',
+      'chevron-back',
+      'chevron-forward',
+      'list-bullets',
+      'paper-plane-tilt',
+      'sign-out',
+    ]);
   });
 });
 

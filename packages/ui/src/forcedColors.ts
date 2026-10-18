@@ -19,8 +19,6 @@ const QUERY = '(forced-colors: active)';
 export const systemColors = {
   /** Text on the page colour. */
   text: 'var(--qc-system-text, CanvasText)',
-  /** The page colour, for shapes cut out of filled icon art. */
-  background: 'var(--qc-system-background, Canvas)',
 } as const;
 
 /** Lets a view keep the colours the kit gives it while forced colours are on (web only). */

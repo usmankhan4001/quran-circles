@@ -9,8 +9,9 @@ export type { Theme, ThemeOptions, ThemeProviderProps } from './theme';
 
 export { Text } from './components/Text';
 export type { TextProps, TextColor, TextLang } from './components/Text';
-export { Icon, iconNames } from './components/Icon';
-export type { IconName, IconProps } from './components/Icon';
+export { Icon, iconNames, kitIconGlyphs, resolveIcon } from './components/Icon';
+export type { IconName, IconProps, IconWeight, KitIconName, PhosphorSlug } from './components/Icon';
+export { phosphorSlugs } from './components/phosphor-glyphs';
 export { Button } from './components/Button';
 export type { ButtonProps, ButtonVariant, ButtonSize } from './components/Button';
 export { IconButton } from './components/IconButton';
