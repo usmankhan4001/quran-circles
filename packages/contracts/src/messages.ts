@@ -146,7 +146,7 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
     requiresConsent: false,
     body: {
       en: '{code} is your Quran Circles code. It works for {minutes} minutes. Do not share it.',
-      ur: 'آپ کا قرآن حلقے کوڈ {code} ہے۔ یہ {minutes} منٹ تک کارآمد ہے۔ اسے کسی کو نہ بتائیں۔',
+      ur: 'آپ کا Quran Circles کوڈ {code} ہے۔ یہ {minutes} منٹ تک کارآمد ہے۔ اسے کسی کو نہ بتائیں۔',
     },
     urduStatus: 'draft',
   },
@@ -218,7 +218,7 @@ export const TEMPLATES: Record<TemplateKey, TemplateDef> = {
     requiresConsent: false,
     body: {
       en: '{inviterName} invited you to help run {scopeName} on Quran Circles. Sign in with this number: {link}',
-      ur: '{inviterName} نے آپ کو قرآن حلقے پر {scopeName} چلانے کی دعوت دی ہے۔ اسی نمبر سے سائن اِن کریں: {link}',
+      ur: '{inviterName} نے آپ کو Quran Circles پر {scopeName} چلانے کی دعوت دی ہے۔ اسی نمبر سے سائن اِن کریں: {link}',
     },
     urduStatus: 'draft',
   },

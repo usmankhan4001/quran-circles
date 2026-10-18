@@ -93,7 +93,7 @@ describe('provider code sender', () => {
     await sender.send({ phone: PHONE, code: CODE, locale: 'ur', channel: 'sms', minutes: 5 });
     expect(sms.sent[0]!.body).toContain(CODE);
     expect(sms.sent[0]!.body).toContain('5');
-    expect(sms.sent[0]!.body).toContain('قرآن حلقے');
+    expect(sms.sent[0]!.body).toContain('Quran Circles');
   });
 
   it('states the real code lifetime by default: 5 minutes, as the API expires codes (SEC-21)', async () => {
