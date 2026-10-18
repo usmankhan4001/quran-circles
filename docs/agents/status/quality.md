@@ -38,3 +38,20 @@ Reports to owner lanes (each lane fixes in its own directories; details and fixe
 - user-app: SEC-15 Low (Expo advisories); SEC-23 Info (service worker caches non-page responses); token storage part of SEC-10.
 - admin-app: SEC-15 Low (Expo advisories).
 - Needs staging: SEC-20 (forged `X-Forwarded-For` through Caddy), re-test SEC-01 after the fix, SEC-10 headers, audit on the release candidate, and deliverable 2 (scope matrix against staging).
+
+## Low-end budgets and accessibility/RTL
+
+Updated: 2026-10-18. Brief items 4 and 5 (WP12). **Provisional**: emulated low-end Android in Chromium (360 × 800, DPR 2, 6× CPU, Slow 4G and 3G) against the local stack; no reference phone, no staging. Write-ups: `docs/quality/low-end-budgets.md` and `docs/quality/accessibility-rtl.md` (screenshots in `docs/quality/screens/`).
+
+- Done: opt-in Playwright project `quality` (`QC_QUALITY=1 pnpm --filter @qc/e2e exec playwright test --project=quality [low-end-budgets|accessibility-rtl]`), code in `tests/e2e/src/quality/`, `@axe-core/playwright` 4.11.0 added to `tests/e2e`. The default e2e run is unchanged. Also fixed the web push fake token in `tests/e2e/src/support/people.ts` to subscription JSON on `fcm.googleapis.com`, as requested.
+- Budgets (5 runs each, median/worst): cold start FCP 9.2/9.7 s (budget 3 s), Home content 11.1/11.9 s (6 s), interactive 11.7/12.2 s (8 s), transfer 922 KiB (900), first tap to Nearby 1.9/2.2 s (1.5 s); coordinator start 11.6/11.7 s (6 s); first-screen JS gzip user 544 KiB, admin 509 KiB (450). Met: warm start 2.1/2.6 s (3 s), Nearby scroll 0/1.6 % dropped and no long task, map fallback 0.32/0.62 s, reader 2.3/2.5 s first open, 0.47/0.68 s reopen, 0.22 s blocking.
+- Accessibility: 17 screens, 392 combinations, 358 axe runs, all rendered. axe: 0 critical; 3 serious WCAG rules (11 elements, all user-app, `aria-prohibited-attr`); 17 moderate best-practice (`region`: user-app 7, admin-app 5, console 4, content 1); 0 minor. Probe findings A-01 to A-10 by lane in the doc.
+- Not done: run 2 of the budgets was cut short by the container restart, so warm start, coordinator, scroll, map and reader have one stack's runs. Nothing measured on a phone or with a screen reader.
+- Findings for owner lanes:
+  - user-app: render an inline shell in `index.html`; gate first render on the current script's UI font only, lazy-load KFGQPC and Mehr; bundle analysis and lazy routes; preload Nearby; A-02 `aria-label` on generic divs (serious); A-06, A-09, A-10.
+  - admin-app: same shell and font gate (`FontGate.tsx`); A-01 `<html dir>` empty and `lang` stays `en` in Urdu (serious); A-09.
+  - console: A-03 overflow at text sizes 2–3 at 1280 px (serious); A-04 320 px reflow; A-05 small targets.
+  - ui: WOFF2 web fonts; A-07 forced colours break kit icons; A-08 no landmarks in the kit layouts.
+  - contracts (i18n): split string tables per language.
+  - platform: confirm Chrome on Android gets zstd from Caddy on staging.
+- Questions for the orchestrator: accept or change the proposed budgets (`tests/e2e/src/quality/budgets.ts`)? Who runs the real-device checks listed in both docs, and on which phone?

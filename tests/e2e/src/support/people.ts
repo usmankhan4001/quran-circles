@@ -100,13 +100,22 @@ export async function inviteVenueCoordinator(by: Person, venueId: string): Promi
   return signIn(phone);
 }
 
-/** A push device with a fake token. The worker's fake provider "sends" to it. */
+/**
+ * A push device with a fake subscription. The API accepts only subscription JSON on an allowed
+ * push service, so the endpoint names one, with a made-up path and keys; nothing is ever sent
+ * there, because the worker's fake provider "sends" to it.
+ */
 export async function addWebPushDevice(person: Person): Promise<void> {
+  const subscription = {
+    endpoint: `https://fcm.googleapis.com/fcm/send/fake-${person.me.id}`,
+    expirationTime: null,
+    keys: { p256dh: 'fake-p256dh', auth: 'fake-auth' },
+  };
   await person.api.devices.register({
     body: {
       platform: 'web',
       provider: 'webpush',
-      token: `e2e-fake-webpush-${person.me.id}`,
+      token: JSON.stringify(subscription),
       locale: 'en',
     },
   });

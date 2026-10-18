@@ -45,5 +45,11 @@ export default defineConfig({
       testDir: './src/flows/admin-app',
       use: { ...browser, viewport: { width: 412, height: 915 } },
     },
+    // Opt-in: low-end budgets and the accessibility/right-to-left audit (quality lane, WP12).
+    // Long-running and report-producing, so not part of the default run. See docs/quality/.
+    //   QC_QUALITY=1 pnpm --filter @qc/e2e exec playwright test --project=quality
+    ...(process.env.QC_QUALITY === '1'
+      ? [{ name: 'quality', testDir: './src/quality', timeout: 60 * 60_000, use: browser }]
+      : []),
   ],
 });
