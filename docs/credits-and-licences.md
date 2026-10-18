@@ -1,0 +1,37 @@
+# Credits and licences
+
+What Quran Circles uses that others made, and the terms it is used under. The apps show the same credits on screen (user app: Profile, About and credits; console: the sidebar footer), from one list in [`packages/ui/src/credits.ts`](../packages/ui/src/credits.ts).
+
+## The Quran Circles code
+
+No licence has been chosen for the code in this repository yet, so all rights are reserved by the owner. Nothing below is covered by the code's licence; each item keeps its own.
+
+## Fonts
+
+The full notices, file checksums and conversion notes are in [`packages/ui/assets/fonts/LICENSES.md`](../packages/ui/assets/fonts/LICENSES.md). The poster renderer carries its own copies with the same notices in [`apps/poster-renderer/assets/fonts/LICENSES.md`](../apps/poster-renderer/assets/fonts/LICENSES.md).
+
+| Use          | Font                        | Licence                                 | Notes                                                                                             |
+| ------------ | --------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| English text | Figtree                     | SIL Open Font License 1.1               | © The Figtree Project Authors. WOFF2 copies for the web stay under the OFL.                       |
+| Urdu text    | Mehr Nastaliq Web 2.00      | CC BY-SA 4.0                            | © Mehr Type with CSaLT, ITU Punjab, Lahore. The WOFF2 copy is shared under CC BY-SA 4.0.          |
+| Quran text   | KFGQPC Uthmanic Script HAFS | KFGQPC free-use licence (embedded EULA) | © King Fahd Glorious Qur'an Printing Complex. Free to use and distribute, never sold or modified. |
+
+Two rules follow from these licences and are enforced by tests in `@qc/ui`:
+
+- **Never modify the KFGQPC font file.** No subsetting, no WOFF conversion, no renaming. A test fails if its checksum changes or if a converted copy appears.
+- **Jameel Noori Nastaleeq is not bundled.** No redistribution licence could be found for it.
+
+## Quran text and translations
+
+| Text                | Source                                                                                           | Terms                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| Arabic Quran text   | Tanzil Project (`quran-uthmani`), via api.alquran.cloud                                          | CC BY 3.0, used verbatim              |
+| Urdu translation    | Sayyid Abul A'la Maududi, _Tafhim al-Qur'an_, via Tanzil                                         | Non-commercial use, as Tanzil permits |
+| English translation | Sayyid Abul A'la Maududi, _Towards Understanding the Qur'an_, tr. Zafar Ishaq Ansari, via Tanzil | Non-commercial use, as Tanzil permits |
+
+The text is fetched at run time and cached on each device for at most 24 passages; none of it is stored in this repository ([decision 0008](engineering/decisions/0008-quran-source-and-cache.md)). Both translations are still in copyright. The app is free and non-commercial, which fits Tanzil's terms; any form of monetisation would first need permission from the publishers. A full offline copy (WP18) waits for written rights.
+
+## Other notable dependencies
+
+- **adhan** (MIT) for prayer times, and a Hijri table generated from **@umalqura/core** (MIT, Alaa Masoud); see [decision 0007](engineering/decisions/0007-prayer-times-and-hijri.md).
+- Everything else is listed with its version in each package's `package.json` and in `pnpm-lock.yaml`.
