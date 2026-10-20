@@ -9,7 +9,8 @@ export function ArtboardsNearby({ onNavigatePage }: { onNavigatePage: (page: str
       when: 'Thu · 7:30 PM (After Maghrib)',
       portion: 'Al-Kahf : 1–31',
       section: 'Brothers',
-      seats: '22 seats left',
+      teacher: 'Dr. Muhammad Israr',
+      badge: 'Follow for Alerts →',
       dist: '0.8 km',
     },
     {
@@ -18,7 +19,8 @@ export function ArtboardsNearby({ onNavigatePage }: { onNavigatePage: (page: str
       when: 'Sat · 4:45 PM (After Asr)',
       portion: 'Al-Mulk : 1–30',
       section: 'Sisters',
-      seats: '3 seats left',
+      teacher: 'Ustadha Maryam',
+      badge: 'Follow for Alerts →',
       dist: '1.2 km',
     },
     {
@@ -27,7 +29,8 @@ export function ArtboardsNearby({ onNavigatePage }: { onNavigatePage: (page: str
       when: 'Daily · 9:00 PM (After Isha)',
       portion: 'Surah Al-Isra',
       section: 'Families',
-      seats: 'Open Hall',
+      teacher: 'Ustadh Tariq',
+      badge: 'Follow for Alerts →',
       dist: '2.1 km',
     },
   ];
@@ -245,7 +248,18 @@ export function ArtboardsNearby({ onNavigatePage }: { onNavigatePage: (page: str
                   }}
                 >
                   <span style={{ color: '#334155', fontWeight: 600 }}>{s.when}</span>
-                  <span style={{ color: '#111827', fontWeight: 700 }}>{s.seats} →</span>
+                  <span
+                    style={{
+                      color: '#16A34A',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <PhIcon name="whatsapp-logo" weight="fill" size={13} color="#16A34A" />
+                    {s.badge}
+                  </span>
                 </div>
               </div>
             ))}

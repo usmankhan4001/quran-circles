@@ -1,16 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PhIcon } from './icons';
 
 export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: string) => void }) {
+  const [alertsEnabled, setAlertsEnabled] = useState(true);
+  const [phoneVal, setPhoneVal] = useState('300 1234567');
+  const [codeVal, setCodeVal] = useState(['5', '2', '9', '4', '1', '8']);
+  const [nameVal, setNameVal] = useState('Usman Khan');
+  const [authStep, setAuthStep] = useState<'sheet' | 'verified'>('sheet');
+  const [readTodayDone, setReadTodayDone] = useState(true);
+
   return (
     <div className="artboard-row">
       {/* ======================================================================
-          ARTBOARD 01: SESSIONSCREEN (CIRCLE DETAIL)
-          Inspired by Iqraa Screenshot 1 Right Phone (Hero Photo + Clean White Sheet)
+          ARTBOARD 01: SESSIONSCREEN (HALQA DETAIL & FOLLOW)
+          Pure Halqa Focus: Times, Venue, Teacher, Portions & WhatsApp Alerts
          ====================================================================== */}
       <div className="artboard-col">
         <div className="artboard-caption">
-          <span>01. SessionScreen — Circle Detail & Portions</span>
+          <span>01. Halqa Detail — Venue, Times, Teacher & Alerts</span>
           <span>375 × 812</span>
         </div>
 
@@ -98,134 +105,180 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                       padding: '3px 10px',
                       borderRadius: 999,
                       background: 'rgba(255,255,255,0.2)',
-                      backdropFilter: 'blur(6px)',
+                      backdropFilter: 'blur(8px)',
                       fontSize: 11,
-                      fontWeight: 600,
+                      fontWeight: 700,
+                      letterSpacing: '0.02em',
                     }}
                   >
-                    Brothers · Urdu/Eng
+                    Weekly Dora-e-Quran
                   </span>
-                  <span style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.85)' }}>
-                    Every Thursday · 45 mins
+                  <span
+                    style={{
+                      padding: '3px 10px',
+                      borderRadius: 999,
+                      background: 'rgba(16,185,129,0.3)',
+                      color: '#A7F3D0',
+                      backdropFilter: 'blur(8px)',
+                      fontSize: 11,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Brothers &amp; Sisters
                   </span>
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
+
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                  }}
+                >
                   Tafseer Surah Al-Kahf
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    opacity: 0.9,
+                    marginTop: 4,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <PhIcon name="map-pin" weight="fill" size={12} />
+                  <span>Jamia Masjid Al-Noor, Gulberg III · 0.8 km</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Clean White Sheet Content */}
-          <div
-            style={{ padding: '18px 20px 0', display: 'flex', flexDirection: 'column', gap: 14 }}
-          >
-            {/* Venue & Ustadh Card */}
-            <div
-              className="iq-white-card"
-              style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}
-            >
-              <div
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 12,
-                      background: '#E8F5EE',
-                      color: '#1E563B',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <PhIcon name="mosque" weight="duotone" size={19} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>
-                      Jamia Masjid Al-Noor
-                    </div>
-                    <div style={{ fontSize: 11.5, color: '#64748B' }}>
-                      Main Blvd, Gulberg III · 0.8 km
-                    </div>
-                  </div>
-                </div>
-                <PhIcon name="caret-right" weight="bold" size={14} color="#94A3B8" />
-              </div>
-
-              <div style={{ height: 1, background: '#F1F5F9' }} />
-
-              <div
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: '50%',
-                      background: '#FEF3C7',
-                      color: '#B45309',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 12,
-                      fontWeight: 800,
-                    }}
-                  >
-                    UA
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
-                      Ustadh Ahmad Al-Azhari
-                    </div>
-                    <div style={{ fontSize: 11.5, color: '#64748B' }}>
-                      In-person + Online livestream
-                    </div>
-                  </div>
-                </div>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: '#1E563B' }}>Online ↗</span>
-              </div>
-            </div>
-
-            {/* SeatMeter Capacity */}
-            <div className="iq-white-card" style={{ padding: 14 }}>
+          {/* Overlapping Content Container */}
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Timing & Countdown Card */}
+            <div className="iq-white-card" style={{ padding: '14px 16px' }}>
               <div
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  fontSize: 12,
-                  marginBottom: 8,
+                  alignItems: 'center',
+                  marginBottom: 10,
                 }}
               >
-                <span style={{ fontWeight: 700, color: '#111827' }}>
-                  22 seats available tonight
-                </span>
-                <span style={{ color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>
-                  18 / 40 reserved
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#10B981',
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>
+                    Tonight at 7:30 PM
+                  </span>
+                  <span style={{ fontSize: 12, color: '#64748B' }}>· After Maghrib</span>
+                </div>
+                <span
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: 999,
+                    background: '#ECFDF5',
+                    color: '#065F46',
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  In 2h 15m
                 </span>
               </div>
+
               <div
-                style={{ height: 6, borderRadius: 999, background: '#F1F5F9', overflow: 'hidden' }}
+                style={{
+                  fontSize: 12,
+                  color: '#475569',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingTop: 8,
+                  borderTop: '1px solid #F1F5F9',
+                }}
               >
-                <div
-                  style={{ width: '45%', height: '100%', borderRadius: 999, background: '#10B981' }}
-                />
+                <PhIcon name="calendar-check" weight="duotone" size={16} color="#1E563B" />
+                <span>Every Thursday evening · Urdu translation &amp; commentary</span>
               </div>
             </div>
 
-            {/* Upcoming Occurrences & Portions */}
+            {/* Teacher / Khateeb Card */}
+            <div className="iq-white-card" style={{ padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #1E563B 0%, #154228 100%)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
+                  MI
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
+                    Dr. Muhammad Israr
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 1 }}>
+                    Tanzeem-e-Islami Lahore · Ustadh Ahmad reciter
+                  </div>
+                </div>
+                <span
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                    background: '#F1F5F9',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#475569',
+                  }}
+                >
+                  In-Person
+                </span>
+              </div>
+            </div>
+
+            {/* Upcoming Schedule & Designated Portions */}
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-                Upcoming Schedule & Portions
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 8,
+                }}
+              >
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>
+                  Weekly Portions (Syllabus)
+                </span>
+                <span
+                  style={{ fontSize: 11.5, color: '#1E563B', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => onNavigatePage('quran')}
+                >
+                  Open in Reader &rarr;
+                </span>
               </div>
               <div className="iq-white-card" style={{ padding: '6px 14px' }}>
                 {[
-                  { d: 'Tonight · 7:30 PM', p: 'Al-Kahf : 1–31' },
-                  { d: 'Thu, 25 Oct · 7:30 PM', p: 'Al-Kahf : 32–59' },
-                  { d: 'Thu, 1 Nov · 7:30 PM', p: 'Al-Kahf : 60–82' },
+                  { d: 'Tonight · 7:30 PM', p: 'Surah Al-Kahf : 1–31', active: true },
+                  { d: 'Thu, 25 Oct · 7:30 PM', p: 'Surah Al-Kahf : 32–59', active: false },
+                  { d: 'Thu, 1 Nov · 7:30 PM', p: 'Surah Al-Kahf : 60–82', active: false },
                 ].map((occ, i) => (
                   <div
                     key={occ.d}
@@ -238,12 +291,26 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                       fontSize: 12,
                     }}
                   >
-                    <span style={{ fontWeight: 600, color: '#334155' }}>{occ.d}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {occ.active && (
+                        <span
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: '#10B981',
+                          }}
+                        />
+                      )}
+                      <span style={{ fontWeight: occ.active ? 700 : 500, color: '#334155' }}>
+                        {occ.d}
+                      </span>
+                    </div>
                     <span
                       style={{
                         fontWeight: 700,
-                        color: '#B45309',
-                        background: '#FFFBEB',
+                        color: occ.active ? '#B45309' : '#64748B',
+                        background: occ.active ? '#FFFBEB' : '#F8FAFC',
                         padding: '3px 8px',
                         borderRadius: 999,
                         fontSize: 11,
@@ -253,6 +320,25 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                     </span>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Notification & Alert Guarantee */}
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 14,
+                background: '#F0FDF4',
+                border: '1px solid #DCFCE7',
+                display: 'flex',
+                gap: 10,
+                alignItems: 'center',
+              }}
+            >
+              <PhIcon name="whatsapp-logo" weight="fill" size={24} color="#16A34A" />
+              <div style={{ flex: 1, fontSize: 11.5, color: '#166534', lineHeight: 1.4 }}>
+                <strong>WhatsApp Reminders:</strong> Receive session reminders 1 hour before, timing
+                changes &amp; tomorrow&apos;s portion directly.
               </div>
             </div>
 
@@ -280,244 +366,342 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <PhIcon name={f.ic} weight="duotone" size={14} color="#1E563B" />
+                  <PhIcon name="check-circle" weight="fill" size={13} color="#1E563B" />
                   {f.l}
                 </span>
               ))}
             </div>
           </div>
 
-          {/* Sticky Dark Pill Bottom CTA (Iqraa Screenshot 1 Left Phone Style) */}
+          {/* Sticky Bottom CTAs (No seats! Just Follow for WhatsApp alerts + Directions) */}
           <div
             style={{
               position: 'absolute',
               bottom: 18,
               left: 20,
               right: 20,
+              display: 'grid',
+              gridTemplateColumns: '1.8fr 1fr',
+              gap: 8,
             }}
           >
-            <button type="button" className="iq-pill-cta dark">
-              <PhIcon name="ticket" weight="fill" size={16} />
-              <span>Reserve Free Seat (Tonight 7:30 PM)</span>
+            <button
+              type="button"
+              className="iq-pill-cta"
+              style={{ background: '#16A34A', color: '#FFFFFF', borderColor: '#16A34A' }}
+            >
+              <PhIcon name="whatsapp-logo" weight="fill" size={16} />
+              <span>Follow for Alerts</span>
+            </button>
+            <button
+              type="button"
+              className="iq-pill-cta"
+              style={{ background: '#F8FAFC', color: '#1E293B', borderColor: '#E2E8F0' }}
+            >
+              <PhIcon name="navigation-arrow" weight="bold" size={14} />
+              <span>Directions</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* ======================================================================
-          ARTBOARD 02: REGISTRATIONSCREEN (SEAT STEPPER + PHONE + OTP)
-          Matches Iqraa Screenshot 3 Left "Sign Up" Clean Input Form
+          ARTBOARD 02: INLINE JOIN SHEET (FIXING THE AUTH BOTTLENECK)
+          Frictionless 2-step phone + OTP sheet directly over the halqa screen
          ====================================================================== */}
       <div className="artboard-col">
         <div className="artboard-caption">
-          <span>02. RegistrationScreen — Seats & OTP Verification</span>
+          <span>02. Inline Join Sheet — Zero-Friction Phone &amp; OTP</span>
           <span>375 × 812</span>
         </div>
 
-        <div className="ios-artboard" style={{ padding: '14px 20px 28px' }}>
-          <div className="iq-status-row" style={{ color: '#111827', marginBottom: 14 }}>
-            <span>9:41</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <PhIcon name="cell-signal-full" weight="bold" size={13} />
-              <PhIcon name="wifi-high" weight="bold" size={13} />
-              <PhIcon name="battery-full" weight="fill" size={15} />
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: 24,
-            }}
-          >
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: '#111827',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <PhIcon name="caret-left" weight="bold" size={14} /> Back
-            </span>
-            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>Reserve Seat</span>
-            <span style={{ width: 40 }} />
-          </div>
-
-          <div
-            style={{
-              fontSize: 22,
-              fontWeight: 800,
-              color: '#111827',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.25,
-            }}
-          >
-            Reserve your place for tonight&apos;s circle
-          </div>
-          <div style={{ fontSize: 12.5, color: '#64748B', marginTop: 6, marginBottom: 24 }}>
-            Tafseer Surah Al-Kahf · Jamia Masjid Al-Noor · 7:30 PM
-          </div>
-
-          {/* Seat Count Stepper */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginBottom: 8 }}>
-              Number of Seats (Brothers Hall)
+        <div
+          className="ios-artboard"
+          style={{ position: 'relative', overflow: 'hidden', padding: 0 }}
+        >
+          {/* Dimmed Background Representing the Session Screen Behind */}
+          <div style={{ filter: 'blur(3px) brightness(0.65)', padding: '14px 20px', height: '100%' }}>
+            <div className="iq-status-row" style={{ color: '#FFFFFF', marginBottom: 14 }}>
+              <span>9:41</span>
             </div>
             <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 14px',
+                height: 180,
+                borderRadius: 18,
+                background: '#154228',
+                marginBottom: 16,
+              }}
+            />
+            <div className="iq-white-card" style={{ height: 120, marginBottom: 12 }} />
+            <div className="iq-white-card" style={{ height: 160 }} />
+          </div>
+
+          {/* Semi-transparent Dimming Backdrop */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(10, 20, 15, 0.55)',
+              zIndex: 10,
+            }}
+          />
+
+          {/* Animated Elegant Bottom Sheet */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              background: '#FFFFFF',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              padding: '12px 22px 30px',
+              zIndex: 20,
+              boxShadow: '0 -10px 40px rgba(0,0,0,0.22)',
+            }}
+          >
+            {/* Grab Handle */}
+            <div
+              style={{
+                width: 38,
+                height: 4,
                 borderRadius: 999,
-                background: '#F8FAFC',
-                border: '1px solid #E2E8F0',
+                background: '#E2E8F0',
+                margin: '0 auto 16px',
+              }}
+            />
+
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                marginBottom: 14,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
-                2 Seats Reserved
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div>
                 <span
                   style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: '#FFFFFF',
-                    border: '1px solid #CBD5E1',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    gap: 5,
+                    padding: '3px 9px',
+                    borderRadius: 999,
+                    background: '#DCFCE7',
+                    color: '#15803D',
+                    fontSize: 11,
                     fontWeight: 700,
+                    marginBottom: 6,
                   }}
                 >
-                  −
+                  <PhIcon name="bell-ringing" weight="fill" size={12} />
+                  Join Halqa Alerts
                 </span>
-                <span style={{ fontSize: 14, fontWeight: 800 }}>2</span>
+                <div style={{ fontSize: 17, fontWeight: 800, color: '#111827' }}>
+                  Follow Jamia Masjid Al-Noor
+                </div>
+                <div style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
+                  Get reminders 1h before halqa, timing updates, and portion links.
+                </div>
+              </div>
+              <button
+                type="button"
+                style={{
+                  border: 'none',
+                  background: '#F1F5F9',
+                  borderRadius: '50%',
+                  width: 28,
+                  height: 28,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#64748B',
+                  cursor: 'pointer',
+                }}
+              >
+                <PhIcon name="x" weight="bold" size={14} />
+              </button>
+            </div>
+
+            {/* Step 1: Pakistani Phone Number */}
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#334155',
+                  marginBottom: 6,
+                  display: 'block',
+                }}
+              >
+                Pakistani Mobile / WhatsApp Number
+              </label>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#F8FAFC',
+                  border: '1.5px solid #22C55E',
+                  borderRadius: 14,
+                  padding: '10px 14px',
+                  gap: 10,
+                }}
+              >
                 <span
                   style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: '#1E563B',
-                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    color: '#111827',
+                    fontSize: 14,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
+                    gap: 6,
                   }}
                 >
-                  +
+                  <span>🇵🇰 +92</span>
+                  <span style={{ color: '#CBD5E1' }}>|</span>
                 </span>
+                <input
+                  type="text"
+                  value={phoneVal}
+                  onChange={(e) => setPhoneVal(e.target.value)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: '#111827',
+                    outline: 'none',
+                    width: '100%',
+                    letterSpacing: '0.04em',
+                  }}
+                />
+                <PhIcon name="whatsapp-logo" weight="fill" size={18} color="#16A34A" />
               </div>
             </div>
-          </div>
 
-          {/* Full Name Field (Iqraa Focused Green Ring Pill) */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginBottom: 6 }}>
-              Your Name
+            {/* Step 2: 6-Digit Code */}
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 6,
+                }}
+              >
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>
+                  6-Digit Verification Code
+                </label>
+                <span style={{ fontSize: 11, color: '#16A34A', fontWeight: 600 }}>
+                  Resend in 0:28
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+                {codeVal.map((digit, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      height: 44,
+                      borderRadius: 10,
+                      border: '1.5px solid #E2E8F0',
+                      background: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: '#111827',
+                    }}
+                  >
+                    {digit}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 16px',
-                borderRadius: 999,
-                background: '#F3FBF7',
-                border: '1.5px solid #10B981',
-              }}
-            >
-              <PhIcon name="user" weight="fill" size={16} color="#1E563B" />
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>Usman Khan</span>
-            </div>
-          </div>
 
-          {/* Mobile Phone Field */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', marginBottom: 6 }}>
-              Mobile Number (for SMS Seat Pass)
+            {/* Step 3: Name Input (Only on first sign up) */}
+            <div style={{ marginBottom: 18 }}>
+              <label
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: '#334155',
+                  marginBottom: 6,
+                  display: 'block',
+                }}
+              >
+                Your Name (for Coordinator Roster)
+              </label>
+              <input
+                type="text"
+                value={nameVal}
+                onChange={(e) => setNameVal(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: 14,
+                  padding: '10px 14px',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: '#111827',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
             </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: '12px 16px',
-                borderRadius: 999,
-                background: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-              }}
-            >
-              <PhIcon name="phone" weight="fill" size={16} color="#64748B" />
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>
-                +92 300 419 8821
-              </span>
-            </div>
-          </div>
 
-          {/* 6-Digit OTP Verification Row */}
-          <div style={{ marginBottom: 24 }}>
-            <div
+            {/* Submit Action */}
+            <button
+              type="button"
+              className="iq-pill-cta"
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: 12,
+                background: '#1E563B',
+                color: '#FFFFFF',
+                borderColor: '#1E563B',
+                width: '100%',
+                padding: '13px',
+                fontSize: 14,
                 marginBottom: 8,
               }}
             >
-              <span style={{ fontWeight: 600, color: '#111827' }}>6-Digit SMS Code</span>
-              <span style={{ color: '#10B981', fontWeight: 600 }}>Resend in 0:42</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
-              {['4', '8', '2', '9', '1', '6'].map((digit, i) => (
-                <div
-                  key={i}
-                  style={{
-                    height: 46,
-                    borderRadius: 12,
-                    background: i < 4 ? '#F3FBF7' : '#F8FAFC',
-                    border: i === 3 ? '1.5px solid #10B981' : '1px solid #E2E8F0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 17,
-                    fontWeight: 800,
-                    color: '#111827',
-                  }}
-                >
-                  {digit}
-                </div>
-              ))}
+              <PhIcon name="check-circle" weight="fill" size={17} />
+              <span>Confirm &amp; Follow Halqa</span>
+            </button>
+
+            <div
+              style={{
+                fontSize: 11,
+                color: '#64748B',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 5,
+              }}
+            >
+              <PhIcon name="shield-check" weight="fill" size={14} color="#10B981" />
+              <span>No spam. You can unfollow or mute alerts anytime with 1 tap.</span>
             </div>
           </div>
-
-          <button type="button" className="iq-pill-cta dark" style={{ marginTop: 'auto' }}>
-            Confirm 2 Seats →
-          </button>
         </div>
       </div>
 
       {/* ======================================================================
-          ARTBOARD 03: JOURNEYSCREEN (MY RESERVED PASS + FOLLOWED MASJIDS)
+          ARTBOARD 03: MY CIRCLES & JOURNEY (FOLLOWED HALQAS + HABIT TRACKER)
+          Real Seeker Command Center: Followed Circles, Habit Streak & Updates
          ====================================================================== */}
       <div className="artboard-col">
         <div className="artboard-caption">
-          <span>03. JourneyScreen — Seat Pass & Followed Masjids</span>
+          <span>03. My Circles Screen — Followed Halqas &amp; Habit Tracker</span>
           <span>375 × 812</span>
         </div>
 
-        <div className="ios-artboard" style={{ paddingTop: 14 }}>
-          <div
-            className="iq-status-row"
-            style={{ padding: '0 20px', color: '#111827', marginBottom: 12 }}
-          >
+        <div className="ios-artboard" style={{ padding: '14px 20px 84px' }}>
+          {/* Top Status Row */}
+          <div className="iq-status-row" style={{ color: '#111827', marginBottom: 12 }}>
             <span>9:41</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <PhIcon name="cell-signal-full" weight="bold" size={13} />
@@ -526,139 +710,398 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
             </div>
           </div>
 
-          <div style={{ padding: '0 20px', fontSize: 20, fontWeight: 800, color: '#111827' }}>
-            My Journey
+          {/* Screen Title */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+                My Circles &amp; Habit
+              </div>
+              <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                2 Followed Halqas · Lahore
+              </div>
+            </div>
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: 999,
+                background: '#ECFDF5',
+                color: '#065F46',
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              Signed In as Usman
+            </span>
           </div>
 
-          {/* Confirmed Seat Pass Card */}
-          <div className="iq-section" style={{ paddingTop: 16 }}>
-            <div className="iq-section-head">
-              <span className="iq-section-title">Upcoming Seat Pass</span>
-              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#10B981' }}>Confirmed ✓</span>
-            </div>
-
-            <div className="iq-white-card" style={{ padding: 18 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* 1. Followed Halqa Card (Tonight) */}
+            <div>
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#475569',
+                  marginBottom: 8,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
                 }}
               >
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>
-                    Tafseer Surah Al-Kahf
-                  </div>
-                  <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
-                    Jamia Masjid Al-Noor · Tonight 7:30 PM
-                  </div>
-                </div>
+                Followed Halqas
+              </div>
+
+              {/* Card 1: Jamia Masjid Al-Noor */}
+              <div
+                className="iq-white-card"
+                style={{
+                  padding: 16,
+                  borderLeft: '4px solid #1E563B',
+                  marginBottom: 10,
+                }}
+              >
                 <div
                   style={{
-                    padding: 6,
-                    borderRadius: 10,
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    marginBottom: 6,
                   }}
                 >
-                  <PhIcon name="qr-code" weight="regular" size={32} color="#111827" />
+                  <div>
+                    <span
+                      style={{
+                        fontSize: 10.5,
+                        fontWeight: 700,
+                        color: '#059669',
+                        background: '#ECFDF5',
+                        padding: '2px 7px',
+                        borderRadius: 999,
+                      }}
+                    >
+                      Tonight · 7:30 PM
+                    </span>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginTop: 4 }}>
+                      Tafseer Surah Al-Kahf
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 1 }}>
+                      Jamia Masjid Al-Noor, Gulberg III
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Alerts Toggle */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: '#F0FDF4',
+                      padding: '4px 8px',
+                      borderRadius: 999,
+                      border: '1px solid #DCFCE7',
+                    }}
+                  >
+                    <PhIcon name="whatsapp-logo" weight="fill" size={14} color="#16A34A" />
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: '#166534' }}>Alerts ON</span>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: 10,
+                    marginTop: 8,
+                    borderTop: '1px solid #F1F5F9',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: '#B45309',
+                      background: '#FFFBEB',
+                      padding: '3px 8px',
+                      borderRadius: 999,
+                    }}
+                  >
+                    Tonight: Al-Kahf 1–31
+                  </span>
+
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => onNavigatePage('quran')}
+                      style={{
+                        border: 'none',
+                        background: '#1E563B',
+                        color: '#FFFFFF',
+                        padding: '5px 11px',
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <PhIcon name="book-open-text" weight="regular" size={13} />
+                      <span>Read Portion</span>
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        border: '1px solid #E2E8F0',
+                        background: '#F8FAFC',
+                        color: '#334155',
+                        padding: '5px 9px',
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Directions
+                    </button>
+                  </div>
                 </div>
               </div>
 
+              {/* Card 2: DHA Phase 4 Central */}
+              <div className="iq-white-card" style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
+                      Surah Yaseen Halqa
+                    </div>
+                    <div style={{ fontSize: 11.5, color: '#64748B', marginTop: 1 }}>
+                      DHA Phase 4 Masjid · Saturday Fajr
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      background: '#F0FDF4',
+                      padding: '3px 8px',
+                      borderRadius: 999,
+                    }}
+                  >
+                    <PhIcon name="whatsapp-logo" weight="fill" size={13} color="#16A34A" />
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#166534' }}>ON</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Your Daily Quran Habit Tracker (Days Read) */}
+            <div>
               <div
                 style={{
-                  margin: '14px 0',
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  background: '#F8FAFC',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#475569',
+                  marginBottom: 8,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  fontSize: 12,
+                  alignItems: 'center',
                 }}
               >
-                <span style={{ color: '#64748B' }}>Pass #QC-8841</span>
-                <span style={{ fontWeight: 700, color: '#111827' }}>2 Seats · Brothers Hall</span>
+                <span>Days Read This Week</span>
+                <span style={{ fontSize: 11.5, color: '#059669', textTransform: 'none', fontWeight: 600 }}>
+                  5 of 7 Days Read
+                </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <button type="button" className="iq-pill-cta" style={{ height: 36, fontSize: 12 }}>
-                  <PhIcon name="path" weight="regular" size={14} /> Directions
-                </button>
-                <button
-                  type="button"
-                  className="iq-pill-cta"
-                  style={{ height: 36, fontSize: 12, color: '#DC2626', borderColor: '#FECACA' }}
-                >
-                  Release Seat
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Followed Masjids & Circles */}
-          <div className="iq-section" style={{ paddingTop: 20 }}>
-            <div className="iq-section-head">
-              <span className="iq-section-title">Followed Masjids</span>
-              <span style={{ fontSize: 12, color: '#64748B' }}>2</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { m: 'Jamia Masjid Al-Noor', s: 'Gulberg III · Daily Ayah & Room Updates' },
-                { m: 'DHA Phase 4 Central Masjid', s: 'DHA · Dora-e-Quran Updates' },
-              ].map((f) => (
+              <div className="iq-white-card" style={{ padding: 16 }}>
                 <div
-                  key={f.m}
-                  className="iq-white-card"
                   style={{
-                    padding: '14px 16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 14,
+                  }}
+                >
+                  {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => {
+                    const done = i < 5;
+                    const isToday = i === 4;
+                    return (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: 10.5, fontWeight: 600, color: '#94A3B8' }}>
+                          {day}
+                        </span>
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: '50%',
+                            background: done ? '#1E563B' : '#F1F5F9',
+                            color: done ? '#FFFFFF' : '#94A3B8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 13,
+                            fontWeight: 700,
+                            border: isToday ? '2px solid #10B981' : 'none',
+                          }}
+                        >
+                          {done ? <PhIcon name="check" weight="bold" size={15} /> : ''}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div
+                  style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
+                    paddingTop: 12,
+                    borderTop: '1px solid #F1F5F9',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <PhIcon name="mosque" weight="duotone" size={20} color="#1E563B" />
-                    <div>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>{f.m}</div>
-                      <div style={{ fontSize: 11.5, color: '#64748B' }}>{f.s}</div>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#475569' }}>
+                    <PhIcon name="fire" weight="fill" size={16} color="#EA580C" />
+                    <span><strong>14 days read</strong> this month</span>
                   </div>
-                  <PhIcon name="bell-ringing" weight="fill" size={16} color="#10B981" />
+                  <button
+                    type="button"
+                    onClick={() => onNavigatePage('quran')}
+                    style={{
+                      border: 'none',
+                      background: '#ECFDF5',
+                      color: '#065F46',
+                      padding: '5px 10px',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Open Quran &rarr;
+                  </button>
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* 3. Live Coordinator Announcements Feed */}
+            <div>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#475569',
+                  marginBottom: 8,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Coordinator Announcements
+              </div>
+
+              <div
+                className="iq-white-card"
+                style={{
+                  padding: 14,
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-start',
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: '#FEF3C7',
+                    color: '#B45309',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <PhIcon name="megaphone" weight="fill" size={16} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#111827' }}>
+                    Jamia Masjid Al-Noor · 1h ago
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#475569', marginTop: 2, lineHeight: 1.4 }}>
+                    Tonight&apos;s halqa will start 15 minutes after Maghrib prayer to allow brothers
+                    joining from out of town to settle.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <nav className="iq-floating-nav">
-            <button
-              type="button"
-              className="iq-nav-icon-btn"
-              onClick={() => onNavigatePage('home')}
-            >
-              <PhIcon name="house" weight="regular" size={20} />
-            </button>
-            <button
-              type="button"
-              className="iq-nav-icon-btn"
-              onClick={() => onNavigatePage('nearby')}
-            >
-              <PhIcon name="compass" weight="regular" size={20} />
-            </button>
-            <button
-              type="button"
-              className="iq-nav-icon-btn"
-              onClick={() => onNavigatePage('quran')}
-            >
-              <PhIcon name="book-open" weight="regular" size={20} />
-            </button>
-            <button type="button" className="iq-nav-icon-btn active">
-              <PhIcon name="bookmarks" weight="fill" size={20} />
-            </button>
-            <button type="button" className="iq-nav-icon-btn">
-              <PhIcon name="user-circle" weight="regular" size={20} />
-            </button>
-          </nav>
+          {/* Floating Pill Tab Bar */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 14,
+              left: 20,
+              right: 20,
+              background: '#FFFFFF',
+              borderRadius: 999,
+              boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+              border: '1px solid #F1F5F9',
+              padding: '8px 16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            {[
+              { id: 'home', l: 'Home', ic: 'house', active: false },
+              { id: 'nearby', l: 'Nearby', ic: 'compass', active: false },
+              { id: 'quran', l: 'Quran', ic: 'book-open-text', active: false },
+              { id: 'session', l: 'My Circles', ic: 'heart', active: true },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => onNavigatePage(tab.id)}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 3,
+                  color: tab.active ? '#1E563B' : '#94A3B8',
+                  fontSize: 10,
+                  fontWeight: tab.active ? 700 : 500,
+                  cursor: 'pointer',
+                  padding: '2px 8px',
+                }}
+              >
+                <PhIcon name={tab.ic} weight={tab.active ? 'fill' : 'regular'} size={18} />
+                <span>{tab.l}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

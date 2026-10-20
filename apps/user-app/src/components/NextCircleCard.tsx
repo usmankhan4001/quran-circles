@@ -21,6 +21,8 @@ export interface NextCircleCardProps {
   distance?: string;
   /** Opens the person's registration. Leave it out when they are not registered. */
   onRegistration?: () => void;
+  /** Opens the portion directly in the Quran reader. */
+  onReadPortion?: () => void;
   /** Now, for the countdown. */
   now: Date;
   testID?: string;
@@ -101,6 +103,7 @@ export function NextCircleCard({
   onDirections,
   distance,
   onRegistration,
+  onReadPortion,
   now,
   testID,
 }: NextCircleCardProps) {
@@ -247,6 +250,14 @@ export function NextCircleCard({
               label={t('home.next.myRegistration')}
               onPress={onRegistration}
               testID="home-lead-registration"
+            />
+          ) : onReadPortion ? (
+            <ArtPill
+              variant="primary"
+              icon="book"
+              label={t('readAlong.open')}
+              onPress={onReadPortion}
+              testID="home-lead-read-portion"
             />
           ) : (
             <ArtPill

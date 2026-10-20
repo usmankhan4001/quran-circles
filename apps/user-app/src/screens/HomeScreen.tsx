@@ -402,6 +402,23 @@ export function HomeScreen() {
         {...(heroDistance ? { distance: heroDistance } : {})}
         onPress={() => nav.go({ name: 'session', sessionId: mine.registration.sessionId })}
         onDirections={() => void openUrl(venueMapUrl(mine.registration.session.venue))}
+        onReadPortion={() => {
+          const occ = mine.registration.session.nextOccurrence;
+          const p = occ?.portion;
+          if (p?.kind === 'surah') {
+            nav.tab({
+              name: 'quran',
+              reader: { surah: p.surah, ayah: 1, at: now().getTime() },
+            });
+          } else if (p?.kind === 'ayah_range') {
+            nav.tab({
+              name: 'quran',
+              reader: { surah: p.surah, ayah: p.fromAyah, at: now().getTime() },
+            });
+          } else {
+            nav.tab({ name: 'quran' });
+          }
+        }}
         onRegistration={() => nav.tab({ name: 'journey' })}
         testID="home-lead-card"
       />

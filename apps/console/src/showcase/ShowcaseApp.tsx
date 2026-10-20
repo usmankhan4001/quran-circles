@@ -55,15 +55,15 @@ const FIGMA_PAGES: FigmaPageMeta[] = [
   {
     id: 'session',
     appGroup: 'user-app',
-    title: '03. Session, Registration & Journey',
+    title: '03. Halqa Detail, Inline Join & My Circles',
     subtitle:
-      'Masjid circle detail with SeatMeter capacity, upcoming Surah/Ayah portions, facilities, frictionless Seat Stepper + 6-digit SMS OTP registration, and My Journey confirmed pass.',
+      'Masjid circle details, frictionless WhatsApp/SMS inline join sheet (zero seat/ticket bloat), and My Circles followed halqas with habit tracker & coordinator alerts.',
     badge: '@qc/user-app · 375 × 812',
-    icon: 'ticket',
+    icon: 'heart',
     layers: [
-      '01. SessionScreen — Circle Detail & Portions',
-      '02. RegistrationScreen — Seats & OTP',
-      '03. JourneyScreen — Seat Pass & Follows',
+      '01. Halqa Detail — Venue, Times, Teacher & Alerts',
+      '02. Inline Join Sheet — Zero-Friction Phone & OTP',
+      '03. My Circles — Followed Halqas & Habit Tracker',
     ],
   },
   {

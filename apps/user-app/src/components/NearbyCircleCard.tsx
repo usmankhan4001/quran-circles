@@ -57,23 +57,16 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
     : null;
   const section = t(`sections.${session.section}`);
   const eyebrow = distance ? `${section}${sep}${distance}` : section;
-  const registration = session.registration;
-  const seats =
+  const badge =
     session.status === 'cancelled'
       ? t('session.cancelled')
-      : registration.enabled && registration.full
-        ? t('session.full')
-        : registration.enabled && registration.capacity !== null
-          ? t('session.seatsLeft', {
-              count: Math.max(0, registration.capacity - (registration.seatsTaken ?? 0)),
-            })
-          : t('nearby.card.details');
+      : t('venue.follow');
   const when = `${day}${sep}${time}`;
   return (
     <Pressable
       role="button"
       onPress={onPress}
-      aria-label={[title.text, venue.text, when, eyebrow, portion, seats]
+      aria-label={[title.text, venue.text, when, eyebrow, portion, badge]
         .filter(Boolean)
         .join(', ')}
       testID={testID ?? `session-card-${session.id}`}
@@ -125,10 +118,15 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
           </Text>
         </View>
         <View style={styles.seats}>
-          <Text variant="caption" decorative style={w('700')}>
-            {seats}
+          <Text
+            variant="caption"
+            color={session.status === 'cancelled' ? 'textWarning' : 'textSuccess'}
+            decorative
+            style={w('700')}
+          >
+            {badge}
           </Text>
-          <Icon name="arrow-forward" size={12} color={c.text} />
+          <Icon name="arrow-forward" size={12} color={session.status === 'cancelled' ? c.warning : c.textSuccess} />
         </View>
       </View>
     </Pressable>

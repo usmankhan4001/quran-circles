@@ -237,11 +237,11 @@ export function ArtboardsHome({
                 <button
                   type="button"
                   className="iq-pill-cta"
-                  style={{ background: '#111827', color: '#FFFFFF', borderColor: '#111827' }}
-                  onClick={() => onNavigatePage('session')}
+                  style={{ background: '#1E563B', color: '#FFFFFF', borderColor: '#1E563B' }}
+                  onClick={() => onNavigatePage('quran')}
                 >
-                  <span>My Registration</span>
-                  <PhIcon name="arrow-right" weight="regular" size={13} />
+                  <PhIcon name="book-open-text" weight="regular" size={14} />
+                  <span>Read Portion</span>
                 </button>
               </div>
             </div>

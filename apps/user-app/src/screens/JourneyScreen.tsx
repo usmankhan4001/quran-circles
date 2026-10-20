@@ -14,6 +14,7 @@ import {
 } from '@qc/ui';
 import type { Follow, Registration } from '@qc/contracts';
 import { ConfirmSheet } from '../components/ConfirmSheet';
+import { DaysReadCard } from '../components/DaysReadCard';
 import { MemorisationEntryCard } from '../components/MemorisationEntryCard';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { ReminderToggle } from '../components/ReminderToggle';
@@ -225,7 +226,7 @@ function FollowCard({ follow }: { follow: Follow }) {
   const { t, l } = useI18n();
   const nav = useNav();
   const c = useTheme().colors;
-  const { unfollow } = useFollowActions();
+  const { unfollow, setAlerts } = useFollowActions();
   const name = l(follow.name);
   const kind = follow.venueId ? t('journey.follows.venue') : t('journey.follows.circle');
   const alerts = follow.alertsEnabled ? t('journey.alerts.on') : t('journey.alerts.off');
@@ -264,12 +265,19 @@ function FollowCard({ follow }: { follow: Follow }) {
             {body}
           </View>
         )}
-        <Icon
-          name="bell"
-          size={18}
-          color={follow.alertsEnabled ? c.progress : c.textMuted}
-          accessibilityLabel={alerts}
-        />
+        <Pressable
+          role="button"
+          aria-label={alerts}
+          onPress={() => void setAlerts.run(follow.id, !follow.alertsEnabled)}
+          style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, padding: 4 }]}
+        >
+          <Icon
+            name="bell"
+            size={18}
+            color={follow.alertsEnabled ? c.progress : c.textMuted}
+            accessibilityLabel={alerts}
+          />
+        </Pressable>
         <Button
           variant="tertiary"
           label={t('journey.follows.unfollow')}
@@ -356,6 +364,10 @@ function JourneyContent() {
             )
           }
         </QueryBoundary>
+      </View>
+
+      <View style={styles.block} testID="journey-reading">
+        <DaysReadCard />
       </View>
 
       <MemorisationEntryCard />
