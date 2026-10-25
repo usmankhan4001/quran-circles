@@ -7,7 +7,6 @@ import {
   Card,
   EmptyState,
   Icon,
-  SeatMeter,
   Text,
   TextField,
   Toast,
@@ -112,7 +111,6 @@ export function AttendanceScreen({
 
 function AttendanceFlow({ sessionId, occurrenceId }: { sessionId: string; occurrenceId: string }) {
   const api = useApi();
-  const session = useSession(sessionId);
   const attendance = useQuery(
     () => api.adminAttendance.get({ params: { occurrenceId } }),
     [occurrenceId],
@@ -120,12 +118,7 @@ function AttendanceFlow({ sessionId, occurrenceId }: { sessionId: string; occurr
   return (
     <QueryBoundary query={attendance} testID="attendance-data">
       {(initial) => (
-        <AttendanceForm
-          sessionId={sessionId}
-          occurrenceId={occurrenceId}
-          initial={initial}
-          capacity={session.data?.registration.capacity ?? null}
-        />
+        <AttendanceForm sessionId={sessionId} occurrenceId={occurrenceId} initial={initial} />
       )}
     </QueryBoundary>
   );
@@ -136,12 +129,10 @@ function AttendanceForm({
   sessionId,
   occurrenceId,
   initial,
-  capacity,
 }: {
   sessionId: string;
   occurrenceId: string;
   initial: Attendance;
-  capacity?: number | null;
 }) {
   const { t, n } = useT();
   const { colors } = useTheme();
@@ -268,29 +259,6 @@ function AttendanceForm({
               />
             </View>
           </View>
-          {/* As drawn, always: with no seat limit it says so. */}
-          {
-            <View style={{ gap: spacing.xs }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  flexWrap: 'wrap',
-                  justifyContent: 'space-between',
-                  gap: spacing.sm,
-                }}
-              >
-                <Text variant="caption" color="textSecondary">
-                  {t('admin.attendance.hallCapacity')}
-                </Text>
-                <Text variant="caption" strong>
-                  {capacity
-                    ? t('admin.home.seats', { taken: n(state.headcount), capacity: n(capacity) })
-                    : t('admin.attendance.noLimit')}
-                </Text>
-              </View>
-              {capacity ? <SeatMeter taken={state.headcount} capacity={capacity} /> : null}
-            </View>
-          }
         </View>
       </Card>
 

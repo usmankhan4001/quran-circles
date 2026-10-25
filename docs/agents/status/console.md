@@ -180,3 +180,7 @@ Drawn but with no data or API behind it (left out, not invented):
 
 - Applied in rc.2 and in the console: `2026-10-16-console-bulk-import.md`, `2026-10-16-console-export-scope.md` (Attendance export and history still open), `2026-10-16-console-user-lookup-handover.md`, `2026-10-16-console-contract-ergonomics.md`.
 - Open: `docs/engineering/change-requests/2026-10-16-console-ui-tokens-entry.md` (`@qc/ui/tokens` web-safe entry; console imports by relative path until then).
+
+## No seat counts (2026-10-25)
+
+Owner decision: no seat booking; joining a session is a pledge (`docs/product/decisions.md`, Registration). Sessions page: the "Live SeatMeter" column and the inspector's seat cap are gone; the third number card now counts sessions meeting in the next 7 days ("Meeting This Week") instead of "Seats Reserved" and full sessions, and `sessionStats` no longer counts full sessions. Registrations: card title "People Joining", the subtitle drops the waitlisted count, the party column says people, not seats, and waitlisted rows read "Not confirmed yet". The registrations icon is people, not a ticket. Unused seat keys removed, English and Urdu together. Tests: `kpis.test.ts`, `table-pages.test.tsx` (no seat words on the sessions page). The bulk import still accepts a `capacity` column (server field kept); say if it should be dropped from the template.

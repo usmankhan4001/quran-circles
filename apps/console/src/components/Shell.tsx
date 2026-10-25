@@ -219,7 +219,7 @@ function ShellFrame() {
           id,
           path: '/sessions',
           label: t(id === 'registrations' ? 'console.nav.registrations' : 'console.nav.posters'),
-          icon: id === 'registrations' ? 'ticket' : 'qr-code',
+          icon: id === 'registrations' ? 'users-three' : 'qr-code',
           badge: id === 'registrations' ? '—' : t('console.nav.posters.badge'),
           hint: t('console.nav.pickSession'),
           active: (path) => sessionPage(path, id),

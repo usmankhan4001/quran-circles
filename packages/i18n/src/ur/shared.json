@@ -37,7 +37,7 @@
   "errors.otp_invalid": "یہ کوڈ درست نہیں ہے۔ براہ کرم دیکھ کر دوبارہ کوشش کریں۔",
   "errors.otp_expired": "اس کوڈ کی مدت ختم ہو گئی ہے۔ براہ کرم نیا کوڈ منگوائیں۔",
   "errors.otp_too_many_attempts": "بہت زیادہ غلط کوڈ ڈالے گئے۔ براہ کرم کچھ دیر بعد کوشش کریں۔",
-  "errors.already_registered": "آپ اس نشست کے لیے پہلے ہی رجسٹر ہیں۔",
+  "errors.already_registered": "آپ پہلے ہی اس نشست میں شامل ہیں۔",
   "errors.registration_closed": "اس نشست کے لیے اندراج بند ہے۔",
   "errors.session_full": "یہ نشست بھر چکی ہے۔",
   "errors.session_cancelled": "یہ نشست منسوخ ہو چکی ہے۔",

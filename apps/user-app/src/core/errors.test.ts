@@ -29,7 +29,7 @@ describe('errorMessageKey', () => {
       seen.add(messages.en[key]);
     }
     expect(seen.size).toBe(REGISTRATION_ERRORS.length);
-    expect(messages.en[errorMessageKey('already_registered')]).toMatch(/already registered/i);
+    expect(messages.en[errorMessageKey('already_registered')]).toMatch(/already joining/i);
     expect(messages.en[errorMessageKey('session_full')]).toMatch(/full/i);
     expect(messages.en[errorMessageKey('registration_closed')]).toMatch(/closed/i);
   });

@@ -22,9 +22,10 @@ Agent-facing copy of the decisions in the Quran Circles V2 Plan. Do not re-decid
 
 ## Registration
 
-- **Required at sign-up:** name, OTP-verified WhatsApp number, area (from our place list), section (women, men or family) and party size.
+- **No seat booking (owner, 2026-10-25):** registering is a pledge to join, not a reserved seat. The session's main action is Join; the person then gets a confirmation, a reminder before each session, and word of any time change or cancellation. No app shows seat counts, seat limits, a full state, a waiting list or a seat pass.
+- **Required at sign-up:** name, OTP-verified WhatsApp number, area (from our place list) and section (women, men or family). The form no longer asks for party size; the app sends 1.
 - **Optional, asked later in the profile:** age band, profession, education, prior reading, language.
-- **Capacity:** optional per session and off by default. When on: seat count, a full state and a waitlist.
+- **Capacity:** the database and API still have the optional per-session limit (off by default), but no screen sets or shows it. A session left with an old limit still puts extra people in line on the server; the apps call that "waiting for confirmation".
 - **Special lectures:** one-off events with optional registration, chosen per lecture, shown in the Updates feed.
 
 ## Circles

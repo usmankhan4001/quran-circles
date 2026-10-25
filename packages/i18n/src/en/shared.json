@@ -36,7 +36,7 @@
   "errors.otp_invalid": "That code is not right. Please check it and try again.",
   "errors.otp_expired": "That code has expired. Please ask for a new one.",
   "errors.otp_too_many_attempts": "Too many wrong codes. Please wait before trying again.",
-  "errors.already_registered": "You are already registered for this session.",
+  "errors.already_registered": "You are already joining this session.",
   "errors.registration_closed": "Registration for this session is closed.",
   "errors.session_full": "This session is full.",
   "errors.session_cancelled": "This session has been cancelled.",

@@ -38,6 +38,8 @@ describe.each<Locale>(['en', 'ur'])('sessions page as drawn (%s)', (locale) => {
     await screen.findByRole('table', { name: text('console.sessions.title', locale) });
     // No figure tiles: the console shows only what the table itself holds.
     expect(screen.queryByRole('region', { name: text('console.kpi.label', locale) })).toBeNull();
+    // No seats anywhere, even when an old seat limit says a session is full.
+    expect(document.body.textContent ?? '').not.toMatch(/seat/i);
     expect(
       screen.getByText(fill(text('console.sessions.awaiting', locale), { count: 1 })).classList,
     ).toContain('tag-amber');

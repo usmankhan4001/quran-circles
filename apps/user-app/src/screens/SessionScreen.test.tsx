@@ -1,7 +1,7 @@
 import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
-import { SESSIONS } from '../test/factories';
+import { SESSIONS, registrationFor } from '../test/factories';
 import { MATRIX, directionOf, expectGreenHeader, renderScreen, waitFor } from '../test/harness';
 import { SessionScreen } from './SessionScreen';
 
@@ -22,23 +22,73 @@ describe('SessionScreen', () => {
     expect((await view.findAllByTestId(/^occurrence-/)).length).toBeGreaterThan(3);
   });
 
-  it('opens the join bottom sheet for a guest follower', async () => {
-    const s = SESSIONS.taraweeh;
-    const view = await renderScreen(<SessionScreen sessionId={s.id} />);
-    await view.findByTestId('facilities');
-    const followBtn = view.getByTestId('register-button');
-    expect(followBtn).toBeTruthy();
-    fireEvent.click(followBtn);
-    expect(await view.findByTestId('join-halqa-sheet')).toBeTruthy();
-  });
-
-  it('allows a signed-in person to toggle following for WhatsApp alerts', async () => {
+  it('offers Join as the main action and opens the join form', async () => {
     const s = SESSIONS.taraweeh;
     const view = await renderScreen(<SessionScreen sessionId={s.id} />, { signedIn: true });
     await view.findByTestId('facilities');
-    const followBtn = view.getByTestId('register-button');
-    fireEvent.click(followBtn);
-    expect(await view.findByText(new RegExp(en['venue.following'], 'i'))).toBeTruthy();
+    const join = view.getByTestId('register-button');
+    expect(join.textContent).toBe(en['session.join']);
+    fireEvent.click(join);
+    expect(view.world.nav.last()).toEqual({
+      type: 'go',
+      route: { name: 'register', sessionId: s.id },
+    });
+  });
+
+  it('sends a guest to sign in first, and back to the join form after', async () => {
+    const s = SESSIONS.taraweeh;
+    const view = await renderScreen(<SessionScreen sessionId={s.id} />);
+    await view.findByTestId('facilities');
+    fireEvent.click(view.getByTestId('register-button'));
+    expect(view.world.nav.last()).toEqual({
+      type: 'go',
+      route: { name: 'signIn', returnTo: { name: 'register', sessionId: s.id } },
+    });
+  });
+
+  it('never talks about seats, even for a session with an old seat limit', async () => {
+    const s = SESSIONS.womenFull;
+    const view = await renderScreen(<SessionScreen sessionId={s.id} />, { signedIn: true });
+    await view.findByTestId('facilities');
+    expect(view.getByTestId('register-button').textContent).toBe(en['session.join']);
+    expect(view.container.textContent ?? '').not.toMatch(/seat|full|waiting list/i);
+  });
+
+  it('shows that the person is joining and opens My Journey', async () => {
+    const s = SESSIONS.taraweeh;
+    const view = await renderScreen(<SessionScreen sessionId={s.id} />, {
+      signedIn: true,
+      mock: {
+        handlers: {
+          'registrations.listMine': () => ({ items: [registrationFor(s)], nextCursor: null }),
+        },
+      },
+    });
+    await waitFor(() =>
+      expect(view.getByTestId('register-button').textContent).toBe(en['session.joined']),
+    );
+    fireEvent.click(view.getByTestId('register-button'));
+    expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
+  });
+
+  it('offers Follow instead when the session takes no registrations', async () => {
+    const s = SESSIONS.taraweeh;
+    const walkIn = { ...s, registration: { ...s.registration, enabled: false } };
+    const mock = { handlers: { 'sessions.get': () => walkIn } };
+    const guest = await renderScreen(<SessionScreen sessionId={s.id} />, { mock });
+    await guest.findByTestId('facilities');
+    fireEvent.click(guest.getByTestId('register-button'));
+    expect(await guest.findByTestId('join-halqa-sheet')).toBeTruthy();
+    guest.unmount();
+
+    const member = await renderScreen(<SessionScreen sessionId={s.id} />, {
+      signedIn: true,
+      mock,
+    });
+    await member.findByTestId('facilities');
+    expect(member.getByTestId('register-button').textContent).toBe(en['venue.follow']);
+    fireEvent.click(member.getByTestId('register-button'));
+    expect(await member.findByText(new RegExp(en['venue.following'], 'i'))).toBeTruthy();
   });
 
   it('shows the circle, its teacher and the online link for a weekly circle', async () => {

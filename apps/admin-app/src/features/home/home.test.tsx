@@ -140,12 +140,14 @@ describe('SessionScreen', () => {
     expect(nav.pushed.at(-1)).toMatch(/\/occurrence\/[^/]+$/);
   });
 
-  it('shows the seats of a session with a capacity', async () => {
+  it('shows no seat count, even for a session with an old seat limit', async () => {
     renderScreen(<SessionScreen sessionId={ids.sessionWomen} now={FIXTURE_NOW} />, {
       backend: createBackend({ me: meFor('city') }),
     });
     await settled('session-data');
-    expect(await screen.findByText(/40 of 40 seats taken/)).toBeTruthy();
+    expect(await screen.findByTestId('session-registrants')).toBeTruthy();
+    expect(screen.queryByText(/seat/i)).toBeNull();
+    expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
   it("says a session outside the person's scope is not available, with no actions", async () => {

@@ -195,11 +195,6 @@ export default function SessionsPage() {
       ),
     },
     {
-      id: 'seats',
-      header: t('console.sessions.col.seatMeter'),
-      cell: (s) => <SeatMeter session={s} />,
-    },
-    {
       id: 'teacher',
       header: t('console.sessions.col.teacher'),
       cell: (s) => (
@@ -228,7 +223,7 @@ export default function SessionsPage() {
                 to={`/sessions/${s.id}/registrations`}
                 aria-label={`${t('console.sessions.registrations')} ${localized(s.title)}`}
               >
-                <Icon name="ticket" size={15} />
+                <Icon name="users-three" size={15} />
               </Link>
             ) : null}
             {posters ? (
@@ -351,34 +346,6 @@ export default function SessionsPage() {
   );
 }
 
-/** "18 / 40" with the share taken and a bar that turns amber near full. */
-function SeatMeter({ session }: { session: AdminSession }) {
-  const { t, number } = useI18n();
-  if (session.registration.capacity === null) {
-    return <span className="cell-muted">{t('console.sessions.seats.unlimited')}</span>;
-  }
-  const taken = session.registration.seatsTaken ?? 0;
-  const capacity = session.registration.capacity;
-  const pct = capacity > 0 ? Math.min(100, Math.round((taken / capacity) * 100)) : 0;
-  const near = pct >= 85;
-  return (
-    <div className={`seat-meter${near ? ' seat-meter-near' : ''}`}>
-      <div className="seat-meter-row">
-        <bdi dir="ltr">
-          {number(taken)} / {number(capacity)}
-        </bdi>
-        <span className="seat-meter-pct">{number(pct)}%</span>
-      </div>
-      <span className="sr-only">
-        {t('console.sessions.seats.of', { taken: number(taken), capacity: number(capacity) })}
-      </span>
-      <div className="seat-bar" aria-hidden="true">
-        <span className="seat-fill" style={{ inlineSize: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
-
 const FACILITY_KEYS = {
   wuduArea: 'facilities.wuduArea',
   parking: 'facilities.parking',
@@ -387,7 +354,7 @@ const FACILITY_KEYS = {
   childFriendly: 'facilities.childFriendly',
 } as const satisfies Partial<Record<keyof Venue['facilities'], MessageKey>>;
 
-/** The side card for the chosen row: the venue, tonight's portion, seats and facilities. */
+/** The side card for the chosen row: the venue, tonight's portion, its section and facilities. */
 function SessionInspector({ session }: { session: AdminSession }) {
   const { t, localized, number } = useI18n();
   const { principal } = useSignedIn();
@@ -414,7 +381,6 @@ function SessionInspector({ session }: { session: AdminSession }) {
           : o?.portion?.kind === 'lesson'
             ? o.portion.title
             : (o?.portionLabel ?? t('console.sessions.portion.none'));
-  const cap = session.registration.capacity;
   return (
     <aside className="inspector" aria-label={t('console.sessions.inspector.label')}>
       <div>
@@ -440,22 +406,9 @@ function SessionInspector({ session }: { session: AdminSession }) {
               <Icon name="pencil-simple" size={13} />
             </div>
           </div>
-          <div className="mini-grid">
-            <div>
-              <div className="mini-label">{t('console.sessions.inspector.section')}</div>
-              <div className="mini-field mini-field-sm">{t(SECTION_KEYS[session.section])}</div>
-            </div>
-            <div>
-              <div className="mini-label">{t('console.sessions.inspector.seatCap')}</div>
-              <div className="mini-field mini-field-sm">
-                {cap === null
-                  ? t('console.sessions.seats.unlimited')
-                  : t('console.sessions.inspector.seats', {
-                      taken: number(session.registration.seatsTaken ?? 0),
-                      capacity: number(cap),
-                    })}
-              </div>
-            </div>
+          <div>
+            <div className="mini-label">{t('console.sessions.inspector.section')}</div>
+            <div className="mini-field mini-field-sm">{t(SECTION_KEYS[session.section])}</div>
           </div>
         </div>
         <div className="inspector-facilities">

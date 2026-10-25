@@ -127,13 +127,13 @@ describe('RegistrantsScreen behaviour', () => {
     expect(backend.callsTo('registrations.forSession')).toHaveLength(before);
   });
 
-  it('shows the waiting list on its own tab', async () => {
+  it('shows the people not confirmed yet on their own tab', async () => {
     const backend = createBackend({ me: meFor('city'), registrantCount: 8 });
     renderScreen(<RegistrantsScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} pollMs={0} />, {
       backend,
     });
     await screen.findByTestId(`registrant-${idOf(ids.sessionDora, 0)}`);
-    fireEvent.click(screen.getByRole('radio', { name: /^Waiting list/ }));
+    fireEvent.click(screen.getByRole('radio', { name: /^Not confirmed yet/ }));
     await waitFor(() =>
       expect(backend.callsTo('registrations.forSession').at(-1)?.query.status).toBe('waitlisted'),
     );

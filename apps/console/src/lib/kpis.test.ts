@@ -33,7 +33,7 @@ const session = (
 });
 
 describe('session numbers', () => {
-  it('counts sessions meeting in the next seven days, the full ones and those waiting', () => {
+  it('counts sessions meeting in the next seven days and those waiting, never seats', () => {
     const list = [
       session(1, NOW + DAY),
       session(2, NOW + 7 * DAY - 1),
@@ -49,13 +49,12 @@ describe('session numbers', () => {
     expect(sessionStats(list, NOW)).toEqual({
       total: 8,
       thisWeek: 3,
-      full: 1,
       waitingApproval: 1,
     });
   });
 
   it('is all zero for no sessions', () => {
-    expect(sessionStats([], NOW)).toEqual({ total: 0, thisWeek: 0, full: 0, waitingApproval: 0 });
+    expect(sessionStats([], NOW)).toEqual({ total: 0, thisWeek: 0, waitingApproval: 0 });
   });
 });
 

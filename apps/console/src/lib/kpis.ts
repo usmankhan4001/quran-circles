@@ -15,23 +15,19 @@ export interface SessionStats {
   total: number;
   /** Sessions whose next meeting starts within the next seven days. */
   thisWeek: number;
-  /** Sessions with a seat limit and every seat taken. */
-  full: number;
   /** Sessions whose circle is waiting for a city lead's approval. */
   waitingApproval: number;
 }
 
 export function sessionStats(sessions: readonly AdminSession[], nowMs: number): SessionStats {
   let thisWeek = 0;
-  let full = 0;
   let waitingApproval = 0;
   for (const s of sessions) {
     const next = s.nextOccurrence ? Date.parse(s.nextOccurrence.startsAt) : NaN;
     if (!Number.isNaN(next) && next >= nowMs && next < nowMs + WEEK_MS) thisWeek += 1;
-    if (s.registration.full) full += 1;
     if (s.circleStatus === 'pending_approval') waitingApproval += 1;
   }
-  return { total: sessions.length, thisWeek, full, waitingApproval };
+  return { total: sessions.length, thisWeek, waitingApproval };
 }
 
 export interface VenueStats {

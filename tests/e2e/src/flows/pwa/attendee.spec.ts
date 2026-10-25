@@ -13,7 +13,7 @@ import { SEED } from '../../support/seed';
  * The PWA (the user app's web export) against the real API: its own `EXPO_PUBLIC_API_URL` points
  * at the API started for the run, so every screen here is fed by Postgres, not the mock.
  */
-test.describe.serial('PWA attendee: find, sign in with a code, register, read updates', () => {
+test.describe.serial('PWA attendee: find, sign in with a code, join, read updates', () => {
   let context: BrowserContext;
   let page: Page;
   const phone = syntheticPhone();
@@ -53,10 +53,12 @@ test.describe.serial('PWA attendee: find, sign in with a code, register, read up
     expect(rows[0]?.display_name).toBe('E2E Web Attendee');
   });
 
-  test('register for a session; the API has it and Journey shows it', async () => {
+  test('join a session (a pledge, no seat booking); the API has it and Journey shows it', async () => {
     await page.goto(`/session/${SEED.sessionTaraweehNoor}`);
     await expect(page.getByTestId('session-screen')).toBeVisible();
+    await expect(page.getByTestId('register-button')).toHaveText('Join');
     await page.getByTestId('register-button').click();
+    await expect(page.getByTestId('registration-party')).toHaveCount(0);
     await expect(page.getByTestId('registration-form')).toBeVisible();
     await page.getByTestId('registration-city').click();
     await page.getByTestId(`registration-city-option-${SEED.rawalpindi}`).click();
@@ -77,6 +79,9 @@ test.describe.serial('PWA attendee: find, sign in with a code, register, read up
 
     await page.goto('/journey');
     await expect(page.getByTestId(`registration-${rows[0]?.id}`)).toBeVisible();
+
+    await page.goto(`/session/${SEED.sessionTaraweehNoor}`);
+    await expect(page.getByTestId('register-button')).toHaveText('You are joining');
   });
 
   test('an update a coordinator posts shows in the PWA feed', async () => {

@@ -22,7 +22,7 @@ import { ReminderToggle } from '../components/ReminderToggle';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { errorMessageKey } from '../core/errors';
 import { formatPhoneForDisplay } from '../core/phone';
-import { allowedSections, MAX_PARTY_SIZE, isWaitlisted } from '../features/registration/form';
+import { allowedSections, isWaitlisted } from '../features/registration/form';
 import { useRegistration } from '../features/registration/useRegistration';
 import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
 import { useSession } from '../features/nearby/useSessions';
@@ -32,7 +32,6 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthState } from '../providers/hooks';
 import { ChoiceCards } from '../ui/ChoiceCards';
 import { SectionIcon } from '../ui/SectionIcon';
-import { Stepper } from '../ui/Stepper';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.lg },
@@ -77,7 +76,7 @@ const styles = StyleSheet.create({
 });
 
 /** The heading and the session in one line under it (D17), so the person knows what they join. */
-function FormHeading({ session, waitlist }: { session: Session; waitlist: boolean }) {
+function FormHeading({ session }: { session: Session }) {
   const { t, l, locale } = useI18n();
   const title = l(session.title);
   const venue = l(session.venue.name);
@@ -87,7 +86,7 @@ function FormHeading({ session, waitlist }: { session: Session; waitlist: boolea
   return (
     <View style={styles.summary}>
       <Text variant="title2" heading={2}>
-        {waitlist ? t('registration.waitlistHeading') : t('registration.heading')}
+        {t('registration.heading')}
       </Text>
       <Text variant="body" color="textSecondary" testID="registration-summary">
         <Text variant="body" color="textSecondary" lang={title.lang}>
@@ -226,7 +225,7 @@ export function RegistrationScreen({
 }
 
 function RegistrationBody({ session, occurrenceId }: { session: Session; occurrenceId?: string }) {
-  const { t, l, locale } = useI18n();
+  const { t, l } = useI18n();
   const nav = useNav();
   const { me } = useAuthState();
   const flow = useRegistration({
@@ -252,7 +251,6 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
     return <Confirmation registration={flow.result} session={session} />;
   }
 
-  const waitlist = session.registration.enabled && session.registration.full;
   const sections = allowedSections(session);
   const area = areas.data?.find((a) => a.id === flow.form.areaId);
   const cityOptions = (cities.data ?? []).map((c) => ({ value: c.id, label: l(c.name).text }));
@@ -260,24 +258,8 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
 
   return (
     <View style={styles.stack} testID="registration-form">
-      <FormHeading session={session} waitlist={waitlist} />
-      <Text variant="body">
-        {waitlist ? t('registration.waitlistIntro') : t('registration.intro')}
-      </Text>
-
-      <Stepper
-        label={t('registration.partySize.label')}
-        helper={t('registration.partySize.help')}
-        valueText={t('registration.confirmation.party', { count: flow.form.partySize })}
-        value={flow.form.partySize}
-        min={1}
-        max={MAX_PARTY_SIZE}
-        onChange={(partySize) => flow.setForm({ partySize })}
-        decreaseLabel={t('registration.partySize.decrease')}
-        increaseLabel={t('registration.partySize.increase')}
-        locale={locale}
-        testID="registration-party"
-      />
+      <FormHeading session={session} />
+      <Text variant="body">{t('registration.intro')}</Text>
 
       {flow.needsName ? (
         <TextField
@@ -417,11 +399,7 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
       ) : null}
 
       <Button
-        label={
-          waitlist
-            ? t('registration.submitWaitlist')
-            : t('registration.confirmSeats', { count: flow.form.partySize })
-        }
+        label={t('registration.pledge')}
         size="large"
         fullWidth
         trailingIcon="arrow-forward"
@@ -466,13 +444,6 @@ function Confirmation({ registration, session }: { registration: Registration; s
         <Text variant="title2" align="center" heading={2}>
           {waitlisted ? t('registration.waitlist.title') : t('registration.success.title')}
         </Text>
-        {waitlisted && registration.waitlistPosition ? (
-          <Text variant="bodyLarge" align="center" testID="waitlist-position">
-            {t('registration.confirmation.position', {
-              count: registration.waitlistPosition,
-            })}
-          </Text>
-        ) : null}
         <Text variant="body" align="center" color="textSecondary">
           {waitlisted ? t('registration.waitlist.body') : t('registration.success.body')}
         </Text>
@@ -486,9 +457,6 @@ function Confirmation({ registration, session }: { registration: Registration; s
         </Text>
         <Text variant="body" color="textSecondary">
           {describeSchedule(session, t, locale)}
-        </Text>
-        <Text variant="caption" color="textSecondary">
-          {t('registration.confirmation.party', { count: registration.partySize })}
         </Text>
       </Card>
       {!waitlisted ? <ReminderToggle sessionId={session.id} registration={registration} /> : null}

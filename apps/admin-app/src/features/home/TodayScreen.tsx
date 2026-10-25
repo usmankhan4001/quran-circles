@@ -80,11 +80,6 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
         day={withDate && next ? formatInstantDate(next.startsAt, locale) : undefined}
         details={whenSummary(s, t, locale)}
         tag={s.status === 'draft' ? { label: t('admin.home.draft'), kind: 'gilt' } : undefined}
-        seats={
-          s.registration.capacity !== null
-            ? { taken: s.registration.seatsTaken ?? 0, capacity: s.registration.capacity }
-            : undefined
-        }
         onPress={() => nav.push(routes.session(s.id))}
       />
     );

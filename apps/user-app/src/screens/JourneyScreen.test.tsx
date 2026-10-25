@@ -55,7 +55,7 @@ describe('JourneyScreen', () => {
     expect(view.world.http.callsTo('GET /v1/registrations')).toHaveLength(0);
   });
 
-  it('shows each registration as a seat pass with the party, directions and cancel (D17)', async () => {
+  it('shows each circle the person is joining with directions and cancel', async () => {
     const world = await createWorld({ signedIn: true, mock: mine() });
     const view = await renderScreen(<JourneyScreen />, { world });
     await view.findByTestId(`registration-${REG_ID}`);
@@ -84,9 +84,8 @@ describe('JourneyScreen', () => {
     expect(view.getByTestId(`registration-status-${WAIT_ID}`).textContent).toBe(
       en['journey.status.waitlisted'],
     );
-    expect(
-      view.getByText(`${en['registration.confirmation.position'].replace('{count}', '2')}`),
-    ).toBeTruthy();
+    // No seat pass: no waiting-list number, QR tile or pass reference.
+    expect(view.queryByText(/#/)).toBeNull();
     // A waitlisted place gets no reminder switch: nothing is promised yet.
     expect(view.queryByTestId(`reminder-${SESSIONS.womenFull.id}`)).toBeNull();
     expect(view.getByTestId(`reminder-${SESSIONS.taraweeh.id}`)).toBeTruthy();

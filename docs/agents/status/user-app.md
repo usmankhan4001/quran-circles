@@ -307,3 +307,19 @@ Open, for the orchestrator:
 
 - **Seat booking is unreachable (high).** The session screen's primary button now follows the venue; nothing opens `register/[sessionId]`, so people cannot reserve a seat. `tests/e2e/src/flows/pwa/attendee.spec.ts` ("register for a session") fails for this reason. Decide whether registration returns or the e2e flow and `registerState` are retired.
 - Map shows a list of places without `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`; the Quran text needs api.alquran.cloud; reader audio ("Recitation coming soon") is not built; "Host not listed yet" and "Join online" are stand-ins (now marked "Coming soon", 2026-10-25).
+
+## Join pledge replaces seat booking (2026-10-25)
+
+Owner decision: no seat booking. Registering is a pledge to join, followed by a confirmation, reminders and change or cancellation notices (`docs/product/decisions.md`, Registration). This closes the open "Seat booking is unreachable (high)" item above.
+
+- Session screen: the main button is Join (`session.join`) and opens `register/[sessionId]`; a guest goes through sign-in and comes back to the form. Once joined it reads "You are joining" (`session.joined`) and opens My Journey. A session that takes no registrations keeps Follow (with the join sheet for guests). `registerState` no longer has a waiting-list state. The reminders card under the venue now says what joining brings (`session.reminders.body`) instead of the empty-feed line.
+- Join form (`RegistrationScreen`): heading "Join this circle", no party-size stepper (the request sends `partySize: 1`), no waiting-list heading or intro, submit "Confirm I will join" (`registration.pledge`). The WhatsApp checkbox now names the confirmation and reminders. The confirmation screen drops the party line and the waiting-list number.
+- Journey: no seat pass (QR tile and pass reference removed), no party count or waiting-list number; status reads Joining or Waiting for confirmation. Session and Nearby cards show no seat meter or "full" tag; the Nearby card's badge says Join (or Follow for walk-in sessions).
+- Copy (English and Urdu drafts together): seat, reserve, waiting-list and party-size keys removed; the rest reworded (`journey.*`, `registration.*`, `profile.push.description`, `notifications.waitlistPromoted.title`, `errors.already_registered`).
+- Notices: no server change needed. The API already queues the WhatsApp confirmation when the box is ticked, the worker sends push reminders to confirmed registrants with a device, and time changes and cancellations go to registrants (`apps/api/src/modules/updates/publish.ts`). The on-device reminder switch on the confirmation screen stays opt-in, because the browser asks for permission on a tap.
+- Tests: `SessionScreen.test.tsx` (Join opens the form, guest goes to sign-in with a way back, "You are joining" opens Journey, no seat words even with an old limit, Follow for walk-in sessions), `RegistrationScreen.test.tsx`, `redesign.test.tsx` (no stepper, sends 1), `JourneyScreen.test.tsx`, `registerState.test.ts`. `tests/e2e/src/flows/pwa/attendee.spec.ts` now checks the Join label, no stepper, and "You are joining" after. The e2e api, pwa, console and admin-app projects pass against a local stack (25 of 25).
+
+Open, for the orchestrator:
+
+- `packages/contracts/src/messages.ts` `waitlist_promoted` body still starts "A seat opened up". It mirrors the approved WhatsApp template `qc_waitlist_promoted`, so it changes only with a new template approval. It fires only for a session left with an old seat limit.
+- The kit's `SeatMeter` and its `ui.seats*` strings are now used by no app (ui lane to keep or retire). The design showcase artboards still draw seat passes and seat meters.

@@ -19,8 +19,8 @@ export interface NextSessionCardProps {
 
 /**
  * D17: tonight's session as a white card sitting half on the green header. A green status line
- * and the portion in amber, the title, the time and place, a row with how many are coming and the
- * seats, then "Log attendance" (charcoal) and "Registrants" (outline). Each action shows only when
+ * and the portion in amber, the title, the time and place, a row with how many are coming (there
+ * is no seat booking, so no seat count), then "Log attendance" (charcoal) and "Registrants" (outline). Each action shows only when
  * the person's role allows it on this session; the server still decides.
  */
 export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
@@ -42,7 +42,6 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
   const place = pickLocalized(s.venue.name, locale);
   const teacher = s.circle?.teacherName ?? null;
   const coming = s.registration.seatsTaken;
-  const capacity = s.registration.capacity;
 
   return (
     <Card testID="today-next" padding="md">
@@ -148,11 +147,6 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
               {coming !== null ? t('admin.home.coming') : t('admin.home.registrants')}
             </Text>
           </View>
-          <Text variant="caption" color="textSecondary">
-            {capacity !== null
-              ? t('admin.home.capacity', { count: n(capacity) })
-              : t('admin.home.noLimit')}
-          </Text>
         </View>
 
         {(can.markAttendance && next) || can.seeRegistrants ? (

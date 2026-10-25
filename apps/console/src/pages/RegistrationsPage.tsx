@@ -173,7 +173,6 @@ export default function RegistrationsPage() {
                 t('console.registrations.sub', {
                   registrations: number(totals.registrations),
                   people: number(totals.people),
-                  waitlisted: number(totals.waitlisted),
                 }),
               ]
                 .filter(Boolean)

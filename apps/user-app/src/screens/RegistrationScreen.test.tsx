@@ -66,20 +66,20 @@ describe('RegistrationScreen', () => {
     expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
   });
 
-  it('puts a person on the waiting list for a full session and tells them where they stand', async () => {
+  it('asks nothing about seats, even for a session with an old seat limit', async () => {
     const s = SESSIONS.womenFull;
     const world = await signedIn();
     const view = await renderScreen(<RegistrationScreen sessionId={s.id} />, { world });
     await view.findByTestId('registration-form');
-    expect(view.getByText(en['registration.waitlistIntro'])).toBeTruthy();
+    expect(view.getByText(en['registration.intro'])).toBeTruthy();
+    expect(view.queryByTestId('registration-party')).toBeNull();
     expect(view.getByTestId('registration-section-fixed')).toBeTruthy();
     await chooseArea(view);
-    expect(view.getByTestId('registration-submit').textContent).toBe(
-      en['registration.submitWaitlist'],
-    );
+    expect(view.getByTestId('registration-submit').textContent).toBe(en['registration.pledge']);
     fireEvent.click(view.getByTestId('registration-submit'));
-    expect(await view.findByTestId('waitlist-position')).toBeTruthy();
-    expect(view.getByText(en['registration.waitlist.title'])).toBeTruthy();
+    // The server still puts the person in line for a limited session; we say so without seats.
+    expect(await view.findByText(en['registration.waitlist.title'])).toBeTruthy();
+    expect(view.queryByTestId('waitlist-position')).toBeNull();
   });
 
   it.each([['already_registered'], ['session_full'], ['registration_closed']] as const)(
@@ -150,7 +150,7 @@ describe('RegistrationScreen', () => {
       expect(view.getByText(words['registration.heading'])).toBeTruthy();
       expect(view.getByText(words['registration.consent.whatsapp'])).toBeTruthy();
       expect(view.getByTestId('registration-submit').textContent).toBe(
-        words['registration.confirmSeats.one'],
+        words['registration.pledge'],
       );
     });
   });

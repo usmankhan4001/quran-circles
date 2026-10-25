@@ -32,13 +32,11 @@ export function SessionCard({
   const title = l(session.title);
   const venue = l(session.venue.name);
   const { time, day } = describeWhenParts(session, t, locale, emphasis === 'next');
-  const registration = session.registration;
+  // No seat counts or "full" tags: joining a session is a pledge to come, not a booked seat.
   const tag =
     session.status === 'cancelled'
       ? { label: t('session.cancelled'), kind: 'alert' as const }
-      : registration.enabled && registration.full
-        ? { label: t('session.full'), kind: 'gilt' as const }
-        : undefined;
+      : undefined;
   const card = (
     <KitSessionCard
       title={title.text}
@@ -50,9 +48,6 @@ export function SessionCard({
         t('schedule.separator'),
       )}
       {...(tag ? { tag } : {})}
-      {...(registration.enabled && !registration.full && registration.capacity !== null
-        ? { seats: { taken: registration.seatsTaken ?? 0, capacity: registration.capacity } }
-        : {})}
       onPress={onPress}
       accessibilityLabel={`${title.text}, ${venue.text}, ${day} ${time}`}
       testID={testID ?? `session-card-${session.id}`}

@@ -13,7 +13,7 @@ import {
   spacing,
   useTheme,
 } from '@qc/ui';
-import type { Session, Occurrence } from '@qc/contracts';
+import type { Registration, Session, Occurrence } from '@qc/contracts';
 import { distanceParts, haversineMetres } from '../core/distance';
 import { IconTile } from '../components/IconTile';
 import { JoinHalqaSheet } from '../components/JoinHalqaSheet';
@@ -23,9 +23,11 @@ import { FacilityChips } from '../components/FacilitiesChecklist';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { toInstant } from '../features/home/useHome';
-import { useIsFollowing } from '../features/journey/hooks';
+import { useRequireAuth } from '../features/auth/useRequireAuth';
+import { useIsFollowing, useMyRegistrations } from '../features/journey/hooks';
 import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
 import { useSession, useSessionOccurrences, useVenue } from '../features/nearby/useSessions';
+import { registerState } from '../features/session/registerState';
 import { safeWebUrl, venueMapUrl, venuePhoneUrl } from '../features/session/links';
 import { describePortion } from '../features/session/portion';
 import { useI18n } from '../i18n/I18nProvider';
@@ -173,6 +175,8 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
 
   const { follow, toggle: toggleFollow } = useIsFollowing(session.data?.venueId ?? '');
   const status = useAuthStatus();
+  const requireAuth = useRequireAuth();
+  const mine = useMyRegistrations();
 
   const share = async (s: Session) => {
     const message = t('session.share.message', {
@@ -237,21 +241,16 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
         session.data ? (
           <View style={styles.footerRow}>
             <View style={styles.footerMain}>
-              <Button
-                variant={follow ? 'secondary' : 'primary'}
-                label={
-                  session.data.status === 'cancelled'
-                    ? t('session.cancelled')
-                    : follow
-                      ? t('venue.following')
-                      : t('venue.follow')
-                }
-                icon={follow ? 'check' : 'bell'}
-                size="large"
-                fullWidth
-                disabled={session.data.status === 'cancelled'}
-                onPress={() => void handleFollowPress()}
-                testID="register-button"
+              <JoinButton
+                session={session.data}
+                mine={mine.data}
+                following={Boolean(follow)}
+                onJoin={() => {
+                  const target = { name: 'register', sessionId } as const;
+                  if (requireAuth(target)) nav.go(target);
+                }}
+                onJourney={() => nav.tab({ name: 'journey' })}
+                onFollow={() => void handleFollowPress()}
               />
             </View>
             <View style={styles.footerSecondary}>
@@ -367,7 +366,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                     {t('session.reminders.title')}
                   </Text>
                   <Text variant="caption" color="textSecondary">
-                    {t('home.updates.empty')}
+                    {t('session.reminders.body')}
                   </Text>
                 </View>
               </View>
@@ -437,6 +436,78 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
       </QueryBoundary>
     </ScreenFrame>
   );
+}
+
+/**
+ * The main button. Seats are not booked: a person says they will join (a registration), and from
+ * then on they get the confirmation, a reminder before each session, and word of any change or
+ * cancellation. A session that takes no registrations offers Follow instead, which brings the
+ * venue's notices.
+ */
+function JoinButton({
+  session,
+  mine,
+  following,
+  onJoin,
+  onJourney,
+  onFollow,
+}: {
+  session: Session;
+  mine: readonly Registration[] | undefined;
+  following: boolean;
+  onJoin: () => void;
+  onJourney: () => void;
+  onFollow: () => void;
+}) {
+  const { t } = useI18n();
+  const state = registerState(session, mine);
+  switch (state.kind) {
+    case 'cancelled':
+      return (
+        <Button
+          label={t('session.cancelled')}
+          size="large"
+          fullWidth
+          disabled
+          testID="register-button"
+        />
+      );
+    case 'registered':
+      return (
+        <Button
+          variant="secondary"
+          label={t('session.joined')}
+          icon="check-circle"
+          size="large"
+          fullWidth
+          onPress={onJourney}
+          testID="register-button"
+        />
+      );
+    case 'open':
+      return (
+        <Button
+          label={t('session.join')}
+          icon="calendar-check"
+          size="large"
+          fullWidth
+          onPress={onJoin}
+          testID="register-button"
+        />
+      );
+    case 'notNeeded':
+      return (
+        <Button
+          variant={following ? 'secondary' : 'primary'}
+          label={following ? t('venue.following') : t('venue.follow')}
+          icon={following ? 'check' : 'bell'}
+          size="large"
+          fullWidth
+          onPress={onFollow}
+          testID="register-button"
+        />
+      );
+  }
 }
 
 /** Two letters of a name in a circle. */

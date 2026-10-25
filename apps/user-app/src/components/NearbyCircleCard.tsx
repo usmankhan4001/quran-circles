@@ -36,12 +36,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
   },
-  seats: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
 
 /**
  * A circle in Nearby's list (D17): "Section · distance" in green with the portion on an amber
- * tag at the end, the title, the venue, a hairline, then when it meets and the seats left.
+ * tag at the end, the title, the venue, a hairline, then when it meets and what the person can do (join, or follow when it takes no registrations).
  */
 export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyCircleCardProps) {
   const { t, l, locale } = useI18n();
@@ -57,7 +57,12 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
     : null;
   const section = t(`sections.${session.section}`);
   const eyebrow = distance ? `${section}${sep}${distance}` : section;
-  const badge = session.status === 'cancelled' ? t('session.cancelled') : t('venue.follow');
+  const badge =
+    session.status === 'cancelled'
+      ? t('session.cancelled')
+      : session.registration.enabled
+        ? t('session.join')
+        : t('venue.follow');
   const when = `${day}${sep}${time}`;
   return (
     <Pressable
@@ -114,7 +119,7 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
             {when}
           </Text>
         </View>
-        <View style={styles.seats}>
+        <View style={styles.badge}>
           <Text
             variant="caption"
             color={session.status === 'cancelled' ? 'textWarning' : 'textSuccess'}

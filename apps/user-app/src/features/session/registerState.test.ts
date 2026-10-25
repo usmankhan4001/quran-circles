@@ -8,8 +8,8 @@ describe('registerState', () => {
     expect(registerState(SESSIONS.taraweeh, undefined)).toEqual({ kind: 'open' });
   });
 
-  it('offers the waiting list when the session is full', () => {
-    expect(registerState(SESSIONS.womenFull, [])).toEqual({ kind: 'waitlist' });
+  it('offers Join even when an old seat limit says the session is full', () => {
+    expect(registerState(SESSIONS.womenFull, [])).toEqual({ kind: 'open' });
   });
 
   it('says so when no registration is needed', () => {

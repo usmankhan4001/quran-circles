@@ -8,7 +8,6 @@ import {
   Text,
   formatNumber,
   minTouchTarget,
-  radii,
   spacing,
   useTheme,
 } from '@qc/ui';
@@ -42,22 +41,7 @@ const styles = StyleSheet.create({
   list: { gap: spacing.md },
   pass: { gap: spacing.md + spacing.xxs },
   passTop: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  qr: {
-    padding: spacing.xs + spacing.xxs,
-    borderRadius: radii.md - 2,
-    borderWidth: 1,
-  },
   passHead: { gap: spacing.xxs },
-  strip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm + spacing.xxs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-  },
   buttons: { flexDirection: 'row', gap: spacing.sm },
   half: { flex: 1 },
   followRow: {
@@ -116,8 +100,6 @@ function PassCard({
   const { t, l, locale } = useI18n();
   const nav = useNav();
   const { openUrl } = useServices();
-  const theme = useTheme();
-  const c = theme.colors;
   const s = registration.session;
   const title = l(s.title);
   const venue = l(s.venue.name);
@@ -159,38 +141,12 @@ function PassCard({
               {waitlisted ? t('journey.status.waitlisted') : t('journey.status.confirmed')}
             </Text>
           </Pressable>
-          {/* The artboard's QR tile. There is no scannable pass yet, so it is drawn greyed. */}
-          <View
-            aria-hidden
-            style={[
-              styles.qr,
-              {
-                backgroundColor: c.surfaceMuted,
-                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
-              },
-            ]}
-          >
-            <Icon name="qr" size={28} color={c.textMuted} />
-          </View>
         </View>
 
-        <View style={[styles.strip, { backgroundColor: c.surfaceMuted }]}>
-          <Text variant="caption" color="textSecondary">
-            {t('journey.pass.ref', { ref: registration.id.slice(-4).toUpperCase() })}
-          </Text>
-          <Text variant="caption" strong>
-            {t('journey.pass.party', {
-              party: t('registration.confirmation.party', { count: registration.partySize }),
-              section: t(`sections.${registration.section}`),
-            })}
-          </Text>
-        </View>
+        <Text variant="caption" color="textSecondary">
+          {t(`sections.${registration.section}`)}
+        </Text>
 
-        {waitlisted && registration.waitlistPosition ? (
-          <Text variant="caption" color="textSecondary">
-            {t('registration.confirmation.position', { count: registration.waitlistPosition })}
-          </Text>
-        ) : null}
         {!waitlisted ? (
           <ReminderToggle sessionId={registration.sessionId} registration={registration} />
         ) : null}

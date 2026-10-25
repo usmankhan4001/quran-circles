@@ -72,8 +72,6 @@ describe('plural keys', () => {
   });
 
   it('falls back to the plain key when a message has no plural forms', () => {
-    expect(en('registration.confirmation.position', { count: 4 })).toBe(
-      'Your place on the waiting list: 4',
-    );
+    expect(en('nearby.filters.buttonCount', { count: 4 })).toBe('Filters (4)');
   });
 });

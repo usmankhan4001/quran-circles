@@ -343,19 +343,15 @@ describe('Registration (R2)', () => {
     }
   });
 
-  it('counts the people with the stepper and sends the number', async () => {
+  it('has no seat count: joining sends one person, with no stepper on the form', async () => {
     const { world, view } = await open();
-    fireEvent.click(view.getByTestId('registration-party-plus'));
-    fireEvent.click(view.getByTestId('registration-party-plus'));
-    expect(view.getByTestId('registration-party-value').textContent).toBe('3');
-    fireEvent.click(view.getByTestId('registration-party-minus'));
-    expect(view.getByTestId('registration-party-value').textContent).toBe('2');
+    expect(view.queryByTestId('registration-party')).toBeNull();
     fireEvent.click(view.getByTestId('registration-area'));
     fireEvent.click(await view.findByTestId(`area-option-${AREA_SADDAR.id}`));
     fireEvent.click(view.getByTestId('registration-section-family'));
     fireEvent.click(view.getByTestId('registration-submit'));
     await waitFor(() => expect(world.http.callsTo('POST /v1/registrations')).toHaveLength(1));
-    expect(world.http.callsTo('POST /v1/registrations')[0]!.body).toMatchObject({ partySize: 2 });
+    expect(world.http.callsTo('POST /v1/registrations')[0]!.body).toMatchObject({ partySize: 1 });
   });
 
   it('starts with no section chosen on a family session, and asks for one', async () => {

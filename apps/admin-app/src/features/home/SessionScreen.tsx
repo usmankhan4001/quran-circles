@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import type { AdminOccurrence } from '@qc/contracts';
-import { Button, Card, SeatMeter, Tag, Text, formatNumber, spacing } from '@qc/ui';
+import { Button, Card, Tag, Text, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -63,20 +63,6 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                   {s.status === 'draft' ? (
                     <View style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }}>
                       <Tag label={t('admin.home.draft')} kind="gilt" />
-                    </View>
-                  ) : null}
-                  {s.registration.capacity !== null ? (
-                    <View style={{ gap: spacing.xs, paddingTop: spacing.xs }}>
-                      <SeatMeter
-                        taken={s.registration.seatsTaken ?? 0}
-                        capacity={s.registration.capacity}
-                      />
-                      <Text variant="caption" color="textSecondary">
-                        {t('admin.home.seats', {
-                          taken: formatNumber(s.registration.seatsTaken ?? 0, locale),
-                          capacity: formatNumber(s.registration.capacity, locale),
-                        })}
-                      </Text>
                     </View>
                   ) : null}
                 </View>

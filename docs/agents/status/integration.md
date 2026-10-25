@@ -41,3 +41,7 @@ Branch: claude/peaceful-archimedes-ain95k (nothing committed by this lane; owner
 
 - Typecheck, lint and format pass. All 7,436 tests pass when packages run one at a time (`pnpm -r --workspace-concurrency=1 --filter '!@qc/e2e' test`, about 7 minutes here).
 - With the default parallel run, two UI tests timed out under load (console `coordinators.test.tsx`, content `V1ImportBanner.test.tsx`); both pass on their own. The console now uses the same 5 s async timeout as the admin app and content. Open: decide whether the root `test` script should limit workspace concurrency.
+
+## Join pledge (2026-10-25)
+
+`src/flows/pwa/attendee.spec.ts`: the flow that failed on the unreachable register screen is now "join a session (a pledge, no seat booking)". It checks the session button reads Join, the form has no party-size stepper, the registration is confirmed in Postgres, Journey lists it, and the session button then reads "You are joining". Run 2026-10-25 against a local stack: api 13 of 13, pwa 7 of 7, console and admin-app 5 of 5 pass (Chromium from `E2E_CHROMIUM=/opt/pw-browsers/chromium`; the default headless shell is missing in this container).

@@ -116,7 +116,7 @@ describe('useRegistration', () => {
   });
 
   it.each([
-    ['already_registered', /already registered/i],
+    ['already_registered', /already joining/i],
     ['session_full', /full/i],
     ['registration_closed', /closed/i],
     ['session_cancelled', /cancelled/i],
