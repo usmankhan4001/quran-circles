@@ -752,6 +752,77 @@ describe('migration 0012: occurrence start floor (Gate 5 load test)', () => {
   });
 });
 
+describe('migration 0013: message template catalog', () => {
+  const NAME = '0013_message_template_catalog';
+  const upTo = (count: number) => prefixDir(count);
+  type Row = { key: string; locale: string; status: string; approved_by: string | null };
+  const rows = async (test: Awaited<ReturnType<typeof freshDb>>) =>
+    (
+      await test.exec.query<Row>(
+        `SELECT key, locale, status, approved_by FROM message_templates ORDER BY key, locale`,
+      )
+    ).rows;
+
+  it('is the thirteenth migration', () => {
+    expect(listMigrations()[12]?.name).toBe(NAME);
+  });
+
+  it('writes the catalog on an empty table: English approved by nobody, Urdu a draft', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(12) });
+    expect(await rows(test)).toEqual([]);
+    expect(await migrateUp(test.exec, { dir: upTo(13) })).toEqual([NAME]);
+    const after = await rows(test);
+    expect(after).toHaveLength(16);
+    expect(after.filter((r) => r.locale === 'en').every((r) => r.status === 'approved')).toBe(true);
+    expect(after.filter((r) => r.locale === 'ur').every((r) => r.status === 'draft')).toBe(true);
+    expect(after.every((r) => r.approved_by === null)).toBe(true);
+    const { rows: stamped } = await test.exec.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM message_templates
+        WHERE (status = 'approved') <> (approved_at IS NOT NULL)`,
+    );
+    expect(stamped[0]?.n).toBe(0);
+  });
+
+  it('keeps rows that were already there: approves a seeded English draft, leaves edits and Urdu alone', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(12) });
+    // What the development seed wrote before 0013: the catalog wording, as drafts.
+    await test.exec.query(
+      `INSERT INTO message_templates (key, channel, locale, body, cost_category, status) VALUES
+         ('session_cancelled', 'push', 'en', 'Cancelled: {sessionTitle}, {when}. {link}', 'utility', 'draft'),
+         ('session_cancelled', 'push', 'ur', 'old draft', 'utility', 'draft'),
+         ('session_reminder', 'push', 'en', 'Our own reminder wording {link}', 'utility', 'draft'),
+         ('circle_opened', 'push', 'en', 'Retired wording {link}', 'marketing', 'retired')`,
+    );
+    await migrateUp(test.exec, { dir: upTo(13) });
+    const byKey = new Map(
+      (
+        await test.exec.query<{ key: string; locale: string; status: string; body: string }>(
+          `SELECT key, locale, status, body FROM message_templates`,
+        )
+      ).rows.map((r) => [`${r.key}/${r.locale}`, r]),
+    );
+    expect(byKey.size).toBe(16);
+    expect(byKey.get('session_cancelled/en')?.status).toBe('approved');
+    expect(byKey.get('session_cancelled/ur')).toMatchObject({ status: 'draft', body: 'old draft' });
+    expect(byKey.get('session_reminder/en')).toMatchObject({
+      status: 'draft',
+      body: 'Our own reminder wording {link}',
+    });
+    expect(byKey.get('circle_opened/en')?.status).toBe('retired');
+  });
+
+  it('rolls back to an empty catalog, and applies again', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(13) });
+    expect(await migrateDown(test.exec, { dir: upTo(13) })).toEqual([NAME]);
+    expect(await rows(test)).toEqual([]);
+    expect(await migrateUp(test.exec, { dir: upTo(13) })).toEqual([NAME]);
+    expect(await rows(test)).toHaveLength(16);
+  });
+});
+
 describe('rollback arguments', () => {
   it('defaults to one migration', () => {
     expect(parseRollbackArgs([])).toEqual({ all: false });

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import { PostedUpdate, type FeedResponse } from '@qc/contracts';
-import { fanOutPendingUpdatePushes, schema } from '@qc/db';
+import { fanOutPendingUpdatePushes, listMigrations, schema } from '@qc/db';
 import { publishUpdate } from '../modules/updates/publish';
 import { createHarness, type Actor, type Harness } from './harness';
 import { auditRows, createCircle, createSession, outboxRows, register } from './fixtures';
@@ -816,6 +816,37 @@ describe('what staff see of posted updates', () => {
   it('keeps ordinary people out', async () => {
     expect((await h.api('adminUpdates.list', { as: await h.person() })).status).toBe(403);
     expect((await h.api('adminTemplates.list', { as: await h.person() })).status).toBe(403);
+  });
+
+  it('lists the catalog the migrations write on a fresh install, to every staff role', async () => {
+    // The harness empties every table between tests; re-run migration 0013 to get a fresh install.
+    const catalog = listMigrations().find((m) => m.name === '0013_message_template_catalog');
+    if (!catalog) throw new Error('migration 0013 not found');
+    await h.pg.exec(catalog.upSql);
+    const cases: [string, Actor | null, number][] = [
+      ['national admin', admin, 200],
+      ['city coordinator', await h.cityCoordinator(h.world.cityA.id), 200],
+      ['venue coordinator', await h.venueCoordinator(h.world.venueB1), 200],
+      ['person', await h.person(), 403],
+      ['nobody', null, 401],
+    ];
+    for (const [name, who, status] of cases) {
+      const res = await h.api('adminTemplates.list', who ? { as: who } : {});
+      expect(res.status, name).toBe(status);
+      if (status !== 200) continue;
+      const items = res.json<{ items: { key: string; locale: string; status: string }[] }>().items;
+      // English is approved; Urdu stays a draft until a native speaker reviews it.
+      expect(items, name).toHaveLength(8);
+      expect(new Set(items.map((t) => t.locale)), name).toEqual(new Set(['en']));
+      expect(
+        items.map((t) => t.key),
+        name,
+      ).toContain('session_cancelled');
+    }
+    // An update may now name a catalog template.
+    expect(
+      (await post(admin, { type: 'national' }, { templateKey: 'session_cancelled' })).status,
+    ).toBe(201);
   });
 
   it('lists approved templates only', async () => {

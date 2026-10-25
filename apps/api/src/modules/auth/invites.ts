@@ -53,10 +53,11 @@ export interface AcceptedInvites {
  * session all exist, or none do. Claiming an invite is an update that only matches while it is
  * still pending, so two sign-ins at once cannot accept it twice.
  *
- * A handover invite (`replaces_assignment_id`) also revokes the assignment it replaces, in the same
- * transaction and with its own audit row, so the place never has two coordinators by accident.
- * The replaced assignment must still be live and be the same role at the same place; if it was
- * revoked in the meantime there is nothing left to end.
+ * A handover invite (`replaces_assignment_id`) already ended the assignment it replaces when it was
+ * created (SEC-22), so normally there is nothing left to end here. An invite created before that
+ * change can still point at a live assignment; accepting it revokes that one in the same transaction,
+ * with its own audit row, so the place never has two coordinators by accident. The replaced
+ * assignment must still be live and be the same role at the same place.
  */
 export async function acceptInvites(
   tx: Tx,

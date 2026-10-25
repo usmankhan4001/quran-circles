@@ -1,7 +1,11 @@
 # Status: auth-scopes
 
-Updated: 2026-10-18 (change request `otp-issue-lock`; before it: security review SEC-04, SEC-07, SEC-20)
+Updated: 2026-10-25 (SEC-22 handover semantics, done in api-core)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; lane branch name to be set by the orchestrator)
+
+## Done (2026-10-25: SEC-22)
+
+- Handover access now ends when the handover invite is created, not on acceptance (`apps/api/src/modules/roles/service.ts`; details in `status/api-core.md`). `acceptInvites` (`modules/auth/invites.ts`) keeps ending a live replaced assignment, which now only matters for invites created before the change; its comment says so. No change to sign-in.
 
 ## Done (2026-10-18: change request `otp-issue-lock`, exact code ceilings across processes)
 

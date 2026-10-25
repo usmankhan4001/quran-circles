@@ -18,7 +18,7 @@ import {
   applyScheduleChange,
   cancelFutureOccurrences,
   materializeSession,
-  type ScheduleSpec,
+  withSeasonEnd,
 } from './occurrences';
 import { specOf } from './public';
 import { loadSessions, selectSessionRecords, toAdminOccurrence, toPublicSession } from './views';
@@ -168,13 +168,7 @@ export async function insertSession(
     })
     .returning();
   if (!row) throw new Error('session insert returned no row');
-  const spec: ScheduleSpec = {
-    ...specOf(row),
-    endsOn:
-      seasonEnd && (!row.endsOn || compareDates(seasonEnd, row.endsOn) < 0)
-        ? seasonEnd
-        : row.endsOn,
-  };
+  const spec = withSeasonEnd(specOf(row), seasonEnd);
   await materializeSession(tx, row.id, spec, deps.now, deps.horizonDays);
   return row.id;
 }
@@ -374,15 +368,25 @@ export async function changeSchedule(
       .set({ localStartTime, durationMinutes, daysOfWeek, endsOn, updatedAt: deps.now })
       .where(eq(sessions.id, sessionId));
 
-    const spec: ScheduleSpec = {
-      kind: current.kind,
-      localStartTime,
-      durationMinutes,
-      daysOfWeek,
-      startsOn: current.startsOn,
-      endsOn,
-      timezone: current.timezone,
-    };
+    // A session in a season stops at the season's last day here too, as when it was created.
+    const [season] = current.seasonId
+      ? await tx
+          .select({ endsOn: seasons.endsOn })
+          .from(seasons)
+          .where(eq(seasons.id, current.seasonId))
+      : [];
+    const spec = withSeasonEnd(
+      {
+        kind: current.kind,
+        localStartTime,
+        durationMinutes,
+        daysOfWeek,
+        startsOn: current.startsOn,
+        endsOn,
+        timezone: current.timezone,
+      },
+      season?.endsOn,
+    );
     const result = await applyScheduleChange(
       tx,
       sessionId,

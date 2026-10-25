@@ -5,6 +5,7 @@ import {
   posterStorageKey,
   type AdminCircle,
   type AdminSession,
+  type FeatureFlagKey,
   type PosterFailureCode,
   type Registration,
 } from '@qc/contracts';
@@ -106,6 +107,38 @@ export async function register(
   h.clock.advanceMinutes(1 / 60);
   return { status: res.status, body: res.json<Registration>() };
 }
+
+/**
+ * Sets feature switches as an admin would: a global row (`cityId` null) or a city's own row.
+ * `reset` empties `feature_flags`, so every switch starts off in each test.
+ */
+export async function setFeatures(
+  h: Harness,
+  keys: readonly FeatureFlagKey[],
+  enabled = true,
+  cityId: string | null = null,
+): Promise<void> {
+  for (const key of keys) {
+    const rows = await h.db.select().from(schema.featureFlags);
+    const existing = rows.find((r) => r.key === key && r.cityId === cityId);
+    if (existing) {
+      await h.db
+        .update(schema.featureFlags)
+        .set({ enabled })
+        .where(eq(schema.featureFlags.id, existing.id));
+    } else {
+      await h.db.insert(schema.featureFlags).values({ key, enabled, cityId });
+    }
+  }
+}
+
+/** The switches of contract rc.4's reading features, all of which the API enforces. */
+export const READING_FEATURES = [
+  'reading_days',
+  'community_today',
+  'ayah_of_the_day',
+  'memorisation',
+] as const satisfies readonly FeatureFlagKey[];
 
 export async function outboxRows(h: Harness) {
   return h.db.select().from(schema.messageOutbox);

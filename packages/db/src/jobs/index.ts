@@ -17,6 +17,7 @@ export {
   planOccurrences,
   scheduleSpecOf,
   topUpOccurrences,
+  withSeasonEnd,
   type JobDb,
   type PlannedOccurrence,
   type ScheduleSpec,

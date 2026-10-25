@@ -275,6 +275,7 @@ Out of scope here: the scope matrix run against staging (deliverable 2), the loa
 - **Owner:** api-core. Needs confirmation with the product owner.
 - **Evidence:** `apps/api/src/modules/auth/invites.ts:115`. The replaced assignment is revoked only when the invite is accepted, and the contract documents this (`InviteBody`). `docs/product/decisions.md` says that "the previous coordinator loses access at once".
 - **Fix:** confirm the intent. If access should end at once, revoke when the invite is created, or have the console offer "revoke now".
+- **Status: resolved (2026-10-25).** The product owner confirmed the rule in `docs/product/decisions.md`: the previous coordinator loses access at once. A handover invite (`POST /v1/admin/invites` or a coordinator import row with `replacesAssignmentId`) now revokes the replaced venue or city assignment in the same transaction that creates the invite, with a `role.revoke` audit row (`meta.reason: 'handover'`, `meta.inviteId`), whether or not the new coordinator has accepted (`apps/api/src/modules/roles/service.ts`, `createInvite` and `endHandedOverAssignment`; `apps/api/src/modules/import/service.ts`). Access ends on the old holder's next request, because roles are read fresh on every request. Revoking or letting the invite lapse does not give the role back. A resend to the same number may repeat the link to the assignment it already ended; any other number gets `not_found`. Acceptance still ends a replaced assignment that is live, which covers invites created before the change. Tests: `apps/api/src/modules/roles/handover.test.ts` (real tokens), `apps/api/src/test/roles.test.ts`, `apps/api/src/test/import.test.ts`.
 
 ### SEC-23 (Info): the PWA service worker can cache a non-page response as the app shell
 
@@ -345,7 +346,7 @@ Out of scope here: the scope matrix run against staging (deliverable 2), the loa
 
 ## Needs staging or a human
 
-1. **Human approval** of each finding and its severity (brief), and owner decisions on SEC-04 (Pakistan-only sign-in), SEC-05 (legacy retention and deletion) and SEC-22 (handover semantics).
+1. **Human approval** of each finding and its severity (brief), and owner decisions on SEC-04 (Pakistan-only sign-in) and SEC-05 (legacy retention and deletion). SEC-22 (handover semantics) is resolved: access ends at once.
 2. **Staging checks** once the stack exists:
    - SEC-20: forged `X-Forwarded-For` through Caddy.
    - SEC-01: after the fix, register a webpush device with an internal endpoint and confirm the worker refuses it.

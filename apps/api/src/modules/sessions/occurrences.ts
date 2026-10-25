@@ -4,6 +4,7 @@ import {
   insertPlanned,
   planOccurrences,
   topUpOccurrences,
+  withSeasonEnd,
   type PlannedOccurrence,
   type ScheduleSpec,
 } from '@qc/db';
@@ -18,7 +19,7 @@ const { occurrences } = schema;
  * worker always plan the same dates. What stays here is API-only: creating a new session's
  * occurrences, schedule changes and cancellation.
  */
-export { horizonDate, insertPlanned, planOccurrences, topUpOccurrences };
+export { horizonDate, insertPlanned, planOccurrences, topUpOccurrences, withSeasonEnd };
 export type { PlannedOccurrence, ScheduleSpec };
 
 /**

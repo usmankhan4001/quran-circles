@@ -1,7 +1,22 @@
 # Status: api-core
 
-Updated: 2026-10-18 (named prepared statements, change request `2026-10-18-api-named-statements` done)
+Updated: 2026-10-25 (functional gaps: SEC-22 handover, poster queue, feature switches, season end)
 Branch: claude/peaceful-archimedes-ain95k
+
+## Done (2026-10-25: functional gaps from the 25 Oct audit)
+
+- **SEC-22, handover ends access at once** (`modules/roles/service.ts`: `createInvite`, `handoverLink`, `endHandedOverAssignment`; `modules/import/service.ts`). A handover invite (single or coordinator import, `replacesAssignmentId`) revokes the replaced venue or city assignment in the transaction that creates the invite, with a `role.revoke` audit row (`reason: 'handover'`, `inviteId`). Roles are read per request, so the old holder loses access on their next call. A resend to the same number may repeat the link to the assignment it already ended (`handed_over`); any other number gets `not_found`. Revoking or letting the invite lapse does not restore the role. Acceptance still ends a live replaced assignment (invites made before the change). Tests: `modules/roles/handover.test.ts` (real tokens, venue and city), `test/roles.test.ts`, `test/import.test.ts`. Security doc marked resolved.
+- **Poster queue before the worker's first start** (`modules/posters/queue.ts`, `sender.ts`). The API creates `poster-render-dead` and `poster-render` (the worker's settings, mirrored in `POSTER_RENDER_QUEUE_OPTIONS`) when missing: at startup, and again before a send if that failed. pg-boss `createQueue` never changes an existing queue; the worker still re-applies its options on start. Tests: `test/poster-sender.test.ts` (+4).
+- **Feature switches enforced by the API** (`modules/system/service.ts`: `featureOnAnywhere`, `requireFeature`; `modules/reading/routes.ts`). `readingDays.*` (`reading_days`), `community.today` (`community_today`), `ayahOfTheDay.get` and `adminDailyAyahs.*` (`ayah_of_the_day`), `memorisation.*` (`memorisation`) answer `forbidden` after the sign-in check when the switch is off everywhere (no `feature_flags` row on, globally or for any city). `forbidden` is already in every one of these endpoints' errors, so no contract change. Tests: `test/reading.test.ts` (+7, every role, nothing written while off, city-only on, no row = off); `test/scope-matrix.test.ts` turns `ayah_of_the_day` on.
+- **Season end on the on-demand top-up** (`modules/sessions/public.ts`). Opening a session whose stored occurrences ran out now stops at the season's last day, through `withSeasonEnd` from `@qc/db`, also used by the daily job, new sessions and schedule changes (schedule changes ignored the season too). Tests: `test/sessions.test.ts` (+3).
+- `@qc/api` 778 tests in 37 files; typecheck, eslint and prettier clean.
+
+## Questions for the orchestrator (2026-10-25)
+
+- Feature switches use `forbidden`; `not_found` would need `not_found` added to seven endpoints' `errors` in contracts (and openapi.json). The API cannot know which city an app shows, so a city that turns a globally-on feature off is still enforced by the apps only.
+- Contract text is now stale on handover: `adminRoles.invite` description (`packages/contracts/src/endpoints.ts`) and the `InviteBody` comment (`schemas/admin.ts`) still say the replaced assignment is revoked on acceptance.
+- Load tests (`tests/load`) call the reading endpoints; staging needs those switches on, or they now get 403.
+- Urdu names: venues, circles and session titles store English in the Urdu column when no Urdu is given. The columns are NOT NULL, and raw reads (WhatsApp and push variables, posters, `me`) use the Urdu column directly, so storing empty text would send empty variables. Needs a migration to allow NULL plus fallbacks at those reads; not done.
 
 ## Done (2026-10-18: named prepared statements, change request `api-named-statements`)
 

@@ -47,6 +47,20 @@ export function scheduleSpecOf(s: typeof schema.sessions.$inferSelect): Schedule
 }
 
 /**
+ * A session in a season stops at the season's last day: the schedule ends on the earlier of its own
+ * end date and the season's. Every path that plans occurrences (a new session, a schedule change,
+ * the daily top-up and the on-demand top-up when a session is opened) applies it, so they agree.
+ */
+export function withSeasonEnd(
+  spec: ScheduleSpec,
+  seasonEndsOn: string | null | undefined,
+): ScheduleSpec {
+  if (!seasonEndsOn) return spec;
+  if (spec.endsOn && compareDates(spec.endsOn, seasonEndsOn) <= 0) return spec;
+  return { ...spec, endsOn: seasonEndsOn };
+}
+
+/**
  * The dated instances of a schedule between two local dates, inclusive. A recurring session
  * repeats on its days of the week; a one-off lecture has a single date (its `startsOn`).
  */

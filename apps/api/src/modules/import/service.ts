@@ -21,6 +21,7 @@ import { insertSession, type AdminDeps } from '../sessions/admin';
 import { insertVenue } from '../venues/service';
 import {
   assertInviteAllowance,
+  endHandedOverAssignment,
   inviteMessage,
   inviterNameOf,
   inviteValues,
@@ -493,6 +494,16 @@ export async function importCoordinators(
         .values(inviteValues(deps, caller.actorId, target, b, replacesId))
         .returning();
       if (!row) throw new Error('invite insert returned no row');
+      // SEC-22: a handover ends the previous holder's access now, not when the invite is accepted.
+      if (replacesId) {
+        await endHandedOverAssignment(tx, {
+          assignmentId: replacesId,
+          inviteId: row.id,
+          actorId: caller.actorId,
+          target,
+          now: deps.now,
+        });
+      }
       invites.push({ row, target });
     }
     await auditImport(

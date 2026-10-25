@@ -39,6 +39,14 @@ It prints only the invite id, never the phone number. It refuses:
 
 The function behind it is `bootstrapNationalAdmin(db, { phone, forceAdditional, confirmProduction })`.
 
+## Message templates
+
+The message template catalog (`TEMPLATES` in `packages/contracts/src/messages.ts`) is written by
+migration `0013_message_template_catalog`, so it exists in every environment, production included;
+the seed does not write it. English rows are `approved`, Urdu rows stay `draft` until a native
+speaker reviews them. A change to the catalog needs a new migration:
+`src/message-templates.test.ts` fails until the migrated table matches the contract again.
+
 ## Seed dates
 
 The seed copies the contract fixtures, which are dated around Monday 15 February 2027. The seed

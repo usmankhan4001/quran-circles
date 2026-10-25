@@ -334,10 +334,75 @@ export const inviteValues = (
 });
 
 /**
- * Invites a person to a role. With `replacesAssignmentId` it is a handover: the invite stays
- * pending, and accepting it at sign-in creates the new assignment and revokes the replaced one in
- * one transaction. Inviting a number again for the same role and place is a resend: the pending
- * invite is replaced by a new one with a fresh expiry, and the message goes out again.
+ * Whether `assignmentId` may be named as the handover of a new invite to `phone` for `target`.
+ * It is `'live'` when the assignment is live and the same role at the same place (the handover ends
+ * it now), `'handed_over'` when an earlier handover invite to this same number for this role and
+ * place already ended it (a resend that copies the link: nothing is left to end), and `null`
+ * otherwise, which reads as not found so an id outside the caller's scope is never confirmed.
+ */
+async function handoverLink(
+  tx: Tx,
+  assignmentId: string,
+  phone: string,
+  target: RoleTarget,
+): Promise<'live' | 'handed_over' | null> {
+  if (await handoverAssignmentExists(tx, assignmentId, target)) return 'live';
+  const [earlier] = await tx
+    .select({ id: coordinatorInvites.id })
+    .from(coordinatorInvites)
+    .innerJoin(roleAssignments, eq(roleAssignments.id, coordinatorInvites.replacesAssignmentId))
+    .where(
+      and(
+        eq(coordinatorInvites.replacesAssignmentId, assignmentId),
+        eq(coordinatorInvites.phoneE164, phone),
+        sameTarget(coordinatorInvites, target),
+        sameTarget(roleAssignments, target),
+      ),
+    )
+    .limit(1);
+  return earlier ? 'handed_over' : null;
+}
+
+/**
+ * SEC-22: a handover ends the previous holder's access at once, when the invite is created, not
+ * when the new coordinator accepts it (`docs/product/decisions.md`: "the previous coordinator
+ * loses access at once"). Revokes the assignment if it is still live, with a `role.revoke` audit
+ * row (`reason: 'handover'`). Returns whether it ended anything.
+ */
+export async function endHandedOverAssignment(
+  tx: Tx,
+  input: { assignmentId: string; inviteId: string; actorId: string; target: RoleTarget; now: Date },
+): Promise<boolean> {
+  const [ended] = await tx
+    .update(roleAssignments)
+    .set({ revokedAt: input.now })
+    .where(
+      and(
+        eq(roleAssignments.id, input.assignmentId),
+        isNull(roleAssignments.revokedAt),
+        sameTarget(roleAssignments, input.target),
+      ),
+    )
+    .returning({ id: roleAssignments.id });
+  if (!ended) return false;
+  await writeAudit(tx, {
+    actorUserId: input.actorId,
+    action: 'role.revoke',
+    entityType: 'role_assignment',
+    entityId: ended.id,
+    scope: input.target.audit,
+    meta: { role: input.target.role, reason: 'handover', inviteId: input.inviteId },
+  });
+  return true;
+}
+
+/**
+ * Invites a person to a role. With `replacesAssignmentId` it is a handover: the replaced
+ * assignment is revoked in the same transaction (SEC-22), so the previous coordinator loses access
+ * at once, and the invite stays pending until the new coordinator signs in. Inviting a number again
+ * for the same role and place is a resend: the pending invite is replaced by a new one with a fresh
+ * expiry, and the message goes out again. A resend keeps the handover link (the body may repeat
+ * it, or leave it out while a pending invite carries it).
  */
 export async function createInvite(
   db: Db,
@@ -354,18 +419,17 @@ export async function createInvite(
       await retireLapsedInvites(tx, body.phone, target, deps.now);
       const { user: existing, holds } = await roleHolder(tx, body.phone, target);
       if (holds) return fail('role_already_assigned');
-      if (replacesId && !(await handoverAssignmentExists(tx, replacesId, target))) {
+      if (replacesId && !(await handoverLink(tx, replacesId, body.phone, target))) {
         return fail('not_found');
       }
 
-      // Resend: the pending invite gives way to this one. Its handover is carried over when the
-      // body names none, as long as the replaced assignment is still live (a stale link would
-      // only be shown to the console and then ignored at acceptance).
+      // Resend: the pending invite gives way to this one, and its handover link is carried over
+      // when the body names none.
       const previous = await pendingInvite(tx, body.phone, target, deps.now);
       const carried =
         !replacesId &&
         previous?.replacesAssignmentId &&
-        (await handoverAssignmentExists(tx, previous.replacesAssignmentId, target))
+        (await handoverLink(tx, previous.replacesAssignmentId, body.phone, target))
           ? previous.replacesAssignmentId
           : null;
       if (previous) {
@@ -383,16 +447,6 @@ export async function createInvite(
         .returning();
       if (!row) throw new Error('invite insert returned no row');
 
-      await enqueueOutbox(tx, [
-        inviteMessage(
-          row,
-          target,
-          existing,
-          await inviterNameOf(tx, actorId),
-          actorId,
-          deps.webBase,
-        ),
-      ]);
       await writeAudit(tx, {
         actorUserId: actorId,
         action: 'role.invite',
@@ -405,6 +459,26 @@ export async function createInvite(
           replacesAssignmentId: row.replacesAssignmentId,
         },
       });
+      if (row.replacesAssignmentId) {
+        await endHandedOverAssignment(tx, {
+          assignmentId: row.replacesAssignmentId,
+          inviteId: row.id,
+          actorId,
+          target,
+          now: deps.now,
+        });
+      }
+
+      await enqueueOutbox(tx, [
+        inviteMessage(
+          row,
+          target,
+          existing,
+          await inviterNameOf(tx, actorId),
+          actorId,
+          deps.webBase,
+        ),
+      ]);
       return row;
     });
     return toInvite(invite, deps.now);

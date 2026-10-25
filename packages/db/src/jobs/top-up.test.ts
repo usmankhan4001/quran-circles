@@ -7,6 +7,7 @@ import {
   planOccurrences,
   scheduleSpecOf,
   topUpAllOccurrences,
+  withSeasonEnd,
   type ScheduleSpec,
 } from './index';
 
@@ -183,5 +184,37 @@ describe('topUpAllOccurrences', () => {
       sessions: 0,
       occurrencesAdded: 0,
     });
+  });
+});
+
+describe('withSeasonEnd', () => {
+  const spec: ScheduleSpec = {
+    kind: 'recurring',
+    localStartTime: '19:00',
+    durationMinutes: 60,
+    daysOfWeek: [5],
+    startsOn: '2026-10-01',
+    endsOn: null,
+    timezone: 'Asia/Karachi',
+  };
+
+  it("ends an open schedule on the season's last day", () => {
+    expect(withSeasonEnd(spec, '2026-11-06').endsOn).toBe('2026-11-06');
+  });
+
+  it('keeps the earlier of the two end dates', () => {
+    expect(withSeasonEnd({ ...spec, endsOn: '2026-10-30' }, '2026-11-06').endsOn).toBe(
+      '2026-10-30',
+    );
+    expect(withSeasonEnd({ ...spec, endsOn: '2026-12-31' }, '2026-11-06').endsOn).toBe(
+      '2026-11-06',
+    );
+  });
+
+  it('changes nothing without a season, and never changes the spec it was given', () => {
+    expect(withSeasonEnd(spec, null)).toBe(spec);
+    expect(withSeasonEnd(spec, undefined)).toBe(spec);
+    withSeasonEnd(spec, '2026-11-06');
+    expect(spec.endsOn).toBeNull();
   });
 });
