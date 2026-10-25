@@ -4,7 +4,7 @@ import {
   colors as palette,
   consoleRedesign,
   consoleTagColors,
-  elevation,
+  consoleFloatShadow,
   fontFallbacks,
   lineHeightRatio,
   minTouchTarget,
@@ -45,7 +45,6 @@ export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   const vars: Record<string, string> = {};
   const colors: SemanticColors = { ...semanticColors[mode], ...consoleRedesign[mode] };
   for (const [name, value] of Object.entries(colors)) vars[`--c-${kebab(name)}`] = value;
-  const night = mode === 'dark';
   // D17: the sidebar is white with a deep emerald brand block on top; these name that block.
   vars['--c-sidebar-from'] = colors.accentPressed;
   vars['--c-sidebar-to'] = colors.accent;
@@ -91,12 +90,11 @@ export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   vars['--line-latin'] = String(lineHeightRatio.latin);
   vars['--line-urdu'] = String(lineHeightRatio.urdu);
   vars['--scale-urdu'] = String(scriptSizeFactor.urdu);
-  // Resting depth is a soft shadow by day. At night depth comes from lighter surfaces, so cards
-  // get a light hairline instead (D11).
-  vars['--shadow-low'] = night ? 'none' : (elevation.low ?? 'none');
-  vars['--shadow-button'] = night ? 'none' : (elevation.medium ?? 'none');
-  vars['--shadow-high'] = night ? 'none' : (elevation.high ?? 'none');
-  vars['--card-edge'] = night ? colors.border : 'transparent';
+  // Flat: cards and buttons use a hairline, not a shadow. Only what floats (dialogs, menus) has one.
+  vars['--shadow-low'] = 'none';
+  vars['--shadow-button'] = 'none';
+  vars['--shadow-high'] = consoleFloatShadow[mode];
+  vars['--card-edge'] = colors.border;
   vars['--c-card-outline'] = colors.border;
   return vars;
 }

@@ -8,6 +8,7 @@ import { canSomewhere, visibleNav, type NavId } from '../lib/permissions';
 import { useTheme, type ThemeChoice } from '../theme';
 import type { TextSizeStep } from '../lib/ui-tokens';
 import { useDirectory } from '../api/directory';
+import { BrandLogo } from './BrandLogo';
 import { Icon, type IconName } from './icons';
 import { ShellFiltersProvider, useShellCity, useShellFilters } from './ShellFilters';
 import { Button, SearchField, SelectField } from './ui';
@@ -173,6 +174,36 @@ function CityPills() {
   );
 }
 
+/** EN and اردو side by side in the top bar; the full display settings stay in the rail's panel. */
+function LanguageSwitch() {
+  const { t, locale, setLocale } = useI18n();
+  return (
+    <div
+      className="segmented lang-switch"
+      role="group"
+      aria-label={t('console.shell.languageSwitch')}
+    >
+      {(
+        [
+          ['en', 'EN'],
+          ['ur', 'اردو'],
+        ] as const
+      ).map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          className="segment"
+          aria-pressed={locale === id}
+          lang={id}
+          onClick={() => setLocale(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** The top bar's search pill, shown while the page on screen has a search. */
 function TopSearch() {
   const filters = useShellFilters();
@@ -266,9 +297,7 @@ function ShellFrame() {
       <header className="sidebar">
         <div className="sidebar-top">
           <div className="brand">
-            <span className="brand-mark">
-              <Icon name="mosque" size={19} weight="duotone" />
-            </span>
+            <BrandLogo size={34} />
             <span className="brand-text">
               <span className="brand-name">{t('app.name')}</span>
               <span className="brand-sub">{t('console.shell.brandSub')}</span>
@@ -316,13 +345,13 @@ function ShellFrame() {
           </nav>
         </div>
         <div className="shell-user">
-          <div className="shell-scope">
-            <span className="scope-dot" aria-hidden="true" />
-            <span className="scope-text">
-              <span className="scope-name">{widest ? t(SCOPE_KEYS[widest]) : roleText}</span>
-              <span className="scope-sub">{t('console.shell.scope.locales')}</span>
+          <section className="operator" aria-label={t('console.shell.signedInLabel')}>
+            <span className="shell-user-name">{name}</span>
+            <span className="operator-role">
+              {roleText}
+              {widest ? ` · ${t(SCOPE_KEYS[widest])}` : ''}
             </span>
-          </div>
+          </section>
           <details className="shell-tools">
             <summary
               aria-label={t('console.shell.toolsLabel')}
@@ -347,15 +376,7 @@ function ShellFrame() {
             <CityPills />
             <TopSearch />
           </section>
-          <section className="operator" aria-label={t('console.shell.signedInLabel')}>
-            <span className="avatar" aria-hidden="true">
-              {initialsOf(name)}
-            </span>
-            <span className="operator-text">
-              <span className="shell-user-name">{name}</span>
-              <span className="operator-role">{roleText}</span>
-            </span>
-          </section>
+          <LanguageSwitch />
         </div>
         <main id="main" className="shell-main" tabIndex={-1}>
           <Outlet />

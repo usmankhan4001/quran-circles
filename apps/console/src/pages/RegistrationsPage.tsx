@@ -101,8 +101,8 @@ export default function RegistrationsPage() {
       })
     : true; // The API still checks; without the session we cannot know the scope here.
 
-  // The artboard's five columns: who, their number, section with party size, the WhatsApp
-  // choice and the status.
+  // Who, their number, the section, the WhatsApp choice and the status. Joining is a pledge, so
+  // the party size is not shown.
   const columns: Column<StaffRegistration>[] = [
     {
       id: 'name',
@@ -117,15 +117,8 @@ export default function RegistrationsPage() {
     },
     {
       id: 'section',
-      header: t('console.registrations.col.sectionParty'),
-      cell: (r) => (
-        <span className="cell-soft">
-          {t('console.registrations.sectionParty', {
-            section: t(SECTION_KEYS[r.section]),
-            count: number(r.partySize),
-          })}
-        </span>
-      ),
+      header: t('console.registrations.col.section'),
+      cell: (r) => <span className="cell-soft">{t(SECTION_KEYS[r.section])}</span>,
     },
     {
       id: 'whatsapp',
@@ -172,7 +165,6 @@ export default function RegistrationsPage() {
                 sessionData ? localized(sessionData.venue.name) : null,
                 t('console.registrations.sub', {
                   registrations: number(totals.registrations),
-                  people: number(totals.people),
                 }),
               ]
                 .filter(Boolean)

@@ -3,6 +3,7 @@ import { SEASON_MODES, SettingsUpdate, type Settings } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useAsync } from '../api/hooks';
+import { Icon } from '../components/icons';
 import {
   Banner,
   Button,
@@ -14,6 +15,7 @@ import {
 } from '../components/ui';
 import { useI18n } from '../i18n';
 import { errorMessageKeyOf, fieldIssues } from '../lib/errors';
+import { canSomewhere } from '../lib/permissions';
 
 const OFFSETS = [-2, -1, 0, 1, 2] as const;
 
@@ -71,7 +73,9 @@ export default function SettingsPage() {
 
 function SettingsForm({ initial }: { initial: Settings }) {
   const { t, number } = useI18n();
-  const { api } = useSignedIn();
+  const { api, principal } = useSignedIn();
+  // Anyone who may read the settings sees them; only a national admin may change them.
+  const readOnly = !canSomewhere(principal, 'settings.update');
   const [saved, setSaved] = useState<Settings>(initial);
   const [hijri, setHijri] = useState(String(initial.hijriOffsetDays));
   const [season, setSeason] = useState<Settings['seasonMode']>(initial.seasonMode);
@@ -155,83 +159,89 @@ function SettingsForm({ initial }: { initial: Settings }) {
     <form className="form card" onSubmit={(e) => void submit(e)} noValidate>
       {done ? <Banner tone="success">{t('console.settings.saved')}</Banner> : null}
       {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
-      <SelectField
-        id="setting-hijri"
-        label={t('console.settings.hijri.label')}
-        hint={t('console.settings.hijri.hint')}
-        value={hijri}
-        error={errors.hijriOffsetDays}
-        onChange={(e) => setHijri(e.target.value)}
-        options={OFFSETS.map((n) => ({ value: String(n), label: offsetLabel(n) }))}
-      />
-      <SelectField
-        id="setting-season"
-        label={t('console.settings.season.label')}
-        hint={t('console.settings.season.hint')}
-        value={season}
-        error={errors.seasonMode}
-        onChange={(e) => setSeason(e.target.value as Settings['seasonMode'])}
-        options={SEASON_MODES.map((m) => ({ value: m, label: t(SEASON_KEYS[m]) }))}
-      />
-      <TextField
-        id="setting-cap"
-        type="number"
-        inputMode="numeric"
-        min={0}
-        max={5}
-        dir="ltr"
-        label={t('console.settings.cap.label')}
-        hint={t('console.settings.cap.hint')}
-        error={errors.whatsappDailyCapPerPerson}
-        value={cap}
-        onChange={(e) => setCap(e.target.value)}
-      />
-      <TextField
-        id="setting-threshold"
-        type="number"
-        inputMode="numeric"
-        min={1}
-        max={1000}
-        dir="ltr"
-        label={t('console.settings.threshold.label')}
-        hint={t('console.settings.threshold.hint')}
-        error={errors.circleRequestAlertThreshold}
-        value={threshold}
-        onChange={(e) => setThreshold(e.target.value)}
-      />
-      <fieldset className="fieldset">
-        <legend className="field-label">{t('console.settings.lead.legend')}</legend>
-        <p className="field-hint">{t('console.settings.lead.hint')}</p>
-        <TextField
-          id="setting-lead-dora"
-          type="number"
-          inputMode="numeric"
-          min={5}
-          max={1440}
-          dir="ltr"
-          label={t('console.settings.lead.dora')}
-          error={errors.leadDora}
-          value={leadDora}
-          onChange={(e) => setLeadDora(e.target.value)}
+      {readOnly ? <Banner tone="info">{t('console.settings.readOnly')}</Banner> : null}
+      <fieldset className="settings-fields" disabled={readOnly}>
+        <SelectField
+          id="setting-hijri"
+          label={t('console.settings.hijri.label')}
+          hint={t('console.settings.hijri.hint')}
+          value={hijri}
+          error={errors.hijriOffsetDays}
+          onChange={(e) => setHijri(e.target.value)}
+          options={OFFSETS.map((n) => ({ value: String(n), label: offsetLabel(n) }))}
+        />
+        <SelectField
+          id="setting-season"
+          label={t('console.settings.season.label')}
+          hint={t('console.settings.season.hint')}
+          value={season}
+          error={errors.seasonMode}
+          onChange={(e) => setSeason(e.target.value as Settings['seasonMode'])}
+          options={SEASON_MODES.map((m) => ({ value: m, label: t(SEASON_KEYS[m]) }))}
         />
         <TextField
-          id="setting-lead-circles"
+          id="setting-cap"
           type="number"
           inputMode="numeric"
-          min={5}
-          max={1440}
+          min={0}
+          max={5}
           dir="ltr"
-          label={t('console.settings.lead.circles')}
-          error={errors.leadCircles}
-          value={leadCircles}
-          onChange={(e) => setLeadCircles(e.target.value)}
+          label={t('console.settings.cap.label')}
+          hint={t('console.settings.cap.hint')}
+          error={errors.whatsappDailyCapPerPerson}
+          value={cap}
+          onChange={(e) => setCap(e.target.value)}
         />
+        <TextField
+          id="setting-threshold"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={1000}
+          dir="ltr"
+          label={t('console.settings.threshold.label')}
+          hint={t('console.settings.threshold.hint')}
+          error={errors.circleRequestAlertThreshold}
+          value={threshold}
+          onChange={(e) => setThreshold(e.target.value)}
+        />
+        <fieldset className="fieldset">
+          <legend className="field-label">{t('console.settings.lead.legend')}</legend>
+          <p className="field-hint">{t('console.settings.lead.hint')}</p>
+          <TextField
+            id="setting-lead-dora"
+            type="number"
+            inputMode="numeric"
+            min={5}
+            max={1440}
+            dir="ltr"
+            label={t('console.settings.lead.dora')}
+            error={errors.leadDora}
+            value={leadDora}
+            onChange={(e) => setLeadDora(e.target.value)}
+          />
+          <TextField
+            id="setting-lead-circles"
+            type="number"
+            inputMode="numeric"
+            min={5}
+            max={1440}
+            dir="ltr"
+            label={t('console.settings.lead.circles')}
+            error={errors.leadCircles}
+            value={leadCircles}
+            onChange={(e) => setLeadCircles(e.target.value)}
+          />
+        </fieldset>
       </fieldset>
-      <div className="form-actions">
-        <Button type="submit" variant="primary" busy={busy} disabled={!dirty}>
-          {t('console.settings.save')}
-        </Button>
-      </div>
+      {readOnly ? null : (
+        <div className="form-actions">
+          <Button type="submit" variant="primary" busy={busy} disabled={!dirty}>
+            <Icon name="check" size="sm" />
+            {t('console.settings.save')}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

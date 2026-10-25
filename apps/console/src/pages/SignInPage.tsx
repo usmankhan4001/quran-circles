@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { PHONE_NOT_PAKISTAN_MOBILE, PakistaniMobilePhone, issueMessageKey } from '@qc/contracts';
 import { useAuth } from '../api/auth';
+import { BrandLogo } from '../components/BrandLogo';
 import { DisplayControls } from '../components/Shell';
 import { Icon } from '../components/icons';
 import { Banner, Button, PageHeader, TextField } from '../components/ui';
@@ -87,7 +88,7 @@ interface Challenge {
 
 /** Coordinators sign in with a code sent to their WhatsApp number. */
 export default function SignInPage() {
-  const { t, number } = useI18n();
+  const { t } = useI18n();
   const auth = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
@@ -177,9 +178,7 @@ export default function SignInPage() {
       </div>
       <div className="card auth-card">
         <div className="auth-hero">
-          <span className="brand-mark brand-mark-large">
-            <Icon name="mosque" />
-          </span>
+          <BrandLogo size={80} />
           <PageHeader
             title={t(challenge ? 'console.signIn.code.title' : 'console.signIn.title')}
             intro={
