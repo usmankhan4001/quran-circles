@@ -5,14 +5,17 @@ import {
   unwiredPosterQueue,
   type PosterJobSender,
   type PosterQueue,
+  type PosterQueueOptions,
 } from './queue';
 
 /**
  * How the server's pg-boss instance is built: a sender only. No maintenance (`supervise`) and no
  * cron (`schedule`), which are the worker's; a small pool, since the API only inserts jobs. Schema
  * install stays on (pg-boss's default, versioned and lock-guarded, the worker's exact version), so a
- * first deploy where the API starts before the worker can still send once the worker has created
- * the queue. The API never creates or changes a queue: the worker owns `poster-render`'s options.
+ * first deploy where the API starts before the worker can still send. The API creates
+ * `poster-render` (and `poster-render-dead`) when they are missing, with the worker's settings, so
+ * posters requested before the worker's first start are queued rather than failed; it never changes
+ * an existing queue: the worker owns `poster-render`'s options and re-applies them on every start.
  */
 export function posterSenderOptions(connectionString: string): ConstructorOptions {
   return { connectionString, max: 2, supervise: false, schedule: false, instanceName: 'api' };
@@ -20,6 +23,7 @@ export function posterSenderOptions(connectionString: string): ConstructorOption
 
 /** The part of a `PgBoss` the server uses. A `PgBoss` fits it as is. */
 export interface PosterBoss extends PosterJobSender {
+  createQueue(name: string, options?: PosterQueueOptions): Promise<void>;
   start(): Promise<unknown>;
   stop(options?: StopOptions): Promise<void>;
   on(event: 'error', listener: (error: Error) => void): unknown;
@@ -56,5 +60,12 @@ export async function startPosterSender(boss: PosterBoss, logger: Logger): Promi
     logger.error('posters.queue_unavailable', { error: errorName(error) });
     return { queue: unwiredPosterQueue, started: false, stop };
   }
-  return { queue: pgBossPosterQueue(boss), started: true, stop };
+  const queue = pgBossPosterQueue(boss);
+  // Make the queue ready now, at startup; if that fails, the first enqueue tries again.
+  try {
+    await queue.ensureQueue();
+  } catch (error) {
+    logger.warn('posters.queue_create_failed', { error: errorName(error) });
+  }
+  return { queue, started: true, stop };
 }
