@@ -596,5 +596,12 @@
   "admin.signIn.features.2.title": "Tell people what changed",
   "admin.signIn.features.2.body": "Post updates, time changes and reminders to everyone who joins.",
   "admin.signIn.features.3.title": "Posters in a minute",
-  "admin.signIn.features.3.body": "Make a flyer with a QR code and share it as a PDF or a status."
+  "admin.signIn.features.3.body": "Make a flyer with a QR code and share it as a PDF or a status.",
+  "admin.venueEditor.location.title": "Venue location",
+  "admin.venueEditor.location.mapLabel": "Map, drag to place the pin",
+  "admin.venueEditor.location.hint": "Drag the map so the pin sits on the masjid entrance.",
+  "admin.venueEditor.location.use": "Use this location",
+  "admin.venueEditor.location.open": "Pick on the map",
+  "admin.venueEditor.location.zoomIn": "Zoom in",
+  "admin.venueEditor.location.zoomOut": "Zoom out"
 }

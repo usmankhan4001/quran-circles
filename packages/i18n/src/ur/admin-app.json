@@ -597,5 +597,12 @@
   "admin.signIn.features.2.title": "لوگوں کو بتائیں کیا بدلا",
   "admin.signIn.features.2.body": "شامل ہونے والے سب لوگوں کو اطلاع، وقت کی تبدیلی اور یاد دہانی بھیجیں۔",
   "admin.signIn.features.3.title": "ایک منٹ میں پوسٹر",
-  "admin.signIn.features.3.body": "کیو آر کوڈ والا پوسٹر بنائیں اور پی ڈی ایف یا اسٹیٹس کے طور پر شیئر کریں۔"
+  "admin.signIn.features.3.body": "کیو آر کوڈ والا پوسٹر بنائیں اور پی ڈی ایف یا اسٹیٹس کے طور پر شیئر کریں۔",
+  "admin.venueEditor.location.title": "مقام کی جگہ",
+  "admin.venueEditor.location.mapLabel": "نقشہ، پن لگانے کے لیے گھسیٹیں",
+  "admin.venueEditor.location.hint": "نقشہ گھسیٹیں تاکہ پن مسجد کے داخلی دروازے پر آ جائے۔",
+  "admin.venueEditor.location.use": "یہی جگہ استعمال کریں",
+  "admin.venueEditor.location.open": "نقشے پر چنیں",
+  "admin.venueEditor.location.zoomIn": "بڑا کریں",
+  "admin.venueEditor.location.zoomOut": "چھوٹا کریں"
 }
