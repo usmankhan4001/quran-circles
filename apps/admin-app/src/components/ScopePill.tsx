@@ -29,15 +29,15 @@ export function ScopePill() {
         name={active.role === 'venue_coordinator' ? 'mosque' : 'map-pin'}
         weight="fill"
         size={16}
-        color={colors.textOnHero}
+        color={colors.textAccent}
       />
       <View style={{ flexShrink: 1 }}>
-        <Text variant="label" color="textOnHero" numberOfLines={1} decorative={several}>
+        <Text variant="label" color="textAccent" numberOfLines={1} decorative={several}>
           {short(active)}
         </Text>
       </View>
       {several ? (
-        <Icon name="caret-down" weight="bold" size={11} color={colors.textOnHero} />
+        <Icon name="caret-down" weight="bold" size={11} color={colors.textAccent} />
       ) : null}
     </>
   );
@@ -55,7 +55,7 @@ export function ScopePill() {
       <View
         testID="scope-single"
         aria-label={full}
-        style={[look, { backgroundColor: colors.heroGlass }]}
+        style={[look, { backgroundColor: colors.accentSubtle }]}
       >
         {body}
       </View>
@@ -74,7 +74,7 @@ export function ScopePill() {
           look,
           {
             minHeight: minTouchTarget,
-            backgroundColor: pressed ? colors.heroGlassPressed : colors.heroGlass,
+            backgroundColor: pressed ? colors.accentSubtle : colors.accentSubtle,
           },
         ]}
       >

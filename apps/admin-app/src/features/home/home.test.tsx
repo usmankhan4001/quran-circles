@@ -85,12 +85,12 @@ describe('TodayScreen scope', () => {
     expect(nav.pushed).toEqual([routes.session(ids.sessionDora)]);
   });
 
-  it('offers to post an update', async () => {
+  it('opens the account from the header', async () => {
     const { nav } = renderScreen(<TodayScreen now={FIXTURE_NOW} />, {
       backend: createBackend({ me: meFor('venue') }),
     });
-    fireEvent.click(await screen.findByTestId('today-post-update'));
-    expect(nav.pushed).toEqual([routes.postUpdate()]);
+    fireEvent.click(await screen.findByTestId('today-account'));
+    expect(nav.pushed).toEqual([routes.account()]);
   });
 
   it('shows an empty state when the scope has no sessions', async () => {

@@ -24,7 +24,6 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
-import { Stepper } from '../../components/Stepper';
 import { formatInstantDate, formatInstantTime, isToday } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { sessionAbilities } from '../../scope/principal';
@@ -35,7 +34,6 @@ import {
   attendanceReducer,
   entriesTotal,
   initialAttendanceState,
-  MAX_ENTRY_COUNT,
   MAX_HEADCOUNT,
   validateAttendance,
 } from './state';
@@ -143,7 +141,6 @@ function AttendanceForm({
   const [error, setError] = useState<MessageKey | null>(null);
   const [typed, setTyped] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-  const [newCount, setNewCount] = useState(1);
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   const registrants = useRegistrants({ sessionId, occurrenceId, status: 'confirmed', pollMs: 0 });
@@ -298,12 +295,12 @@ function AttendanceForm({
                     key={r.id}
                     testID={`attendance-tick-${r.id}`}
                     name={r.name ? isolate(r.name) : t('admin.registrants.noName')}
-                    sub={t('admin.registrants.party', { count: n(r.partySize) })}
+                    sub={t(`admin.registrants.section.${r.section}`)}
                     checked={r.id in state.ticked}
                     onToggle={(on) =>
                       dispatch(
                         on
-                          ? { type: 'tick', registrationId: r.id, count: r.partySize }
+                          ? { type: 'tick', registrationId: r.id, count: 1 }
                           : { type: 'untick', registrationId: r.id },
                       )
                     }
@@ -335,7 +332,7 @@ function AttendanceForm({
                   type: 'tickAll',
                   people: registrants.items.map((r) => ({
                     registrationId: r.id,
-                    count: r.partySize,
+                    count: 1,
                   })),
                 })
               }
@@ -402,9 +399,6 @@ function AttendanceForm({
                 <Text variant="label">
                   {d.name ? isolate(d.name) : t('admin.attendance.unnamed')}
                 </Text>
-                <Text variant="caption" color="textSecondary">
-                  {t('admin.registrants.party', { count: n(d.count) })}
-                </Text>
               </View>
               <Button
                 testID={`attendance-dropin-${d.id}-remove`}
@@ -421,14 +415,6 @@ function AttendanceForm({
             onChangeText={setNewName}
             maxLength={80}
           />
-          <Stepper
-            testID="attendance-new-count"
-            label={t('admin.attendance.peopleLabel')}
-            value={newCount}
-            min={1}
-            max={MAX_ENTRY_COUNT}
-            onChange={setNewCount}
-          />
           <Button
             testID="attendance-add"
             label={t('admin.attendance.add')}
@@ -436,9 +422,8 @@ function AttendanceForm({
             icon="plus"
             fullWidth
             onPress={() => {
-              dispatch({ type: 'addDropIn', name: newName || null, count: newCount });
+              dispatch({ type: 'addDropIn', name: newName || null, count: 1 });
               setNewName('');
-              setNewCount(1);
             }}
           />
         </View>
