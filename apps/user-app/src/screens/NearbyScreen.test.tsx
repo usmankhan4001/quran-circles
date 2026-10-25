@@ -2,7 +2,7 @@ import { act, fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { fixtures } from '@qc/contracts/fixtures';
-import { CITY_RAWALPINDI, SESSIONS } from '../test/factories';
+import { CITY_RAWALPINDI, SESSIONS, registrationFor } from '../test/factories';
 import {
   FakeNetwork,
   MATRIX,
@@ -97,6 +97,66 @@ describe('NearbyScreen', () => {
     expect(view.world.nav.last()).toEqual({
       type: 'go',
       route: { name: 'venue', venueId: SESSIONS.taraweeh.venueId },
+    });
+  });
+
+  describe('joining from a place on the map', () => {
+    async function openCard(options: { signedIn?: boolean; locale?: 'en' | 'ur' } = {}) {
+      const view = await renderScreen(<NearbyScreen />, options);
+      await view.findByTestId('nearby-list');
+      const words = messages[options.locale ?? 'en'];
+      fireEvent.click(within(view.getByTestId('nearby-view')).getByText(words['nearby.view.map']));
+      fireEvent.click(await view.findByTestId(`map-marker-${SESSIONS.taraweeh.venueId}`));
+      return { view, words, selection: await view.findByTestId('map-selection') };
+    }
+
+    it('offers a Join action on the session card, which opens the join flow when signed in', async () => {
+      const { view, words } = await openCard({ signedIn: true });
+      fireEvent.click(view.getByTestId(`map-join-${SESSIONS.taraweeh.id}`));
+      expect(words['session.join']).toBeTruthy();
+      expect(view.world.nav.last()).toEqual({
+        type: 'go',
+        route: { name: 'register', sessionId: SESSIONS.taraweeh.id },
+      });
+    });
+
+    it('sends a signed-out person to sign in and back to the join flow', async () => {
+      const { view } = await openCard();
+      fireEvent.click(view.getByTestId(`map-join-${SESSIONS.taraweeh.id}`));
+      expect(view.world.nav.last()).toEqual({
+        type: 'go',
+        route: {
+          name: 'signIn',
+          returnTo: { name: 'register', sessionId: SESSIONS.taraweeh.id },
+        },
+      });
+    });
+
+    it('shows Joined for a session already joined, which opens the journey', async () => {
+      const view = await renderScreen(<NearbyScreen />, {
+        signedIn: true,
+        mock: {
+          handlers: {
+            'registrations.listMine': () => ({
+              items: [registrationFor(SESSIONS.taraweeh)],
+              nextCursor: null,
+            }),
+          },
+        },
+      });
+      await view.findByTestId('nearby-list');
+      fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
+      fireEvent.click(await view.findByTestId(`map-marker-${SESSIONS.taraweeh.venueId}`));
+      const join = await view.findByTestId(`map-join-${SESSIONS.taraweeh.id}`);
+      await waitFor(() => expect(join.textContent).toBe(en['session.joined']));
+      fireEvent.click(join);
+      expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
+    });
+
+    it('reads in Urdu, right to left', async () => {
+      const { view, words, selection } = await openCard({ locale: 'ur' });
+      expect(within(selection).getAllByText(words['session.join']).length).toBeGreaterThan(0);
+      expect(directionOf(view.container)).toBe('rtl');
     });
   });
 

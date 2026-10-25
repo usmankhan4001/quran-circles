@@ -12,6 +12,9 @@ import {
   spacing,
   useTheme,
 } from '@qc/ui';
+import { useRequireAuth } from '../features/auth/useRequireAuth';
+import { useMyRegistrations } from '../features/journey/hooks';
+import { registerState } from '../features/session/registerState';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { NearbyCircleCard } from '../components/NearbyCircleCard';
 import { errorMessageKey } from '../core/errors';
@@ -91,6 +94,8 @@ type ViewMode = 'list' | 'map';
 export function NearbyScreen() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
+  const requireAuth = useRequireAuth();
+  const mine = useMyRegistrations();
   const { MapView } = useServices();
   const prefs = usePreferences();
   const config = useAppConfig();
@@ -326,6 +331,7 @@ export function NearbyScreen() {
                     ? describePortion(session.nextOccurrence, t, locale)
                     : null;
                   const when = describeWhenParts(session, t, locale, true);
+                  const joinState = registerState(session, mine.data);
                   return (
                     <Card key={session.id} testID={`map-selected-${session.id}`}>
                       <View style={styles.selected}>
@@ -353,6 +359,29 @@ export function NearbyScreen() {
                         <Text variant="caption" color="textSecondary" style={w('400')}>
                           {[when.day, when.time, t(`sections.${session.section}`)].join(sep)}
                         </Text>
+                        {joinState.kind === 'open' || joinState.kind === 'registered' ? (
+                          <View style={styles.selectedAction}>
+                            <Button
+                              fullWidth
+                              variant={joinState.kind === 'registered' ? 'secondary' : 'primary'}
+                              label={
+                                joinState.kind === 'registered'
+                                  ? t('session.joined')
+                                  : t('session.join')
+                              }
+                              accessibilityLabel={`${joinState.kind === 'registered' ? t('session.joined') : t('session.join')}${sep}${title.text}`}
+                              onPress={() => {
+                                if (joinState.kind === 'registered') {
+                                  nav.tab({ name: 'journey' });
+                                  return;
+                                }
+                                const target = { name: 'register', sessionId: session.id } as const;
+                                if (requireAuth(target)) nav.go(target);
+                              }}
+                              testID={`map-join-${session.id}`}
+                            />
+                          </View>
+                        ) : null}
                         <View style={styles.selectedAction}>
                           <ArtPill
                             trailingIcon="arrow-forward"

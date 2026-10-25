@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '@qc/ui';
-import { ListOnlyMapView } from './ListOnlyMapView';
+import { TileMapView } from './TileMapView';
 import { centerOf, type MapViewProps } from './types';
 
 /**
  * Google Maps for the web target (the PWA), through the Maps JavaScript API. The key is public
  * configuration (`EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`) and must be restricted to our web origins in
- * the Google console. Phones use `GoogleMapView.native.tsx`. If the script cannot load, the
- * list-only map shows instead, so the screen never goes blank.
+ * the Google console. Phones use `GoogleMapView.native.tsx`. Without a key, or if the script
+ * cannot load, the keyless OpenStreetMap map (`TileMapView`) shows instead, so there is always a map.
  */
 
 type Json = Record<string, unknown>;
@@ -96,7 +96,7 @@ export function GoogleMapView(props: MapViewProps) {
     };
   }, [apiKey, markers, onSelect, props.center, theme.locale]);
 
-  if (!apiKey || failed) return <ListOnlyMapView {...props} />;
+  if (!apiKey || failed) return <TileMapView {...props} />;
   return (
     <View style={[styles.box, { height }]} role="application" aria-label={accessibilityLabel}>
       <div ref={host} style={{ width: '100%', height: '100%' }} />
