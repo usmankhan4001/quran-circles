@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import { join } from 'node:path';
 import { startDatabase, type Database } from './postgres';
@@ -28,6 +28,12 @@ export interface StackInfo {
   /** The admin app's web export (the coordinators' phone app, provable on the web target). */
   adminUrl: string | null;
   adminError: string | null;
+  /** The poster renderer the worker sends poster jobs to (headless Chromium). */
+  rendererUrl: string | null;
+  /** Why the renderer is not running, when it is not. The poster tests fail with this message. */
+  rendererError: string | null;
+  /** Where the worker writes poster files and the API reads them. */
+  posterDir: string;
   /** This run's logs (api.log, worker.log, console.log). */
   logDir: string;
   startedAt: string;
@@ -81,7 +87,8 @@ export async function startStack(
       env: dbEnv,
     });
 
-    const [apiPort, workerPort, pwaPort, consolePort, adminPort] = await Promise.all([
+    const [apiPort, workerPort, pwaPort, consolePort, adminPort, rendererPort] = await Promise.all([
+      freePort(),
       freePort(),
       freePort(),
       freePort(),
@@ -95,6 +102,10 @@ export async function startStack(
     // A fresh random secret per run: nothing to leak, nothing in the repository.
     const authSecret = randomBytes(32).toString('hex');
     const messagingEnv = { MESSAGING_MODE: 'fake' };
+    // Posters: the worker writes the files, the API serves them, both from this run's folder.
+    const posterDir = join(dirs.root, 'posters');
+    mkdirSync(posterDir, { recursive: true });
+    const posterEnv = { POSTER_STORAGE_DIR: posterDir };
 
     const api = tsx('api', 'src/index.ts', join(REPO_DIR, 'apps', 'api'), {
       ...dbEnv,
@@ -107,13 +118,39 @@ export async function startStack(
       TRUST_PROXY: 'true',
       AUTH_TRUST_PROXY: 'true',
       CORS_ORIGINS: [pwaUrl, consoleUrl, adminUrl].join(','),
+      ...posterEnv,
       // Runtime deprecations print a stack trace, so a finding can name the code that caused it.
       NODE_OPTIONS: '--trace-deprecation --stack-trace-limit=60',
     });
     procs.push(api);
+
+    // The poster renderer, with its own random token per run. It needs Playwright's headless
+    // Chromium (`pnpm --filter @qc/poster-renderer exec playwright-core install --only-shell
+    // chromium`); without it the rest of the stack still runs and the poster flow says why.
+    const rendererUrl = `http://127.0.0.1:${rendererPort}`;
+    const rendererToken = randomBytes(32).toString('hex');
+    let rendererError: string | null = null;
+    const renderer = tsx('renderer', 'src/main.ts', join(REPO_DIR, 'apps', 'poster-renderer'), {
+      APP_ENV: 'development',
+      RENDERER_HOST: '127.0.0.1',
+      RENDERER_PORT: String(rendererPort),
+      RENDERER_TOKEN: rendererToken,
+    });
+    procs.push(renderer);
+    try {
+      await waitForHttp(`${rendererUrl}/healthz`, 60_000, renderer);
+    } catch (error) {
+      rendererError = error instanceof Error ? error.message : String(error);
+    }
+    const rendererEnv: Record<string, string> = rendererError
+      ? {}
+      : { RENDERER_URL: rendererUrl, RENDERER_TOKEN: rendererToken };
+
     const worker = tsx('worker', 'src/main.ts', join(REPO_DIR, 'apps', 'worker'), {
       ...dbEnv,
       ...messagingEnv,
+      ...posterEnv,
+      ...rendererEnv,
       WORKER_HTTP_PORT: String(workerPort),
       WORKER_POLL_MS: '500',
       NODE_OPTIONS: '--trace-deprecation --stack-trace-limit=60',
@@ -170,6 +207,9 @@ export async function startStack(
       consoleError,
       adminUrl: adminError ? null : adminUrl,
       adminError,
+      rendererUrl: rendererError ? null : rendererUrl,
+      rendererError,
+      posterDir,
       logDir: dirs.logs,
       startedAt: new Date().toISOString(),
     };

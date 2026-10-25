@@ -25,13 +25,12 @@ import {
   PageHeader,
   Phone,
   SelectField,
-  StatRow,
   TableCard,
   type BadgeTone,
   type Column,
 } from '../components/ui';
 import { useI18n } from '../i18n';
-import { sessionStats, venueStats } from '../lib/kpis';
+import { sessionStats } from '../lib/kpis';
 import { canSomewhere, isNavAllowed } from '../lib/permissions';
 import { filterBySearch } from '../lib/search';
 import { surahLabel } from '../lib/surahs';
@@ -248,13 +247,6 @@ export default function SessionsPage() {
   ];
 
   const waiting = stats.waitingApproval;
-  const venuesHere = dir.venues.filter((v) => !cityId || v.cityId === cityId);
-  const places = venueStats(venuesHere);
-  const cityCount = new Set(venuesHere.filter((v) => v.status === 'active').map((v) => v.cityId))
-    .size;
-  const weekly = loaded.filter((s) => s.program === 'circles').length;
-  const dora = loaded.length - weekly;
-  const reserved = loaded.reduce((sum, s) => sum + (s.registration.seatsTaken ?? 0), 0);
   // Counts of loaded rows are exact only when there is no next page. Otherwise they are shown as
   // "at least" ("50+"), never as a total; an exact total needs `total` on the list response.
   const exact = !(list.status === 'ready' && list.hasMore);
@@ -263,62 +255,6 @@ export default function SessionsPage() {
   return (
     <div className="page">
       <PageHeader title={t('console.sessions.title')} intro={t('console.sessions.intro')} hidden />
-      {list.status === 'ready' ? (
-        <StatRow
-          label={t('console.kpi.label')}
-          partial={list.hasMore}
-          stats={[
-            {
-              id: 'masjids',
-              label: t('console.sessions.kpi.masjids'),
-              value: places.active,
-              display: t('console.sessions.kpi.masjidsValue', { count: number(places.active) }),
-              sub: t('console.sessions.kpi.masjidsSub', {
-                women: number(places.womenSection),
-                cities: number(cityCount),
-              }),
-              icon: 'mosque',
-            },
-            // The number of circles is a total only when every page is loaded: the list returns
-            // `{ items, nextCursor }` and no total. Wire an exact count here once
-            // `adminSessions.list` returns `total` (or a count endpoint exists); until then the
-            // card is left out rather than showing the loaded rows as if they were all of them.
-            ...(exact
-              ? [
-                  {
-                    id: 'circles',
-                    label: t('console.sessions.kpi.total'),
-                    value: stats.total,
-                    display: t('console.sessions.kpi.totalValue', { count: number(stats.total) }),
-                    sub: t('console.sessions.kpi.totalSub', {
-                      weekly: number(weekly),
-                      dora: number(dora),
-                    }),
-                    icon: 'calendar-blank' as const,
-                    iconTone: 'sky' as const,
-                  },
-                ]
-              : []),
-            {
-              id: 'demand',
-              label: t('console.sessions.kpi.demand'),
-              value: reserved,
-              display: t('console.sessions.kpi.demandValue', { count: number(reserved) }),
-              sub: t('console.sessions.kpi.demandSub', {
-                full: number(stats.full),
-                week: number(stats.thisWeek),
-              }),
-              icon: 'ticket',
-              iconTone: 'amber',
-            },
-            // Not shown: "Field Reliability" (coordinator check-ins), registrations this month and
-            // the share who turned up are drawn on the artboard but no endpoint returns them.
-            // Wire them here as cards when the API has them, for example
-            // `GET /v1/admin/reports/attendance?from&to` (headcount against registrations) and a
-            // registrations count by date range in scope; never show a placeholder figure.
-          ]}
-        />
-      ) : null}
       <div className="workspace">
         <TableCard
           tabs={

@@ -198,17 +198,6 @@ function PostersWorkspace({ session, canCreate }: { session: AdminSession; canCr
             <h2 id="poster-list-title">{t('console.posters.list.title')}</h2>
             <p className="table-card-sub">{t('console.posters.generator.sub')}</p>
           </div>
-          {/* Drawn on the artboard; there is no bulk download yet, so it stays off. */}
-          <button
-            type="button"
-            className="btn btn-small btn-emerald"
-            disabled
-            aria-disabled="true"
-            title={t('console.posters.generator.bulkSoon')}
-          >
-            <Icon name="file-pdf" size={13} weight="fill" />
-            <span>{t('console.posters.generator.bulk')}</span>
-          </button>
         </div>
         <section className="poster-source" aria-labelledby="poster-source-title">
           <h3 id="poster-source-title">{t('console.posters.source.title')}</h3>
@@ -302,6 +291,53 @@ function PosterList({
   );
 }
 
+/**
+ * The poster itself, drawn from the file the renderer made, for the picture formats. A print PDF has
+ * no preview here, so it keeps the plain tile. The picture is fetched with the sign-in (the file
+ * route needs it), shown with the poster's own description, and released when the card goes.
+ */
+function PosterPreview({ poster: p, title }: { poster: Poster; title: string }) {
+  const { api } = useSignedIn();
+  const { locale } = useI18n();
+  const [url, setUrl] = useState<string | null>(null);
+  const picture = p.status === 'ready' && posterMime(p.format) === 'image/png';
+  useEffect(() => {
+    if (!picture) return;
+    let live = true;
+    let made: string | null = null;
+    api.adminPosters
+      .file({ params: { posterId: p.id } })
+      .then((bytes) => {
+        if (!live) return;
+        const copy = new Uint8Array(bytes.byteLength);
+        copy.set(bytes);
+        made = URL.createObjectURL(new Blob([copy.buffer], { type: 'image/png' }));
+        setUrl(made);
+      })
+      .catch(() => {
+        /* the tile stays; download shows the error */
+      });
+    return () => {
+      live = false;
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, [api, p.id, picture]);
+  if (url) {
+    const alt = p.altText?.[locale === 'ur' ? 'ur' : 'en'] ?? p.altText?.en ?? p.altText?.ur ?? '';
+    return (
+      <div className={`poster-thumb poster-thumb-image poster-thumb-${p.format}`}>
+        <img src={url} alt={alt} />
+      </div>
+    );
+  }
+  return (
+    <div className={`poster-thumb poster-thumb-${p.format}`} aria-hidden="true">
+      <span className="poster-thumb-title">{title}</span>
+      <Icon name="qr-code" size={16} weight="bold" />
+    </div>
+  );
+}
+
 type CardFailure = { kind: 'regenerate' | 'download'; error: unknown };
 
 /** One plain sentence for a refused or failed regenerate or download. */
@@ -383,10 +419,7 @@ function PosterCard({
 
   return (
     <article className="card poster-card" aria-labelledby={headingId}>
-      <div className={`poster-thumb poster-thumb-${p.format}`} aria-hidden="true">
-        <span className="poster-thumb-title">{title}</span>
-        <Icon name="qr-code" size={16} weight="bold" />
-      </div>
+      <PosterPreview poster={p} title={title} />
       <div className="poster-card-head">
         <h3 id={headingId}>
           {t('console.posters.card.title', {

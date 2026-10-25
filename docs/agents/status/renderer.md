@@ -5,6 +5,8 @@ Branch: lane/renderer/poster-renderer (not committed; the orchestrator commits)
 
 ## Done
 
+- 2026-10-25 (orchestrator task, no renderer code changed): the e2e stack (`tests/e2e/src/stack/stack.ts`) now starts the renderer and wires the worker to it; verified English, Urdu and mixed posters as PNG and PDF through the API and the console. Sample posters (`render:sample`) checked by eye: Urdu title, QR and mixed text lay out correctly. Needs Playwright's headless Chromium locally.
+
 - 2026-10-18 (security review SEC-08, SEC-11, orchestrator clearance): **fails closed.** `APP_ENV` unset or empty now means `production` (as in the API); `RENDERER_TOKEN` (and `PUBLIC_WEB_BASE`) are required unless `APP_ENV` is exactly `development` or `test`, any other value refuses to start. Run locally with `APP_ENV=development pnpm --filter @qc/poster-renderer start`. **Second guard for text:** `blocksOf` strips the contract's `SafeText` characters (`stripUnsafeText` from `@qc/contracts`) from title, details, venue and area before drawing and in alt text, so only the template's own isolates (decision 0012) set direction; the request itself is already refused by the contract. Tests in `config.test.ts` and `input.test.ts`. `@qc/poster-renderer`: 175 tests in 15 files, typecheck passes.
 
 - **Urdu go/no-go: go.** Decision record `docs/engineering/decisions/0012-poster-urdu-rendering.md` (status proposed, waiting for the orchestrator to accept). Mehr Nastaliq Web and Figtree in headless Chromium (Playwright 1.56.1) shape correctly; three rules came out of it (isolate Latin runs in Urdu, Figtree-first stack for spaces and digits, Urdu line height 2.0 or more and no clipping) and the templates follow them.

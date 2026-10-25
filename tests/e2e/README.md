@@ -21,4 +21,6 @@ E2E_REUSE_STACK=1 pnpm --filter @qc/e2e test              # run against the runn
 | `src/quality/` | Opt-in low-end budget and accessibility/RTL checks (quality lane, WP12) |
 | `src/support/` | Shared helpers                                                          |
 
+The stack also starts the poster renderer (headless Chromium) and wires the worker to it, so poster flows run for real; if Chromium is missing the stack still starts and the poster tests say why (`rendererError`).
+
 The suite is kept out of `pnpm check` because it starts real services.

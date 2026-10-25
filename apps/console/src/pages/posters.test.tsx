@@ -311,6 +311,20 @@ describe('regenerating', () => {
   });
 });
 
+describe('the picture of a poster', () => {
+  it('shows a ready picture poster with its own description, and no picture for a print PDF', async () => {
+    await openPage();
+    const story = cards()[2]!;
+    const picture = await within(story).findByRole('img');
+    expect(picture.getAttribute('src')).toMatch(/^blob:/);
+    expect(picture.getAttribute('alt')).toBe(storyReady!.altText?.en ?? '');
+    // A print PDF, a queued poster and a failed one keep the plain tile.
+    expect(within(cards()[3]!).queryByRole('img')).toBeNull();
+    expect(within(cards()[0]!).queryByRole('img')).toBeNull();
+    expect(within(cards()[1]!).queryByRole('img')).toBeNull();
+  });
+});
+
 describe('downloading', () => {
   it('downloads a ready poster as a file', async () => {
     const created = vi.spyOn(URL, 'createObjectURL');

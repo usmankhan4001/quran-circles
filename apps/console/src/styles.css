@@ -2781,6 +2781,17 @@ html[dir='rtl'] .validator-commit::after {
 .poster-thumb-print_a3 {
   background: var(--c-sidebar-to);
 }
+.poster-thumb-image {
+  padding: 0;
+  background: var(--c-surface-muted, var(--c-border));
+}
+.poster-thumb-image img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  max-block-size: 18rem;
+  object-fit: contain;
+}
 .poster-thumb-title {
   font-size: 0.6875rem;
   font-weight: 800;

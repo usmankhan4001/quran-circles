@@ -19,23 +19,16 @@ const adminSessions: AdminSession[] = sessions.map((s, i) => ({
   registration:
     i === 0 ? { enabled: true, capacity: 20, seatsTaken: 20, full: true } : s.registration,
 }));
-const fullCount = adminSessions.filter((s) => s.registration.full).length;
 
-/** The number shown on a card, by its label. */
 /** A message with its {placeholders} filled, as the page writes it. */
 const fill = (message: string, params: Record<string, number>) =>
   message.replace(/\{(\w+)\}/g, (_, k: string) => String(params[k]));
-
-function statValue(label: string): string {
-  const term = screen.getByText(label, { selector: 'dt' });
-  return term.parentElement?.querySelector('dd')?.textContent ?? '';
-}
 
 const listCalls = (calls: Call[], path: string) =>
   calls.filter((c) => c.method === 'GET' && c.path === path);
 
 describe.each<Locale>(['en', 'ur'])('sessions page as drawn (%s)', (locale) => {
-  it('shows the numbers on top and the table in one card with search and add', async () => {
+  it('shows the table in one card with search and add, and no figure tiles', async () => {
     renderConsole({
       role: 'national',
       locale,
@@ -43,21 +36,8 @@ describe.each<Locale>(['en', 'ur'])('sessions page as drawn (%s)', (locale) => {
       handlers: { 'adminSessions.list': () => page(adminSessions) },
     });
     await screen.findByRole('table', { name: text('console.sessions.title', locale) });
-    const stats = screen.getByRole('region', { name: text('console.kpi.label', locale) });
-    // Masjids, circles and seats; the drawn check-in card has no data behind it and is left out.
-    expect(within(stats).getAllByRole('term')).toHaveLength(3);
-    expect(statValue(text('console.sessions.kpi.total', locale))).toContain(
-      fill(text('console.sessions.kpi.totalValue', locale), { count: adminSessions.length }),
-    );
-    // Full sessions are counted on the demand card's line; approvals waiting sit in the gold tag.
-    const demand = screen.getByText(text('console.sessions.kpi.demand', locale), {
-      selector: 'dt',
-    }).parentElement;
-    expect(demand?.querySelector('.stat-sub')?.textContent).toContain(
-      fill(text('console.sessions.kpi.demandSub', locale), { full: fullCount, week: 0 }).split(
-        ' · ',
-      )[0],
-    );
+    // No figure tiles: the console shows only what the table itself holds.
+    expect(screen.queryByRole('region', { name: text('console.kpi.label', locale) })).toBeNull();
     expect(
       screen.getByText(fill(text('console.sessions.awaiting', locale), { count: 1 })).classList,
     ).toContain('tag-amber');
@@ -99,7 +79,6 @@ describe('searching a table', () => {
       handlers: { 'adminSessions.list': () => page(adminSessions, 'next-page') },
     });
     await screen.findByRole('table', { name: text('console.sessions.title') });
-    expect(screen.getByText(text('console.kpi.partial'))).toBeTruthy();
     await user.type(
       screen.getByRole('searchbox', { name: text('console.sessions.search') }),
       'zzzz-no-such-session',
@@ -176,7 +155,7 @@ describe('add actions', () => {
     renderConsole({ role: 'venue', path: '/sessions' });
     await screen.findByRole('table', { name: text('console.sessions.title') });
     expect(screen.queryByRole('link', { name: text('console.sessions.add') })).toBeNull();
-    expect(screen.getByRole('region', { name: text('console.kpi.label') })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: text('console.kpi.label') })).toBeNull();
   });
 
   it('ignores a kind in the address that the person may not import', async () => {
@@ -189,16 +168,10 @@ describe('add actions', () => {
 });
 
 describe('venues page', () => {
-  it('counts venues from the loaded rows and searches them', async () => {
+  it('lists venues without figure tiles and searches them', async () => {
     const { user } = renderConsole({ role: 'national', path: '/venues' });
     const table = await screen.findByRole('table', { name: text('console.venues.title') });
-    const active = venues.filter((v) => v.status === 'active');
-    expect(statValue(text('console.venues.kpi.active'))).toBe(String(active.length));
-    expect(statValue(text('console.venues.kpi.noContact'))).toBe(
-      String(active.filter((v) => !v.contactPhone).length),
-    );
-    // Archived venues get a card only when they are shown.
-    expect(screen.queryByText(text('console.venues.kpi.archived'), { selector: 'dt' })).toBeNull();
+    expect(screen.queryByRole('region', { name: text('console.kpi.label') })).toBeNull();
     expect(within(table).getAllByRole('row')).toHaveLength(venues.length + 1);
     await user.type(
       screen.getByRole('searchbox', { name: text('console.venues.search') }),

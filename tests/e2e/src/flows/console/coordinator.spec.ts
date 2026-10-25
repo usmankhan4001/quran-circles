@@ -52,7 +52,7 @@ test.describe('console against the real API', () => {
     await page.locator('#invite-venue').selectOption(SEED.venueNoor);
     await page.locator('#invite-phone').fill(invitee);
     await page.locator('#invite-name').fill('E2E Console Invitee');
-    await page.getByRole('button', { name: 'Send Scoped Invite' }).click();
+    await page.getByRole('button', { name: 'Send invite' }).click();
     await expect(page.getByText('Invite sent.')).toBeVisible();
 
     const { rows } = await db().query<{ status: string; venue_id: string }>(
@@ -115,5 +115,27 @@ test.describe('console against the real API', () => {
     expect([403, 404]).toContain((await refused).status());
     await expect(page.getByText(registrantName)).toHaveCount(0);
     await expect(page.getByRole('alert').or(page.getByRole('status')).first()).toBeVisible();
+  });
+
+  test('a national admin makes posters in English and Urdu and sees the finished picture', async ({
+    page,
+  }) => {
+    const { rendererError } = stack();
+    if (rendererError) throw new Error(`The poster renderer did not start: ${rendererError}`);
+    await consoleSignIn(page, await nationalAdminInvite());
+    await page.goto(at(`/sessions/${SEED.sessionTaraweehNoor}/posters`));
+    await page.getByRole('radio', { name: 'English and Urdu, English first' }).check();
+    await page.getByRole('checkbox', { name: /^Story/ }).check();
+    await page.getByRole('button', { name: 'Make posters' }).click();
+    const card = page.getByRole('article').first();
+    await expect(card.getByText('Ready')).toBeVisible({ timeout: 60_000 });
+    const picture = card.getByRole('img');
+    await expect(picture).toBeVisible();
+    // A real picture: the renderer draws story posters at 1080 by 1920.
+    await expect
+      .poll(() =>
+        picture.evaluate((img: HTMLImageElement) => `${img.naturalWidth}x${img.naturalHeight}`),
+      )
+      .toBe('1080x1920');
   });
 });

@@ -16,14 +16,11 @@ import {
   NoMatch,
   PageHeader,
   Phone,
-  StatRow,
   TableCard,
   type Column,
-  type Stat,
 } from '../components/ui';
 import { useShellCity, useShellSearch } from '../components/ShellFilters';
 import { useI18n } from '../i18n';
-import { venueStats } from '../lib/kpis';
 import { canSomewhere, isNavAllowed } from '../lib/permissions';
 import { filterBySearch } from '../lib/search';
 
@@ -50,7 +47,6 @@ export default function VenuesPage() {
   );
 
   const loaded = list.status === 'ready' ? list.items : [];
-  const stats = useMemo(() => venueStats(loaded), [loaded]);
   const rows = useMemo(
     () =>
       filterBySearch(loaded, query, (v) => [
@@ -63,26 +59,6 @@ export default function VenuesPage() {
   );
   // Venues are added through the bulk import; the console has no single-venue form yet.
   const canAdd = isNavAllowed(principal, 'import') && canSomewhere(principal, 'venue.create');
-  const statCards: Stat[] = [
-    { id: 'active', label: t('console.venues.kpi.active'), value: stats.active, icon: 'mosque' },
-    {
-      id: 'women',
-      label: t('console.venues.kpi.womenSection'),
-      value: stats.womenSection,
-      icon: 'users-three',
-    },
-    {
-      id: 'noContact',
-      label: t('console.venues.kpi.noContact'),
-      value: stats.noContact,
-      tone: 'notice',
-      icon: 'warning-circle',
-    },
-    ...(includeArchived
-      ? [{ id: 'archived', label: t('console.venues.kpi.archived'), value: stats.archived }]
-      : []),
-  ];
-
   const columns: Column<Venue>[] = [
     {
       id: 'name',
@@ -122,9 +98,6 @@ export default function VenuesPage() {
   return (
     <div className="page">
       <PageHeader title={t('console.venues.title')} intro={t('console.venues.intro')} hidden />
-      {list.status === 'ready' ? (
-        <StatRow label={t('console.kpi.label')} partial={list.hasMore} stats={statCards} />
-      ) : null}
       <TableCard
         tabs={
           <>

@@ -1,7 +1,20 @@
 # Status: console
 
 Updated: 2026-10-25
-Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+Branch: main
+
+## Look-and-feel pass and poster maker (25 Oct 2026, orchestrator task)
+
+Console only, following the look-and-feel board (sentence case, no figure tiles, words on every status, edit panel on the right, cards on a phone) without a redesign.
+
+- **Sentence case.** 42 English labels in `packages/i18n/src/en/console.json` lost their Title Case ("Audit log", "Send invite", "Waiting for approval · 1", "Save and publish"). Table columns now read Venue, Session, Tonight's portion, Section, Seats, Teacher. The inspector reads "Edit session". Urdu values were not touched. The venues page link back to the list is "All sessions" so it does not repeat the sidebar's "Sessions".
+- **No figure tiles.** `StatRow` is no longer drawn on Sessions or Venues (the Sessions "seats reserved" tile showed 0 while booking is being replaced by a pledge; the others repeated the tab counts). Tab counts still read "6+" while more pages exist. Tests: `pages/home-figures.test.tsx`, `pages/table-pages.test.tsx`.
+- **Posters.** The disabled "Download all as PDF" button is gone (and its keys). Picture posters (story, link preview) show the real rendered picture in the card, fetched with the sign-in and described by the poster's own alt text in the page language; PDFs, queued and failed posters keep the plain tile. Test: `pages/posters.test.tsx` ("the picture of a poster").
+- **Poster maker end to end.** The renderer needed a browser and was not part of the local stack, so posters stayed "Not made". `tests/e2e/src/stack/stack.ts` now starts `@qc/poster-renderer` with a per-run token and gives the worker `RENDERER_URL`, `RENDERER_TOKEN` and a shared `POSTER_STORAGE_DIR` with the API. Verified live: English, Urdu and English-and-Urdu story PNG (1080 by 1920) and A4 PDF (Mehr Nastaliq embedded) made by the worker and downloaded; the console shows them in both languages and directions. New e2e: `flows/api/poster-maker.spec.ts` and a console flow in `flows/console/coordinator.spec.ts`.
+- Checks: console 500 tests passing, i18n 40, poster renderer 175 (with Chromium), e2e api and console poster flows passing; lint, typecheck and format clean.
+- Browser: the renderer needs Playwright's headless Chromium for the pinned Playwright (`pnpm --filter @qc/poster-renderer exec playwright-core install --only-shell chromium`); the e2e stack says so in `rendererError` when it is missing. Staging and production already run the renderer container (`infra/docker/poster-renderer.Dockerfile`, compose service `poster-renderer`); nothing changed there.
+
+Open: a bulk "download all posters" and a PDF preview need an API change (no endpoint zips files). Coordinator desktop views share these pages, so they follow the same changes.
 
 ## UI fix pass (25 Oct 2026, orchestrator task)
 

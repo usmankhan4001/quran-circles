@@ -697,8 +697,6 @@
   "console.audit.card.tz": "PKT (UTC+5)",
   "console.audit.card.foot": "آڈٹ میں ذاتی تفصیل محفوظ نہیں · شہر، مقام، ریکارڈ کی قسم اور تاریخ سے چھانیں",
   "console.posters.generator.sub": "A4/A3 پی ڈی ایف اور واٹس ایپ تصویر · نشست بدلنے پر پوسٹر نشان زد ہوتے ہیں",
-  "console.posters.generator.bulk": "تمام A4 پی ڈی ایف ڈاؤن لوڈ کریں",
-  "console.posters.generator.bulkSoon": "ایک ساتھ کئی پوسٹر ڈاؤن لوڈ کرنا ابھی دستیاب نہیں؛ نیچے ہر پوسٹر الگ ڈاؤن لوڈ کریں",
   "console.posters.generator.foot": "کیو آر: رجسٹریشن یا نشست کا صفحہ، ہر پوسٹر کے لیے چنا گیا · سانچے: {templates}",
   "console.venues.tab.sessions": "حلقوں کی نشستیں"
 }
