@@ -181,7 +181,9 @@ export function QuranIndexScreen({
         <SurahRow
           surah={item.surah}
           saved={saved.has(item.surah.id)}
-          {...(portionTags?.[item.surah.id] ? { portion: portionTags[item.surah.id] as string } : {})}
+          {...(portionTags?.[item.surah.id]
+            ? { portion: portionTags[item.surah.id] as string }
+            : {})}
           onOpen={onOpen}
           i18n={i18n}
         />

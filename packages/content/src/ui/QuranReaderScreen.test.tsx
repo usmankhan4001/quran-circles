@@ -89,9 +89,7 @@ describe.each(matrix)('QuranReaderScreen marks and credit in $name', (combo) => 
     open(t, { kind: 'surah', id: 1 }, { combo: { combo } });
     await screen.findByTestId('arabic-1-1');
     const label = screen.getByTestId('ayah-number-1-7');
-    expect(label.textContent).toBe(
-      msg(combo.locale, 'quran.ayah.number', { number: 7 }),
-    );
+    expect(label.textContent).toBe(msg(combo.locale, 'quran.ayah.number', { number: 7 }));
     // The label sits in the same ayah as its Arabic.
     const verse = screen.getByTestId('verse-1-7');
     expect(verse.contains(label)).toBe(true);
@@ -189,7 +187,11 @@ describe('QuranReaderScreen', () => {
 
   it('respects the translation switch on an Urdu screen too', async () => {
     const t = createTestServices();
-    await t.services.prefs.save({ ...DEFAULT_READER_PREFS, showTranslation: false, arabicZoomIndex: 1 });
+    await t.services.prefs.save({
+      ...DEFAULT_READER_PREFS,
+      showTranslation: false,
+      arabicZoomIndex: 1,
+    });
     open(t, { kind: 'surah', id: 1 }, { combo: { combo: { locale: 'ur' } } });
     await screen.findByTestId('arabic-1-1');
     await waitFor(() => expect(screen.queryByTestId('translation-1-1')).toBeNull());

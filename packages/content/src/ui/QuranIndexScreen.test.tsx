@@ -83,9 +83,7 @@ describe.each(matrix)('QuranIndexScreen in $name', (combo) => {
     expect(screen.getByRole('searchbox', { name: msg(combo.locale, 'quran.search') })).toBeTruthy();
     // Underlined tabs: Surahs, Juz and Saved.
     for (const key of ['quran.tab.surah', 'quran.tab.juz', 'quran.tab.saved']) {
-      expect(
-        screen.getByRole('tab', { name: msg(combo.locale, key) }),
-      ).toBeTruthy();
+      expect(screen.getByRole('tab', { name: msg(combo.locale, key) })).toBeTruthy();
     }
   });
 });
@@ -210,7 +208,9 @@ describe('QuranIndexScreen juz and bookmarks', () => {
     const onOpen = vi.fn();
     renderContent(<QuranIndexScreen onOpen={onOpen} />, services);
     fireEvent.click(
-      await screen.findByRole('button', { name: new RegExp(msg('en', 'quran.continueAt', { ayah: 10 })) }),
+      await screen.findByRole('button', {
+        name: new RegExp(msg('en', 'quran.continueAt', { ayah: 10 })),
+      }),
     );
     expect(onOpen).toHaveBeenCalledWith({ kind: 'surah', id: 18, ayah: 10 });
   });

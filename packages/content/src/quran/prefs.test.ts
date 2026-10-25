@@ -38,9 +38,9 @@ describe('reader preferences', () => {
     expect(clampZoomIndex(2.9)).toBe(2);
     expect(clampZoomIndex(Number.NaN)).toBe(DEFAULT_ARABIC_ZOOM_INDEX);
     const store = createReaderPrefsStore(createMemoryStorage());
-    expect((await store.save({ ...DEFAULT_READER_PREFS, arabicZoomIndex: 50 })).arabicZoomIndex).toBe(
-      ARABIC_ZOOM_STEPS.length - 1,
-    );
+    expect(
+      (await store.save({ ...DEFAULT_READER_PREFS, arabicZoomIndex: 50 })).arabicZoomIndex,
+    ).toBe(ARABIC_ZOOM_STEPS.length - 1);
   });
 
   it('falls back to defaults for damaged data', async () => {
