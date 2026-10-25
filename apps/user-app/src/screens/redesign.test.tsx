@@ -367,18 +367,16 @@ describe('My Journey (J1)', () => {
 });
 
 describe('Profile, Updates and Sign-in (B)', () => {
-  it('opens the profile on white with quick tiles as cards under the account (D17)', async () => {
+  it('opens the profile on white with a flat list and no quick tiles (D17)', async () => {
     const world = await createWorld({ signedIn: true });
     const view = await renderScreen(<ProfileScreen />, { world });
     const header = view.getByTestId('screen-header');
     expect(within(header).queryByTestId('profile-tiles')).toBeNull();
-    expect(view.getByTestId('profile-tiles')).toBeTruthy();
-    fireEvent.click(view.getByTestId('profile-tile-journey'));
-    expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
-    fireEvent.click(view.getByTestId('profile-tile-updates'));
-    expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
-    fireEvent.click(view.getByTestId('profile-tile-help'));
+    expect(view.queryByTestId('profile-tiles')).toBeNull();
+    fireEvent.click(view.getByTestId('profile-help'));
     expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'page', slug: 'faq' } });
+    fireEvent.click(view.getByTestId('profile-about'));
+    expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'page', slug: 'about' } });
   });
 
   it('shows each update as a card that opens its session', async () => {

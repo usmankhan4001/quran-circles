@@ -161,9 +161,8 @@ describe('JourneyScreen', () => {
     const world = await createWorld({ signedIn: true, mock: mine([], []) });
     const view = await renderScreen(<JourneyScreen />, { world });
     expect(await view.findByTestId('journey-empty')).toBeTruthy();
-    fireEvent.click(view.getByText(en['journey.registrations.empty.action']));
+    fireEvent.click(view.getByText(en['states.journey.find']));
     expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
-    expect(view.getByText(en['journey.followed.empty'])).toBeTruthy();
   });
 
   it('lists followed venues, opens one, and stops following', async () => {
