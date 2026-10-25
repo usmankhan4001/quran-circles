@@ -417,6 +417,7 @@ describe('the halaqa flyer lines', () => {
   it("puts a failed poster's flyer lines back in the form", () => {
     const poster = {
       ...fx.posters[0]!,
+      outOfDate: null,
       fields: { ...fx.posters[0]!.fields, flyer: { phone: '0300 0000000' } },
     };
     expect(formFromPoster(poster).phone).toBe('0300 0000000');
