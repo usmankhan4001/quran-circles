@@ -1,9 +1,11 @@
 # Status: renderer
 
-Updated: 2026-10-17
+Updated: 2026-10-25
 Branch: lane/renderer/poster-renderer (not committed; the orchestrator commits)
 
 ## Done
+
+- 2026-10-25 (owner request, from Canva): **new template `quranic_circles`**, the owner's first final design (not provisional), rebuilt from page 14 of the Canva design "Quranic Circles". The photo layer (hand holding the Mushaf on deep green, Tanzeem marks at top and foot) is bundled as `assets/art/quranic-circles.jpg` (1080x1350 JPEG, exported from a working copy in Canva with the live text, icons and QR codes removed; source and checksum in `assets/art/SOURCES.md`), embedded as a `data:image/jpeg` URL and checked by `src/art.ts` like the fonts. The template draws the title as the headline (white, uppercase in English), the details as the cream tagline, a green band with the day and time, the venue and area, and the QR code on a white card with "Scan to register"; link previews put the photo at the trailing side and leave out the tagline. All four formats in all four languages render (`render:sample`, checked by eye: story en, story ur_en, A4 en_ur, preview ur_en). The tests that assumed only `cloud` and `night` now list three templates; `templates.test.ts` allows embedded JPEG art next to fonts. Registered in the contract's `DEMO_POSTER_TEMPLATES` (`packages/contracts`, provisional false) so the seed and fixtures carry the row: a contracts-lane change made in the same commit at the owner's request; production still has no path that inserts template rows other than the seed. `@qc/poster-renderer`: 200 tests in 15 files with real Chromium (Playwright 1.56.1 headless shell); `@qc/contracts` posters tests and `@qc/console` tests pass (two contracts tests, the OpenAPI and SCOPES.md snapshots, fail on this Windows checkout only because of CRLF line endings, before and after this change).
 
 - 2026-10-25 (orchestrator task, no renderer code changed): the e2e stack (`tests/e2e/src/stack/stack.ts`) now starts the renderer and wires the worker to it; verified English, Urdu and mixed posters as PNG and PDF through the API and the console. Sample posters (`render:sample`) checked by eye: Urdu title, QR and mixed text lay out correctly. Needs Playwright's headless Chromium locally.
 

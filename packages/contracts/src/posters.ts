@@ -148,4 +148,12 @@ export const DEMO_POSTER_TEMPLATES: readonly DemoPosterTemplate[] = [
     formats: POSTER_FORMATS,
     provisional: true,
   },
+  // The owner's first final design, from the Canva design "Quranic Circles".
+  {
+    key: 'quranic_circles',
+    name: { en: 'Quranic Circles', ur: 'قرآنی حلقے' },
+    version: 1,
+    formats: POSTER_FORMATS,
+    provisional: false,
+  },
 ];

@@ -42,8 +42,9 @@ describe('renderer HTTP interface', () => {
     const body = (await ok.json()) as {
       items: Array<{ id: string; provisional: boolean; formats: string[] }>;
     };
-    expect(body.items.map((t) => t.id)).toEqual(['cloud', 'night']);
-    expect(body.items.every((t) => t.provisional && t.formats.length === 4)).toBe(true);
+    expect(body.items.map((t) => t.id)).toEqual(['cloud', 'night', 'quranic_circles']);
+    expect(body.items.map((t) => t.provisional)).toEqual([true, true, false]);
+    expect(body.items.every((t) => t.formats.length === 4)).toBe(true);
   });
 
   it('renders and returns the files as base64 with the snapshot', async () => {

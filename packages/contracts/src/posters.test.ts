@@ -441,13 +441,13 @@ describe('poster endpoints in the registry', () => {
 });
 
 describe('poster fixtures', () => {
-  it('are the renderer demo templates, all formats, provisional', () => {
+  it('are the renderer templates, all formats, the demo ones provisional', () => {
     expect(fx.posterTemplates.map((t) => t.key)).toEqual(DEMO_POSTER_TEMPLATES.map((t) => t.key));
-    expect(fx.posterTemplates.map((t) => t.key)).toEqual(['cloud', 'night']);
+    expect(fx.posterTemplates.map((t) => t.key)).toEqual(['cloud', 'night', 'quranic_circles']);
     expect(PosterTemplatesResponse.safeParse({ items: fx.posterTemplates }).success).toBe(true);
     for (const t of fx.posterTemplates) {
       expect(t.formats).toEqual([...POSTER_FORMATS]);
-      expect(t.provisional).toBe(true);
+      expect(t.provisional).toBe(t.key !== 'quranic_circles');
       expect(PosterTemplateKey.safeParse(t.key).success).toBe(true);
     }
   });
@@ -499,6 +499,7 @@ describe('mock server, poster endpoints by role', () => {
       expect(PosterTemplatesResponse.parse(await json(r)).items.map((t) => t.key)).toEqual([
         'cloud',
         'night',
+        'quranic_circles',
       ]);
     }
     expect((await call('GET', '/v1/admin/poster-templates', 'mock-user')).status).toBe(403);
@@ -653,7 +654,7 @@ describe('typed client, poster endpoints', () => {
 
   it('lists, creates and downloads, with the file as bytes', async () => {
     const templates = await api.adminPosters.templates();
-    expect(templates.items).toHaveLength(2);
+    expect(templates.items).toHaveLength(3);
     const sessionId = fixtureId('session', 1);
     const list = await api.adminPosters.list({ params: { sessionId } });
     expect(list.items.some((p) => p.outOfDate?.reasons.includes('time'))).toBe(true);

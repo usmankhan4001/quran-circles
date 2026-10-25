@@ -213,7 +213,7 @@ describe('answers are the contract’s shapes', () => {
 });
 
 describe('the demo templates', () => {
-  it('are the contract’s DEMO_POSTER_TEMPLATES, all provisional', () => {
+  it('are the contract’s DEMO_POSTER_TEMPLATES, with the same provisional flags', () => {
     expect(TEMPLATE_IDS).toEqual(DEMO_POSTER_TEMPLATES.map((d) => d.key));
     for (const demo of DEMO_POSTER_TEMPLATES) {
       const template = templateOf(demo.key);
@@ -221,11 +221,11 @@ describe('the demo templates', () => {
       expect(template?.name).toEqual(demo.name);
       expect(template?.version).toBe(demo.version);
       expect(template?.formats).toEqual(demo.formats);
-      expect(template?.provisional).toBe(true);
+      expect(template?.provisional).toBe(demo.provisional);
     }
   });
 
-  it('are reported as provisional by /templates, with the contract’s accents', async () => {
+  it('are reported by /templates with their provisional flag and the contract’s accents', async () => {
     const { app } = setup();
     const res = await app.request('/templates', { headers: { authorization: `Bearer ${TOKEN}` } });
     const body = (await res.json()) as {
@@ -234,6 +234,7 @@ describe('the demo templates', () => {
     expect(body.items.map((i) => [i.id, i.provisional])).toEqual([
       ['cloud', true],
       ['night', true],
+      ['quranic_circles', false],
     ]);
     for (const item of body.items) expect(item.accents).toEqual([...POSTER_ACCENTS]);
   });

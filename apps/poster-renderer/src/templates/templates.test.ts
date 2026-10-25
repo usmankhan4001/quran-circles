@@ -48,13 +48,13 @@ describe('locked templates', () => {
           expect(html).toContain(`<meta http-equiv="Content-Security-Policy" content="${CSP}">`);
           expect(html).not.toMatch(/<script|<link|<iframe|<object|<embed|@import|javascript:/i);
           expect(html).not.toMatch(/(src|href)\s*=/i);
-          // Every url() is an embedded font.
+          // Every url() is an embedded font or embedded art.
           for (const m of html.matchAll(/url\(([^)]*)\)/g))
-            expect(m[1]?.startsWith('data:font/ttf;base64,')).toBe(true);
+            expect(/^data:(font\/ttf|image\/jpeg);base64,/.test(m[1] ?? '')).toBe(true);
           // The only web address on the page is the printed host, never a fetchable reference.
-          expect(html.replace(/data:font\/ttf;base64,[A-Za-z0-9+/=]+/g, '')).not.toMatch(
-            /https?:\/\//,
-          );
+          expect(
+            html.replace(/data:(font\/ttf|image\/jpeg);base64,[A-Za-z0-9+/=]+/g, ''),
+          ).not.toMatch(/https?:\/\//);
           expect(html).toContain('data-fit="title.');
           expect(html.includes('<div class="qr">')).toBe(format !== 'link_preview');
         });

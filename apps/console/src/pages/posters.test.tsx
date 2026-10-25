@@ -102,13 +102,15 @@ describe.each<Locale>(['en', 'ur'])('poster page (%s)', (locale) => {
     expect(within(form).queryByLabelText(/time|venue|date/i)).toBeNull();
   });
 
-  it('marks the provisional templates as demo', async () => {
+  it('marks the provisional templates as demo, and only those', async () => {
     await openPage({ locale });
     const demo = text('console.posters.demo', locale);
+    expect(fx.posterTemplates.some((t) => !t.provisional)).toBe(true);
     for (const template of fx.posterTemplates) {
       const name = locale === 'ur' ? template.name.ur : template.name.en;
       const radio = screen.getByRole('radio', { name: new RegExp(name) });
-      expect(radio.closest('.check')?.textContent).toContain(demo);
+      const label = radio.closest('.check')?.textContent ?? '';
+      expect(label.includes(demo), name).toBe(template.provisional);
     }
     expect(screen.getByText(text('console.posters.demo.hint', locale))).toBeTruthy();
   });
