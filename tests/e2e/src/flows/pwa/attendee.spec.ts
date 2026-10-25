@@ -33,7 +33,8 @@ test.describe.serial('PWA attendee: find, sign in with a code, join, read update
   test('find: the nearby list shows seeded sessions from the real API', async () => {
     await page.goto('/nearby');
     await expect(page.getByTestId('nearby-screen')).toBeVisible();
-    await expect(page.getByText('Taraweeh with Dora (sample)').first()).toBeVisible();
+    // Rows are headed by the venue (design: venue, then day and section, then the start time).
+    await expect(page.getByText(/Masjid Al-Noor/).first()).toBeVisible();
   });
 
   test('sign in with a code as a new attendee', async () => {
