@@ -1104,3 +1104,116 @@ describe('the daily occurrence top-up', () => {
     expect(dates).toEqual(['2026-10-16', '2026-10-23', '2026-10-30', '2026-11-06']);
   });
 });
+
+describe('the season end on every path that plans occurrences', () => {
+  /** The session, moved into a season that ends on 2026-11-06, with only its first occurrence. */
+  async function inShortSeason(): Promise<string> {
+    const session = await createSession(h, { venueId: h.world.venueA1, as: admin });
+    const [row] = await h.db
+      .select()
+      .from(schema.sessions)
+      .where(eq(schema.sessions.id, session.id));
+    const [season] = await h.db
+      .insert(schema.seasons)
+      .values({
+        programId: row!.programId,
+        name: 'Short season',
+        startsOn: '2026-10-01',
+        endsOn: '2026-11-06',
+      })
+      .returning();
+    await h.db
+      .update(schema.sessions)
+      .set({ seasonId: season!.id })
+      .where(eq(schema.sessions.id, session.id));
+    await h.db
+      .delete(schema.occurrences)
+      .where(
+        and(
+          eq(schema.occurrences.sessionId, session.id),
+          gt(schema.occurrences.startsAt, new Date('2026-10-17T00:00:00Z')),
+        ),
+      );
+    return session.id;
+  }
+  const storedDates = async (sessionId: string) =>
+    (await h.db.select().from(schema.occurrences))
+      .filter((o) => o.sessionId === sessionId && o.status === 'scheduled')
+      .map((o) => o.startsAt.toISOString().slice(0, 10))
+      .sort();
+
+  it("stops the on-demand top-up, when someone opens the session, at the season's last day", async () => {
+    const sessionId = await inShortSeason();
+    h.clock.advanceDays(1);
+    const callers: [string, Actor | null][] = [
+      ['nobody', null],
+      ['person', await h.person()],
+      ['venue coordinator', await h.venueCoordinator(h.world.venueA1)],
+      ['national admin', admin],
+    ];
+    for (const [name, who] of callers) {
+      const res = await h.api('sessions.occurrences', {
+        ...(who ? { as: who } : {}),
+        params: { sessionId },
+        query: { limit: 100, from: '2026-10-01T00:00:00.000Z' },
+      });
+      expect(res.status, name).toBe(200);
+      const items = res.json<{ items: Occurrence[] }>().items;
+      expect(
+        items.map((o) => o.startsAt.slice(0, 10)),
+        name,
+      ).toEqual(['2026-10-16', '2026-10-23', '2026-10-30', '2026-11-06']);
+    }
+    expect(await storedDates(sessionId)).toEqual([
+      '2026-10-16',
+      '2026-10-23',
+      '2026-10-30',
+      '2026-11-06',
+    ]);
+    // The daily job agrees: it has nothing to add.
+    expect((await topUpAllOccurrences(h.db, h.clock.now(), 90)).occurrencesAdded).toBe(0);
+  });
+
+  it('still fills to the horizon for a session with no season, and to its own earlier end date', async () => {
+    const free = await createSession(h, { venueId: h.world.venueA2, as: admin, title: 'Free' });
+    await h.db
+      .delete(schema.occurrences)
+      .where(
+        and(
+          eq(schema.occurrences.sessionId, free.id),
+          gt(schema.occurrences.startsAt, new Date('2026-10-17T00:00:00Z')),
+        ),
+      );
+    const sessionId = await inShortSeason();
+    await h.db
+      .update(schema.sessions)
+      .set({ endsOn: '2026-10-30' })
+      .where(eq(schema.sessions.id, sessionId));
+    h.clock.advanceDays(1);
+    for (const id of [free.id, sessionId]) {
+      expect(
+        (
+          await h.api('sessions.occurrences', {
+            params: { sessionId: id },
+            query: { limit: 100, from: '2026-10-01T00:00:00.000Z' },
+          })
+        ).status,
+      ).toBe(200);
+    }
+    expect((await storedDates(free.id)).length).toBeGreaterThan(4);
+    expect(await storedDates(sessionId)).toEqual(['2026-10-16', '2026-10-23', '2026-10-30']);
+  });
+
+  it('keeps a schedule change inside the season', async () => {
+    const sessionId = await inShortSeason();
+    const res = await h.api('adminSessions.changeSchedule', {
+      as: admin,
+      params: { sessionId },
+      body: { effectiveFrom: '2026-10-17', localStartTime: '19:30', notify: false },
+    });
+    expect(res.status).toBe(200);
+    const dates = await storedDates(sessionId);
+    expect(dates.at(-1)).toBe('2026-11-06');
+    expect(dates).toEqual(['2026-10-16', '2026-10-23', '2026-10-30', '2026-11-06']);
+  });
+});

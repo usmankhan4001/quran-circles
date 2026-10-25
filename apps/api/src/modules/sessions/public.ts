@@ -18,7 +18,7 @@ import { schema, type Db } from '../../db';
 import { fail } from '../shared/errors';
 import { likePattern, venueLat, venueLng } from '../shared/mappers';
 import { decodeOffsetCursor, offsetPage, type Page } from '../shared/pagination';
-import { topUpOccurrences, type ScheduleSpec } from './occurrences';
+import { topUpOccurrences, withSeasonEnd, type ScheduleSpec } from './occurrences';
 import {
   loadSessions,
   occurrenceStartFloor,
@@ -28,7 +28,7 @@ import {
 } from './views';
 import { toLocalTime } from '../shared/time';
 
-const { sessions, venues, areas, programs, circles, occurrences } = schema;
+const { sessions, venues, areas, programs, circles, occurrences, seasons } = schema;
 
 export { publicSessionConditions };
 
@@ -199,11 +199,13 @@ export const OCCURRENCE_LAPSE_DAYS = 7;
  * this only reads the latest occurrence. It tops up here only as a fallback, when the stored
  * schedule has lapsed to within `OCCURRENCE_LAPSE_DAYS` of now (the daily job has not run for
  * weeks); one top-up restores the horizon, so later reads go back to reading only. A session whose
- * own end date is near plans nothing, so the fallback reads but writes nothing for it.
+ * own end date is near plans nothing, so the fallback reads but writes nothing for it. A session in
+ * a season stops at the season's last day, exactly as in the daily job (`withSeasonEnd`).
  */
 async function topUpIfLapsed(
   db: Db,
   row: typeof sessions.$inferSelect,
+  seasonEndsOn: string | null,
   latestStartsAt: Date | null,
   now: Date,
   horizonDays: number,
@@ -212,7 +214,7 @@ async function topUpIfLapsed(
   const lapseDays = Math.min(OCCURRENCE_LAPSE_DAYS, horizonDays);
   const lapsesAt = now.getTime() + lapseDays * 24 * 60 * 60 * 1000;
   if (latestStartsAt && latestStartsAt.getTime() >= lapsesAt) return;
-  await topUpOccurrences(db, row.id, specOf(row), now, horizonDays);
+  await topUpOccurrences(db, row.id, withSeasonEnd(specOf(row), seasonEndsOn), now, horizonDays);
 }
 
 export async function getPublicOccurrences(
@@ -227,6 +229,8 @@ export async function getPublicOccurrences(
   const [row] = await db
     .select({
       s: sessions,
+      seasonEndsOn: sql<string | null>`(select se.ends_on::text from ${seasons} se
+        where se.id = ${sessions.seasonId})`,
       latestStartsAt: sql<Date | null>`(select max(o.starts_at) from ${occurrences} o
         where o.session_id = ${sessions.id})`.mapWith(occurrences.startsAt),
     })
@@ -235,7 +239,7 @@ export async function getPublicOccurrences(
     .leftJoin(circles, eq(circles.id, sessions.circleId))
     .where(and(eq(sessions.id, sessionId), ...publicSessionConditions()));
   if (!row) return fail('not_found');
-  await topUpIfLapsed(db, row.s, row.latestStartsAt, now, horizonDays);
+  await topUpIfLapsed(db, row.s, row.seasonEndsOn, row.latestStartsAt, now, horizonDays);
   const from = query.from ? new Date(query.from) : now;
   const rows = await db
     .select()

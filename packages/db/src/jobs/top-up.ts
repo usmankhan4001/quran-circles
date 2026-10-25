@@ -1,7 +1,7 @@
 import { and, eq, gte, inArray, isNull, or } from 'drizzle-orm';
 import * as schema from '../schema/index';
-import { compareDates, DEFAULT_TIMEZONE, utcToLocalDate } from './local-time';
-import { scheduleSpecOf, topUpOccurrences, type JobDb } from './occurrences';
+import { DEFAULT_TIMEZONE, utcToLocalDate } from './local-time';
+import { scheduleSpecOf, topUpOccurrences, withSeasonEnd, type JobDb } from './occurrences';
 
 const { sessions, seasons } = schema;
 
@@ -36,10 +36,7 @@ export async function topUpAllOccurrences(
     );
   let occurrencesAdded = 0;
   for (const { s, seasonEndsOn } of rows) {
-    const spec = scheduleSpecOf(s);
-    if (seasonEndsOn && (!spec.endsOn || compareDates(seasonEndsOn, spec.endsOn) < 0)) {
-      spec.endsOn = seasonEndsOn;
-    }
+    const spec = withSeasonEnd(scheduleSpecOf(s), seasonEndsOn);
     occurrencesAdded += await topUpOccurrences(db, s.id, spec, now, horizonDays);
   }
   return { sessions: rows.length, occurrencesAdded };
