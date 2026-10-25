@@ -47,7 +47,7 @@
   "errors.role_already_assigned": "اس شخص کے پاس یہ ذمہ داری پہلے سے ہے۔",
   "errors.last_national_admin": "کم از کم ایک قومی ایڈمن ہمیشہ موجود ہونا چاہیے۔",
   "errors.invite_expired": "اس دعوت کی مدت ختم ہو گئی ہے۔",
-  "issues.phone_not_pakistan_mobile": "سائن اِن صرف پاکستانی موبائل نمبر سے ہو سکتا ہے، جیسے 0300 1234567۔",
+  "issues.phone_not_pakistan_mobile": "سائن اِن صرف پاکستانی موبائل نمبر سے ہو سکتا ہے، جیسے ⁦0300 1234567⁩۔",
   "issues.invite_daily_limit": "آپ 24 گھنٹوں میں جتنے دعوت نامے بھیج سکتے ہیں، بھیج چکے ہیں۔ براہِ کرم بعد میں دوبارہ کوشش کریں۔",
   "time.period.lateNight": "رات",
   "time.period.morning": "صبح",
