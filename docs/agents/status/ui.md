@@ -93,3 +93,14 @@ Direction from the look-and-feel board: green is the only action colour, and Urd
 - `semanticColors.light.cta` / `ctaPressed` are now the emerald and deep emerald, so the kit's `primary` Button, EmptyState action and the like are green in light mode. Dark and high contrast keep their own pairs. All 954 kit tests, including the contrast pairs, pass.
 - `scriptSizeFactor.urdu` went from 1.1 to 1.25. Every Urdu size grows by about 14%, so check long Urdu lines on the other screens (the console reads the same factor through `--scale-urdu`).
 - Not done: the clip-art photo on cards, a labelled tab bar and a large-text mode (all on the board, none of them session screens).
+
+## Member app redesign, kit pass (2026-10-26, branch lane/ui/member-redesign)
+
+The kit follows the Quran Circles design system (artifact UEFqRavqK4aJmgkkWJJJLp): mostly white, one green accent, hairline cards, no coloured header band, labelled tab bar.
+
+- Tokens: new `colors.day` and `colors.night` palettes; `semanticColors.light` and `dark` rebuilt from them (green `#0A6938` is accent and cta in light; night is near-black). Radii: controls 12, cards 16, sheets 20 (`radii.control`, `field`, `card`, `sheet`); elevation is flat except `elevation.high` (sheets). Type roles match the design's `en-*` and `ur-*` sizes (Urdu sizes are set by hand through `urdu` on each role); Urdu line height 2.0, Quran 2.1 at 30 dp.
+- Components reshaped: Button (12 dp, `secondary` is the grey fill, `outline` thin edge, `danger` red outline, no shadow), Chip (chosen = solid green with tick, 44 dp), SegmentedControl, Card (flat), TabBar (flat, hairline, every tab labelled, green marker above the current tab).
+- New: `StarMark`, `QuranPortion`, `ScreenHeader`, `SectionHeader`, `TimeRow`, `MapPin`. Tests across the 24-combination matrix: `member-kit.test.tsx`.
+- Admin app test `MainTabs.test.tsx` changed for the labelled tab bar (admin lane to confirm the look).
+- Not done: the Urdu face is still Mehr Nastaliq Web (bundled, licensed). The design names Noori Nastaleeq with Noto Nastaliq Urdu behind it; Noori's licence is unconfirmed so it cannot be bundled, and swapping the bundled face touches admin, console and the poster renderer. Proposed: a separate change that bundles Noto Nastaliq Urdu and puts Noori first in the web stack.
+- Not done: HeroHeader is kept (admin app and console still use it); the member app does not.
