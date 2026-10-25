@@ -39,11 +39,14 @@ export function Button({
   children,
   ...rest
 }: ButtonProps) {
+  const off = Boolean(disabled || busy);
   return (
     <button
       type={type}
       className={`btn btn-${variant}${className ? ` ${className}` : ''}`}
-      disabled={disabled || busy}
+      disabled={off}
+      // Said out loud as well as drawn: `.btn:disabled` and `[aria-disabled]` share one muted look.
+      aria-disabled={off || undefined}
       aria-busy={busy || undefined}
       {...rest}
     >
@@ -711,6 +714,13 @@ export interface Column<T> {
   rowHeader?: boolean;
 }
 
+/**
+ * A real table on wide screens. Below the phone breakpoint (`.table-stack` in styles.css) each
+ * row becomes a card of "label: value" lines, so nothing scrolls sideways at 390 px. Every body
+ * cell carries its column header as `data-label` for that card view. The roles are written out
+ * because a table drawn with `display: block` loses its implicit roles in some browsers, and a
+ * screen reader must still hear the column header with each value.
+ */
 export function DataTable<T>({
   caption,
   columns,
@@ -729,27 +739,29 @@ export function DataTable<T>({
 }) {
   return (
     <div className="table-wrap" role="region" aria-label={caption} tabIndex={0}>
-      <table className={className ? `table ${className}` : 'table'}>
+      <table className={`table table-stack${className ? ` ${className}` : ''}`} role="table">
         <caption className="sr-only">{caption}</caption>
-        <thead>
-          <tr>
+        <thead role="rowgroup">
+          <tr role="row">
             {columns.map((c) => (
-              <th key={c.id} scope="col">
+              <th key={c.id} scope="col" role="columnheader">
                 {c.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           {rows.map((row) => (
-            <tr key={rowKey(row)} className={rowClassName?.(row)}>
+            <tr key={rowKey(row)} className={rowClassName?.(row)} role="row">
               {columns.map((c) =>
                 c.rowHeader ? (
-                  <th key={c.id} scope="row">
+                  <th key={c.id} scope="row" role="rowheader" data-label={c.header}>
                     {c.cell(row)}
                   </th>
                 ) : (
-                  <td key={c.id}>{c.cell(row)}</td>
+                  <td key={c.id} role="cell" data-label={c.header}>
+                    {c.cell(row)}
+                  </td>
                 ),
               )}
             </tr>

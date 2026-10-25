@@ -49,6 +49,7 @@ import {
   type PickDraft,
 } from '../lib/daily-ayahs';
 import { errorKind, errorMessageKeyOf, fieldIssues } from '../lib/errors';
+import { surahLabel, surahNumbered } from '../lib/surahs';
 
 type ScopeFilter = 'all' | DailyAyahScope;
 const SCOPE_FILTERS: readonly ScopeFilter[] = ['all', 'national', 'venue', 'circle'];
@@ -90,11 +91,17 @@ const emptyDraft = (date: string): PickDraft => ({
   ayah: '',
 });
 
-/** "Surah 2, ayah 255" in the screen's language. The console never shows the ayah's text. */
+/**
+ * "Surah Al-Baqarah (2), ayah 255" in the screen's language, with the surah's name from the
+ * content list. The console never shows the ayah's text.
+ */
 function useReference() {
-  const { t, number } = useI18n();
+  const { t, number, locale } = useI18n();
   return (ref: { surah: number; ayah: number }) =>
-    t('console.dailyAyahs.ref', { surah: number(ref.surah), ayah: number(ref.ayah) });
+    t('console.dailyAyahs.ref', {
+      surah: surahLabel(ref.surah, locale, number),
+      ayah: number(ref.ayah),
+    });
 }
 
 /**
@@ -574,7 +581,7 @@ function PickPanel({
   placeName: (p: Pick<DailyAyahEntry, 'scopeType' | 'venueId' | 'circleId'>) => string;
   onSaved: (entry: DailyAyahEntry) => void;
 }) {
-  const { t, number, localized } = useI18n();
+  const { t, number, localized, locale } = useI18n();
   const { api, principal } = useSignedIn();
   const dir = useDirectory();
   const reference = useReference();
@@ -601,7 +608,7 @@ function PickPanel({
         return t('console.dailyAyahs.error.surah.range');
       case 'ayah_not_in_surah':
         return t('console.dailyAyahs.error.ayah.notInSurah', {
-          surah: number(problem.surah),
+          surah: surahLabel(problem.surah, locale, number),
           count: number(problem.count),
         });
       case 'ayah_number':
@@ -733,8 +740,9 @@ function PickPanel({
           onChange={(e) => set({ surah: e.target.value })}
           options={Array.from({ length: 114 }, (_, i) => ({
             value: String(i + 1),
+            // "Surah 2 · Al-Baqarah (286 ayahs)": the number first, so the list stays in order.
             label: t('console.dailyAyahs.form.surahOption', {
-              number: number(i + 1),
+              number: surahNumbered(i + 1, locale, number),
               count: number(ayahCount(i + 1) ?? 0),
             }),
           }))}
@@ -764,7 +772,7 @@ function PickPanel({
               <p className="ayah-preview-ref">{reference(check.body)}</p>
               <p className="ayah-preview-note">
                 {t('console.dailyAyahs.form.previewCount', {
-                  surah: number(check.body.surah),
+                  surah: surahLabel(check.body.surah, locale, number),
                   count: number(ayahCount(check.body.surah) ?? 0),
                 })}
               </p>

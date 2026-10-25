@@ -114,7 +114,7 @@ describe.each<Locale>(['en', 'ur'])('coordinators page (%s)', (locale) => {
   it('hides the middle of the number in the invites table but not for the people who hold roles', async () => {
     renderConsole({ role: 'national', path: '/coordinators', handlers: data });
     const invites = await screen.findByRole('table', { name: text('console.invites.list.title') });
-    expect(within(invites).getByText('+92••••061')).toBeTruthy();
+    expect(within(invites).getByText('+92 ••• •••0061')).toBeTruthy();
     expect(within(invites).queryByText(/0000061/)).toBeNull();
   });
 
@@ -146,13 +146,15 @@ describe.each<Locale>(['en', 'ur'])('coordinators page (%s)', (locale) => {
     expect(document.documentElement.dir).toBe(locale === 'ur' ? 'rtl' : 'ltr');
   });
 
-  it('keeps phone numbers left to right even in Urdu', async () => {
+  it('keeps phone numbers left to right even in Urdu, masked to the last four digits', async () => {
     renderConsole({ role: 'national', locale, path: '/coordinators', handlers: data });
     const people = await screen.findByRole('table', {
       name: text('console.invites.active.title', locale),
     });
-    const bdi = within(people).getByText('+92 300 0000051');
+    const bdi = within(people).getByText('+92 ••• •••0051');
     expect(bdi.closest('bdi')?.getAttribute('dir')).toBe('ltr');
+    // The full number is not on the page anywhere in the role holders' table.
+    expect(within(people).queryByText(/300\s?0000051/)).toBeNull();
   });
 });
 
@@ -333,6 +335,10 @@ describe('handover and removal', () => {
     );
     // The person being replaced is not offered.
     expect(within(select).queryByText(/Test Person One/)).toBeNull();
+    // Each person's number is masked and isolated left to right inside the option text.
+    const option = within(select).getByText(/Test Person Two/);
+    expect(option.textContent).toBe('Test Person Two (\u2068+92 ••• •••0052\u2069)');
+    expect(option.textContent).not.toMatch(/0000052/);
     await user.click(
       within(dialog).getByRole('button', { name: text('console.invites.handover.submit') }),
     );
@@ -508,7 +514,7 @@ describe('handover and removal', () => {
     });
     await user.click(
       await screen.findByRole('button', {
-        name: `${text('console.invites.revoke')} for the number ending 061`,
+        name: `${text('console.invites.revoke')} for the number ending 0061`,
       }),
     );
     expect(writes(calls)).toEqual([]);
@@ -580,12 +586,12 @@ describe('invite status and resend', () => {
         name: `${text('console.invites.revoke')} for the number ending ${digits}`,
       });
     await screen.findByRole('table', { name: text('console.invites.list.title') });
-    expect(resend('061')).toBeTruthy();
-    expect(cancel('061')).toBeTruthy();
-    expect(resend('062')).toBeTruthy();
-    expect(cancel('062')).toBeNull();
-    expect(resend('063')).toBeNull();
-    expect(cancel('063')).toBeNull();
+    expect(resend('0061')).toBeTruthy();
+    expect(cancel('0061')).toBeTruthy();
+    expect(resend('0062')).toBeTruthy();
+    expect(cancel('0062')).toBeNull();
+    expect(resend('0063')).toBeNull();
+    expect(cancel('0063')).toBeNull();
   });
 
   it('sends an invite again as a new invite for the same number, role and place', async () => {
@@ -599,7 +605,7 @@ describe('invite status and resend', () => {
     });
     await user.click(
       await screen.findByRole('button', {
-        name: `${text('console.invites.resend')} for the number ending 062`,
+        name: `${text('console.invites.resend')} for the number ending 0062`,
       }),
     );
     expect(await screen.findByText(text('console.invites.resent'))).toBeTruthy();
@@ -623,7 +629,7 @@ describe('invite status and resend', () => {
     });
     await user.click(
       await screen.findByRole('button', {
-        name: `${text('console.invites.resend')} for the number ending 061`,
+        name: `${text('console.invites.resend')} for the number ending 0061`,
       }),
     );
     expect(await screen.findByText(text('errors.rate_limited'))).toBeTruthy();
@@ -647,10 +653,10 @@ describe('invite status and resend', () => {
       screen.queryByRole('button', {
         name: `${text('console.invites.resend')} for the number ending ${digits}`,
       });
-    expect(resendFor('061')).toBeTruthy();
+    expect(resendFor('0061')).toBeTruthy();
     // The other invite is for a venue in another city.
     expect(venues[2]!.cityId).not.toBe(rawalpindi!.id);
-    expect(resendFor('064')).toBeNull();
+    expect(resendFor('0064')).toBeNull();
   });
 });
 
@@ -727,7 +733,7 @@ describe('resending a handover invite', () => {
         'adminRoles.invite': (c: { body: unknown }) => ({ ...handover, ...(c.body as object) }),
       },
     });
-    await user.click(await resendButton('065'));
+    await user.click(await resendButton('0065'));
     expect(await screen.findByText(text('console.invites.resent'))).toBeTruthy();
     const sent = find(calls, 'POST', '/v1/admin/invites');
     expect(sent).toHaveLength(1);
@@ -753,7 +759,7 @@ describe('resending a handover invite', () => {
             : { ...handover, ...(c.body as object), replacesAssignmentId: null },
       },
     });
-    await user.click(await resendButton('065'));
+    await user.click(await resendButton('0065'));
     const alert = await screen.findByRole('alert');
     expect(within(alert).getByText(text('console.invites.handoverGone.title'))).toBeTruthy();
     expect(within(alert).getByText(text('console.invites.handoverGone.body'))).toBeTruthy();
@@ -785,7 +791,7 @@ describe('resending a handover invite', () => {
       path: '/coordinators',
       handlers: { ...withHandover, 'adminRoles.invite': errorResponse('not_found') },
     });
-    await user.click(await resendButton('061'));
+    await user.click(await resendButton('0061'));
     expect(await screen.findByText(text('errors.not_found'))).toBeTruthy();
     expect(screen.queryByText(text('console.invites.handoverGone.title'))).toBeNull();
   });
@@ -798,7 +804,7 @@ describe('resending a handover invite', () => {
       forceError: (c) =>
         c.method === 'POST' && c.path === '/v1/admin/invites' ? 'rate_limited' : undefined,
     });
-    await user.click(await resendButton('065'));
+    await user.click(await resendButton('0065'));
     expect(await screen.findByText(text('errors.rate_limited'))).toBeTruthy();
     expect(screen.queryByText(text('console.invites.handoverGone.title'))).toBeNull();
   });
@@ -847,7 +853,7 @@ describe('the 24-hour invite limit', () => {
     });
     await user.click(
       await screen.findByRole('button', {
-        name: `${text('console.invites.resend')} for the number ending 061`,
+        name: `${text('console.invites.resend')} for the number ending 0061`,
       }),
     );
     expect(await screen.findByText(text('issues.invite_daily_limit'))).toBeTruthy();

@@ -46,7 +46,8 @@ import { useI18n } from '../i18n';
 import { coordinatorStats } from '../lib/kpis';
 import { filterBySearch } from '../lib/search';
 import { errorKind, errorMessageKeyOf, fieldIssues, issuesOf } from '../lib/errors';
-import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, phoneTail } from '../lib/phone';
+import { PHONE_ISSUE_KEYS, formatPhone, maskPhone, normalizePhone, phoneTail } from '../lib/phone';
+import { isolate } from '../lib/ui-tokens';
 import { canAssignRole, canSomewhere } from '../lib/permissions';
 
 const ROLES: readonly Role[] = ['national_admin', 'city_coordinator', 'venue_coordinator'];
@@ -294,7 +295,8 @@ export default function CoordinatorsPage() {
     {
       id: 'phone',
       header: t('console.invites.col.phoneVerified'),
-      cell: (a) => <Phone value={a.phone} />,
+      // Masked to the last four digits, like every number in the coordinators lists.
+      cell: (a) => <Phone value={a.phone} masked />,
     },
     { id: 'scope', header: t('console.invites.col.assigned'), cell: (a) => scopeLabel(a) },
     {
@@ -970,7 +972,7 @@ function HandoverDialog({
             onChange={(e) => setUserId(e.target.value)}
             options={people.map((a) => ({
               value: a.userId,
-              label: `${a.userName ?? t('console.invites.unnamed')} (${formatPhone(a.phone)})`,
+              label: `${a.userName ?? t('console.invites.unnamed')} (${isolate(maskPhone(a.phone))})`,
             }))}
           />
         ) : null}

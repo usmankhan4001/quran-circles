@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { builtInAyahFor, ERROR_CODES, makeApiError } from '@qc/contracts';
 import * as fx from '@qc/contracts/fixtures';
 import type { Locale } from '../i18n';
+import { surahLabel } from '../lib/surahs';
 import { venueA } from '../test/people';
 import {
   renderConsole,
@@ -37,7 +38,7 @@ const isList = (c: { method: string; path: string }) =>
 
 const ref = (surah: number, ayah: number, locale: Locale = 'en') =>
   text('console.dailyAyahs.ref', locale)
-    .replace('{surah}', String(surah))
+    .replace('{surah}', surahLabel(surah, locale))
     .replace('{ayah}', String(ayah));
 
 /** Opens the page and waits until the list has answered and the form has its places. */
@@ -53,7 +54,7 @@ async function openPage(options: HarnessOptions = {}) {
   return view;
 }
 
-/** The table row that shows a reference, such as "Surah 13, ayah 28". */
+/** The table row that shows a reference, such as "Surah Ar-Ra'd (13), ayah 28". */
 const rowWith = (table: HTMLElement, reference: string) => {
   const row = within(table)
     .getAllByRole('row')
@@ -235,7 +236,9 @@ describe('setting a pick', () => {
 
     // Al-Fatiha has seven ayat: refused here, nothing sent.
     expect(
-      await within(form).findByText('Surah 1 has 7 ayahs. Enter a number from 1 to 7.'),
+      await within(form).findByText(
+        'Surah Al-Fatihah (1) has 7 ayahs. Enter a number from 1 to 7.',
+      ),
     ).toBeTruthy();
     expect(writes(calls)).toHaveLength(0);
 
@@ -352,7 +355,7 @@ describe('setting a pick', () => {
     expect(
       (within(form).getByLabelText(text('console.dailyAyahs.form.ayah')) as HTMLInputElement).value,
     ).toBe('28');
-    expect(within(form).getByText(/already has Surah 13, ayah 28/)).toBeTruthy();
+    expect(within(form).getByText(/already has Surah Ar-Ra'd \(13\), ayah 28/)).toBeTruthy();
     await user.clear(within(form).getByLabelText(text('console.dailyAyahs.form.ayah')));
     await user.type(within(form).getByLabelText(text('console.dailyAyahs.form.ayah')), '29');
     await user.click(
@@ -443,7 +446,9 @@ describe('setting a pick', () => {
       within(form).getByRole('button', { name: text('console.dailyAyahs.form.save') }),
     );
     expect(
-      await within(form).findByText('Surah 112 has 4 ayahs. Enter a number from 1 to 4.'),
+      await within(form).findByText(
+        'Surah Al-Ikhlas (112) has 4 ayahs. Enter a number from 1 to 4.',
+      ),
     ).toBeTruthy();
     expect(within(form).getByText(text('errors.validation_failed'))).toBeTruthy();
   });

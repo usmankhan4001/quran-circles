@@ -3,6 +3,14 @@ import type { ReactNode } from 'react';
 import { messages, type MessageKey } from '@qc/i18n';
 import { directionForLocale, type Direction } from '../lib/ui-tokens';
 import { webStore, type KeyValueStore } from '../lib/storage';
+import {
+  formatClock,
+  formatDate,
+  formatDateTime,
+  formatLocalDateTime,
+  formatWeekday,
+  formatWeekdays,
+} from '../lib/datetime';
 
 export type Locale = 'en' | 'ur';
 export type Params = Record<string, string | number>;
@@ -45,25 +53,24 @@ export interface I18n {
   tx(key: string, params?: Params): string;
   tp(baseKey: string, count: number, params?: Params): string;
   number(value: number): string;
+  /**
+   * Dates and times, all from `lib/datetime.ts`: Pakistan time, and in Urdu every run of figures
+   * isolated so it cannot run into the words around it.
+   */
   dateTime(iso: string): string;
   date(iso: string): string;
+  /** A local "HH:MM" time, such as a session's start. */
+  time(hhmm: string): string;
+  /** A local day and time, such as a one-off session: "25 Oct 2026, 9:00 pm". */
+  localDateTime(day: string, hhmm: string): string;
   weekday(day: number, style?: 'short' | 'long'): string;
+  /** Days of the week joined with the language's comma. */
+  weekdays(days: readonly number[]): string;
   /** English first, then Urdu: the name to show for `{ en, ur }` content in the current locale. */
   localized(value: { en: string; ur: string | null } | null | undefined): string;
 }
 
-const TIME_ZONE = 'Asia/Karachi';
-
 export function createI18n(locale: Locale, setLocale: (l: Locale) => void): I18n {
-  const dtf = new Intl.DateTimeFormat(dateLocale(locale), {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: TIME_ZONE,
-  });
-  const df = new Intl.DateTimeFormat(dateLocale(locale), {
-    dateStyle: 'medium',
-    timeZone: TIME_ZONE,
-  });
   const nf = new Intl.NumberFormat(dateLocale(locale));
   return {
     locale,
@@ -74,19 +81,12 @@ export function createI18n(locale: Locale, setLocale: (l: Locale) => void): I18n
     tp: (baseKey, count, params) =>
       translatePlural(locale, baseKey, count, { count: nf.format(count), ...params }),
     number: (value) => nf.format(value),
-    dateTime: (iso) => {
-      const d = new Date(iso);
-      return Number.isNaN(d.getTime()) ? iso : dtf.format(d);
-    },
-    date: (iso) => {
-      const d = new Date(iso);
-      return Number.isNaN(d.getTime()) ? iso : df.format(d);
-    },
-    weekday: (day, style = 'short') =>
-      new Intl.DateTimeFormat(dateLocale(locale), { weekday: style, timeZone: 'UTC' }).format(
-        // 2023-01-01 was a Sunday, so day 0 is Sunday.
-        new Date(Date.UTC(2023, 0, 1 + day)),
-      ),
+    dateTime: (iso) => formatDateTime(iso, locale),
+    date: (iso) => formatDate(iso, locale),
+    time: (hhmm) => formatClock(hhmm, locale),
+    localDateTime: (day, hhmm) => formatLocalDateTime(day, hhmm, locale),
+    weekday: (day, style = 'short') => formatWeekday(day, locale, style),
+    weekdays: (days) => formatWeekdays(days, locale),
     localized: (value) => (value ? (locale === 'ur' ? (value.ur ?? value.en) : value.en) : ''),
   };
 }

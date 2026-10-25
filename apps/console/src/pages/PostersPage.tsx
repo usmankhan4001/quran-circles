@@ -148,10 +148,7 @@ function whenOf(s: AdminSession, i18n: I18n): string {
     return i18n.t('console.posters.source.once', { date: i18n.date(s.startsOn), time });
   if (s.daysOfWeek.length === 7) return i18n.t('console.posters.source.daily', { time });
   return i18n.t('console.posters.source.weekly', {
-    days: [...s.daysOfWeek]
-      .sort()
-      .map((d) => i18n.weekday(d))
-      .join(i18n.t('console.posters.listSeparator')),
+    days: i18n.weekdays([...s.daysOfWeek].sort()),
     time,
   });
 }
@@ -206,6 +203,7 @@ function PostersWorkspace({ session, canCreate }: { session: AdminSession; canCr
             type="button"
             className="btn btn-small btn-emerald"
             disabled
+            aria-disabled="true"
             title={t('console.posters.generator.bulkSoon')}
           >
             <Icon name="file-pdf" size={13} weight="fill" />

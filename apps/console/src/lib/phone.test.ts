@@ -1,6 +1,6 @@
 import { E164_PATTERN } from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
-import { formatPhone, normalizePhone, toAsciiDigits } from './phone';
+import { formatPhone, maskPhone, normalizePhone, phoneTail, toAsciiDigits } from './phone';
 
 const e164 = (input: string, mobileOnly = false) => {
   const r = normalizePhone(input, { mobileOnly });
@@ -52,5 +52,34 @@ describe('formatPhone', () => {
   it('spaces Pakistan mobiles and leaves anything else alone', () => {
     expect(formatPhone('+923001234567')).toBe('+92 300 1234567');
     expect(formatPhone('+14155550123')).toBe('+14155550123');
+  });
+});
+
+describe('maskPhone and phoneTail', () => {
+  it('keeps the country code and the last four digits of an E.164 number', () => {
+    expect(maskPhone('+923001234567')).toBe('+92 ••• •••4567');
+    expect(maskPhone('+14155550123')).toBe('+14 ••• •••0123');
+    expect(maskPhone(' +923001234567 ')).toBe('+92 ••• •••4567');
+  });
+
+  it('never shows more than four digits of the number', () => {
+    expect(maskPhone('+923001234567').replace(/[^0-9]/g, '')).toBe('924567');
+    expect(maskPhone('+923001234567')).not.toContain('300');
+  });
+
+  it('keeps only the last four digits of something that is not E.164', () => {
+    expect(maskPhone('0300 1234567')).toBe('••• •••4567');
+    expect(maskPhone('۰۳۰۰۱۲۳۴۵۶۷')).toBe('••• •••4567');
+  });
+
+  it('shows the mask alone when there are fewer than four digits', () => {
+    expect(maskPhone('')).toBe('••• •••');
+    expect(maskPhone('+92')).toBe('••• •••');
+    expect(maskPhone('abc')).toBe('••• •••');
+  });
+
+  it('gives the last four digits for screen readers', () => {
+    expect(phoneTail('+923001234567')).toBe('4567');
+    expect(phoneTail('12')).toBe('12');
   });
 });
