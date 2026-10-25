@@ -11,7 +11,10 @@ import { render, type EmailTemplateData, type EmailTemplateName } from '../src/e
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(process.argv[2] ?? join(here, '..', '.email-previews'));
 mkdirSync(out, { recursive: true });
-copyFileSync(join(here, '..', 'assets', 'email', 'logo.png'), join(out, 'logo.png'));
+copyFileSync(
+  join(here, '..', '..', '..', 'apps', 'user-app', 'public', 'brand', 'email-logo.png'),
+  join(out, 'logo.png'),
+);
 
 const samples: { [K in EmailTemplateName]: Record<Locale, EmailTemplateData[K]> } = {
   sign_in_code: {
@@ -58,7 +61,7 @@ const rows: string[] = [];
 for (const name of Object.keys(samples) as EmailTemplateName[]) {
   for (const locale of LOCALES) {
     const data = samples[name][locale] as never;
-    const email = render(name, locale, data, { assetBaseUrl: '.' });
+    const email = render(name, locale, data, { logoUrl: './logo.png' });
     writeFileSync(join(out, `${name}.${locale}.html`), email.html);
     writeFileSync(join(out, `${name}.${locale}.txt`), email.text);
     rows.push(

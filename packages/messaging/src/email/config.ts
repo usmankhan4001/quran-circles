@@ -20,11 +20,12 @@ export const EMAIL_FROM = `Quran Circles <${EMAIL_ADDRESSES.notifications}>`;
 export const EMAIL_APP_ORIGIN = 'https://qurancircle.doraquran.pk';
 
 /**
- * Where the email images are served from. `logo.png` (`packages/messaging/assets/email/`) must be
- * published at `${EMAIL_ASSET_BASE_URL}/logo.png`; email clients cannot load an image from a
- * data: URL reliably, so the logo is always a hosted PNG.
+ * The logo in every email: an absolute https URL, no query string. The file is
+ * `apps/user-app/public/brand/email-logo.png` (360x316, shown at 150x132 for sharp 2x screens), so it
+ * is served by the web app and only exists at this address after a release carrying it is deployed.
+ * Email clients cannot load an image from a data: URL reliably, so it is always a hosted PNG.
  */
-export const EMAIL_ASSET_BASE_URL = `${EMAIL_APP_ORIGIN}/email`;
+export const EMAIL_LOGO_URL = `${EMAIL_APP_ORIGIN}/brand/email-logo.png`;
 
 /**
  * Colours and shapes copied from the finalized design system (light mode only): white page, one

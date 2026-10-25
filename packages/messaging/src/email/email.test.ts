@@ -60,7 +60,7 @@ describe.each(all)('$name ($locale)', ({ name, locale }) => {
       expect(href).toMatch(/^https:\/\/fonts\.googleapis\.com\//);
     }
     expect(email.html).toMatch(
-      /<img src="https:\/\/qurancircle\.doraquran\.pk\/email\/logo\.png"[^>]+alt="Quran Circles"/,
+      /<img src="https:\/\/qurancircle\.doraquran\.pk\/brand\/email-logo\.png"[^>]+alt="Quran Circles"/,
     );
     expect(email.html).not.toContain('data:image');
     expect(email.html).toContain('display:none'); // preheader
@@ -130,7 +130,7 @@ describe('content', () => {
   });
 
   it('serves the logo from the preview base when given', () => {
-    const e = render('welcome', 'en', {}, { assetBaseUrl: '.' });
+    const e = render('welcome', 'en', {}, { logoUrl: './logo.png' });
     expect(e.html).toContain('<img src="./logo.png"');
   });
 });

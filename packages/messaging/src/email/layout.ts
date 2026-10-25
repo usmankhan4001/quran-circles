@@ -10,8 +10,8 @@ import { escapeHtml as h, safeUrl } from './escape';
 import { FOOTER, type EmailContent } from './templates';
 
 export interface LayoutOptions {
-  /** Base URL for `logo.png`, no trailing slash. */
-  assetBaseUrl: string;
+  /** Absolute URL of the logo image. */
+  logoUrl: string;
 }
 
 const LOGO_WIDTH = 150;
@@ -149,7 +149,7 @@ export function renderHtml(content: EmailContent, locale: Locale, options: Layou
 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" bgcolor="${T.page}" class="bg-page" style="background-color:${T.page};"><tr><td align="center" style="padding:24px 12px;">
 <!--[if mso]><table role="presentation" width="${T.width}" align="center" border="0" cellspacing="0" cellpadding="0"><tr><td><![endif]-->
 <table role="presentation" width="${T.width}" border="0" cellspacing="0" cellpadding="0" class="container bg-page" bgcolor="${T.page}" style="width:${T.width}px;max-width:${T.width}px;background-color:${T.page};" dir="${f.dir}">
-<tr><td class="pad" align="${f.align}" style="padding:8px 32px 8px 32px;text-align:${f.align};"><img src="${h(`${options.assetBaseUrl}/logo.png`)}" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" alt="Quran Circles" style="display:block;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;border:0;"></td></tr>
+<tr><td class="pad" align="${f.align}" style="padding:8px 32px 8px 32px;text-align:${f.align};"><img src="${h(options.logoUrl)}" width="${LOGO_WIDTH}" height="${LOGO_HEIGHT}" alt="Quran Circles" style="display:block;width:${LOGO_WIDTH}px;height:${LOGO_HEIGHT}px;border:0;"></td></tr>
 <tr><td class="pad" align="${f.align}" style="padding:16px 32px 4px 32px;text-align:${f.align};"><h1 class="ink" style="margin:0;${text(f, f.heading, '1.4', T.ink, 700)}">${h(content.heading)}</h1></td></tr>
 <tr><td class="pad" align="${f.align}" style="padding:12px 32px 8px 32px;text-align:${f.align};">${parts.join('\n')}</td></tr>
 <tr><td class="pad" style="padding:8px 32px 0 32px;"><div style="border-top:1px solid ${T.border};height:1px;line-height:1px;font-size:1px;">&nbsp;</div></td></tr>

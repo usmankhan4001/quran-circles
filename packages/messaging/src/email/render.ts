@@ -1,5 +1,5 @@
 import { LOCALES, type Locale } from '@qc/contracts';
-import { EMAIL_ASSET_BASE_URL } from './config';
+import { EMAIL_LOGO_URL } from './config';
 import { oneLine } from './escape';
 import { renderHtml, renderPlainText } from './layout';
 import {
@@ -16,8 +16,8 @@ export interface RenderedEmail {
 }
 
 export interface RenderOptions {
-  /** Where `logo.png` is served from. Defaults to the production address; previews point at local files. */
-  assetBaseUrl?: string;
+  /** The logo's URL. Defaults to the production address; previews point at a local file. */
+  logoUrl?: string;
 }
 
 export class EmailTemplateError extends Error {
@@ -49,7 +49,7 @@ export function render<K extends EmailTemplateName>(
   return {
     subject: oneLine(content.subject),
     html: renderHtml(content, locale, {
-      assetBaseUrl: options.assetBaseUrl ?? EMAIL_ASSET_BASE_URL,
+      logoUrl: options.logoUrl ?? EMAIL_LOGO_URL,
     }),
     text: renderPlainText(content, locale),
   };
@@ -96,7 +96,7 @@ export function renderTemplateSource(
   const email: RenderedEmail = {
     subject: oneLine(content.subject),
     html: renderHtml(content, locale, {
-      assetBaseUrl: options.assetBaseUrl ?? EMAIL_ASSET_BASE_URL,
+      logoUrl: options.logoUrl ?? EMAIL_LOGO_URL,
     }),
     text: renderPlainText(content, locale),
   };
