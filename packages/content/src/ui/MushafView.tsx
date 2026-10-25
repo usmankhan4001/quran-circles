@@ -74,8 +74,9 @@ export function MushafView({
   const shown = state.status === 'ready' ? state.page : state.previous;
   const blocks = useMemo(() => (shown ? blocksOf(shown.ayahs) : []), [shown]);
   const arabic = {
-    fontSize: Math.round(26 * theme.scale * zoom),
-    lineHeight: Math.round(26 * theme.scale * zoom * 2.1),
+    // The board: Quran text 27px on a 2.35 line.
+    fontSize: Math.round(27 * theme.scale * zoom),
+    lineHeight: Math.round(27 * theme.scale * zoom * 2.35),
   };
 
   const first = shown?.ayahs[0];
