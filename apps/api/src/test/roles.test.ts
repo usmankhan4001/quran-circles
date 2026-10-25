@@ -204,7 +204,7 @@ describe('inviting someone by phone', () => {
     expect((await venueInvite(await h.person(), nil)).status).toBe(403);
   });
 
-  it('stores a handover on the invite, and answers not found for an assignment that is unknown, ended or elsewhere', async () => {
+  it("stores a handover on the invite, ends the old holder's access at once, and answers not found for an assignment that is unknown, ended or elsewhere", async () => {
     const holder = await h.venueCoordinator(h.world.venueA1);
     const elsewhere = await h.venueCoordinator(h.world.venueB1);
     const [old] = await liveAssignments(holder.userId);
@@ -222,8 +222,15 @@ describe('inviting someone by phone', () => {
     expect((await auditRows(h)).find((r) => r.action === 'role.invite')?.meta).toMatchObject({
       replacesAssignmentId: old!.id,
     });
-    // The old holder keeps the role until the invite is accepted.
-    expect(await liveAssignments(holder.userId)).toHaveLength(1);
+    // SEC-22: the old holder loses the role now, before anyone accepts the invite, and it is audited.
+    expect(await liveAssignments(holder.userId)).toHaveLength(0);
+    expect((await auditRows(h)).find((r) => r.action === 'role.revoke')).toMatchObject({
+      actorUserId: cityA.userId,
+      entityId: old!.id,
+      venueId: h.world.venueA1,
+      cityId: h.world.cityA.id,
+      meta: { role: 'venue_coordinator', reason: 'handover', inviteId: made.json<Invite>().id },
+    });
 
     for (const replacesAssignmentId of [nil, far!.id]) {
       const res = await venueInvite(cityA, h.world.venueA1, newPhone(), { replacesAssignmentId });
@@ -337,24 +344,91 @@ describe('the handover on the invite response (contract rc.3)', () => {
     expect(resent.replacesAssignmentId).toBeNull();
   });
 
-  it('drops a carried link whose assignment has ended, and refuses one sent explicitly', async () => {
+  it('accepts the link again on a resend to the same number, but not for another number', async () => {
     const holder = await h.venueCoordinator(h.world.venueA1);
     const [old] = await liveAssignments(holder.userId);
     const phone = newPhone();
     const first = (
       await venueInvite(admin, h.world.venueA1, phone, { replacesAssignmentId: old!.id })
     ).json<Invite>();
-    await revoke(admin, old!.id);
+    expect(await liveAssignments(holder.userId)).toHaveLength(0);
 
+    // The console's Resend copies the link of an assignment the handover already ended.
     const explicit = await venueInvite(admin, h.world.venueA1, phone, {
       replacesAssignmentId: old!.id,
     });
-    expect(explicit.status).toBe(404);
-    // Nothing changed: the pending invite is still there.
-    expect((await listed(admin)).find((i) => i.id === first.id)?.status).toBe('pending');
+    expect(explicit.status).toBe(201);
+    expect(explicit.json<Invite>().replacesAssignmentId).toBe(old!.id);
+    expect((await listed(admin)).find((i) => i.id === first.id)?.status).toBe('revoked');
+    // Nothing is ended twice.
+    expect((await auditRows(h)).filter((r) => r.action === 'role.revoke')).toHaveLength(1);
 
-    const carried = (await venueInvite(admin, h.world.venueA1, phone)).json<Invite>();
-    expect(carried.replacesAssignmentId).toBeNull();
+    // An ended assignment cannot be borrowed as the handover of an invite to someone else.
+    const other = await venueInvite(admin, h.world.venueA1, newPhone(), {
+      replacesAssignmentId: old!.id,
+    });
+    expect(other.status).toBe(404);
+  });
+
+  it("ends a city coordinator's access at once when the city is handed over, before acceptance", async () => {
+    const holder = await h.cityCoordinator(h.world.cityB.id);
+    const [old] = await liveAssignments(holder.userId);
+    const made = await invite(admin, {
+      role: 'city_coordinator',
+      cityId: h.world.cityB.id,
+      phone: newPhone(),
+      replacesAssignmentId: old!.id,
+    });
+    expect(made.status).toBe(201);
+    expect(made.json<Invite>().status).toBe('pending');
+    expect(await liveAssignments(holder.userId)).toHaveLength(0);
+    expect((await auditRows(h)).find((r) => r.action === 'role.revoke')).toMatchObject({
+      actorUserId: admin.userId,
+      entityId: old!.id,
+      cityId: h.world.cityB.id,
+      venueId: null,
+      meta: { role: 'city_coordinator', reason: 'handover' },
+    });
+  });
+
+  it("keeps the old holder's access when the handover is refused, and for a plain invite", async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await liveAssignments(holder.userId);
+    const cases: [string, Actor | null, Record<string, unknown>, number][] = [
+      ['person', await h.person(), { replacesAssignmentId: old!.id }, 403],
+      ['nobody', null, { replacesAssignmentId: old!.id }, 401],
+      [
+        'venue coordinator',
+        await h.venueCoordinator(h.world.venueA2),
+        { replacesAssignmentId: old!.id },
+        403,
+      ],
+      [
+        'city coordinator elsewhere',
+        await h.cityCoordinator(h.world.cityB.id),
+        { replacesAssignmentId: old!.id },
+        403,
+      ],
+      ['the holder themself', holder, { replacesAssignmentId: old!.id }, 403],
+      ['plain invite by an admin', admin, {}, 201],
+    ];
+    for (const [name, who, extra, status] of cases) {
+      const res = await invite(who, {
+        role: 'venue_coordinator',
+        venueId: h.world.venueA1,
+        phone: newPhone(),
+        ...extra,
+      });
+      expect(res.status, name).toBe(status);
+      expect(await liveAssignments(holder.userId), name).toHaveLength(1);
+    }
+    // Handing the place to the person who already holds it is refused, and they keep it.
+    const self = await venueInvite(admin, h.world.venueA1, holder.phone, {
+      replacesAssignmentId: old!.id,
+    });
+    expect(self.status).toBe(409);
+    expect(await liveAssignments(holder.userId)).toHaveLength(1);
+    expect((await auditRows(h)).filter((r) => r.action === 'role.revoke')).toHaveLength(0);
   });
 
   it('follows the scope rules for a handover resend, for every kind of caller', async () => {

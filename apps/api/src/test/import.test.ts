@@ -300,7 +300,7 @@ describe('importing coordinators', () => {
     expect(await outboxRows(h)).toHaveLength(0);
   });
 
-  it('stores a handover on an imported invite', async () => {
+  it("stores a handover on an imported invite and ends the old holder's access at once", async () => {
     const holder = await h.venueCoordinator(h.world.venueA1);
     const [old] = await h.db
       .select()
@@ -312,6 +312,48 @@ describe('importing coordinators', () => {
     expect(r.applied).toBe(true);
     const [invite] = await h.db.select().from(schema.coordinatorInvites);
     expect(invite?.replacesAssignmentId).toBe(old!.id);
+    expect(invite?.status).toBe('pending');
+    // SEC-22: the previous coordinator loses access when the invite is created.
+    const [ended] = await h.db
+      .select()
+      .from(schema.roleAssignments)
+      .where(eq(schema.roleAssignments.id, old!.id));
+    expect(ended?.revokedAt).not.toBeNull();
+    expect((await auditRows(h)).find((a) => a.action === 'role.revoke')).toMatchObject({
+      actorUserId: admin.userId,
+      entityId: old!.id,
+      meta: { reason: 'handover', inviteId: invite?.id },
+    });
+  });
+
+  it("leaves the old holder's access alone on a dry run, a refused row, or a city outside the caller's scope", async () => {
+    const holder = await h.venueCoordinator(h.world.venueA1);
+    const [old] = await h.db
+      .select()
+      .from(schema.roleAssignments)
+      .where(eq(schema.roleAssignments.userId, holder.userId));
+    const live = async () =>
+      (
+        await h.db
+          .select()
+          .from(schema.roleAssignments)
+          .where(eq(schema.roleAssignments.id, old!.id))
+      )[0]?.revokedAt ?? null;
+    const row = coordinatorRow({ replacesAssignmentId: old!.id });
+    expect(result(await run('coordinators', admin, [row], true)).applied).toBe(false);
+    expect(await live()).toBeNull();
+    // One invalid row stops the whole file, the handover included.
+    const mixed = result(
+      await run('coordinators', admin, [
+        row,
+        coordinatorRow({ venueId: '00000000-0000-4000-8000-000000000000' }),
+      ]),
+    );
+    expect(mixed.applied).toBe(false);
+    expect(await live()).toBeNull();
+    const cityB = await h.cityCoordinator(h.world.cityB.id);
+    expect(result(await run('coordinators', cityB, [row])).applied).toBe(false);
+    expect(await live()).toBeNull();
   });
 
   it('follows the role rules row by row for every kind of caller', async () => {
