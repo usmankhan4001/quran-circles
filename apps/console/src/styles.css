@@ -2830,3 +2830,69 @@ html[dir='rtl'] .validator-commit::after {
     gap: 0.875rem;
   }
 }
+
+/* Tables on a phone: below 40rem every table row is a card of "label: value" lines, so nothing
+   scrolls sideways at 390 px. The label is the cell's `data-label` (its column header, set by
+   DataTable); the header row stays for screen readers only. Wider screens keep the table. */
+@media (max-width: 40rem) {
+  .table-wrap:has(> .table-stack) {
+    overflow-x: visible;
+  }
+  .table.table-stack {
+    min-inline-size: 0;
+  }
+  .table-stack thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tbody tr {
+    display: block;
+    inline-size: 100%;
+  }
+  .table-stack tbody tr {
+    padding-block: var(--space-xs);
+    border-block-end: 1px solid var(--c-border);
+  }
+  .table-stack tbody tr:last-child {
+    border-block-end: 0;
+  }
+  .table-stack tbody tr > :is(th, td),
+  .table-stack tbody tr > :is(th, td):first-child,
+  .table-stack tbody tr > :is(th, td):last-child {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--space-sm);
+    align-items: start;
+    padding-block: 0.375rem;
+    padding-inline: 0.875rem;
+    border-block-end: 0;
+    border-radius: 0;
+    background: transparent;
+    text-align: start;
+    white-space: normal;
+  }
+  /* The label is already in the header row screen readers use, so it gets empty alt text. */
+  .table-stack tbody tr > :is(th, td)::before {
+    content: attr(data-label);
+    content: attr(data-label) / '';
+    color: var(--c-text-muted);
+    font-size: 0.65625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  html[lang='ur'] .table-stack tbody tr > :is(th, td)::before {
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  /* A column with no header has no label to show. */
+  .table-stack tbody tr > :is(th, td)[data-label='']::before {
+    content: none;
+  }
+}
