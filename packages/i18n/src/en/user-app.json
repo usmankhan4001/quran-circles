@@ -751,5 +751,16 @@
   "home.greetingGuest": "Assalamu alaikum",
   "home.profile.open": "Open profile",
   "home.profile.signIn": "Sign in or create an account",
-  "home.nearWeek": "Near you this week"
+  "home.nearWeek": "Near you this week",
+  "join.title": "Join {when} at {venue}?",
+  "join.noSeat": "No seat is reserved. Telling us you will come helps the coordinator plan the night.",
+  "join.remind": "Remind me on WhatsApp",
+  "join.notNow": "Not now",
+  "join.firstTime": "First time? We check your number once, with a code.",
+  "join.code.title": "Check your number",
+  "join.done.title": "You are joining this circle",
+  "join.done.body": "We will remind you before each session and tell you if the time changes or it is cancelled.",
+  "join.done.status": "Joining · {section}",
+  "join.done.journey": "See it in My Journey",
+  "join.done.done": "Done"
 }
