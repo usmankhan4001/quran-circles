@@ -19,17 +19,19 @@ import type { ExpoConfig } from 'expo/config';
  * - `GOOGLE_SERVICES_JSON`: path to Firebase's `google-services.json` for the Android app (an EAS
  *   file variable). Push needs it: the app registers its native FCM token. Without it the build
  *   still succeeds and push is off.
- * - `EAS_PROJECT_ID`: the EAS project, printed by `eas init`.
+ * - `EAS_PROJECT_ID`: overrides the EAS project id set below (printed by `eas init`).
  */
 const APP_ID = 'pk.doraquran.circles';
 
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || undefined;
 const googleServicesFile = process.env.GOOGLE_SERVICES_JSON || undefined;
-const easProjectId = process.env.EAS_PROJECT_ID || undefined;
+// The EAS project @twoplustwoios-team/quran-circles; `EAS_PROJECT_ID` overrides it.
+const easProjectId = process.env.EAS_PROJECT_ID || 'b4979929-6d56-42e0-aed0-6aa5e53d3069';
 
 const config: ExpoConfig = {
   name: 'Quran Circles',
   slug: 'quran-circles',
+  owner: 'twoplustwoios-team',
   scheme: 'quran-circles',
   version: '0.1.0',
   orientation: 'portrait',
@@ -72,7 +74,7 @@ const config: ExpoConfig = {
       backgroundColor: '#ffffff',
     },
   },
-  ...(easProjectId ? { extra: { eas: { projectId: easProjectId } } } : {}),
+  extra: { eas: { projectId: easProjectId } },
 };
 
 export default config;
