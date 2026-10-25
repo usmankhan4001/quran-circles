@@ -2,12 +2,9 @@ import React, { useState } from 'react';
 import { PhIcon } from './icons';
 
 export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: string) => void }) {
-  const [alertsEnabled, setAlertsEnabled] = useState(true);
   const [phoneVal, setPhoneVal] = useState('300 1234567');
-  const [codeVal, setCodeVal] = useState(['5', '2', '9', '4', '1', '8']);
+  const [codeVal] = useState(['5', '2', '9', '4', '1', '8']);
   const [nameVal, setNameVal] = useState('Usman Khan');
-  const [authStep, setAuthStep] = useState<'sheet' | 'verified'>('sheet');
-  const [readTodayDone, setReadTodayDone] = useState(true);
 
   return (
     <div className="artboard-row">
@@ -420,7 +417,9 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
           style={{ position: 'relative', overflow: 'hidden', padding: 0 }}
         >
           {/* Dimmed Background Representing the Session Screen Behind */}
-          <div style={{ filter: 'blur(3px) brightness(0.65)', padding: '14px 20px', height: '100%' }}>
+          <div
+            style={{ filter: 'blur(3px) brightness(0.65)', padding: '14px 20px', height: '100%' }}
+          >
             <div className="iq-status-row" style={{ color: '#FFFFFF', marginBottom: 14 }}>
               <span>9:41</span>
             </div>
@@ -720,7 +719,14 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
             }}
           >
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', letterSpacing: '-0.02em' }}>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: '#111827',
+                  letterSpacing: '-0.02em',
+                }}
+              >
                 My Circles &amp; Habit
               </div>
               <div style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
@@ -808,7 +814,9 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                     }}
                   >
                     <PhIcon name="whatsapp-logo" weight="fill" size={14} color="#16A34A" />
-                    <span style={{ fontSize: 10.5, fontWeight: 700, color: '#166534' }}>Alerts ON</span>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: '#166534' }}>
+                      Alerts ON
+                    </span>
                   </div>
                 </div>
 
@@ -877,7 +885,9 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
 
               {/* Card 2: DHA Phase 4 Central */}
               <div className="iq-white-card" style={{ padding: '12px 16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
                       Surah Yaseen Halqa
@@ -919,7 +929,14 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                 }}
               >
                 <span>Days Read This Week</span>
-                <span style={{ fontSize: 11.5, color: '#059669', textTransform: 'none', fontWeight: 600 }}>
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    color: '#059669',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                  }}
+                >
                   5 of 7 Days Read
                 </span>
               </div>
@@ -980,9 +997,19 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                     borderTop: '1px solid #F1F5F9',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#475569' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontSize: 11.5,
+                      color: '#475569',
+                    }}
+                  >
                     <PhIcon name="fire" weight="fill" size={16} color="#EA580C" />
-                    <span><strong>14 days read</strong> this month</span>
+                    <span>
+                      <strong>14 days read</strong> this month
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -1048,8 +1075,8 @@ export function ArtboardsSession({ onNavigatePage }: { onNavigatePage: (page: st
                     Jamia Masjid Al-Noor · 1h ago
                   </div>
                   <div style={{ fontSize: 11.5, color: '#475569', marginTop: 2, lineHeight: 1.4 }}>
-                    Tonight&apos;s halqa will start 15 minutes after Maghrib prayer to allow brothers
-                    joining from out of town to settle.
+                    Tonight&apos;s halqa will start 15 minutes after Maghrib prayer to allow
+                    brothers joining from out of town to settle.
                   </div>
                 </div>
               </div>

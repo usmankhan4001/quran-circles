@@ -57,10 +57,7 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
     : null;
   const section = t(`sections.${session.section}`);
   const eyebrow = distance ? `${section}${sep}${distance}` : section;
-  const badge =
-    session.status === 'cancelled'
-      ? t('session.cancelled')
-      : t('venue.follow');
+  const badge = session.status === 'cancelled' ? t('session.cancelled') : t('venue.follow');
   const when = `${day}${sep}${time}`;
   return (
     <Pressable
@@ -126,7 +123,11 @@ export function NearbyCircleCard({ session, distance, onPress, testID }: NearbyC
           >
             {badge}
           </Text>
-          <Icon name="arrow-forward" size={12} color={session.status === 'cancelled' ? c.warning : c.textSuccess} />
+          <Icon
+            name="arrow-forward"
+            size={12}
+            color={session.status === 'cancelled' ? c.warning : c.textSuccess}
+          />
         </View>
       </View>
     </Pressable>

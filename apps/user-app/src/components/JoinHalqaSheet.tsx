@@ -1,21 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import {
-  Button,
-  Card,
-  CodeField,
-  Icon,
-  Sheet,
-  Text,
-  TextField,
-  radii,
-  spacing,
-  useTheme,
-} from '@qc/ui';
+import { Button, CodeField, Icon, Sheet, Text, TextField, radii, spacing, useTheme } from '@qc/ui';
 import { issueMessageKey } from '@qc/contracts';
 import { errorMessageKey } from '../core/errors';
 import { useSignIn } from '../features/auth/useSignIn';
-import { useFollowActions, useMyFollows } from '../features/journey/hooks';
+import { useFollowActions } from '../features/journey/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuthStatus } from '../providers/hooks';
 
@@ -32,7 +21,12 @@ export interface JoinHalqaSheetProps {
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.md },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xxs },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xxs,
+  },
   badge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -75,8 +69,7 @@ export function JoinHalqaSheet({
   const theme = useTheme();
   const c = theme.colors;
   const status = useAuthStatus();
-  const { follow, setAlerts } = useFollowActions();
-  const follows = useMyFollows();
+  const { follow } = useFollowActions();
   const [completed, setCompleted] = useState(false);
   const [followingAction, setFollowingAction] = useState(false);
 

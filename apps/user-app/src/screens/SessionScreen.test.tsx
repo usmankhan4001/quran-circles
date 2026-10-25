@@ -2,18 +2,10 @@ import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS } from '../test/factories';
-import {
-  MATRIX,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, directionOf, expectGreenHeader, renderScreen, waitFor } from '../test/harness';
 import { SessionScreen } from './SessionScreen';
 
 const en = messages.en;
-const ur = messages.ur;
 
 describe('SessionScreen', () => {
   it('shows when, how long, where, the facilities and the dates coming up', async () => {
@@ -22,7 +14,9 @@ describe('SessionScreen', () => {
     expect(await view.findByTestId('facilities')).toBeTruthy();
     expect(view.getAllByText(s.title.en).length).toBeGreaterThan(0);
     expect(view.getAllByText(/^Every day at 9:00\s?pm$/i).length).toBeGreaterThan(0);
-    expect(view.getAllByText('0 minutes'.replace('0', String(s.durationMinutes))).length).toBeGreaterThan(0);
+    expect(
+      view.getAllByText('0 minutes'.replace('0', String(s.durationMinutes))).length,
+    ).toBeGreaterThan(0);
     const info = view.getByTestId('session-venue');
     expect(within(info).getByText(s.venue.name.en)).toBeTruthy();
     expect((await view.findAllByTestId(/^occurrence-/)).length).toBeGreaterThan(3);
