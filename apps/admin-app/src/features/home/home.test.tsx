@@ -140,6 +140,32 @@ describe('SessionScreen', () => {
     expect(nav.pushed.at(-1)).toMatch(/\/occurrence\/[^/]+$/);
   });
 
+  it('shows the first five dates, each with its portion state, and all of them on request', async () => {
+    renderScreen(<SessionScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} />, {
+      backend: createBackend({ me: meFor('city') }),
+    });
+    await settled('session-dates');
+    const rows = () => screen.getAllByTestId(/^occurrence-[0-9a-f-]+$/);
+    await waitFor(() => expect(rows()).toHaveLength(5));
+    for (const row of rows())
+      expect(row.textContent).toMatch(/Portion not set|Para|Surah|Juz|Ayah|Cancelled/i);
+    fireEvent.click(screen.getByTestId('session-all-dates'));
+    expect(rows().length).toBeGreaterThan(5);
+    expect(screen.queryByTestId('session-all-dates')).toBeNull();
+  });
+
+  it("puts today's date on the card and opens its attendance from Log attendance", async () => {
+    const { nav } = renderScreen(<SessionScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} />, {
+      backend: createBackend({ me: meFor('venue') }),
+    });
+    await settled('session-dates');
+    expect(await screen.findByTestId('session-focus-when')).toBeTruthy();
+    fireEvent.click(await screen.findByTestId('session-log-attendance'));
+    const todayRow = screen.getAllByTestId(/^occurrence-[0-9a-f-]+-today$/)[0]!;
+    const todayId = /^occurrence-(.+)-today$/.exec(todayRow.getAttribute('data-testid') ?? '')?.[1];
+    expect(nav.pushed.at(-1)).toBe(routes.attendance(ids.sessionDora, todayId!));
+  });
+
   it('tags the date that is today, so it stands out in the list', async () => {
     renderScreen(<SessionScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} />, {
       backend: createBackend({ me: meFor('city') }),

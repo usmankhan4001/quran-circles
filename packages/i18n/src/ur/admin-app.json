@@ -183,6 +183,8 @@
   "admin.home.changeTime": "وقت بدلیں",
   "admin.home.dates": "آنے والی تاریخیں",
   "admin.home.noDates": "کوئی آنے والی تاریخ نہیں۔",
+  "admin.home.allDates": "تمام {count} تاریخیں دکھائیں",
+  "admin.home.portionMissing": "حصہ ابھی مقرر نہیں",
   "admin.home.attendance": "حاضری",
   "admin.home.editOccurrence": "حصہ اور نوٹ",
   "admin.home.cancelled": "منسوخ",

@@ -46,6 +46,8 @@ Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committ
 
 ## Done
 
+- 2026-10-25 (owner request, "each session screen needs improvement"): **session screen reworked** (`features/home/SessionScreen.tsx`). The top card is now about the date that matters: a Today or Next session tag, the portion state ("Portion not set" or the portion), that date and time large, the weekly schedule and section under it, the "N coming" chip when the server gives a count, and Log attendance (today's or the next date) beside Registrants, as on the home card. The other actions stay as tiles. Coming dates are one compact list instead of a card per day: the first five with "Show all N dates", each row with its portion state, Today or Cancelled, the headcount and the Attendance and Portion and notes shortcuts. Two new keys (`admin.home.allDates`, `admin.home.portionMissing`), English and Urdu (Urdu drafts under the file's review marker). Two new tests in `home.test.tsx`; `@qc/admin-app` 889 tests pass, typecheck and lint clean.
+
 WP6 Wave 2 items. Expo SDK 58 + expo-router app in `apps/admin-app`, provable on the web target. Decision record: `docs/engineering/decisions/0010-admin-app-stack.md`.
 
 - Sign-in: phone code (WhatsApp channel) as a coordinator; a person with no staff role sees a "not invited" page and nothing is called. Tokens in the keychain on phones, session storage on the web; one refresh on `token_expired`, sign-out when it fails.

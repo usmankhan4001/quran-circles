@@ -182,6 +182,8 @@
   "admin.home.changeTime": "Change the time",
   "admin.home.dates": "Coming dates",
   "admin.home.noDates": "No dates coming up.",
+  "admin.home.allDates": "Show all {count} dates",
+  "admin.home.portionMissing": "Portion not set",
   "admin.home.attendance": "Attendance",
   "admin.home.editOccurrence": "Portion and notes",
   "admin.home.cancelled": "Cancelled",
