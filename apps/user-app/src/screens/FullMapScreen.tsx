@@ -105,6 +105,7 @@ export function FullMapScreen({ venueId }: { venueId?: string }) {
         accessibilityLabel={t('map.full.label')}
         unavailableLabel={t('nearby.map.unavailable')}
         height={height}
+        controlsInset={top + 116}
       />
       <View style={[styles.top, { top }]}>
         <IconButton
