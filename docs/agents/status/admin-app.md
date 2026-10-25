@@ -175,3 +175,10 @@ From the WP11 end-to-end run of the admin app's web export against the real API 
 ## No seat counts (2026-10-25)
 
 Owner decision: no seat booking; joining a session is a pledge (`docs/product/decisions.md`, Registration). The admin app no longer shows seats anywhere: the seat meter and "x of y seats taken" are gone from the session screen and the Today list cards, the next-session card keeps "coming" but drops the seat-limit line, and attendance drops the "Hall capacity" row and its meter. The registrants filter for people the server put in line now reads "Not confirmed yet". Unused keys removed (`admin.home.seats`, `admin.home.capacity`, `admin.home.noLimit`, `admin.attendance.hallCapacity`, `admin.attendance.noLimit`, `admin.circleEditor.capacity.*`), English and Urdu together. Tests: `home.test.tsx` (no seat text even for a session with an old limit), `RegistrantsScreen.test.tsx`.
+
+## Session screens improved (2026-10-25)
+
+- The main action on a card (Log attendance) is green like every other main action (`PillButton` tone `charcoal` now draws the green accent; the name stays so call sites do not change).
+- Session page: the Registrants button is green; a cancelled session shows a Cancelled tag; the date that is today carries a Today tag in the list of dates (`occurrence-<id>-today`).
+- Today's next-session card no longer repeats the word Registrants (the row shows only when the server gives a count); quick-action tiles let their second line wrap to two lines instead of cutting it off ("Sun 25 Oct · 8:30…").
+- Test: `home.test.tsx` (the Today tag). Checked in the running web app at 390 px in English and Urdu and at the largest Urdu text size.

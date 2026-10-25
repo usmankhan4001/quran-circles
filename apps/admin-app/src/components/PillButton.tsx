@@ -16,7 +16,7 @@ export interface PillButtonProps {
   onPress: () => void;
   icon?: IconName;
   iconWeight?: IconWeight;
-  /** `charcoal` main action, `outline` white with a hairline, `tint` emerald tint (WhatsApp). */
+  /** `charcoal` (now the green main action; the name stays so call sites do not change), `outline` white with a hairline, `tint` emerald tint (WhatsApp). */
   tone?: 'charcoal' | 'outline' | 'tint';
   /** The name for a screen reader when the label alone is not enough ("Call Sample Guest"). */
   accessibilityLabel?: string;
@@ -39,7 +39,12 @@ export function PillButton({
 }: PillButtonProps) {
   const { colors, mode } = useTheme();
   const look = {
-    charcoal: { bg: colors.cta, pressed: colors.ctaPressed, border: colors.cta, fg: 'textOnCta' },
+    charcoal: {
+      bg: colors.accent,
+      pressed: colors.accentPressed,
+      border: colors.accent,
+      fg: 'textOnAccent',
+    },
     outline: {
       bg: colors.surface,
       pressed: colors.surfaceMuted,

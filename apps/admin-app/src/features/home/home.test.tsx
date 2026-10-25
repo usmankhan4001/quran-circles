@@ -140,6 +140,16 @@ describe('SessionScreen', () => {
     expect(nav.pushed.at(-1)).toMatch(/\/occurrence\/[^/]+$/);
   });
 
+  it('tags the date that is today, so it stands out in the list', async () => {
+    renderScreen(<SessionScreen sessionId={ids.sessionDora} now={FIXTURE_NOW} />, {
+      backend: createBackend({ me: meFor('city') }),
+    });
+    await settled('session-dates');
+    const tags = await screen.findAllByTestId(/^occurrence-[0-9a-f-]+-today$/);
+    expect(tags).toHaveLength(1);
+    expect(tags[0]!.textContent).toBe('Today');
+  });
+
   it('shows no seat count, even for a session with an old seat limit', async () => {
     renderScreen(<SessionScreen sessionId={ids.sessionWomen} now={FIXTURE_NOW} />, {
       backend: createBackend({ me: meFor('city') }),

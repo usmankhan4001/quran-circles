@@ -399,6 +399,7 @@ function RegistrationBody({ session, occurrenceId }: { session: Session; occurre
       ) : null}
 
       <Button
+        variant="emerald"
         label={t('registration.pledge')}
         size="large"
         fullWidth
@@ -462,6 +463,7 @@ function Confirmation({ registration, session }: { registration: Registration; s
       {!waitlisted ? <ReminderToggle sessionId={session.id} registration={registration} /> : null}
       <View style={styles.actions}>
         <Button
+          variant="emerald"
           label={t('registration.success.journey')}
           size="large"
           fullWidth

@@ -50,23 +50,16 @@ const styles = StyleSheet.create({
   },
   when: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   timingCard: { gap: spacing.xs },
-  timingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  timingRow: { flexDirection: 'row', alignItems: 'center' },
   liveDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     marginEnd: spacing.xs,
   },
-  timingLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   subSchedule: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.xs,
     paddingTop: spacing.xs,
@@ -123,7 +116,7 @@ const styles = StyleSheet.create({
 
 /** Who the session is for and when, in a glass pill and a line over the picture (D17). */
 function SessionOverline({ session }: { session: Session }) {
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const c = useTheme().colors;
   const dot = (
     <Text variant="caption" color="textOnHero" strong decorative>
@@ -143,17 +136,6 @@ function SessionOverline({ session }: { session: Session }) {
         {dot}
         <Text variant="caption" color="textOnHero" strong>
           {t(`programs.${session.program}`)}
-        </Text>
-      </View>
-      <View style={styles.when}>
-        <Text variant="caption" color="textOnHero">
-          {describeSchedule(session, t, locale)}
-        </Text>
-        <Text variant="caption" color="textOnHero" decorative>
-          ·
-        </Text>
-        <Text variant="caption" color="textOnHero">
-          {t('session.duration', { count: session.durationMinutes })}
         </Text>
       </View>
     </View>
@@ -256,7 +238,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
             <View style={styles.footerSecondary}>
               <Button
                 variant="outline"
-                label={t('venue.directions')}
+                label={t('journey.directions')}
                 icon="route"
                 size="large"
                 fullWidth
@@ -287,19 +269,17 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 <Card padding="md">
                   <View style={styles.timingCard}>
                     <View style={styles.timingRow}>
-                      <View style={styles.timingLeft}>
-                        <View style={[styles.liveDot, { backgroundColor: c.success }]} />
-                        <Text variant="title3" strong>
-                          {describeOccurrence(s.nextOccurrence, s.timezone, locale)}
-                        </Text>
-                      </View>
-                      <Tag kind="ok" label={describeSchedule(s, t, locale)} />
+                      <View style={[styles.liveDot, { backgroundColor: c.success }]} aria-hidden />
+                      <Text variant="title3" strong style={styles.grow}>
+                        {describeOccurrence(s.nextOccurrence, s.timezone, locale)}
+                      </Text>
                     </View>
                     <View style={[styles.subSchedule, { borderTopColor: c.hairline }]}>
                       <Icon name="clock" size={14} color={c.textSecondary} />
                       <Text variant="caption" color="textSecondary">
                         {t('session.duration', { count: s.durationMinutes })}
                       </Text>
+                      <Tag kind="ok" label={describeSchedule(s, t, locale)} />
                     </View>
                   </View>
                 </Card>
@@ -323,53 +303,38 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                   {...(circle?.teacherName
                     ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
                     : { subtitle: t('session.host.inPerson') })}
-                  trailing={
-                    onlineUrl ? (
-                      <Pressable
-                        role="link"
-                        onPress={() => void openUrl(onlineUrl)}
-                        hitSlop={spacing.sm}
-                        style={styles.online}
-                        testID="session-online"
-                      >
-                        <Text variant="caption" color="textAccent" strong>
-                          {t('session.online')}
-                        </Text>
-                        <Icon name="arrow-forward" size={14} color={c.textAccent} />
-                      </Pressable>
-                    ) : (
-                      // No online link for this circle: drawn, but nothing to open (owner, 25 Oct 2026).
-                      <ComingSoon role="link" label={t('session.online')} testID="session-online">
-                        <View style={styles.online}>
-                          <Text variant="caption" color="textSecondary" strong>
-                            {t('session.online')}
-                          </Text>
-                          <Icon name="arrow-forward" size={14} color={c.textSecondary} />
-                        </View>
-                      </ComingSoon>
-                    )
-                  }
                   testID="session-circle"
                 />
+                <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                {onlineUrl ? (
+                  <Pressable
+                    role="link"
+                    aria-label={t('session.online')}
+                    onPress={() => void openUrl(onlineUrl)}
+                    style={styles.infoRow}
+                    testID="session-online"
+                  >
+                    <IconTile icon="video-camera" />
+                    <Text variant="label" color="textAccent" strong style={styles.grow}>
+                      {t('session.online')}
+                    </Text>
+                    <Icon name="arrow-forward" size={16} color={c.textAccent} />
+                  </Pressable>
+                ) : (
+                  // No online link for this circle: drawn, but nothing to open (owner, 25 Oct 2026).
+                  <ComingSoon role="link" label={t('session.online')} testID="session-online">
+                    <View style={styles.infoRow}>
+                      <IconTile icon="video-camera" />
+                      <Text variant="label" color="textSecondary" style={styles.grow}>
+                        {t('session.online')}
+                      </Text>
+                    </View>
+                  </ComingSoon>
+                )}
               </Card>
 
-              {/* WhatsApp Notification Promise */}
-              <View
-                style={[
-                  styles.alertCard,
-                  { backgroundColor: c.successSubtle, borderColor: c.border },
-                ]}
-              >
-                <Icon name="bell" size={20} color={c.success} />
-                <View style={styles.grow}>
-                  <Text variant="caption" strong>
-                    {t('session.reminders.title')}
-                  </Text>
-                  <Text variant="caption" color="textSecondary">
-                    {t('session.reminders.body')}
-                  </Text>
-                </View>
-              </View>
+              {/* What the person has done, and what happens next (joined), or what joining brings. */}
+              <ReminderPromise joined={joinedTo(s, mine.data)} />
 
               {/* Upcoming Portions & Schedule */}
               <View style={styles.block}>
@@ -438,6 +403,35 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
   );
 }
 
+const joinedTo = (session: Session, mine: readonly Registration[] | undefined) =>
+  registerState(session, mine).kind === 'registered';
+
+/**
+ * Under the timing card: before joining, what joining brings; after joining, that the person is
+ * joining and that the reminders are on. A labelled state, not colour alone (check icon, words).
+ */
+function ReminderPromise({ joined }: { joined: boolean }) {
+  const { t } = useI18n();
+  const c = useTheme().colors;
+  return (
+    <View
+      role="status"
+      testID={joined ? 'session-joined' : 'session-reminders'}
+      style={[styles.alertCard, { backgroundColor: c.successSubtle, borderColor: c.border }]}
+    >
+      <Icon name={joined ? 'check-circle' : 'bell'} size={24} color={c.success} />
+      <View style={styles.grow}>
+        <Text variant="label" color="textOnSuccessSubtle">
+          {joined ? t('registration.success.title') : t('session.reminders.title')}
+        </Text>
+        <Text variant="caption" color="textSecondary">
+          {joined ? t('registration.success.body') : t('session.reminders.body')}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /**
  * The main button. Seats are not booked: a person says they will join (a registration), and from
  * then on they get the confirmation, a reminder before each session, and word of any change or
@@ -487,6 +481,7 @@ function JoinButton({
     case 'open':
       return (
         <Button
+          variant="emerald"
           label={t('session.join')}
           icon="calendar-check"
           size="large"
@@ -498,7 +493,7 @@ function JoinButton({
     case 'notNeeded':
       return (
         <Button
-          variant={following ? 'secondary' : 'primary'}
+          variant={following ? 'secondary' : 'emerald'}
           label={following ? t('venue.following') : t('venue.follow')}
           icon={following ? 'check' : 'bell'}
           size="large"

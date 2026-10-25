@@ -115,39 +115,41 @@ export function NextSessionCard({ session: s, now }: NextSessionCardProps) {
           ) : null}
         </Pressable>
 
-        {/* Always drawn, as in the artboard; a value the server does not give is left out. */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: spacing.sm,
-            paddingVertical: spacing.sm,
-            paddingHorizontal: spacing.md,
-            borderRadius: radii.md,
-            borderWidth: 1,
-            borderColor: colors.hairline,
-            backgroundColor: colors.surfaceMuted,
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-            <Icon name="users-three" weight="duotone" size={15} color={colors.textAccent} />
-            {coming !== null ? (
-              <Text
-                testID="today-next-coming"
-                variant="caption"
-                color="textAccent"
-                strong
-                lang="en"
-              >
-                {n(coming)}
+        {/* Only when the server gives a count: without one, the Registrants button says it. */}
+        {coming !== null ? (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+              paddingVertical: spacing.sm,
+              paddingHorizontal: spacing.md,
+              borderRadius: radii.md,
+              borderWidth: 1,
+              borderColor: colors.hairline,
+              backgroundColor: colors.surfaceMuted,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+              <Icon name="users-three" weight="duotone" size={15} color={colors.textAccent} />
+              {coming !== null ? (
+                <Text
+                  testID="today-next-coming"
+                  variant="caption"
+                  color="textAccent"
+                  strong
+                  lang="en"
+                >
+                  {n(coming)}
+                </Text>
+              ) : null}
+              <Text variant="caption" color="textAccent" strong>
+                {coming !== null ? t('admin.home.coming') : t('admin.home.registrants')}
               </Text>
-            ) : null}
-            <Text variant="caption" color="textAccent" strong>
-              {coming !== null ? t('admin.home.coming') : t('admin.home.registrants')}
-            </Text>
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {(can.markAttendance && next) || can.seeRegistrants ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>

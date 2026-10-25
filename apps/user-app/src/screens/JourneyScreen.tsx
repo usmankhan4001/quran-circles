@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Icon,
+  Tag,
   Text,
   formatNumber,
   minTouchTarget,
@@ -51,6 +52,7 @@ const styles = StyleSheet.create({
     minHeight: minTouchTarget,
   },
   grow: { flex: 1 },
+  statusRow: { flexDirection: 'row', paddingTop: spacing.xs },
 });
 
 export function JourneyScreen() {
@@ -107,6 +109,7 @@ function PassCard({
     ? describeOccurrence(s.nextOccurrence, s.timezone, locale)
     : describeSchedule(s, t, locale);
   const waitlisted = registration.status === 'waitlisted';
+  const cancelled = s.status === 'cancelled';
   return (
     <Card padding="lg">
       <View style={styles.pass}>
@@ -132,14 +135,19 @@ function PassCard({
               {' · '}
               {when}
             </Text>
-            <Text
-              variant="caption"
-              color={waitlisted ? 'textWarning' : 'textSuccess'}
-              strong
-              testID={`registration-status-${registration.id}`}
-            >
-              {waitlisted ? t('journey.status.waitlisted') : t('journey.status.confirmed')}
-            </Text>
+            <View style={styles.statusRow}>
+              <Tag
+                kind={cancelled ? 'alert' : waitlisted ? 'gilt' : 'ok'}
+                label={
+                  cancelled
+                    ? t('journey.status.cancelled')
+                    : waitlisted
+                      ? t('journey.status.waitlisted')
+                      : t('journey.status.confirmed')
+                }
+                testID={`registration-status-${registration.id}`}
+              />
+            </View>
           </Pressable>
         </View>
 
@@ -147,7 +155,7 @@ function PassCard({
           {t(`sections.${registration.section}`)}
         </Text>
 
-        {!waitlisted ? (
+        {!waitlisted && !cancelled ? (
           <ReminderToggle sessionId={registration.sessionId} registration={registration} />
         ) : null}
 

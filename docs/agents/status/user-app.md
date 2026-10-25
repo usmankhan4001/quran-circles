@@ -333,3 +333,14 @@ Open, for the orchestrator:
 
 - `packages/contracts/src/messages.ts` `waitlist_promoted` body still starts "A seat opened up". It mirrors the approved WhatsApp template `qc_waitlist_promoted`, so it changes only with a new template approval. It fires only for a session left with an old seat limit.
 - The kit's `SeatMeter` and its `ui.seats*` strings are now used by no app (ui lane to keep or retire). The design showcase artboards still draw seat passes and seat meters.
+
+## Session screens improved (2026-10-25)
+
+Direction: improve what exists, keep today's layouts (look-and-feel board, "Quran Circles look and feel"). Checked in the running web app at 390 px in English and Urdu, and at the largest text size in Urdu.
+
+- Session page: Join is the green action (`variant="emerald"`), Directions is short ("Directions", `journey.directions`) so it no longer wraps to two lines. The hero shows who the session is for only; the schedule and length are in the timing card right under it (they were said twice). The timing card puts the date on its own line with the length and schedule tag below, so nothing clips at the largest Urdu size. "Join online" is its own row instead of squeezing into the host row. Once joined, the card under the venue says "You are joining this circle" with a check and what happens next (`registration.success.*`); before that it says what joining brings.
+- Join form and confirmation: the submit and "See it in My Journey" buttons are green.
+- My Journey: each registration shows its status as a tag with words (Joining, Waiting for confirmation, Cancelled), and a cancelled session gets no reminder switch.
+- Tests: `SessionScreen.test.tsx` (before and after joining), `JourneyScreen.test.tsx` (status tag).
+
+Open: "Host not listed yet" and "Join online" still read "Coming soon" (owner's earlier choice). The sample sessions all share one clip-art photo; the look-and-feel board proposes a calm pattern instead (not built here).

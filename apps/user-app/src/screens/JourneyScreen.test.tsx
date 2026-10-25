@@ -84,6 +84,10 @@ describe('JourneyScreen', () => {
     expect(view.getByTestId(`registration-status-${WAIT_ID}`).textContent).toBe(
       en['journey.status.waitlisted'],
     );
+    // The status is a labelled tag with words, never colour alone.
+    expect(view.getByTestId(`registration-status-${REG_ID}`).textContent).toBe(
+      en['journey.status.confirmed'],
+    );
     // No seat pass: no waiting-list number, QR tile or pass reference.
     expect(view.queryByText(/#/)).toBeNull();
     // A waitlisted place gets no reminder switch: nothing is promised yet.

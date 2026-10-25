@@ -71,6 +71,29 @@ describe('SessionScreen', () => {
     expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
   });
 
+  it('says what joining brings before the person has joined', async () => {
+    const s = SESSIONS.taraweeh;
+    const before = await renderScreen(<SessionScreen sessionId={s.id} />, { signedIn: true });
+    const promise = await before.findByTestId('session-reminders');
+    expect(promise.textContent).toContain(en['session.reminders.title']);
+    expect(before.queryByTestId('session-joined')).toBeNull();
+  });
+
+  it('says what happens next once the person has joined', async () => {
+    const s = SESSIONS.taraweeh;
+    const after = await renderScreen(<SessionScreen sessionId={s.id} />, {
+      signedIn: true,
+      mock: {
+        handlers: {
+          'registrations.listMine': () => ({ items: [registrationFor(s)], nextCursor: null }),
+        },
+      },
+    });
+    const joined = await after.findByTestId('session-joined');
+    expect(joined.textContent).toContain(en['registration.success.title']);
+    expect(after.queryByTestId('session-reminders')).toBeNull();
+  });
+
   it('offers Follow instead when the session takes no registrations', async () => {
     const s = SESSIONS.taraweeh;
     const walkIn = { ...s, registration: { ...s.registration, enabled: false } };

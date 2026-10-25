@@ -60,6 +60,15 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                     {t(`admin.home.section.${s.section}`)} ·{' '}
                     {s.language === 'ur' ? 'اردو' : 'English'}
                   </Text>
+                  {s.status === 'cancelled' ? (
+                    <View style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }}>
+                      <Tag
+                        label={t('admin.home.cancelled')}
+                        kind="alert"
+                        testID="session-cancelled"
+                      />
+                    </View>
+                  ) : null}
                   {s.status === 'draft' ? (
                     <View style={{ alignSelf: 'flex-start', marginTop: spacing.xxs }}>
                       <Tag label={t('admin.home.draft')} kind="gilt" />
@@ -74,6 +83,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                   label={
                     todayOccurrence ? t('admin.home.registrantsToday') : t('admin.home.registrants')
                   }
+                  variant="emerald"
                   size="large"
                   fullWidth
                   onPress={() => nav.push(routes.registrants(s.id, todayOccurrence?.id))}
@@ -122,6 +132,7 @@ export function SessionScreen({ sessionId, now = new Date(), reloadKey = 0 }: Se
                           sessionId={s.id}
                           canMark={can.markAttendance}
                           canEdit={can.editOccurrence}
+                          now={now}
                         />
                       ))}
                     </View>
@@ -141,11 +152,13 @@ function OccurrenceCard({
   sessionId,
   canMark,
   canEdit,
+  now,
 }: {
   occurrence: AdminOccurrence;
   sessionId: string;
   canMark: boolean;
   canEdit: boolean;
+  now: Date;
 }) {
   const { t, locale, n } = useT();
   const nav = useNavigation();
@@ -167,7 +180,15 @@ function OccurrenceCard({
           <Text variant="label">
             {formatInstantDate(o.startsAt, locale)} · {formatInstantTime(o.startsAt, locale)}
           </Text>
-          {o.status === 'cancelled' ? <Tag label={t('admin.home.cancelled')} kind="alert" /> : null}
+          {o.status === 'cancelled' ? (
+            <Tag label={t('admin.home.cancelled')} kind="alert" />
+          ) : isToday(o.startsAt, now) ? (
+            <Tag
+              label={t('admin.home.todaySection')}
+              kind="ok"
+              testID={`occurrence-${o.id}-today`}
+            />
+          ) : null}
         </View>
         {notes.length > 0 ? (
           <Text variant="caption" color={o.status === 'cancelled' ? 'textDanger' : 'textSecondary'}>

@@ -59,7 +59,7 @@ export function ActionTile({ icon, label, sub, onPress, wide, testID }: ActionTi
           {label}
         </Text>
         {sub ? (
-          <Text variant="caption" color="textSecondary" numberOfLines={1} decorative>
+          <Text variant="caption" color="textSecondary" numberOfLines={2} decorative>
             {sub}
           </Text>
         ) : null}
