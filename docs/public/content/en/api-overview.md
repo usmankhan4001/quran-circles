@@ -74,4 +74,4 @@ Add `cityId` (from `GET /v1/places/cities`), `dayOfWeek`, `timeFrom`, `timeTo`, 
 
 - **Seats.** Joining a session is a pledge to attend. The API does not reserve seats or show seat counts. A session can carry an optional limit that is off by default; when it is on, extra people are told they are waiting for confirmation.
 - **Quran text.** The API returns surah and ayah numbers only. The reader fetches and caches the text from its own source.
-- **Partner keys and outbound webhooks.** There is no API key for a partner system and the API does not call other systems when something changes. [The ERPNext guide](erpnext.md) explains the gap and the proposed fix.
+- **Partner keys and outbound webhooks.** There is no API key for a partner system and the API does not call other systems when something changes. [The ERPNext guide](erpnext.md) describes the gap and some possible approaches; none is decided.

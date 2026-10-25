@@ -7,9 +7,11 @@ order: 10
 
 # ERPNext integration guide
 
-This guide is for Muhammad's ERPNext (Frappe) instance. It covers how the two systems can talk, which parts work **today**, which parts need new work in Quran Circles first, and the exact questions that have to be answered before building.
+This guide is general. It describes how Quran Circles and an ERPNext (Frappe) site could exchange data, which parts work **today**, and which would need new work in Quran Circles first.
 
-> **Warning.** Quran Circles has **no partner API key and no outbound webhooks today**. Nothing below that says "proposed" exists in the product. No ERPNext address, DocType or field name has been supplied yet, so none is assumed here; everything specific to the ERPNext site is a question in [the list further down](#questions-for-muhammad).
+> **Note.** **Nothing about the integration has been decided.** The direction of data, which records are shared, which fields, and whether any personal data is shared are all **to be decided**. No ERPNext address, DocType or field name is assumed anywhere on this page. The options below are possibilities, not a plan, and the open questions are collected [at the end](#open-questions).
+
+> **Warning.** Quran Circles has **no partner API key and no outbound webhooks today**. Anything marked "possible" or "proposed" does not exist in the product.
 
 ## What exists today
 
@@ -32,7 +34,7 @@ A system cannot receive a WhatsApp code, a login shared by several people breaks
 
 ## Frappe and ERPNext in brief
 
-What the ERPNext side offers (these are standard Frappe features; confirm the version in the questions below):
+What the ERPNext side offers (these are standard Frappe features; the version of the ERPNext site is not known yet):
 
 | Capability            | How                                                                                                                                                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,9 +54,11 @@ curl -s "https://<erp-host>/api/resource/<DocType>?fields=%5B%22name%22%5D&limit
 
 Never paste a real key or secret into a chat, a ticket or a repository. The owner sets them directly in the deployment tool's environment settings.
 
-## Three ways to connect, in order of effort
+## Three possible approaches
 
-### Option 1: pull the public catalogue into ERPNext (works today)
+These are listed from least to most new work. None is chosen.
+
+### Option 1: pull the public catalogue into ERPNext (possible today)
 
 A scheduled job on the ERPNext side calls the public API and writes venues and sessions into DocTypes. No change to Quran Circles.
 
@@ -62,7 +66,7 @@ A scheduled job on the ERPNext side calls the public API and writes venues and s
 - **Limits:** read-only; no people; whole-list reads; the data is public anyway.
 - **Effort:** a small custom Frappe app, a few hundred lines.
 
-A starting point for the Frappe side (one scheduled function; adapt the DocType and fields after the questions are answered):
+A starting point for the Frappe side (one scheduled function; the DocType and fields are placeholders, to be decided):
 
 ```python
 import requests, frappe
@@ -122,13 +126,16 @@ def qc_webhook():
     # parse, de-duplicate on the delivery id, save, then return
 ```
 
-### Recommended order
+### How the options relate
 
-1. Answer the questions below.
-2. Build Option 1 if venue and session master data is all that is needed. It can ship without touching Quran Circles.
-3. If people or attendance are needed, approve the partner key (Option 2). Start with **read-only** and one city.
-4. Add outbound webhooks (Option 3) only if polling the feed is too slow for the use.
-5. Writes from ERPNext into Quran Circles (for example creating sessions) come last, if at all, and need their own review.
+They build on each other, so a choice now does not rule out a later one.
+
+- Option 1 needs no change to Quran Circles.
+- Option 2 only matters if people or attendance data is wanted, and would start read-only.
+- Option 3 only matters if polling is too slow for the use.
+- Writes from ERPNext into Quran Circles are not covered here and would need their own review.
+
+Which of these, if any, to use is **to be decided**.
 
 ## Push, pull and webhooks compared
 
@@ -140,11 +147,11 @@ def qc_webhook():
 | Load                      | Predictable, wasteful if nothing changed | Proportional to activity             | Both                          |
 | Available                 | Option 1 now; Option 2 for people        | After Option 3                       | Not planned                   |
 
-A hybrid is usual: webhooks for speed and a nightly pull to reconcile anything missed.
+A hybrid is common: webhooks for speed and a scheduled pull to reconcile anything missed. Whether to use any of these is to be decided.
 
-## Questions for Muhammad
+## Open questions
 
-Answer these and the design can be finished. Please answer in the thread or in a document; send **no** keys, secrets or personal data.
+Every item below is **to be decided**. The owner has said that the direction of data and the records and fields involved are not defined yet, and this guide does not guess them. When a decision is made, this page is updated. Answers should never include keys, secrets or personal data.
 
 ### The ERPNext site
 
@@ -163,7 +170,7 @@ Answer these and the design can be finished. Please answer in the thread or in a
 
    The quickest answer is the JSON from `GET /api/resource/DocType/<name>` or an exported fixture, with no data in it.
 
-7. **Personal data.** Which person fields may leave Quran Circles (name, phone number, area, section, consent)? Members agreed to messages from Quran Circles, not necessarily to be stored in another system. The privacy page must say so and consent may need to cover it. The default proposal is **no personal data at all** in the first release (venues, sessions and counts only).
+7. **Personal data.** Which person fields may leave Quran Circles (name, phone number, area, section, consent)? Members agreed to messages from Quran Circles, not necessarily to be stored in another system. The privacy page would have to say so, and consent may need to cover it. Sharing no personal data (venues, sessions and counts only) is the simplest case; whether to go further is to be decided.
 8. **Identity.** How does ERPNext identify a person (mobile number, email, an existing Customer or Contact)? How are duplicates handled, and what about numbers that change?
 
 ### Direction and timing
@@ -175,12 +182,12 @@ Answer these and the design can be finished. Please answer in the thread or in a
 
 ### Delivery
 
-13. **Who builds the Frappe side?** The Quran Circles team (we need a test site and developer access) or Muhammad's team (we supply the contract and examples)?
+13. **Who builds the Frappe side?** The Quran Circles team (this would need a test site and developer access) or the ERPNext side (Quran Circles would supply the contract and examples)?
 14. **A test site** with synthetic data, and a target date to go live.
 15. **Money.** Quran Circles has no fees or billing in this release. Does the integration involve donations, invoices or payments? If so, that is a separate product decision.
 
-## What happens next
+## Status
 
-- The change request for the partner key and webhooks is written and waits for the owner's decision and a security review.
-- Option 1 needs only questions 1, 2, 4 and 6 and can start as soon as they are answered.
-- This page will be updated with the answers, with the real DocType names and with the exact endpoints once Option 2 is approved.
+- No decision has been made on direction, records, fields or personal data.
+- A change request describing a possible partner key and webhooks exists as a proposal only. It waits for a decision and a security review.
+- This page will be updated when decisions are made.

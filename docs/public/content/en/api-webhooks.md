@@ -48,4 +48,4 @@ Only the operator who owns the WhatsApp Business account. An integration partner
 
 ## Outbound webhooks (Quran Circles to a partner)
 
-**Not available.** The API does not call other systems when a session changes or someone joins. Anything that needs this today has to poll, and the public API has no "changed since" filter. The ERPNext guide proposes a signed outbound webhook and a pull endpoint, with the open questions: see [ERPNext integration](erpnext.md).
+**Not available.** The API does not call other systems when a session changes or someone joins. Anything that needs this today has to poll, and the public API has no "changed since" filter. The ERPNext guide describes a signed outbound webhook and a pull endpoint as possibilities, with the open questions; nothing is decided: see [ERPNext integration](erpnext.md).

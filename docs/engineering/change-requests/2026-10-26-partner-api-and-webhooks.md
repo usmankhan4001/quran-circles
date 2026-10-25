@@ -20,7 +20,7 @@ Checked against `packages/contracts` (version 1.0.0-rc.5), `apps/api`, `apps/wor
 
 ## Proposed change
 
-All of it is open to change after the questions in the ERPNext guide are answered. Build in this order, each step reviewable on its own.
+All of it is open to change. The owner has said the direction, records and fields for ERPNext are not defined yet, so this is a possible shape, not a decision. Build in this order, each step reviewable on its own.
 
 ### 1. Partner keys (scopes, schema)
 

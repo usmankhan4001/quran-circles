@@ -35,7 +35,7 @@ Owns: `docs/public/` (source and generator), this status file. A change request 
 ## Blocked or open
 
 - **Screenshots.** The only captures in the repository are four test captures in `docs/quality/screens/` from the current build (some at the largest Urdu size), which are used and labelled as such. The redesigned apps have no captures yet, and the store-asset images from the shared folder are not in the repository. After the redesign lands: capture Home, Nearby, Session, Join, My Journey, the coordinator Today, Attendance and Post update screens, and the console Sessions, Exports and Import pages, put them in `docs/public/assets/screens/` and replace the four.
-- **ERPNext facts.** Nothing about Muhammad's instance (URL, version, DocTypes, fields, direction) is known; there were no ERPNext notes or code in the repository. The guide lists the questions; the Frappe snippets are examples, not tested against a real site.
+- **ERPNext facts.** Nothing about the instance (URL, version, DocTypes, fields, direction) is defined; the owner said on 2026-10-25 that all of it is still to be decided. The guide is now general: three options presented neutrally, every open question marked "to be decided", no decision implied. The Frappe snippets are examples, not tested against a real site.
 - The reference rebuilds from the contract, but the hand-written pages quote some values (token lifetimes, default limits). They should be re-read whenever those change.
 - The member guide says the Android app is on an internal test track (per `docs/release/go-live.md`); update when it reaches production.
 
