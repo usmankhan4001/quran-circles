@@ -63,7 +63,7 @@
   "prayer.noCity.title": "اپنا شہر منتخب کریں",
   "prayer.noCity.body": "نماز کے اوقات دکھانے کے لیے ہمیں آپ کا شہر چاہیے۔",
   "prayer.noCity.action": "شہر منتخب کریں",
-  "nearby.title": "قریبی حلقے",
+  "nearby.title": "آپ کے قریب حلقے",
   "nearby.search.label": "تلاش",
   "nearby.search.placeholder": "علاقے یا مقام کے نام سے تلاش کریں",
   "nearby.view.label": "دکھانے کا انداز",
@@ -764,5 +764,12 @@
   "join.done.body": "ہم ہر نشست سے پہلے آپ کو یاد دلائیں گے، اور وقت بدلنے یا نشست منسوخ ہونے پر بتائیں گے۔",
   "join.done.status": "شامل · {section}",
   "join.done.journey": "اسے میرے سفر میں دیکھیں",
-  "join.done.done": "مکمل"
+  "join.done.done": "مکمل",
+  "nearby.tonight": "آج رات",
+  "nearby.location.offTitle": "لوکیشن بند ہے",
+  "nearby.location.offBody": "اپنا علاقہ چنیں، ہم اس کے سب سے قریب حلقے دکھائیں گے۔",
+  "nearby.location.chooseArea": "علاقہ چنیں",
+  "nearby.map.offlineTitle": "نقشہ دستیاب نہیں",
+  "nearby.map.selectedJoin": "شامل ہوں",
+  "nearby.map.details": "تفصیل"
 }

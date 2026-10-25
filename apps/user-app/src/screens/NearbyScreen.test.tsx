@@ -25,15 +25,16 @@ describe('NearbyScreen', () => {
   it('lists the sessions the server returns, with where and when', async () => {
     const view = await renderScreen(<NearbyScreen />);
     const list = await view.findByTestId('nearby-list');
-    expect(within(list).getByText(SESSIONS.taraweeh.title.en)).toBeTruthy();
-    expect(within(list).getByText(SESSIONS.circle.title.en)).toBeTruthy();
     expect(within(list).getAllByText(SESSIONS.taraweeh.venue.name.en).length).toBeGreaterThan(0);
+    expect(within(list).getAllByText(SESSIONS.circle.venue.name.en).length).toBeGreaterThan(0);
+    // Each row carries the start time as its biggest figure.
+    expect(within(list).getAllByRole('button').length).toBeGreaterThan(1);
     expect(view.world.http.callsTo('GET /v1/sessions')[0]!.search).toContain('limit=20');
   });
 
   it('opens a session when its card is pressed', async () => {
     const view = await renderScreen(<NearbyScreen />);
-    fireEvent.click(await view.findByTestId(`session-card-${SESSIONS.circle.id}`));
+    fireEvent.click(await view.findByTestId(`nearby-row-${SESSIONS.circle.id}`));
     expect(view.world.nav.last()).toEqual({
       type: 'go',
       route: { name: 'session', sessionId: SESSIONS.circle.id },
@@ -59,7 +60,6 @@ describe('NearbyScreen', () => {
       expect(params.get('language')).toBe('ur');
     });
     expect(view.getByTestId('nearby-filters-button').textContent).toContain('(4)');
-    expect(view.getByTestId('active-filters')).toBeTruthy();
   });
 
   it('filters by the city chosen', async () => {
@@ -92,7 +92,9 @@ describe('NearbyScreen', () => {
     expect(within(map).getAllByText(SESSIONS.taraweeh.venue.name.en).length).toBeGreaterThan(0);
     fireEvent.click(view.getByTestId(`map-marker-${SESSIONS.taraweeh.venueId}`));
     const selection = await view.findByTestId('map-selection');
-    expect(within(selection).getByText(SESSIONS.taraweeh.title.en)).toBeTruthy();
+    expect(within(selection).getAllByText(SESSIONS.taraweeh.venue.name.en).length).toBeGreaterThan(
+      0,
+    );
     fireEvent.click(within(selection).getByText(en['nearby.map.viewVenue']));
     expect(view.world.nav.last()).toEqual({
       type: 'go',
@@ -256,7 +258,7 @@ describe('NearbyScreen', () => {
     world.http.setOffline(true);
     const second = await renderScreen(<NearbyScreen />, { world });
     const list = await second.findByTestId('nearby-list');
-    expect(within(list).getByText(SESSIONS.taraweeh.title.en)).toBeTruthy();
+    expect(within(list).getAllByText(SESSIONS.taraweeh.venue.name.en).length).toBeGreaterThan(0);
     expect(await second.findByTestId('saved-copy-note')).toBeTruthy();
     expect(await second.findByTestId('offline-banner')).toBeTruthy();
   });
@@ -294,69 +296,67 @@ describe('NearbyScreen', () => {
     });
   });
 
-  describe('one chip row under the search (N2)', () => {
-    it('holds the place, area, section, day and the filters (D17)', async () => {
+  describe('the chips under the view switch', () => {
+    it('offers Women, Men, Family, Tonight and the filters', async () => {
       const view = await renderScreen(<NearbyScreen />);
       await view.findByTestId('nearby-list');
-      const header = view.getByTestId('screen-header');
-      const chips = within(header).getByTestId('nearby-chips');
       for (const id of [
-        'nearby-city',
-        'nearby-area-button',
-        'nearby-section',
-        'nearby-day',
+        'nearby-section-women',
+        'nearby-section-men',
+        'nearby-section-family',
+        'nearby-tonight',
         'nearby-filters-button',
       ]) {
-        expect(within(chips).getByTestId(id)).toBeTruthy();
+        expect(view.getByTestId(id)).toBeTruthy();
       }
     });
 
-    it('picks a section from the Section chip, asks the server for it, and takes it off again', async () => {
+    it('picks a section chip, asks the server for it, and takes it off again', async () => {
       const view = await renderScreen(<NearbyScreen />);
       await view.findByTestId('nearby-list');
-      fireEvent.click(view.getByTestId('nearby-section'));
-      fireEvent.click(await view.findByTestId('filter-section-women'));
-      fireEvent.click(view.getByTestId('filters-apply'));
+      fireEvent.click(view.getByTestId('nearby-section-women'));
       await waitFor(() => {
         const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
         expect(new URLSearchParams(last.search).get('section')).toBe('women');
       });
-      expect(view.getByTestId('nearby-section').textContent).toContain(en['sections.women']);
-      fireEvent.click(view.getByTestId('nearby-section'));
-      fireEvent.click(await view.findByTestId('filter-section-women'));
-      fireEvent.click(view.getByTestId('filters-apply'));
-      // Off again: the list without a section comes back (from the saved answer).
+      expect(view.getByTestId('nearby-section-women').getAttribute('aria-checked')).toBe('true');
+      fireEvent.click(view.getByTestId('nearby-section-women'));
       await waitFor(() =>
-        expect(view.getByTestId('nearby-section').textContent).toContain(
-          en['nearby.filters.section'],
-        ),
+        expect(view.getByTestId('nearby-section-women').getAttribute('aria-checked')).toBe('false'),
       );
-      expect(await view.findByTestId('nearby-list')).toBeTruthy();
     });
 
-    it('chooses the city from a sheet, and keeps it for next time', async () => {
+    it('asks for tonight (after Isha) with the Tonight chip', async () => {
       const view = await renderScreen(<NearbyScreen />);
       await view.findByTestId('nearby-list');
-      fireEvent.click(view.getByTestId('nearby-city'));
-      fireEvent.click(await view.findByTestId(`city-option-${CITY_RAWALPINDI.id}`));
+      fireEvent.click(view.getByTestId('nearby-tonight'));
+      await waitFor(() => {
+        const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
+        expect(new URLSearchParams(last.search).get('timeFrom')).toBe('20:30');
+      });
+    });
+
+    it('changes the city and area from the line above the title, and keeps them', async () => {
+      const view = await renderScreen(<NearbyScreen />);
+      await view.findByTestId('nearby-list');
+      fireEvent.click(view.getByTestId('nearby-area-button'));
+      fireEvent.click(await view.findByTestId(`area-city-${CITY_RAWALPINDI.id}`));
       await waitFor(() => {
         const last = view.world.http.callsTo('GET /v1/sessions').at(-1)!;
         expect(new URLSearchParams(last.search).get('cityId')).toBe(CITY_RAWALPINDI.id);
       });
       expect(view.world.services.preferences.get().cityId).toBe(CITY_RAWALPINDI.id);
-      expect(view.getByTestId('nearby-city').textContent).toContain(CITY_RAWALPINDI.name.en);
     });
+  });
 
-    it('opens the day choice from the Day chip and names the days picked', async () => {
-      const view = await renderScreen(<NearbyScreen />);
-      await view.findByTestId('nearby-list');
-      fireEvent.click(view.getByTestId('nearby-day'));
-      fireEvent.click(await view.findByTestId('filter-day-2'));
-      fireEvent.click(view.getByTestId('filters-apply'));
-      await waitFor(() =>
-        expect(view.getByTestId('nearby-day').textContent).toContain(en['days.tue']),
-      );
-    });
+  it('asks a person on the map with no area to choose one, and says why', async () => {
+    const view = await renderScreen(<NearbyScreen />);
+    await view.findByTestId('nearby-list');
+    fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
+    expect(await view.findByTestId('nearby-location-off')).toBeTruthy();
+    expect(view.getByText(en['nearby.location.offTitle'])).toBeTruthy();
+    fireEvent.click(view.getByTestId('nearby-choose-area'));
+    expect(await view.findByTestId(`area-city-${CITY_RAWALPINDI.id}`)).toBeTruthy();
   });
 
   it('draws green pins on the map with the number of circles at each place', async () => {
@@ -375,17 +375,17 @@ describe('NearbyScreen', () => {
       const view = await renderScreen(<NearbyScreen />, { locale, color, textSize });
       await view.findByTestId('nearby-list');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      // D17: a white header with the "Nearby circles" title, not the green one.
+      // A white header with the big title and no coloured band.
       const heading = within(view.getByTestId('screen-header')).getByRole('heading', {
-        name: (locale === 'ur' ? ur : en)['nearby.heading'],
+        name: (locale === 'ur' ? ur : en)['nearby.title'],
       });
       expect(heading).toBeTruthy();
       void color;
-      const first =
+      const venue =
         locale === 'ur'
-          ? (SESSIONS.taraweeh.title.ur ?? SESSIONS.taraweeh.title.en)
-          : SESSIONS.taraweeh.title.en;
-      expect(within(view.getByTestId('nearby-list')).getByText(first)).toBeTruthy();
+          ? (SESSIONS.taraweeh.venue.name.ur ?? SESSIONS.taraweeh.venue.name.en)
+          : SESSIONS.taraweeh.venue.name.en;
+      expect(within(view.getByTestId('nearby-list')).getAllByText(venue).length).toBeGreaterThan(0);
     });
   });
 });

@@ -119,7 +119,7 @@ describe('Nearby (N2)', () => {
     const header = await view.findByTestId('screen-header');
     expect(within(header).getByTestId('nearby-search')).toBeTruthy();
     expect(within(header).getByTestId('nearby-view')).toBeTruthy();
-    expect(within(header).getByRole('heading', { name: en['nearby.heading'] })).toBeTruthy();
+    expect(within(header).getByRole('heading', { name: en['nearby.title'] })).toBeTruthy();
   });
 
   it('ends the list with "Ask for a circle near you" when the flag is on, its action marked coming soon', async () => {
@@ -146,7 +146,7 @@ describe('Nearby (N2)', () => {
     const view = await renderScreen(<NearbyScreen />, { world });
     const list = await view.findByTestId('nearby-list');
     await waitFor(() => expect(world.http.callsTo('GET /v1/config').length).toBeGreaterThan(0));
-    expect(within(list).getAllByText(SESSIONS.taraweeh.title.en).length).toBeGreaterThan(0);
+    expect(within(list).getAllByText(SESSIONS.taraweeh.venue.name.en).length).toBeGreaterThan(0);
     expect(view.queryByTestId('nearby-ask')).toBeNull();
     expect(view.queryByText(en['nearby.ask.title'])).toBeNull();
   });
@@ -199,15 +199,13 @@ describe('Nearby (N2)', () => {
     expect(within(withoutRequest).queryByText(en['nearby.request.action'])).toBeNull();
   });
 
-  it('shows small cards for the nearest places on the map and selects one when tapped', async () => {
+  it('selects a place on the map and shows its card with Join and Details', async () => {
     const view = await renderScreen(<NearbyScreen />, { cityId: CITY_RAWALPINDI.id });
     await view.findByTestId('nearby-list');
     fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
-    const nearest = await view.findByTestId('map-nearest');
-    const card = nearest.querySelector<HTMLElement>('[data-testid^="map-nearest-"]');
-    expect(card).not.toBeNull();
-    fireEvent.click(card!);
+    fireEvent.click(await view.findByTestId(`map-marker-${SESSIONS.taraweeh.venueId}`));
     expect(await view.findByTestId('map-selection')).toBeTruthy();
+    expect(view.getByTestId(`map-open-${SESSIONS.taraweeh.id}`)).toBeTruthy();
   });
 });
 
@@ -278,15 +276,13 @@ describe('Registration (R2)', () => {
     return { world, view };
   }
 
-  it('opens full screen with a back button, a big heading and the session under it (D17)', async () => {
+  it('opens with a back button, the session on the page and the pledge sheet under it', async () => {
     const { world, view } = await open();
-    const header = view.getByTestId('screen-header');
-    expect(within(header).getByText(en['registration.topTitle'])).toBeTruthy();
-    expect(view.getByText(en['registration.heading'])).toBeTruthy();
     expect(view.getByTestId('registration-summary').textContent).toContain(
       SESSIONS.taraweeh.venue.name.en,
     );
-    fireEvent.click(view.getByTestId('screen-back'));
+    expect(view.getByText(en['join.noSeat'])).toBeTruthy();
+    fireEvent.click(view.getByTestId('page-back'));
     expect(world.nav.last()).toEqual({ type: 'back' });
   });
 
@@ -295,9 +291,7 @@ describe('Registration (R2)', () => {
     async (section) => {
       const { world, view } = await open();
       for (const s of ['women', 'men', 'family']) {
-        expect(
-          view.getByTestId(`registration-section-${s}`).getAttribute('aria-disabled'),
-        ).not.toBe('true');
+        expect(view.getByTestId(`registration-section-${s}`)).toBeTruthy();
       }
       fireEvent.click(view.getByTestId('registration-area'));
       fireEvent.click(await view.findByTestId(`area-option-${AREA_SADDAR.id}`));
@@ -311,25 +305,10 @@ describe('Registration (R2)', () => {
     },
   );
 
-  it('fades the sections a women-only session does not offer', async () => {
+  it('shows no section choice for a women-only session, only the fixed one', async () => {
     const { view } = await open(SESSIONS.womenFull);
-    expect(view.getByTestId('registration-section-women').getAttribute('aria-checked')).toBe(
-      'true',
-    );
-    expect(view.getByTestId('registration-section-men').getAttribute('aria-disabled')).toBe('true');
-    expect(view.getByTestId('registration-section-family').getAttribute('aria-disabled')).toBe(
-      'true',
-    );
+    expect(view.queryByTestId('registration-section-men')).toBeNull();
     expect(view.getByTestId('registration-section-fixed')).toBeTruthy();
-  });
-
-  it('draws a picture on each section card', async () => {
-    const { view } = await open();
-    for (const s of ['women', 'men', 'family']) {
-      const card = view.getByTestId(`registration-section-${s}`);
-      expect(card.querySelector('[aria-hidden="true"]')).not.toBeNull();
-      expect(card.textContent).toContain(en[`sections.${s}` as 'sections.women']);
-    }
   });
 
   it('has no seat count: joining sends one person, with no stepper on the form', async () => {

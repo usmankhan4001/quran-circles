@@ -61,7 +61,7 @@
   "prayer.noCity.title": "Choose your city",
   "prayer.noCity.body": "We need your city to show prayer times.",
   "prayer.noCity.action": "Choose city",
-  "nearby.title": "Nearby",
+  "nearby.title": "Circles near you",
   "nearby.search.label": "Search",
   "nearby.search.placeholder": "Search by area or venue",
   "nearby.view.label": "Show as",
@@ -762,5 +762,12 @@
   "join.done.body": "We will remind you before each session and tell you if the time changes or it is cancelled.",
   "join.done.status": "Joining · {section}",
   "join.done.journey": "See it in My Journey",
-  "join.done.done": "Done"
+  "join.done.done": "Done",
+  "nearby.tonight": "Tonight",
+  "nearby.location.offTitle": "Location is off",
+  "nearby.location.offBody": "Choose your area and we will show the circles nearest to it.",
+  "nearby.location.chooseArea": "Choose an area",
+  "nearby.map.offlineTitle": "The map is not available",
+  "nearby.map.selectedJoin": "Join",
+  "nearby.map.details": "Details"
 }
