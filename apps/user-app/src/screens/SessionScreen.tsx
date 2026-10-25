@@ -356,7 +356,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 <Icon name="bell" size={20} color={c.success} />
                 <View style={styles.grow}>
                   <Text variant="caption" strong>
-                    WhatsApp &amp; SMS Reminders
+                    {t('session.reminders.title')}
                   </Text>
                   <Text variant="caption" color="textSecondary">
                     {t('home.updates.empty')}

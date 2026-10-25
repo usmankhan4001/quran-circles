@@ -46,13 +46,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  noteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    justifyContent: 'center',
-    marginTop: spacing.xs,
-  },
 });
 
 export function JoinHalqaSheet({
@@ -147,7 +140,7 @@ export function JoinHalqaSheet({
               {t('venue.following')} {targetName}
             </Text>
             <Text variant="body" color="textSecondary" align="center">
-              {t('home.updates.empty')}
+              {t('venue.followDone')}
             </Text>
           </View>
           <Button
@@ -164,7 +157,7 @@ export function JoinHalqaSheet({
           <View style={styles.badgeRow}>
             <View style={[styles.badge, { backgroundColor: c.accentSubtle }]}>
               <Text variant="caption" color="textAccent" strong>
-                WhatsApp / SMS Alerts
+                {t('venue.followBadge')}
               </Text>
             </View>
           </View>
@@ -197,12 +190,6 @@ export function JoinHalqaSheet({
                 onPress={() => void signInFlow.submitPhone()}
                 testID="join-send-code"
               />
-              <View style={styles.noteRow}>
-                <Icon name="info" size={14} color={c.textMuted} />
-                <Text variant="caption" color="textMuted">
-                  {t('prayer.hijriNote')}
-                </Text>
-              </View>
             </>
           ) : null}
 

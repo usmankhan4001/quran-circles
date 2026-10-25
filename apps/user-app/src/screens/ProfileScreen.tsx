@@ -479,7 +479,7 @@ function AlertsSections() {
                     divider
                     trailing={
                       <Switch
-                        label={t('profile.alerts.venue', { name: l(follow.name).text })}
+                        label={t('profile.alerts.venue', { venue: l(follow.name).text })}
                         value={follow.alertsEnabled}
                         onValueChange={(value) => void alerts.run(follow, value)}
                         testID={`alerts-${follow.id}`}
