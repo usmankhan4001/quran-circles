@@ -1,7 +1,22 @@
 # Status: admin-app
 
-Updated: 2026-10-25
+Updated: 2026-10-26
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## Coordinator redesign (26 Oct 2026, branch lane/admin-app/redesign)
+
+Built from the approved coordinator canvas (Tonight, Tell people, Places and schedule, plus Welcome and Features). Merged the shared kit from `lane/ui/member-redesign`; nothing in `packages/ui` was edited.
+
+- **People only (pledge rule).** Registrants and attendance count people: no "Party of N"; every tick and every walk-in is one person (count 1); the walk-in stepper is gone; the Registrants total is the number of registrations.
+- **Welcome before sign-in.** One Welcome screen (big mark, tag, "Sign in with your phone", the invite-only note, "What can I do here?"), a Features screen, then the existing phone and code steps. Strings `admin.signIn.welcome.*`, `admin.signIn.features.*`, `admin.signIn.back` in English and Urdu (draft). The mark is the kit star on a green tile until the real logo file is wired in.
+- **Flat headers.** `Screen` tab variant now uses the kit's `ScreenHeader` (muted line, ink title, small control at the end, scope pill under it); no green band. Scope pill uses accent tint instead of the hero glass.
+- **Today.** Greeting title and date line, account button at the end (the bell moved out; Post update stays a quick action and the Updates tab), "Masjid tools" row for the daily ayah.
+- **Registrants.** Coming / Women / Men tiles (the split only once every person is loaded), person rows with initial, name, section and call and WhatsApp icon buttons.
+- Already as drawn from the earlier pass and left alone: Updates and Post update (templates as pills, language, reach, review, sent), Places (venues and circles, pending banner), Schedule, Occurrence, Venue and Circle editors.
+
+Needs the integration lane: `tests/e2e/src/flows/admin-app/coordinator.spec.ts` must click `welcome-sign-in` before filling `sign-in-phone` (and `quality/screens.ts` may want the welcome screen).
+
+Not done: Urdu review of the new strings; real logo image on Welcome; Updates list rows with the body line (the update list item has no body in the contract view); Places pending banner shown on both tabs.
 
 ## Audit fixes (25 Oct 2026): names in Urdu, sign-in wait, surah names
 

@@ -34,7 +34,6 @@ import {
   attendanceReducer,
   entriesTotal,
   initialAttendanceState,
-  MAX_ENTRY_COUNT,
   MAX_HEADCOUNT,
   validateAttendance,
 } from './state';
