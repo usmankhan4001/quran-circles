@@ -1,6 +1,6 @@
 import { StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useTheme } from '../theme';
-import { minTouchTarget, radii, spacing } from '../tokens';
+import { radii, spacing } from '../tokens';
 import { Icon } from './Icon';
 import { Text } from './Text';
 import { Touchable } from './Touchable';
@@ -21,9 +21,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    minHeight: minTouchTarget,
+    minHeight: 44,
     borderRadius: radii.pill,
-    borderWidth: 1.5,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   main: {
@@ -46,15 +46,15 @@ export function Chip({ label, selected, onPress, onRemove, disabled, testID }: C
   const c = theme.colors;
   const isToggle = selected !== undefined;
   const on = selected === true;
-  // D17: a chosen chip takes the emerald tint, an emerald outline and a tick.
-  const textColor = disabled ? 'disabledText' : on ? 'textOnAccentSubtle' : 'text';
+  // A chosen chip turns solid green with a tick, so the state is never colour alone.
+  const textColor = disabled ? 'disabledText' : on ? 'textOnAccent' : 'text';
   const fg = c[textColor];
   return (
     <View
       style={[
         styles.pill,
         {
-          backgroundColor: disabled ? c.disabledBackground : on ? c.accentSubtle : c.surface,
+          backgroundColor: disabled ? c.disabledBackground : on ? c.accent : c.surface,
           borderColor: disabled ? c.disabledBackground : on ? c.accent : c.borderStrong,
         },
       ]}

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
-import { elevation, radii, spacing } from '../tokens';
+import { spacing } from '../tokens';
 import { Badge, badgeLabel, type BadgeProps } from './Badge';
 import { Text } from './Text';
 import { Touchable } from './Touchable';
@@ -28,41 +28,44 @@ export interface TabBarProps {
 const share = { flexGrow: 1, flexShrink: 1, flexBasis: 0 } as const;
 
 const styles = StyleSheet.create({
-  // D17: a white floating dock of icons. The chosen icon turns charcoal and gains a dot under it
-  // (so the choice is not shown by colour alone); every tab keeps its name for screen readers.
+  // Design system: a flat white bar with a hairline on top. Every tab has a word under its icon.
+  // The current tab is green with a short bar above it and a bold label, so it is not colour alone.
   bar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: spacing.xl + spacing.sm,
-    marginBottom: spacing.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
-    borderWidth: 1,
+    alignItems: 'stretch',
+    borderTopWidth: 1,
+    paddingTop: 6,
+    paddingBottom: spacing.sm,
   },
   tab: {
-    minHeight: 52,
+    minHeight: 56,
     minWidth: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.pill,
+    paddingHorizontal: 2,
+    paddingVertical: 6,
   },
-  textTab: { paddingHorizontal: spacing.sm },
   iconWrap: { minHeight: 28, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 4, height: 4, borderRadius: 2, marginTop: 4 },
-  dotSpace: { height: 4, marginTop: 4 },
+  marker: {
+    position: 'absolute',
+    top: -7,
+    width: 28,
+    height: 3,
+    borderBottomStartRadius: 3,
+    borderBottomEndRadius: 3,
+  },
+  label: { marginTop: 3 },
+  labelRow: { flexDirection: 'row', alignItems: 'center' },
+  badgeInline: { marginStart: spacing.xs },
   // On the icon's top end corner.
   badge: { position: 'absolute', top: -6, end: -12 },
-  badgeInline: { marginStart: spacing.xs },
-  textRow: { flexDirection: 'row', alignItems: 'center' },
 });
 
 export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID }: TabBarProps) {
   const theme = useTheme();
   const c = theme.colors;
   // The bar is the app's navigation landmark (A-08), so screen-reader users can jump to it and
-  // past it. It is the only one on a screen, so it needs no name of its own; the tab list inside
-  // keeps the name.
+  // past it. The tab list inside keeps the name.
   return (
     <View role="navigation">
       <View
@@ -72,15 +75,14 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
         style={[
           styles.bar,
           {
-            backgroundColor: c.surfaceRaised,
+            backgroundColor: c.surface,
             borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
-            boxShadow: theme.mode === 'light' ? elevation.high : undefined,
           },
         ]}
       >
         {items.map((item) => {
           const selected = item.key === activeKey;
-          const color = selected ? c.text : c.textMuted;
+          const color = selected ? c.accent : c.textMuted;
           const extra = item.badge ? badgeLabel(theme, item.badge) : undefined;
           return (
             <Touchable
@@ -93,10 +95,16 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
               style={({ pressed }) => [
                 styles.tab,
                 share,
-                item.icon ? null : styles.textTab,
                 { backgroundColor: pressed ? c.surfaceMuted : 'transparent' },
               ]}
             >
+              {selected ? (
+                <View
+                  aria-hidden
+                  testID={`tab-dot-${item.key}`}
+                  style={[styles.marker, { backgroundColor: c.accent }]}
+                />
+              ) : null}
               {item.icon ? (
                 <View style={styles.iconWrap}>
                   {typeof item.icon === 'function' ? item.icon({ selected, color }) : item.icon}
@@ -106,35 +114,24 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
                     </View>
                   ) : null}
                 </View>
-              ) : (
-                // Without an icon the label is the only thing to see, so it shows.
-                <View style={styles.textRow}>
-                  <Text
-                    variant="caption"
-                    color={selected ? 'text' : 'textMuted'}
-                    align="center"
-                    strong={selected}
-                    numberOfLines={1}
-                    decorative
-                  >
-                    {item.label}
-                  </Text>
-                  {item.badge ? (
-                    <View style={styles.badgeInline}>
-                      <Badge {...item.badge} decorative />
-                    </View>
-                  ) : null}
-                </View>
-              )}
-              {selected ? (
-                <View
-                  aria-hidden
-                  testID={`tab-dot-${item.key}`}
-                  style={[styles.dot, { backgroundColor: c.text }]}
-                />
-              ) : (
-                <View aria-hidden style={styles.dotSpace} />
-              )}
+              ) : null}
+              <View style={[styles.label, item.icon ? undefined : styles.labelRow]}>
+                <Text
+                  variant="caption"
+                  color={selected ? 'textAccent' : 'textMuted'}
+                  align="center"
+                  strong={selected}
+                  numberOfLines={2}
+                  decorative
+                >
+                  {item.label}
+                </Text>
+                {!item.icon && item.badge ? (
+                  <View style={styles.badgeInline}>
+                    <Badge {...item.badge} decorative />
+                  </View>
+                ) : null}
+              </View>
             </Touchable>
           );
         })}
