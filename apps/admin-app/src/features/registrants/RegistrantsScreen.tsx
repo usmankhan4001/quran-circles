@@ -123,7 +123,7 @@ export function RegistrantsScreen({
       actions={
         list.totals ? (
           <Text testID="registrants-total-people" variant="caption" color="textAccent" strong>
-            {t('admin.registrants.peopleCount', { count: n(list.totals.people) })}
+            {t('admin.registrants.peopleCount', { count: n(list.totals.registrations) })}
           </Text>
         ) : undefined
       }
@@ -251,7 +251,7 @@ function RegistrantCard({
   registrant: StaffRegistration;
   onContact: ContactOpener;
 }) {
-  const { t, n } = useT();
+  const { t } = useT();
   const name = r.name ?? t('admin.registrants.noName');
   const contact = (kind: ContactKind) => {
     if (r.phone) onContact(kind, contactUrl(kind, r.phone));
@@ -264,7 +264,6 @@ function RegistrantCard({
             {r.name ? isolate(r.name) : name}
           </Text>
           <Text variant="caption" color="textSecondary">
-            {t('admin.registrants.party', { count: n(r.partySize) })} ·{' '}
             {t(`admin.registrants.section.${r.section}`)}
             {r.status === 'waitlisted' ? ` · ${t('admin.registrants.waitlisted')}` : ''}
           </Text>
