@@ -60,6 +60,20 @@ describe('VenueScreen', () => {
     expect(view.world.http.callsTo('GET /v1/sessions')[0]!.search).toContain(`venueId=${noor.id}`);
   });
 
+  it('shows a map card above Maps, Call and Follow that opens the full map on this venue', async () => {
+    const view = await renderScreen(<VenueScreen venueId={noor.id} />);
+    const card = await view.findByTestId('venue-map-card');
+    const tiles = ['venue-location', 'venue-contact', 'venue-follow'].map((id) =>
+      view.getByTestId(id),
+    );
+    // The map card comes first in the page, then the three tiles.
+    for (const tile of tiles) {
+      expect(card.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    fireEvent.click(card);
+    expect(view.world.nav.last()).toEqual({ type: 'go', route: { name: 'map', venueId: noor.id } });
+  });
+
   it('opens the phone and the map from the buttons', async () => {
     const view = await renderScreen(<VenueScreen venueId={noor.id} />);
     fireEvent.click(await view.findByTestId('venue-contact'));
@@ -105,10 +119,9 @@ describe('VenueScreen', () => {
       await view.findByTestId('facilities');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
       const words = locale === 'ur' ? ur : en;
-      // The drawn place on top with its glass back button; the name is the page's heading (D17).
-      const header = view.getByTestId('screen-header');
-      expect(within(header).getByTestId('venue-photo')).toBeTruthy();
-      expect(within(header).getByLabelText(words['ui.back'])).toBeTruthy();
+      // A plain top bar with back; the name is the page's heading.
+      expect(view.getByLabelText(words['ui.back'])).toBeTruthy();
+      expect(view.getByTestId('venue-map-card')).toBeTruthy();
       expect(view.getByRole('heading', { level: 1 }).textContent).toBe(
         locale === 'ur' ? noor.name.ur : noor.name.en,
       );

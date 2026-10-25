@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import {
+  Button,
   Icon,
   Text,
-  elevation,
   formatNumber,
   minTouchTarget,
   radii,
@@ -12,13 +12,14 @@ import {
   type IconName,
 } from '@qc/ui';
 
-// Small pieces of the showcase artboards (D17 override) that the Quran and prayer screens share.
+// Small pieces the Quran and prayer screens share, drawn from the Quran Circles design system:
+// mostly white, hairline edges, one green accent, no shadows.
 
-/** A white card with the hairline and whisper shadow (`.iq-white-card`), any radius and padding. */
+/** A white card with a hairline edge, flat. `outlined` is the chosen look (a green edge). */
 export function WhiteCard({
   children,
   radius = radii.card,
-  padding = 18,
+  padding = 16,
   outlined,
   style,
   testID,
@@ -26,7 +27,7 @@ export function WhiteCard({
   children: ReactNode;
   radius?: number;
   padding?: number;
-  /** The chosen look: an emerald outline (the current prayer, the ayah asked for). */
+  /** A green edge: the current prayer, the ayah asked for. */
   outlined?: boolean;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -41,9 +42,8 @@ export function WhiteCard({
         {
           backgroundColor: c.surface,
           borderRadius: radius,
-          borderWidth: outlined ? 1.5 : 1,
-          borderColor: outlined ? c.progress : hc ? c.borderStrong : c.hairline,
-          boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+          borderWidth: outlined ? 2 : 1,
+          borderColor: outlined ? c.accent : hc ? c.borderStrong : c.hairline,
           padding,
         },
         style,
@@ -54,74 +54,50 @@ export function WhiteCard({
   );
 }
 
-/** The 6 px green dot and short bold line that opens a lead card. */
+/** The green dot and short line that opens a lead card. */
 export function StatusLine({ label, testID }: { label: string; testID?: string }) {
   const c = useTheme().colors;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 }}>
       <View
         aria-hidden
-        style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: c.progress }}
+        style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.accent }}
       />
-      <Text variant="caption" color="textAccent" strong testID={testID}>
+      <Text variant="eyebrow" color="textAccent" testID={testID}>
         {label}
       </Text>
     </View>
   );
 }
 
-/**
- * The white outline pill with a forward arrow (`.iq-pill-cta`). It is drawn 36 to 40 tall as on
- * the artboard; the touch area reaches 48 dp.
- */
+/** A quiet action with a forward arrow, kept under the old name for the app's cards. */
 export function PillCta({
   label,
   onPress,
-  height = 40,
-  small,
   accessibilityLabel,
   testID,
 }: {
   label: string;
   onPress: () => void;
+  /** Kept for callers written for the earlier look; the kit's button sets its own height. */
   height?: number;
-  /** The smaller pill of the mini cards: caption text. */
   small?: boolean;
   accessibilityLabel?: string;
   testID?: string;
 }) {
-  const theme = useTheme();
-  const c = theme.colors;
-  const slop = Math.max(0, Math.ceil((minTouchTarget - height) / 2));
   return (
-    <Pressable
-      role="button"
-      aria-label={accessibilityLabel}
+    <Button
+      variant="secondary"
+      label={label}
+      trailingIcon="arrow-forward"
       onPress={onPress}
-      hitSlop={slop}
-      testID={testID}
-      style={({ pressed }) => ({
-        minHeight: Math.round(height * theme.scale),
-        borderRadius: radii.pill,
-        borderWidth: 1,
-        borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
-        backgroundColor: pressed ? c.surfaceMuted : c.surface,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingHorizontal: spacing.md,
-      })}
-    >
-      <Text variant={small ? 'caption' : 'label'} strong>
-        {label}
-      </Text>
-      <Icon name="arrow-right" size={small ? 12 : 14} color={c.text} />
-    </Pressable>
+      {...(accessibilityLabel ? { accessibilityLabel } : {})}
+      {...(testID ? { testID } : {})}
+    />
   );
 }
 
-/** A section title with an optional quiet link at the end (`.iq-section-head`). */
+/** A section title with an optional quiet link at the end. */
 export function SectionHead({
   title,
   more,
@@ -141,7 +117,7 @@ export function SectionHead({
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: spacing.sm,
-        marginBottom: 8,
+        minHeight: 44,
       }}
     >
       <Text variant="title3" heading={2}>
@@ -154,10 +130,10 @@ export function SectionHead({
           testID={moreTestID}
           style={{ minHeight: minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 3 }}
         >
-          <Text variant="caption" color="textSecondary" strong>
+          <Text variant="caption" color="textAccent">
             {more}
           </Text>
-          <Icon name="caret-right" weight="bold" size={11} color={c.textSecondary} />
+          <Icon name="caret-right" weight="bold" size={11} color={c.textAccent} />
         </Pressable>
       ) : null}
     </View>
@@ -165,10 +141,10 @@ export function SectionHead({
 }
 
 /**
- * The compact tabs of the Quran list (Surahs, Juz, Saved): a soft grey pill track sized to its
- * labels, the chosen tab a white pill with a whisper shadow.
+ * The tabs of the Quran list (Surahs, Juz, Saved): plain words on a hairline, the chosen one in
+ * dark text with a green line under it.
  */
-export function PillTabs<T extends string>({
+export function UnderlineTabs<T extends string>({
   value,
   onChange,
   options,
@@ -181,24 +157,17 @@ export function PillTabs<T extends string>({
   accessibilityLabel: string;
   testID?: string;
 }) {
-  const theme = useTheme();
-  const c = theme.colors;
-  const hc = theme.mode === 'highContrast';
+  const c = useTheme().colors;
   return (
     <View
-      role="radiogroup"
+      role="tablist"
       aria-label={accessibilityLabel}
       testID={testID}
       style={{
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignSelf: 'flex-start',
-        flexShrink: 1,
-        padding: 3,
-        borderRadius: radii.pill,
-        backgroundColor: c.surfaceMuted,
-        borderWidth: hc ? 1 : 0,
-        borderColor: c.borderStrong,
+        gap: spacing.lg + spacing.xs,
+        borderBottomWidth: 1,
+        borderBottomColor: c.hairline,
       }}
     >
       {options.map((option) => {
@@ -206,23 +175,19 @@ export function PillTabs<T extends string>({
         return (
           <Pressable
             key={option.value}
-            role="radio"
-            aria-checked={chosen}
+            role="tab"
+            aria-selected={chosen}
             onPress={() => onChange(option.value)}
-            hitSlop={{ top: 12, bottom: 12, left: 0, right: 0 }}
             testID={testID ? `${testID}-${option.value}` : undefined}
-            style={({ pressed }) => ({
-              paddingVertical: 4,
-              paddingHorizontal: chosen ? 12 : 11,
-              borderRadius: radii.pill,
-              backgroundColor: chosen ? c.surface : pressed ? c.border : 'transparent',
-              borderWidth: chosen && hc ? 2 : 0,
-              borderColor: c.borderStrong,
-              boxShadow:
-                chosen && theme.mode === 'light' ? '0px 1px 3px rgba(0,0,0,0.06)' : undefined,
-            })}
+            style={{
+              minHeight: 44,
+              justifyContent: 'center',
+              borderBottomWidth: 2,
+              marginBottom: -1,
+              borderBottomColor: chosen ? c.accent : 'transparent',
+            }}
           >
-            <Text variant="caption" strong={chosen} color={chosen ? 'text' : 'textSecondary'}>
+            <Text variant="label" strong={chosen} color={chosen ? 'text' : 'textMuted'}>
               {option.label}
             </Text>
           </Pressable>
@@ -232,44 +197,47 @@ export function PillTabs<T extends string>({
   );
 }
 
-/** The 30 px round grey button beside the tabs (search), with a 48 dp touch area. */
-export function RoundButton({
-  icon,
+/**
+ * The ayah number in a thin ring (the surah list's number, the juz number). Western digits in
+ * both languages. It grows with the text size.
+ */
+export function NumberRing({
+  value,
   accessibilityLabel,
-  onPress,
   testID,
 }: {
-  icon: 'search' | 'close';
-  accessibilityLabel: string;
-  onPress: () => void;
+  value: number;
+  accessibilityLabel?: string;
   testID?: string;
 }) {
-  const c = useTheme().colors;
+  const theme = useTheme();
+  const size = Math.round(32 * theme.scale);
   return (
-    <Pressable
-      role="button"
-      aria-label={accessibilityLabel}
-      onPress={onPress}
-      hitSlop={9}
+    <View
       testID={testID}
-      style={({ pressed }) => ({
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+      role={accessibilityLabel ? 'img' : undefined}
+      aria-label={accessibilityLabel}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
         borderWidth: 1,
-        borderColor: c.border,
-        backgroundColor: pressed ? c.border : c.background,
+        borderColor: theme.colors.borderStrong,
         alignItems: 'center',
         justifyContent: 'center',
-      })}
+      }}
     >
-      <Icon
-        name={icon === 'search' ? 'magnifying-glass' : 'x'}
-        weight="bold"
-        size={13}
-        color={c.textSecondary}
-      />
-    </Pressable>
+      <Text
+        variant="caption"
+        color="textMuted"
+        lang="en"
+        direction="ltr"
+        align="center"
+        decorative={Boolean(accessibilityLabel)}
+      >
+        {formatNumber(value, 'en')}
+      </Text>
+    </View>
   );
 }
 
@@ -345,21 +313,18 @@ export function Medallion({
   );
 }
 
-/** A small icon button of a top bar: the icon at the artboard's 17 px, a 48 dp touch area. */
+/** A small icon button of a top bar, with a 48 dp touch area. */
 export function BarIcon({
   icon,
   accessibilityLabel,
   onPress,
   disabled,
-  strong,
   testID,
 }: {
   icon: IconName;
   accessibilityLabel: string;
   onPress?: () => void;
   disabled?: boolean;
-  /** The back caret is bold and in the text colour, as drawn. */
-  strong?: boolean;
   testID?: string;
 }) {
   const c = useTheme().colors;
@@ -372,21 +337,16 @@ export function BarIcon({
       onPress={onPress}
       testID={testID}
       style={({ pressed }) => ({
-        width: 40,
+        width: minTouchTarget,
         height: minTouchTarget,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: radii.md,
+        borderRadius: radii.control,
         backgroundColor: pressed ? c.surfaceMuted : 'transparent',
         opacity: disabled ? 0.45 : 1,
       })}
     >
-      <Icon
-        name={icon}
-        size={strong ? 16 : 17}
-        weight={strong ? 'bold' : 'regular'}
-        color={strong ? c.text : c.textSecondary}
-      />
+      <Icon name={icon} size={22} color={c.text} />
     </Pressable>
   );
 }

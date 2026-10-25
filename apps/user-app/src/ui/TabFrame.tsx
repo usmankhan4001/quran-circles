@@ -11,8 +11,6 @@ export interface TabFrameProps {
    * row with the List / Map switch on Nearby (D17). It scrolls away with the page.
    */
   header: ReactNode;
-  /** True when the header is the green one, so the status bar area is green too. */
-  green?: boolean;
   children: ReactNode;
   testID?: string;
 }
@@ -29,7 +27,7 @@ const styles = StyleSheet.create({
  * note and the safe area at the top. The screens lay out their own gutters (20 dp, as drawn),
  * since rows such as Home's pictures run to the edge of the screen.
  */
-export function TabFrame({ header, green, children, testID }: TabFrameProps) {
+export function TabFrame({ header, children, testID }: TabFrameProps) {
   const theme = useTheme();
   const { t } = useI18n();
   const offline = useOffline();
@@ -37,7 +35,7 @@ export function TabFrame({ header, green, children, testID }: TabFrameProps) {
   const c = theme.colors;
   return (
     <View testID={testID} role="main" style={[styles.root, { backgroundColor: c.background }]}>
-      <View style={{ backgroundColor: green ? c.hero : c.background, paddingTop: insets.top }} />
+      <View style={{ backgroundColor: c.background, paddingTop: insets.top }} />
       <ScrollView
         testID="screen-scroll"
         style={styles.root}
@@ -46,7 +44,7 @@ export function TabFrame({ header, green, children, testID }: TabFrameProps) {
       >
         {header}
         {offline ? (
-          <Banner kind="offline" title={t('ui.offlineTitle')} testID="offline-banner" />
+          <Banner kind="offline" title={t('states.offline.banner')} testID="offline-banner" />
         ) : null}
         {children}
       </ScrollView>

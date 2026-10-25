@@ -26,6 +26,8 @@ export interface MapViewProps {
   /** Shown by the list-only map when there is no real map. */
   unavailableLabel: string;
   height?: number;
+  /** Space kept above the zoom buttons, for a screen that lays its own controls over the map. */
+  controlsInset?: number;
 }
 
 /**

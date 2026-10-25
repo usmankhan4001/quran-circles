@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { useTheme } from '../theme';
-import { elevation, minTouchTarget, radii, spacing } from '../tokens';
+import { minTouchTarget, radii, spacing } from '../tokens';
 import { Text } from './Text';
 import { Touchable } from './Touchable';
 
@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   group: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderRadius: radii.pill,
+    borderRadius: radii.control,
     overflow: 'hidden',
     padding: spacing.xs,
   },
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
+    borderRadius: radii.control - 3,
   },
 });
 
@@ -85,9 +85,8 @@ export function SegmentedControl<T extends string>({
                   : pressed
                     ? c.border
                     : 'transparent',
-                borderWidth: selected && theme.mode === 'highContrast' ? 2 : 0,
-                borderColor: c.borderStrong,
-                boxShadow: selected && !off && theme.mode === 'light' ? elevation.low : undefined,
+                borderWidth: selected ? (theme.mode === 'highContrast' ? 2 : 1) : 0,
+                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
               },
             ]}
           >

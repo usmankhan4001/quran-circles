@@ -52,7 +52,13 @@ export function secondsUntil(target: number, now: number): number {
  * Phone, then the code from WhatsApp (SMS as a fallback), then, for a new account, a name.
  * The screen only draws this; every rule is here and in `validation.ts`.
  */
-export function useSignIn(onDone: () => void): SignInFlow {
+export function useSignIn(
+  onDone: () => void,
+  options: {
+    /** A name asked for earlier (sign up). A new account is given it and skips the name step. */
+    presetName?: string;
+  } = {},
+): SignInFlow {
   const { api, auth, now } = useServices();
   const { locale } = useI18n();
   const [step, setStep] = useState<SignInStep>('phone');
@@ -149,13 +155,19 @@ export function useSignIn(onDone: () => void): SignInFlow {
         });
         const { me, isNewAccount, ...tokens } = result;
         await auth.signIn(tokens, me);
-        if (isNewAccount || !me.displayName) setStep('name');
+        const preset = options.presetName ? checkName(options.presetName) : null;
+        if ((isNewAccount || !me.displayName) && preset && 'name' in preset) {
+          const named = await api.me.update({ body: { displayName: preset.name } });
+          auth.setMe(named);
+          setStep('done');
+          onDoneRef.current();
+        } else if (isNewAccount || !me.displayName) setStep('name');
         else {
           setStep('done');
           onDoneRef.current();
         }
       }),
-    [guard, codeInput, challenge, api, auth],
+    [guard, codeInput, challenge, api, auth, options.presetName],
   );
 
   const submitName = useCallback(

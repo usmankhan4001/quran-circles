@@ -93,3 +93,30 @@ Direction from the look-and-feel board: green is the only action colour, and Urd
 - `semanticColors.light.cta` / `ctaPressed` are now the emerald and deep emerald, so the kit's `primary` Button, EmptyState action and the like are green in light mode. Dark and high contrast keep their own pairs. All 954 kit tests, including the contrast pairs, pass.
 - `scriptSizeFactor.urdu` went from 1.1 to 1.25. Every Urdu size grows by about 14%, so check long Urdu lines on the other screens (the console reads the same factor through `--scale-urdu`).
 - Not done: the clip-art photo on cards, a labelled tab bar and a large-text mode (all on the board, none of them session screens).
+
+## Member app redesign, kit pass (2026-10-26, branch lane/ui/member-redesign)
+
+The kit follows the Quran Circles design system (artifact UEFqRavqK4aJmgkkWJJJLp): mostly white, one green accent, hairline cards, no coloured header band, labelled tab bar.
+
+- Tokens: new `colors.day` and `colors.night` palettes; `semanticColors.light` and `dark` rebuilt from them (green `#0A6938` is accent and cta in light; night is near-black). Radii: controls 12, cards 16, sheets 20 (`radii.control`, `field`, `card`, `sheet`); elevation is flat except `elevation.high` (sheets). Type roles match the design's `en-*` and `ur-*` sizes (Urdu sizes are set by hand through `urdu` on each role); Urdu line height 2.0, Quran 2.1 at 30 dp.
+- Components reshaped: Button (12 dp, `secondary` is the grey fill, `outline` thin edge, `danger` red outline, no shadow), Chip (chosen = solid green with tick, 44 dp), SegmentedControl, Card (flat), TabBar (flat, hairline, every tab labelled, green marker above the current tab).
+- New: `StarMark`, `QuranPortion`, `ScreenHeader`, `SectionHeader`, `TimeRow`, `MapPin`. Tests across the 24-combination matrix: `member-kit.test.tsx`.
+- Admin app test `MainTabs.test.tsx` changed for the labelled tab bar (admin lane to confirm the look).
+- Not done: the Urdu face is still Mehr Nastaliq Web (bundled, licensed). The design names Noori Nastaleeq with Noto Nastaliq Urdu behind it; Noori's licence is unconfirmed so it cannot be bundled, and swapping the bundled face touches admin, console and the poster renderer. Proposed: a separate change that bundles Noto Nastaliq Urdu and puts Noori first in the web stack.
+- Not done: HeroHeader is kept (admin app and console still use it); the member app does not.
+
+## Member app: Quran and Prayer times (2026-10-26, branch lane/ui/member-quran)
+
+Quran index, reader, Mushaf page view, reading settings and Prayer times are on the white design. The code is in `packages/content/src/ui` (brief for this thread); the content lane's package is touched only for what these screens need.
+
+- **Index:** large title and Quran / Prayer times switch (`QuranHubHeader`), lead card (continue reading, else Al-Fatihah), underlined Surahs / Juz / Saved tabs, search always visible.
+- **Reader:** ayah by ayah, with the translation under each ayah (Maududi: Urdu on an Urdu screen, English on an English one) or Arabic only; "My last mark" pill and a heavier rule under the ayah asked for; bookmark and share per ayah; jump-to-ayah and surah search in the sheet opened from the title.
+- **Mushaf page view:** Arabic only, one of 604 printed pages at a time (`quran/pages.ts` reads `/page/N` and `/ayah/S:A` from the same online source, kept on the device once read). Opens on the page of the ayah asked for or the last mark; previous / next page. If the page of the starting ayah cannot be found offline, an offline error with retry shows, not a loading skeleton.
+- **Reading settings sheet:** text size (six steps), show translation, translator, view (ayah by ayah / Mushaf page), script, Light / Night (the reader's own look, auto follows the app; high contrast is never overridden), reciter. Saved with the other reader preferences; older saved preferences still load.
+- **Coming soon, shown as such and not faked:** IndoPak script (disabled option labelled "coming soon"; fonts and rights undecided), more translators (a row with a "Coming soon" tag; only Maududi is built in), reciter.
+- **Prayer times:** unchanged since the kit pass (it already uses the white cards and the new switch).
+- Switching to Night keeps the same tree, so the settings sheet stays open and the place in the list is kept.
+- Tests: 906 in `@qc/content` pass, including new ones for pages, the Mushaf view and the settings sheet, in the 24-combination matrix where it matters. Older reader, index, tab and card tests were rewritten for the new labels (tabs, ayah number line, Urdu type sizes from the kit).
+- Strings added in `packages/i18n/src/{en,ur}/user-app.json`; the Urdu values are drafts for review.
+
+Questions: (1) The reader's page-turn buttons follow the app direction (previous at the start of the line) as in the new design, not right to left in both languages as the earlier spec proposed. (2) Verify the IndoPak and extra-translator rights/fonts decision before enabling those options. (3) `quran.hub.title` and `quran.tab.prayerShort` are no longer used by the screens; left in the tables.

@@ -26,7 +26,15 @@ describe('sanitizePreferences', () => {
       { locale: 'ur', textSize: 2, color: 'dark', cityId: 'c1', areaId: null },
       fallback,
     );
-    expect(next).toEqual({ locale: 'ur', textSize: 2, color: 'dark', cityId: 'c1', areaId: null });
+    expect(next).toEqual({
+      locale: 'ur',
+      textSize: 2,
+      color: 'dark',
+      cityId: 'c1',
+      areaId: null,
+      section: null,
+      welcomed: false,
+    });
   });
 
   it('replaces anything invalid with the fallback', () => {

@@ -13,15 +13,7 @@ import {
 import { fixtures } from '@qc/contracts/fixtures';
 import { formatNumber } from '@qc/ui';
 import { CITY_RAWALPINDI, SESSIONS, followFor, registrationFor } from '../test/factories';
-import {
-  MATRIX,
-  NOW,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, NOW, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
 import { ALL_NEXT_FLAGS, configWith, meWith, mine, type Handlers } from '../test/nextFeatures';
 import { hrefToRoute, routeToHref } from '../nav/routes';
 import { HomeScreen } from './HomeScreen';
@@ -384,7 +376,6 @@ describe.each(MATRIX)('Home with the rc.4 cards in $name', ({ locale, color, tex
     await view.findByTestId('home-read-along');
     await view.findByTestId('home-ayah-read');
     expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-    expectGreenHeader(view.container, color);
     expect(view.getByText(words['daysRead.title'])).toBeTruthy();
     expect(view.getByText(words['daysRead.markToday'])).toBeTruthy();
     expect(view.getByText(words['communityToday.title'])).toBeTruthy();

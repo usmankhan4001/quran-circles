@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Avatar,
   Button,
   Icon,
   ListItem,
+  SectionHeader,
   SegmentedControl,
   Select,
   Switch,
   Text,
   TextField,
+  minTouchTarget,
   textSizeSteps,
-  radii,
   spacing,
   useTheme,
   type IconName,
@@ -20,8 +21,7 @@ import {
 import { MEMORISATION_REVISE_AFTER_DAYS_DEFAULT, type Locale } from '@qc/contracts';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 import { QueryBoundary } from '../components/QueryBoundary';
-import { ScreenFrame } from '../components/ScreenFrame';
-import { Section } from '../components/Section';
+import { Page } from '../components/Page';
 import { COLOR_PREFERENCES, type ColorPreference } from '../core/preferences';
 import { errorMessageKey } from '../core/errors';
 import { formatPhoneForDisplay } from '../core/phone';
@@ -53,75 +53,97 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthState, useAuthStatus, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useToast } from '../providers/Toasts';
+import { ComingSoon } from '../ui/ComingSoon';
 
 const styles = StyleSheet.create({
-  tiles: { flexDirection: 'row', gap: spacing.sm },
-  tile: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.card,
-    borderWidth: 1,
-  },
   stack: { gap: spacing.xl },
+  group: { gap: spacing.xs },
+  fields: { gap: spacing.md },
   account: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   grow: { flex: 1 },
-  gap: { gap: spacing.md },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 64,
+    borderBottomWidth: 1,
+  },
+  rowIcon: { width: 24, alignItems: 'center' },
+  rowSwitch: { flex: 1 },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: minTouchTarget + spacing.sm,
+    borderBottomWidth: 1,
+  },
+  centre: { alignItems: 'center' },
 });
 
-/** Quick tiles to the places a person comes here to reach, as small white cards (D17). */
-function QuickTiles() {
-  const { t } = useI18n();
-  const nav = useNav();
-  const theme = useTheme();
-  const c = theme.colors;
-  const tiles: { key: string; icon: IconName; label: string; onPress: () => void }[] = [
-    {
-      key: 'journey',
-      icon: 'calendar',
-      label: t('tabs.myJourney'),
-      onPress: () => nav.tab({ name: 'journey' }),
-    },
-    {
-      key: 'updates',
-      icon: 'bell',
-      label: t('updates.title'),
-      onPress: () => nav.go({ name: 'updates' }),
-    },
-    {
-      key: 'help',
-      icon: 'people',
-      label: t('profile.support.help'),
-      onPress: () => nav.go({ name: 'page', slug: 'faq' }),
-    },
-  ];
+/** A titled block of the profile: the small heading, then the controls with no frame around them. */
+function Group({
+  title,
+  children,
+  testID,
+}: {
+  title: string;
+  children: ReactNode;
+  testID?: string;
+}) {
   return (
-    <View style={styles.tiles} testID="profile-tiles">
-      {tiles.map((tile) => (
-        <Pressable
-          key={tile.key}
-          role="button"
-          aria-label={tile.label}
-          testID={`profile-tile-${tile.key}`}
-          onPress={tile.onPress}
-          style={({ pressed }) => [
-            styles.tile,
-            {
-              backgroundColor: pressed ? c.surfaceMuted : c.surface,
-              borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
-              transform: pressed && !theme.reduceMotion ? [{ scale: 0.96 }] : undefined,
-            },
-          ]}
-        >
-          <Icon name={tile.icon} size={22} color={c.textAccent} />
-          <Text variant="caption" align="center" decorative>
-            {tile.label}
-          </Text>
-        </Pressable>
-      ))}
+    <View style={styles.group} testID={testID}>
+      <SectionHeader title={title} />
+      <View style={styles.fields}>{children}</View>
     </View>
+  );
+}
+
+/** A row of a list: an icon, a title, what sits at the end, and a hairline under it. */
+function LinkRow({
+  icon,
+  title,
+  value,
+  danger,
+  onPress,
+  testID,
+}: {
+  icon: IconName;
+  title: string;
+  value?: string;
+  danger?: boolean;
+  onPress: () => void;
+  testID: string;
+}) {
+  const c = useTheme().colors;
+  return (
+    <Pressable
+      role="button"
+      aria-label={value ? `${title}, ${value}` : title}
+      onPress={onPress}
+      testID={testID}
+      style={({ pressed }) => [
+        styles.link,
+        {
+          borderBottomColor: c.hairline,
+          backgroundColor: pressed ? c.surfaceMuted : 'transparent',
+        },
+      ]}
+    >
+      <View style={styles.rowIcon}>
+        <Icon name={icon} size={22} color={danger ? c.textDanger : c.textMuted} />
+      </View>
+      <View style={styles.grow}>
+        <Text variant="label" color={danger ? 'textDanger' : 'text'} decorative>
+          {title}
+        </Text>
+      </View>
+      {value ? (
+        <Text variant="caption" color="textSecondary" decorative>
+          {value}
+        </Text>
+      ) : null}
+      {danger ? null : <Icon name="chevron-forward" size={18} color={c.textMuted} />}
+    </Pressable>
   );
 }
 
@@ -131,16 +153,13 @@ export function ProfileScreen() {
   const status = useAuthStatus();
 
   return (
-    <ScreenFrame title={t('profile.title')} onBack={() => nav.back()} plain testID="profile-screen">
-      <View style={styles.stack}>
-        <AccountSection signedIn={status === 'signedIn'} />
-        <QuickTiles />
-        <PreferencesSections />
-        {status === 'signedIn' ? <ReadingSettingsSection /> : null}
-        {status === 'signedIn' ? <AlertsSections /> : null}
-        <SupportSection />
-      </View>
-    </ScreenFrame>
+    <Page barTitle={t('profile.title')} onBack={() => nav.back()} testID="profile-screen">
+      <AccountSection signedIn={status === 'signedIn'} />
+      <PreferencesSections />
+      {status === 'signedIn' ? <AlertsSections /> : null}
+      {status === 'signedIn' ? <ReadingSettingsSection /> : null}
+      <SupportSection />
+    </Page>
   );
 }
 
@@ -174,72 +193,81 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
 
   if (!signedIn) {
     return (
-      <Section title={t('profile.account.title')} card>
-        <Text variant="body">{t('profile.account.signedOut')}</Text>
+      <Group title={t('profile.account.title')}>
+        <Text variant="body" color="textSecondary">
+          {t('profile.account.signedOut')}
+        </Text>
         <Button
           label={t('profile.account.signIn')}
           fullWidth
           onPress={() => nav.go({ name: 'signIn', returnTo: { name: 'profile' } })}
           testID="profile-sign-in"
         />
-      </Section>
+      </Group>
     );
   }
 
   return (
-    <Section title={t('profile.account.title')} testID="profile-account" card>
+    <View style={styles.stack} testID="profile-account">
       <View style={styles.account}>
-        <Avatar name={me?.displayName ?? t('profile.guestName')} size="lg" />
+        <Avatar name={me?.displayName ?? t('profile.guestName')} size="md" />
         <View style={styles.grow}>
           <Text variant="title3">{me?.displayName ?? t('profile.guestName')}</Text>
           {me ? (
-            <Text variant="body" color="textSecondary" direction="ltr" testID="profile-phone">
+            <Text variant="caption" color="textSecondary" direction="ltr" testID="profile-phone">
               {formatPhoneForDisplay(me.phone)}
             </Text>
           ) : null}
         </View>
       </View>
-      <TextField
-        label={t('profile.name.label')}
-        value={name}
-        onChangeText={(value) => {
-          setName(value);
-          setNameProblem(false);
-        }}
-        {...(nameProblem ? { error: t('signIn.problem.name') } : {})}
-        testID="profile-name"
-      />
-      <Button
-        variant="secondary"
-        fullWidth
-        label={t('profile.save')}
-        loading={saveName.running}
-        onPress={async () => {
-          const checked = checkName(name);
-          if ('problem' in checked) {
-            setNameProblem(true);
-            return;
-          }
-          const saved = await saveName.run(checked.name);
-          if (saved) toast.show(t('profile.saved'), 'success');
-        }}
-        testID="profile-name-save"
-      />
-      <Button
-        variant="secondary"
-        fullWidth
-        label={t('profile.account.signOut')}
-        loading={leave.running}
-        onPress={() => void leave.run()}
-        testID="profile-sign-out"
-      />
-      <Button
-        variant="tertiary"
-        fullWidth
-        label={t('profile.account.delete')}
-        onPress={() => setConfirmDelete(true)}
-        testID="profile-delete"
-      />
+      <View style={styles.fields}>
+        <TextField
+          label={t('profile.name.label')}
+          value={name}
+          onChangeText={(value) => {
+            setName(value);
+            setNameProblem(false);
+          }}
+          {...(nameProblem ? { error: t('signIn.problem.name') } : {})}
+          testID="profile-name"
+        />
+        <Button
+          variant="secondary"
+          fullWidth
+          label={t('profile.save')}
+          loading={saveName.running}
+          onPress={async () => {
+            const checked = checkName(name);
+            if ('problem' in checked) {
+              setNameProblem(true);
+              return;
+            }
+            const saved = await saveName.run(checked.name);
+            if (saved) toast.show(t('profile.saved'), 'success');
+          }}
+          testID="profile-name-save"
+        />
+      </View>
+      <View>
+        <ComingSoon
+          label={t('profile.details.title')}
+          role="button"
+          testID="profile-details-soon"
+        />
+        <LinkRow
+          icon="sign-out"
+          title={t('profile.account.signOut')}
+          onPress={() => void leave.run()}
+          testID="profile-sign-out"
+        />
+        <LinkRow
+          icon="trash"
+          title={t('profile.account.delete')}
+          danger
+          onPress={() => setConfirmDelete(true)}
+          testID="profile-delete"
+        />
+      </View>
       <ConfirmSheet
         visible={confirmDelete}
         title={t('profile.account.delete.title')}
@@ -256,7 +284,7 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
         }}
         testID="delete-sheet"
       />
-    </Section>
+    </View>
   );
 }
 
@@ -272,7 +300,7 @@ function PreferencesSections() {
 
   return (
     <>
-      <Section title={t('profile.language.title')} card>
+      <Group title={t('profile.language.title')}>
         <SegmentedControl<Locale>
           accessibilityLabel={t('profile.language.title')}
           value={prefs.locale}
@@ -293,9 +321,9 @@ function PreferencesSections() {
           ]}
           testID="profile-language"
         />
-      </Section>
+      </Group>
 
-      <Section title={t('profile.textSize.title')} card>
+      <Group title={t('profile.textSize.title')}>
         <SegmentedControl<`${TextSizeStep}`>
           accessibilityLabel={t('profile.textSize.title')}
           value={`${prefs.textSize}`}
@@ -309,9 +337,9 @@ function PreferencesSections() {
         <Text variant="body" color="textSecondary">
           {t('profile.textSize.sample')}
         </Text>
-      </Section>
+      </Group>
 
-      <Section title={t('profile.appearance.title')} card>
+      <Group title={t('profile.appearance.title')}>
         <SegmentedControl<ColorPreference>
           accessibilityLabel={t('profile.appearance.title')}
           value={prefs.color}
@@ -322,7 +350,7 @@ function PreferencesSections() {
           }))}
           testID="profile-appearance"
         />
-      </Section>
+      </Group>
     </>
   );
 }
@@ -348,7 +376,7 @@ function ReadingSettingsSection() {
   };
 
   return (
-    <Section title={t('profile.reading.title')} testID="profile-reading" card>
+    <Group title={t('profile.reading.title')} testID="profile-reading">
       {goalFeature.on ? (
         <Select<string>
           label={t('profile.goal.label')}
@@ -382,7 +410,7 @@ function ReadingSettingsSection() {
           {t(errorMessageKey(save.error.code))}
         </Text>
       ) : null}
-    </Section>
+    </Group>
   );
 }
 
@@ -426,7 +454,7 @@ function AlertsSections() {
 
   return (
     <>
-      <Section title={t('profile.notifications.title')} testID="profile-notifications" card>
+      <Group title={t('profile.notifications.title')} testID="profile-notifications">
         <Switch
           label={t('profile.push.label')}
           description={
@@ -460,9 +488,9 @@ function AlertsSections() {
             {t(errorMessageKey(ayahPush.change.error.code))}
           </Text>
         ) : null}
-      </Section>
+      </Group>
 
-      <Section title={t('profile.alerts.title')} testID="profile-alerts" card>
+      <Group title={t('profile.alerts.title')} testID="profile-alerts">
         <QueryBoundary query={follows}>
           {(items) =>
             items.length === 0 ? (
@@ -491,7 +519,7 @@ function AlertsSections() {
             )
           }
         </QueryBoundary>
-      </Section>
+      </Group>
     </>
   );
 }
@@ -501,30 +529,30 @@ function SupportSection() {
   const nav = useNav();
   const { appVersion } = useServices();
   return (
-    <Section title={t('profile.support')} testID="profile-support" card>
-      <View>
-        <ListItem
-          title={t('profile.support.help')}
-          onPress={() => nav.go({ name: 'page', slug: 'faq' })}
-          divider
-          testID="profile-help"
-        />
-        <ListItem
-          title={t('profile.about')}
-          onPress={() => nav.go({ name: 'page', slug: 'about' })}
-          divider
-          testID="profile-about"
-        />
-        <ListItem
-          title={t('credits.open')}
-          onPress={() => nav.go({ name: 'credits' })}
-          divider
-          testID="profile-credits"
-        />
+    <View testID="profile-support">
+      <LinkRow
+        icon="info"
+        title={t('profile.support.help')}
+        onPress={() => nav.go({ name: 'page', slug: 'faq' })}
+        testID="profile-help"
+      />
+      <LinkRow
+        icon="masjid"
+        title={t('profile.about')}
+        onPress={() => nav.go({ name: 'page', slug: 'about' })}
+        testID="profile-about"
+      />
+      <LinkRow
+        icon="star"
+        title={t('credits.open')}
+        onPress={() => nav.go({ name: 'credits' })}
+        testID="profile-credits"
+      />
+      <View style={[styles.centre, { paddingTop: spacing.lg }]}>
+        <Text variant="caption" color="textSecondary" testID="profile-version">
+          {t('profile.support.version', { version: appVersion })}
+        </Text>
       </View>
-      <Text variant="caption" color="textSecondary" testID="profile-version">
-        {t('profile.support.version', { version: appVersion })}
-      </Text>
-    </Section>
+    </View>
   );
 }

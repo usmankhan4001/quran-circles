@@ -10,22 +10,22 @@
 export const colors = {
   brand: {
     /** Deep emerald: the green header, chosen states, links and the brand (Iqraa redesign). */
-    emerald: '#1e563b',
-    deep: '#163f2c',
+    emerald: '#0a6938',
+    deep: '#08532c',
     /** The page colour after Isha. */
     night: '#0b1f16',
     /** Emerald tint: chosen pills, tonal buttons, section tags. */
-    leaf: '#e8f5ee',
+    leaf: '#edf5f0',
     /** Soft surfaces: muted cards, tracks, the search pill. */
-    cloud: '#f8fafc',
-    mist: '#e2e8f0',
+    cloud: '#f4f6f5',
+    mist: '#e8ecea',
     /** Charcoal: the main call to action on every screen (pill buttons). */
     charcoal: '#111827',
     /** Portion amber. Quran portions, Ramadan and decoration; never body text on white. */
     gilt: '#f59e0b',
     /** Red for unread counts and errors. White text needs the deeper `red[700]`. */
     alert: '#ef4444',
-    ink: '#111827',
+    ink: '#0e1512',
   },
   /** Emerald ramp (style guide: Emerald 50 to 900). */
   green: {
@@ -56,8 +56,8 @@ export const colors = {
     800: '#1e293b',
     900: '#111827',
   },
-  /** Night surfaces, lighter as they rise. */
-  night: {
+  /** The earlier green-black night surfaces. Still used by the admin app and console. */
+  nightGreen: {
     surface: '#11291e',
     raised: '#163426',
     muted: '#0e241a',
@@ -86,6 +86,52 @@ export const colors = {
     800: '#92400e',
     900: '#78350f',
     950: '#451a03',
+  },
+  /**
+   * The Quran Circles design system (design system artifact, 25 Oct 2026): mostly white, black-green
+   * text, one green accent. `day` is the default look; `night` is only used when the person picks it.
+   */
+  day: {
+    page: '#ffffff',
+    fill: '#f4f6f5',
+    line: '#e8ecea',
+    lineStrong: '#858f8a',
+    ink: '#0e1512',
+    inkSoft: '#3f4a45',
+    inkMuted: '#5e6963',
+    green: '#0a6938',
+    greenPress: '#08532c',
+    greenTint: '#edf5f0',
+    onGreenTint: '#08532c',
+    gilt: '#b8862b',
+    giltInk: '#8a6214',
+    giltTint: '#fbf3e2',
+    noticeTint: '#fff6e0',
+    noticeInk: '#6b4e00',
+    careful: '#b3261e',
+    carefulPress: '#8f1e18',
+    carefulTint: '#fdeeed',
+  },
+  night: {
+    page: '#0b0d0c',
+    surface: '#121514',
+    raised: '#191d1b',
+    fill: '#1a1f1c',
+    line: '#242a27',
+    lineStrong: '#6f7a75',
+    ink: '#eef1ef',
+    inkSoft: '#c4ccc8',
+    inkMuted: '#a2aca7',
+    green: '#4fc386',
+    greenPress: '#6fd39c',
+    onGreen: '#04210f',
+    greenTint: '#142a1e',
+    onGreenTint: '#8eddb2',
+    gilt: '#e3b85c',
+    noticeTint: '#2b2412',
+    noticeInk: '#f2cf73',
+    careful: '#ff9a8f',
+    carefulTint: '#331815',
   },
   white: '#ffffff',
   black: '#000000',
@@ -161,36 +207,36 @@ export type SpacingToken = keyof typeof spacing;
 export const screenGutter = spacing.lg;
 
 /**
- * Corners (D17): tags, chips, buttons and fields are pills; thumbnails 8 and 12; tiles 16;
- * small cards 18; cards 20; dialogs 26; sheets 28.
+ * Corners (design system): controls (buttons, fields, banners, the segmented control) 12; cards 16;
+ * sheets and dialogs 20; chips, tags and counters are pills.
  */
 export const radii = {
   none: 0,
   sm: 8,
   md: 12,
+  control: 12,
+  field: 12,
   lg: 16,
-  section: 18,
-  card: 20,
-  xl: 24,
-  dialog: 26,
-  sheet: 28,
-  field: 999,
+  section: 16,
+  card: 16,
+  xl: 20,
+  dialog: 20,
+  sheet: 20,
   pill: 999,
 } as const;
 export type RadiusToken = keyof typeof radii;
 
 /**
- * Elevation as `boxShadow` strings, which React Native 0.76+ and React Native Web both support.
- * In dark mode depth is shown with lighter surfaces; the shadow is kept subtle.
+ * Elevation as `boxShadow` strings. The design is flat: cards use a hairline, not a shadow. The
+ * bottom sheet is the one thing that floats (`high`). `low` and `medium` stay as names so older
+ * screens compile; they draw nothing.
  */
 export const elevation = {
   none: undefined,
-  /** Resting cards (D17): a whisper of charcoal under a hairline border. */
-  low: '0px 6px 24px -4px rgba(17, 24, 39, 0.06), 0px 1px 2px rgba(17, 24, 39, 0.03)',
-  /** Picture cards and the main pill button. */
-  medium: '0px 8px 20px -4px rgba(17, 24, 39, 0.14)',
-  /** Floating: sheets, the tab dock and map cards. */
-  high: '0px 10px 30px rgba(17, 24, 39, 0.12), 0px 1px 3px rgba(17, 24, 39, 0.05)',
+  low: undefined,
+  medium: undefined,
+  /** Bottom sheets only. */
+  high: '0px -12px 40px rgba(14, 21, 18, 0.10)',
 } as const;
 export type ElevationToken = keyof typeof elevation;
 
@@ -224,27 +270,30 @@ export type Script = 'latin' | 'urdu' | 'quran';
 interface TypeRoleSpec {
   /** Size in dp at text size step 0, for Latin text. */
   size: number;
+  /** Size in dp at step 0 for Urdu, where the design sets it by hand. Default: `size` times `scriptSizeFactor.urdu`. */
+  urdu?: number;
   weight: '400' | '500' | '600' | '700' | '800';
   letterSpacing: number;
 }
 
 /**
- * Type scale (D17). Sizes at text size step 0 copy the owner's Iqraa artboards
- * (apps/console/src/showcase); people who need bigger text pick a larger step.
+ * Type scale (design system tokens, 25 Oct 2026). English is Plus Jakarta Sans: big, tight titles
+ * and calm 400 to 600 elsewhere. The Urdu sizes are the design's `ur-*` styles: body 20, label 19,
+ * caption 17, card title 24, title 30.
  */
 export const typeRoles: Record<TypeRole, TypeRoleSpec> = {
-  countdown: { size: 42, weight: '700', letterSpacing: -1 },
-  time: { size: 28, weight: '800', letterSpacing: -0.5 },
-  display: { size: 24, weight: '800', letterSpacing: -0.4 },
-  title1: { size: 21, weight: '800', letterSpacing: -0.2 },
-  title2: { size: 18, weight: '700', letterSpacing: -0.1 },
-  title3: { size: 16, weight: '700', letterSpacing: 0 },
-  bodyLarge: { size: 14.5, weight: '400', letterSpacing: 0 },
-  body: { size: 13, weight: '400', letterSpacing: 0 },
-  label: { size: 13, weight: '600', letterSpacing: 0 },
-  caption: { size: 11.5, weight: '500', letterSpacing: 0.1 },
-  eyebrow: { size: 10.5, weight: '700', letterSpacing: 0.8 },
-  quran: { size: 28, weight: '400', letterSpacing: 0 },
+  countdown: { size: 42, weight: '800', letterSpacing: -0.8 },
+  time: { size: 30, weight: '600', letterSpacing: -0.6 },
+  display: { size: 28, urdu: 30, weight: '700', letterSpacing: -0.56 },
+  title1: { size: 22, urdu: 27, weight: '700', letterSpacing: -0.2 },
+  title2: { size: 20, urdu: 26, weight: '700', letterSpacing: 0 },
+  title3: { size: 17, urdu: 24, weight: '600', letterSpacing: 0 },
+  bodyLarge: { size: 17, urdu: 21, weight: '400', letterSpacing: 0 },
+  body: { size: 16, urdu: 20, weight: '400', letterSpacing: 0 },
+  label: { size: 15, urdu: 19, weight: '600', letterSpacing: 0 },
+  caption: { size: 13, urdu: 17, weight: '500', letterSpacing: 0 },
+  eyebrow: { size: 13, urdu: 16, weight: '500', letterSpacing: 0 },
+  quran: { size: 30, weight: '400', letterSpacing: 0 },
 };
 
 /**
@@ -254,8 +303,8 @@ export const typeRoles: Record<TypeRole, TypeRoleSpec> = {
  */
 export const lineHeightRatio: Record<Script, number> = {
   latin: 1.4,
-  urdu: 2.1,
-  quran: 2.2,
+  urdu: 2,
+  quran: 2.1,
 };
 
 /** Nastaliq looks smaller than the Latin face at the same size, so Urdu text is set larger (D5; 1.1 became 1.25 on 25 Oct 2026 because the Nastaliq read too small on a phone). */
@@ -277,7 +326,9 @@ export interface TypeStyle {
 export function typeStyle(role: TypeRole, script: Script, step: TextSizeStep = 0): TypeStyle {
   const spec = typeRoles[role];
   const scale = textScale[step];
-  const fontSize = Math.round(spec.size * scriptSizeFactor[script] * scale * 2) / 2;
+  const base =
+    script === 'urdu' && spec.urdu !== undefined ? spec.urdu : spec.size * scriptSizeFactor[script];
+  const fontSize = Math.round(base * scale * 2) / 2;
   return {
     fontFamily: fonts[fontTokenFor(script)],
     fontSize,

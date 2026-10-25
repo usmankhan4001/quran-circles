@@ -3,15 +3,19 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Button,
   EmptyState,
+  Icon,
   ListItem,
+  SectionHeader,
   Select,
   Sheet,
   Skeleton,
+  Tag,
   Text,
   formatNumber,
-  radii,
+  minTouchTarget,
   spacing,
   useTheme,
+  type TagKind,
 } from '@qc/ui';
 import {
   MEMORISATION_STATUSES,
@@ -20,19 +24,13 @@ import {
   type MemorisationEntry,
   type MemorisationStatus,
 } from '@qc/contracts';
-import { Medallion, WhiteCard, useArtSize } from '@qc/content/screens';
+import { useArtSize } from '@qc/content/screens';
+import { Page } from '../components/Page';
 import { QueryBoundary } from '../components/QueryBoundary';
-import { ScreenFrame } from '../components/ScreenFrame';
-import { Section } from '../components/Section';
 import { errorMessageKey } from '../core/errors';
 import { formatLocalDate } from '../core/format';
 import { useClearSurah, useMarkSurah, useMemorisation } from '../features/memorisation/hooks';
-import {
-  SURAH_NUMBERS,
-  countByStatus,
-  reviseThisWeek,
-  surahNames,
-} from '../features/memorisation/logic';
+import { SURAH_NUMBERS, reviseThisWeek, surahNames } from '../features/memorisation/logic';
 import { useI18n } from '../i18n/I18nProvider';
 import type { TFunction } from '../i18n/translate';
 import { useNav } from '../nav/NavProvider';
@@ -42,21 +40,35 @@ import { useToast } from '../providers/Toasts';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.xl },
-  gap: { gap: spacing.md },
-  stats: { flexDirection: 'row', gap: spacing.sm },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-    gap: spacing.xxs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.card,
-    borderWidth: 1,
-  },
+  block: { gap: spacing.xs },
   sheet: { gap: spacing.md },
-  rows: { gap: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  rowText: { flex: 1, gap: 1 },
+  private: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 64,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+  },
+  arabic: { width: 56, alignItems: 'center' },
+  number: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowText: { flex: 1, gap: spacing.xxs },
+  done: {
+    width: minTouchTarget,
+    height: minTouchTarget,
+    borderRadius: minTouchTarget / 2,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 /** "1. Al-Fatihah", with the number in the screen's digits. */
@@ -72,42 +84,11 @@ function revisedLine(entry: MemorisationEntry, t: TFunction, locale: Locale): st
     : t('memorisation.neverRevised');
 }
 
-/** Counts by mark, on the glass of the green header (as the numbers on My Journey). */
-function MemorisationSummary({ items }: { items: readonly MemorisationEntry[] }) {
-  const { t, locale } = useI18n();
-  const theme = useTheme();
-  const c = theme.colors;
-  const counts = countByStatus(items);
-  return (
-    <View style={styles.stats} testID="memorisation-summary">
-      {MEMORISATION_STATUSES.map((status) => {
-        const label = t(`memorisation.status.${status}`);
-        return (
-          // Read as text ("2, Memorised"), as on My Journey: no name on a plain `div`.
-          <View
-            key={status}
-            accessible
-            style={[
-              styles.stat,
-              {
-                backgroundColor: c.heroGlass,
-                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.heroGlass,
-              },
-            ]}
-            testID={`memorisation-stat-${status}`}
-          >
-            <Text variant="title1" color="textOnHero">
-              {formatNumber(counts[status], locale)}
-            </Text>
-            <Text variant="caption" color="textOnHero" align="center">
-              {label}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
+const STATUS_TAG: Record<MemorisationStatus, TagKind> = {
+  memorised: 'ok',
+  revising: 'gilt',
+  learning: 'neutral',
+};
 
 /**
  * The memorisation tracker (feature 3): each surah can be learning, memorised or revising, or
@@ -125,6 +106,7 @@ export function MemorisationScreen() {
   if (status !== 'signedIn') {
     body = (
       <EmptyState
+        icon="brain"
         title={t('memorisation.title')}
         description={t('memorisation.signedOut')}
         action={{
@@ -143,6 +125,7 @@ export function MemorisationScreen() {
   } else if (!tracker.enabled) {
     body = (
       <EmptyState
+        icon="brain"
         title={t('memorisation.title')}
         description={t('memorisation.off')}
         testID="memorisation-off"
@@ -159,14 +142,9 @@ export function MemorisationScreen() {
   }
 
   return (
-    <ScreenFrame
-      title={t('memorisation.title')}
-      onBack={() => nav.back()}
-      {...(items && tracker.enabled ? { hero: <MemorisationSummary items={items} /> } : {})}
-      testID="memorisation-screen"
-    >
+    <Page barTitle={t('memorisation.title')} onBack={() => nav.back()} testID="memorisation-screen">
       {body}
-    </ScreenFrame>
+    </Page>
   );
 }
 
@@ -178,6 +156,7 @@ function MemorisationContent({
   reviseAfterDays: number;
 }) {
   const { t, locale } = useI18n();
+  const c = useTheme().colors;
   const { now } = useServices();
   const toast = useToast();
   const mark = useMarkSurah();
@@ -192,8 +171,25 @@ function MemorisationContent({
 
   return (
     <View style={styles.stack}>
-      <Section title={t('memorisation.revise.title')} testID="memorisation-revise">
-        <Text variant="body" color="textSecondary">
+      <View style={styles.private}>
+        <Icon name="shield-check" size={16} color={c.textMuted} />
+        <Text variant="caption" color="textMuted">
+          {t('memorisation.private')}
+        </Text>
+      </View>
+
+      <View style={styles.block} testID="memorisation-revise">
+        <SectionHeader
+          title={t('memorisation.revise.title')}
+          trailing={
+            due.length > 0 ? (
+              <Text variant="caption" color="textSecondary">
+                {formatNumber(due.length, locale)}
+              </Text>
+            ) : undefined
+          }
+        />
+        <Text variant="caption" color="textSecondary">
           {t('memorisation.revise.note', { count: reviseAfterDays })}
         </Text>
         {due.length === 0 ? (
@@ -201,61 +197,80 @@ function MemorisationContent({
             {t('memorisation.revise.empty')}
           </Text>
         ) : (
-          <View style={styles.rows}>
-            {due.map((entry) => (
-              <SurahCard
+          <View>
+            {due.map((entry, i) => (
+              <SurahRow
                 key={entry.surah}
                 entry={entry}
                 subtitle={revisedLine(entry, t, locale)}
+                last={i === due.length - 1}
+                lead="arabic"
                 trailing={
-                  <Button
-                    variant="outline"
-                    label={t('memorisation.markRevised')}
-                    accessibilityLabel={t('memorisation.markRevisedFor', {
+                  <Pressable
+                    role="button"
+                    aria-label={t('memorisation.markRevisedFor', {
                       surah: surahNames(entry.surah).simple,
                     })}
+                    aria-disabled={mark.running}
                     disabled={mark.running}
                     onPress={() => void markRevised(entry.surah)}
                     testID={`revise-${entry.surah}`}
-                  />
+                    style={({ pressed }) => [
+                      styles.done,
+                      {
+                        borderColor: c.borderStrong,
+                        backgroundColor: pressed ? c.surfaceMuted : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Icon name="check" size={20} color={c.textAccent} />
+                  </Pressable>
                 }
                 testID={`due-${entry.surah}`}
               />
             ))}
           </View>
         )}
-      </Section>
+      </View>
 
-      <Section title={t('memorisation.list.title')} testID="memorisation-list">
-        <Select<string>
-          label={t('memorisation.add.label')}
-          placeholder={t('memorisation.add.placeholder')}
-          value={undefined}
-          options={SURAH_NUMBERS.map((n) => ({ value: `${n}`, label: surahTitle(n, locale) }))}
-          onChange={(value) => setOpen(Number(value))}
-          testID="memorisation-add"
-        />
+      <View style={styles.block} testID="memorisation-list">
+        <SectionHeader title={t('memorisation.list.title')} />
         {items.length === 0 ? (
           <Text variant="body" color="textSecondary" testID="memorisation-empty">
             {t('memorisation.list.empty')}
           </Text>
         ) : (
-          <View style={styles.rows}>
-            {items.map((entry) => (
-              <SurahCard
+          <View>
+            {items.map((entry, i) => (
+              <SurahRow
                 key={entry.surah}
                 entry={entry}
-                subtitle={`${t(`memorisation.status.${entry.status}`)}${t('schedule.separator')}${revisedLine(entry, t, locale)}`}
+                subtitle={revisedLine(entry, t, locale)}
+                last={i === items.length - 1}
+                lead="number"
+                trailing={
+                  <Tag
+                    kind={STATUS_TAG[entry.status]}
+                    label={t(`memorisation.status.${entry.status}`)}
+                  />
+                }
+                accessibilityLabel={`${surahNames(entry.surah).simple}, ${t(`memorisation.status.${entry.status}`)}, ${revisedLine(entry, t, locale)}`}
                 onPress={() => setOpen(entry.surah)}
                 testID={`surah-${entry.surah}`}
               />
             ))}
           </View>
         )}
-        <Text variant="caption" color="textSecondary">
-          {t('memorisation.private')}
-        </Text>
-      </Section>
+      </View>
+
+      <Select<string>
+        label={t('memorisation.add.label')}
+        placeholder={t('memorisation.add.placeholder')}
+        value={undefined}
+        options={SURAH_NUMBERS.map((n) => ({ value: `${n}`, label: surahTitle(n, locale) }))}
+        onChange={(value) => setOpen(Number(value))}
+        testID="memorisation-add"
+      />
 
       <SurahSheet
         surah={open}
@@ -267,53 +282,81 @@ function MemorisationContent({
 }
 
 /**
- * A surah as the Quran list draws it (D17): a white card with the star medallion, the name and
- * a line under it, and the Arabic name at the end. Opens the sheet when it can be pressed.
+ * A surah as a flat row: its number in a ring, or its Arabic name, then the English name and a
+ * line under it, and what sits at the end (a tick to mark it revised, or its status). A row
+ * that can be pressed opens the sheet.
  */
-function SurahCard({
+function SurahRow({
   entry,
   subtitle,
+  last,
+  lead,
   trailing,
+  accessibilityLabel,
   onPress,
   testID,
 }: {
   entry: MemorisationEntry;
   subtitle: string;
-  trailing?: ReactNode;
+  last: boolean;
+  lead: 'arabic' | 'number';
+  trailing: ReactNode;
+  accessibilityLabel?: string;
   onPress?: () => void;
   testID: string;
 }) {
+  const { locale } = useI18n();
+  const c = useTheme().colors;
   const size = useArtSize();
   const names = surahNames(entry.surah);
-  const card = (
-    <WhiteCard radius={15} padding={12}>
-      <View style={styles.row}>
-        <Medallion value={entry.surah} />
-        <View style={styles.rowText}>
-          <Text variant="label" strong numberOfLines={1}>
-            {names.simple}
-          </Text>
-          <Text variant="caption" color="textSecondary">
-            {subtitle}
-          </Text>
-        </View>
-        {trailing ?? (
-          <Text variant="quran" lang="ar" decorative style={size(17, 'quran', 'quran')}>
+  const body = (
+    <>
+      {lead === 'arabic' ? (
+        <View style={styles.arabic}>
+          <Text variant="quran" lang="ar" decorative style={size(22, 'quran', 'quran')}>
             {names.arabic}
           </Text>
-        )}
+        </View>
+      ) : (
+        <View style={[styles.number, { borderColor: c.borderStrong }]}>
+          <Text variant="caption" color="textSecondary" decorative>
+            {formatNumber(entry.surah, locale)}
+          </Text>
+        </View>
+      )}
+      <View style={styles.rowText}>
+        <Text variant="label" numberOfLines={1}>
+          {names.simple}
+        </Text>
+        <Text variant="caption" color="textSecondary">
+          {subtitle}
+        </Text>
       </View>
-    </WhiteCard>
+    </>
   );
-  if (!onPress) return <View testID={testID}>{card}</View>;
+  const border = { borderBottomColor: last ? 'transparent' : c.hairline };
+  if (!onPress) {
+    return (
+      <View style={[styles.row, border]} testID={testID}>
+        {body}
+        {trailing}
+      </View>
+    );
+  }
   return (
     <Pressable
       role="button"
-      aria-label={`${names.simple}, ${subtitle}`}
+      aria-label={accessibilityLabel ?? `${names.simple}, ${subtitle}`}
       onPress={onPress}
       testID={testID}
+      style={({ pressed }) => [
+        styles.row,
+        border,
+        { backgroundColor: pressed ? c.surfaceMuted : 'transparent' },
+      ]}
     >
-      {card}
+      {body}
+      {trailing}
     </Pressable>
   );
 }

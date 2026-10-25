@@ -123,6 +123,29 @@ export function createFakeQuranApi(): FakeQuranApi {
         return Promise.resolve(json({ status: 'OK', data }));
       }
 
+      // The mushaf page endpoints, with an invented layout: page N holds the first (up to 8) ayahs
+      // of surah N, and every ayah of surah N is "on" page N.
+      const pageMatch = /\/page\/(\d+)\/quran-uthmani$/.exec(url);
+      if (pageMatch) {
+        const page = Number(pageMatch[1]);
+        const surah = Math.min(page, 114);
+        const count = Math.min(8, ayahCountOf(surah));
+        const ayahs = Array.from({ length: count }, (_, i) => ({
+          ...ayahOf(surah, i + 1, fakeArabic(surah, i + 1), true),
+          juz: 1,
+        }));
+        return Promise.resolve(json({ status: 'OK', data: { number: page, ayahs } }));
+      }
+      const pageOfMatch = /\/ayah\/(\d+):(\d+)\/quran-uthmani$/.exec(url);
+      if (pageOfMatch) {
+        const surah = Number(pageOfMatch[1]);
+        const ayah = Number(pageOfMatch[2]);
+        if (ayah < 1 || ayah > ayahCountOf(surah)) {
+          return Promise.resolve(new Response('{}', { status: 404 }));
+        }
+        return Promise.resolve(json({ status: 'OK', data: { page: surah } }));
+      }
+
       const ayahMatch = /\/ayah\/(\d+):(\d+)\/editions\/([^/]+)$/.exec(url);
       if (ayahMatch) {
         const surah = Number(ayahMatch[1]);

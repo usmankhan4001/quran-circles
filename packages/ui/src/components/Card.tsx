@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useTheme } from '../theme';
-import { elevation, radii, spacing, type SpacingToken } from '../tokens';
+import { radii, spacing, type SpacingToken } from '../tokens';
 import { Touchable } from './Touchable';
 
 export type CardVariant = 'raised' | 'outlined' | 'flat';
@@ -45,7 +45,6 @@ export function Card({
         : variant === 'flat'
           ? c.surfaceMuted
           : c.hairline,
-    boxShadow: variant === 'raised' && theme.mode === 'light' ? elevation.low : undefined,
   };
   if (!onPress) {
     return (
