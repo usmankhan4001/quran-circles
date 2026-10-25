@@ -16,11 +16,19 @@ Source of truth: the 25 Oct 2026 boards. Design system `UEFqRavqK4aJmgkkWJJJLp`,
 | Urdu face                     | Kit font stack already lists Noori Nastaleeq first with Noto Nastaliq as fallback. Noori file not supplied yet.                              |
 | Not yet compared              | Mushaf page and reading settings screens, coordinator welcome ("by invitation"), poster maker, states boards, Urdu screens, console screens. |
 
+## Owner decisions
+
+- **Floating pill tab bar stays.** Muhammad: "i need the floating bar". This deviates from the boards, which show a flat labelled bar (design system TabBar, TabBar README). The pill is the default in `packages/ui` `TabBar`, used by the member and coordinator apps. Earlier messages asking for the flat bar, or for a flag, are superseded. The bar lives only in the tab layout, so Mushaf, reader, full map, sign-in, sign-up, Welcome and Features do not show it.
+- **Sign-in, sign-up and code screens**: identity fields and auth logic belong to lane `lane/auth/email-otp` (email code via Resend plus a required WhatsApp number). This branch does not touch them, so the two merge cleanly.
+- Plus Jakarta Sans stays (the design system specifies it). The splash change stays on the branch for Muhammad to review.
+
 ## Done
 
 - `packages/ui` TabBar rebuilt as a floating pill (see above); `redesign-kit.test.tsx` updated for it.
 - `apps/user-app` tabs fade on switch unless reduced motion is on.
 - Splash and web colours (above).
+- Member app **Welcome**: it showed in night mode because the default colour mode followed the phone; light is now the default and night only when chosen (design system rule). The logo is now Muhammad's logo (160px, rounded) instead of a green square with a star, and the language switch reads English / اردو.
+- Coordinator welcome ("by invitation"), its features screen, the Mushaf page and the reading settings sheet already exist in code; not yet compared line by line with the boards.
 
 ## Open, for the orchestrator
 

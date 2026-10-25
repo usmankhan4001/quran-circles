@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Button, StarMark, Text, spacing, useTheme } from '@qc/ui';
+import { Image, StyleSheet, View } from 'react-native';
+import { Button, Text, spacing } from '@qc/ui';
+import logoImage from '../../public/icons/icon-512.png';
 import { Page } from '../components/Page';
 import { LanguageSwitch } from '../components/LanguageSwitch';
 import { useI18n } from '../i18n/I18nProvider';
@@ -29,7 +30,6 @@ export function WelcomeScreen() {
   const { t } = useI18n();
   const nav = useNav();
   const prefs = usePreferences();
-  const c = useTheme().colors;
 
   // Seen once, then never again on its own.
   const { welcomed, update } = prefs;
@@ -87,9 +87,11 @@ export function WelcomeScreen() {
         <LanguageSwitch />
       </View>
       <View style={styles.hero}>
-        <View style={[styles.logo, { backgroundColor: c.accent }]} aria-hidden>
-          <StarMark size={72} />
-        </View>
+        <Image
+          aria-hidden
+          source={typeof logoImage === 'string' ? { uri: logoImage } : logoImage}
+          style={styles.logo}
+        />
         <View style={styles.words}>
           <Text variant="display" heading={1} align="center">
             {t('app.name')}
