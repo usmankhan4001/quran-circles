@@ -11,6 +11,7 @@ import { within } from '@testing-library/react';
 import { MATRIX, NOW, createWorld, directionOf, renderScreen, waitFor } from '../../test/harness';
 import { pakistanDate, resolveDailyAyah } from '@qc/contracts';
 import { fixtures } from '@qc/contracts/fixtures';
+import { CITY_RAWALPINDI } from '../../test/factories';
 import { HomeScreen } from '../../screens/HomeScreen';
 import { QuranPrayerScreen } from '../../screens/QuranPrayerScreen';
 import { createContentModules } from './contentPackage';
@@ -95,6 +96,15 @@ describe('the Quran & Prayer package inside the app', () => {
     await view.findByTestId('section-switch');
     expect(view.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['quran.hub.title']);
+  });
+
+  it('uses the city chosen for the app when no city was chosen in the prayer view', async () => {
+    const storage = createMemoryStorage();
+    await createViewStateStore(storage).update({ section: 'prayer' });
+    const { content } = modules(storage);
+    const view = await renderScreen(<QuranPrayerScreen />, { content, cityId: CITY_RAWALPINDI.id });
+    await waitFor(() => expect(view.getAllByText(en['prayer.fajr']).length).toBeGreaterThan(0));
+    expect(view.queryByTestId('no-city')).toBeNull();
   });
 
   it("shows today's five prayers in the strip on Home once a city is chosen", async () => {

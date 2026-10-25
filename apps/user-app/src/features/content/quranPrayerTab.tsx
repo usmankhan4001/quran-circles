@@ -18,9 +18,10 @@ import { ProfileButton } from '../../components/ProfileButton';
 import { formatClockTime, formatShortDate } from '../../core/format';
 import { useI18n } from '../../i18n/I18nProvider';
 import { useNav } from '../../nav/NavProvider';
-import { useAuthStatus, useOffline } from '../../providers/hooks';
+import { useAuthStatus, useOffline, usePreferences } from '../../providers/hooks';
 import { useInsets } from '../../providers/insets';
 import { useMemorisation } from '../memorisation/hooks';
+import { useCities } from '../places/usePlaces';
 import { countByStatus, reviseThisWeek, surahNames } from '../memorisation/logic';
 import { useTodayPortions } from '../readAlong/hooks';
 import { useUpdatesFeed } from '../updates/hooks';
@@ -252,6 +253,9 @@ function AppQuranPrayerTab({ initialReader }: { initialReader?: ReaderTarget }) 
   const offline = useOffline();
   const c = useTheme().colors;
   const view = useSavedView();
+  // Without a city chosen here, fall back to the app's own city, as Home's prayer strip does.
+  const prefs = usePreferences();
+  const appCitySlug = useCities().data?.find((x) => x.id === prefs.cityId)?.slug ?? null;
   const [reader, setReader] = useState<ReaderTarget | null>(initialReader ?? null);
   const lead = usePortionLead(setReader);
   const banner = offline ? (
@@ -297,7 +301,7 @@ function AppQuranPrayerTab({ initialReader }: { initialReader?: ReaderTarget }) 
           <PrayerTimesScreen
             header={header}
             footer={<LatestUpdate />}
-            placeId={view.state.placeId}
+            placeId={view.state.placeId ?? appCitySlug}
             ready
             onPlaceChange={(placeId) => view.update({ placeId })}
             calendarView={view.state.calendarView}
