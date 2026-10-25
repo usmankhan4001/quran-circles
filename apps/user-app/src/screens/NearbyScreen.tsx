@@ -33,7 +33,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
-import { useToast } from '../providers/Toasts';
+import { ComingSoon } from '../ui/ComingSoon';
 import { PictureCard } from '../ui/PictureCard';
 import { TabFrame } from '../ui/TabFrame';
 import { NearbyChip, NearbySearch, ViewSwitch } from '../ui/NearbyControls';
@@ -81,6 +81,7 @@ const styles = StyleSheet.create({
   selected: { gap: spacing.xs },
   selectedAction: { marginTop: spacing.md },
   portion: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: radii.pill },
+  soonCentre: { alignSelf: 'center', justifyContent: 'center' },
 });
 
 const NEAREST_WIDTH = 176;
@@ -90,7 +91,6 @@ type ViewMode = 'list' | 'map';
 export function NearbyScreen() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
-  const toast = useToast();
   const { MapView } = useServices();
   const prefs = usePreferences();
   const config = useAppConfig();
@@ -271,24 +271,25 @@ export function NearbyScreen() {
             testID="nearby-error"
           />
         ) : list.items.length === 0 ? (
-          <EmptyState
-            title={t('nearby.empty.title')}
-            description={
-              hasAnyFilter(filters) ? t('nearby.empty.withFilters') : t('nearby.empty.body')
-            }
-            {...(hasAnyFilter(filters)
-              ? { action: { label: t('nearby.filters.clear'), onPress: clearFilters } }
-              : {})}
-            {...(config.featureFlags.circle_requests
-              ? {
-                  secondaryAction: {
-                    label: t('nearby.request.action'),
-                    onPress: () => toast.show(t('nearby.request.soon'), 'info'),
-                  },
-                }
-              : {})}
-            testID="nearby-empty"
-          />
+          <View testID="nearby-empty">
+            <EmptyState
+              title={t('nearby.empty.title')}
+              description={
+                hasAnyFilter(filters) ? t('nearby.empty.withFilters') : t('nearby.empty.body')
+              }
+              {...(hasAnyFilter(filters)
+                ? { action: { label: t('nearby.filters.clear'), onPress: clearFilters } }
+                : {})}
+            />
+            {/* Requesting a circle is a later wave: drawn, but not built (owner, 25 Oct 2026). */}
+            {config.featureFlags.circle_requests ? (
+              <ComingSoon
+                label={t('nearby.request.action')}
+                style={styles.soonCentre}
+                testID="nearby-request"
+              />
+            ) : null}
+          </View>
         ) : mode === 'map' ? (
           <View style={styles.stack}>
             <MapView
@@ -420,12 +421,7 @@ export function NearbyScreen() {
                   <Text variant="body" color="textSecondary">
                     {t('nearby.ask.body')}
                   </Text>
-                  <Button
-                    variant="secondary"
-                    label={t('nearby.ask.action')}
-                    onPress={() => toast.show(t('nearby.request.soon'), 'info')}
-                    testID="nearby-ask-action"
-                  />
+                  <ComingSoon label={t('nearby.ask.action')} testID="nearby-ask-action" />
                 </View>
               </Card>
             ) : null}
