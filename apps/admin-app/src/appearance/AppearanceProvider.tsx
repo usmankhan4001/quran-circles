@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import type { Locale } from '@qc/contracts';
 import { formatNumber, ThemeProvider, type ColorMode, type TextSizeStep } from '@qc/ui';
 import type { LanguageLoader } from '../i18n/languageLoader';
@@ -95,9 +95,11 @@ export function AppearanceProvider({
     // for nothing (a phone, and tests, start in English as before).
     locale: initial?.locale ?? pageLocale(),
     textSize: initial?.textSize ?? 0,
-    colorChoice: initial?.colorChoice ?? 'system',
+    // Light is the default for everyone; the phone's dark setting only when picked.
+    colorChoice: initial?.colorChoice ?? 'light',
   });
   const [ready, setReady] = useState(Boolean(initial));
+  const scheme = useColorScheme();
 
   useEffect(() => {
     if (initial) return;
@@ -153,8 +155,8 @@ export function AppearanceProvider({
     [state, locale, ready, update, languages],
   );
 
-  // Light is the default for every app; the phone's dark setting is not followed on its own.
-  const mode: ColorMode = state.colorChoice === 'system' ? 'light' : state.colorChoice;
+  const mode: ColorMode =
+    state.colorChoice === 'system' ? (scheme === 'dark' ? 'dark' : 'light') : state.colorChoice;
 
   return (
     <AppearanceContext.Provider value={value}>

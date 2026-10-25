@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 
 describe('theme tokens', () => {
   it('resolves the system choice from the device preference', () => {
-    expect(resolveTheme('system', true)).toBe('light'); // the system setting is not followed
+    expect(resolveTheme('system', true)).toBe('dark');
     expect(resolveTheme('system', false)).toBe('light');
     expect(resolveTheme('light', true)).toBe('light');
   });

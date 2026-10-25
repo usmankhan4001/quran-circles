@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, useColorScheme } from 'react-native';
 import { ThemeProvider, type ColorMode } from '@qc/ui';
 import { NavProvider, type Navigator } from '../nav/NavProvider';
 import { I18nProvider } from '../i18n/I18nProvider';
@@ -12,12 +12,10 @@ import { useReduceMotion } from './useReduceMotion';
 
 const styles = StyleSheet.create({ root: { flex: 1 } });
 
-/**
- * Light is the default; the phone's dark setting is not followed on its own (design system).
- * Night, or high contrast, only when the person picks it in Settings.
- */
-function modeFor(color: string): ColorMode {
-  return color === 'dark' || color === 'highContrast' ? color : 'light';
+function modeFor(color: string, system: 'light' | 'dark' | null | undefined): ColorMode {
+  if (color === 'dark' || color === 'light' || color === 'highContrast') return color;
+  // "Same as phone": only when the person picked it. The default is light.
+  return system === 'dark' ? 'dark' : 'light';
 }
 
 /** Puts language, direction, colour mode and text size on the screen, from the saved choices. */
@@ -29,6 +27,7 @@ function ThemeFromPreferences({
   reduceMotion?: boolean;
 }) {
   const prefs = usePreferences();
+  const system = useColorScheme();
   const systemReduceMotion = useReduceMotion();
   // The saved language once its words are in (the web downloads one language at a time).
   const locale = useShownLocale(prefs.locale);
@@ -42,7 +41,7 @@ function ThemeFromPreferences({
 
   return (
     <ThemeProvider
-      mode={modeFor(prefs.color)}
+      mode={modeFor(prefs.color, system)}
       locale={locale}
       textSize={prefs.textSize}
       reduceMotion={reduceMotion ?? systemReduceMotion}

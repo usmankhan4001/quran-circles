@@ -33,7 +33,7 @@ export function defaultPreferences(deviceLanguages: readonly string[] = []): Pre
   return {
     locale: detectLocale(deviceLanguages),
     textSize: 0,
-    color: 'system',
+    color: 'light',
     cityId: null,
     areaId: null,
     section: null,
