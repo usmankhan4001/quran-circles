@@ -71,7 +71,7 @@ export function SheetPanel({
         <View style={[styles.handle, { backgroundColor: c.border }]} aria-hidden />
         <View style={styles.header}>
           <View style={styles.title}>
-            <Text variant="title3" heading={2}>
+            <Text variant="title2" heading={2}>
               {title}
             </Text>
           </View>
