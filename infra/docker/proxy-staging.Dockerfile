@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1.7
 #
-# Staging proxy image: Caddy with the PWA and console static builds baked in, for the Dokploy
-# staging stack (infra/docker-compose.staging.yml). Production keeps host-mounted builds.
+# Proxy image for the Dokploy stacks: Caddy with the PWA and console static builds baked in.
+# Staging (infra/docker-compose.staging.yml) uses the defaults; production on Dokploy
+# (infra/docker-compose.dokploy-prod.yml) passes CADDYFILE=infra/caddy/Caddyfile.dokploy-prod and
+# the public web keys. The plain-VPS production setup keeps host-mounted builds.
 #
 #   docker build -f infra/docker/proxy-staging.Dockerfile --target proxy-staging \
 #     --build-arg PUBLIC_API_URL=https://staging.example.invalid/api -t qc-staging/proxy:<tag> .
@@ -18,6 +20,10 @@ ARG PNPM_VERSION=10.28.0
 # The PWA calls the api at this absolute URL (EXPO_PUBLIC_API_URL); the console uses /api on its
 # own origin.
 ARG PUBLIC_API_URL
+# Public, restricted keys baked into the PWA (never secrets; see apps/user-app/src/platform/env.ts).
+# Empty: the keyless map and no web push.
+ARG GOOGLE_MAPS_WEB_KEY=""
+ARG VAPID_PUBLIC_KEY=""
 
 RUN npm install --global --no-fund --no-audit "pnpm@${PNPM_VERSION}"
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
@@ -32,13 +38,17 @@ RUN --mount=type=cache,id=qc-pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --ignore-scripts
 
 RUN test -n "${PUBLIC_API_URL}" \
- && EXPO_PUBLIC_API_URL="${PUBLIC_API_URL}" pnpm --filter @qc/user-app export:web \
+ && EXPO_PUBLIC_API_URL="${PUBLIC_API_URL}" \
+    EXPO_PUBLIC_GOOGLE_MAPS_API_KEY="${GOOGLE_MAPS_WEB_KEY}" \
+    EXPO_PUBLIC_VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY}" \
+    pnpm --filter @qc/user-app export:web \
  && VITE_API_BASE_URL=/api pnpm --filter @qc/console build
 
 # ---------------------------------------------------------------------------------------------
 # hadolint ignore=DL3006
 FROM ${CADDY_IMAGE} AS proxy-staging
 
-COPY infra/caddy/Caddyfile.staging /etc/caddy/Caddyfile
+ARG CADDYFILE=infra/caddy/Caddyfile.staging
+COPY ${CADDYFILE} /etc/caddy/Caddyfile
 COPY --from=build /repo/apps/user-app/dist /srv/www/app
 COPY --from=build /repo/apps/console/dist /srv/www/console

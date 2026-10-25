@@ -1,0 +1,110 @@
+# Production override for Dokploy (Traefik, and a Cloudflare tunnel, in front). Used together with
+# the production file, never alone, exactly as staging uses infra/docker-compose.staging.yml:
+#
+#   docker compose -f infra/docker-compose.prod.yml -f infra/docker-compose.dokploy-prod.yml \
+#     --env-file <production env> up -d --build
+#
+# Differences from the plain-VPS production setup, all at the edge:
+# - The production `proxy` (host ports 80/443, automatic TLS) is parked behind the `prod-proxy`
+#   profile, so it never starts here: Dokploy's Traefik already owns ports 80 and 443. `web` takes
+#   its place: Caddy on plain HTTP :80, no host ports, routed by the Traefik labels below for
+#   QC_DOMAIN and QC_CONSOLE_DOMAIN. Cloudflare (or Traefik) terminates TLS.
+# - The PWA and console builds are baked into the `web` image, with the public web keys
+#   (QC_GOOGLE_MAPS_WEB_KEY and the worker's VAPID_PUBLIC_KEY) passed as build arguments.
+# - `web` also joins Dokploy's shared network, so it reaches the api and the worker by unique
+#   aliases (qc-prod-api, qc-prod-worker; see infra/caddy/Caddyfile.dokploy-prod).
+# - No seed, load-test or restore-check services: those are staging tools.
+# Postgres, the poster renderer, the api and the worker stay on the internal networks exactly as
+# in production, with the same database roles and limits. ACME_EMAIL is still required by the
+# production file; any value works here because Caddy does not request certificates.
+#
+# Traefik entrypoint: `web` (HTTP), for names that reach the server through a Cloudflare tunnel, as
+# on the staging host. If the DNS records point straight at the server instead, leave these labels
+# and add both names in Dokploy (Domains, service `web`, port 80, HTTPS with Let's Encrypt).
+#
+# No YAML merge tags (!reset, !override): Dokploy re-serialises this file before deploying and
+# drops them, so everything here must work with plain Compose merging.
+
+services:
+  proxy:
+    profiles:
+      - prod-proxy
+
+  web:
+    image: ${QC_IMAGE_REGISTRY:-qc-prod}/proxy:${QC_IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: infra/docker/proxy-staging.Dockerfile
+      target: proxy-staging
+      args:
+        CADDYFILE: infra/caddy/Caddyfile.dokploy-prod
+        PUBLIC_API_URL: https://${QC_DOMAIN:?set QC_DOMAIN in the env file}/api
+        GOOGLE_MAPS_WEB_KEY: ${QC_GOOGLE_MAPS_WEB_KEY:-}
+        VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    environment:
+      QC_DOMAIN: ${QC_DOMAIN:?set QC_DOMAIN in the env file}
+      QC_CONSOLE_DOMAIN: ${QC_CONSOLE_DOMAIN:?set QC_CONSOLE_DOMAIN in the env file}
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - edge
+      - dokploy-network
+    # Routing for Dokploy's Traefik, set here rather than as Dokploy domains, so the routing lives
+    # in the repository. List form, because Compose interpolates values but not mapping keys.
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.rule=Host(`${QC_DOMAIN}`) || Host(`${QC_CONSOLE_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.entrypoints=web
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.service=${COMPOSE_PROJECT_NAME:-qc-prod}-web
+      - traefik.http.services.${COMPOSE_PROJECT_NAME:-qc-prod}-web.loadbalancer.server.port=80
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:2019/config/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '${QC_PROXY_CPUS:-0.5}'
+          memory: ${QC_PROXY_MEMORY:-256m}
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+        tag: '{{.Name}}'
+
+  # Unique aliases on `edge`, merged into the production network list.
+  api:
+    networks:
+      edge:
+        aliases:
+          - qc-prod-api
+
+  worker:
+    networks:
+      edge:
+        aliases:
+          - qc-prod-worker
+
+networks:
+  dokploy-network:
+    external: true

@@ -18,6 +18,12 @@
 	servers {
 		# Traefik (on Dokploy's private network) sits in front; keep its X-Forwarded-* headers.
 		trusted_proxies static private_ranges
+		# The real client: Cloudflare's header when the request came through its tunnel, otherwise
+		# the address Traefik recorded (Traefik drops X-Forwarded-For from untrusted senders and
+		# sets its own). Read only from the private-range hops above.
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+		# Rightmost untrusted entry, so a forged X-Forwarded-For prefix is ignored.
+		trusted_proxies_strict
 	}
 }
 
@@ -43,7 +49,11 @@
 		request_body {
 			max_size 10MB
 		}
-		reverse_proxy qc-staging-api:3000
+		reverse_proxy qc-staging-api:3000 {
+			# The api reads the rightmost X-Forwarded-For entry (SEC-20). Without this it would be the
+			# Traefik hop for everyone, and every person would share one sign-in and request budget.
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 }
 
@@ -63,7 +73,7 @@ http://{$QC_DOMAIN} {
 	import common
 	header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
 	@app not path /api/* /webhooks/*
-	header @app Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.alquran.cloud https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob:; frame-src https://*.google.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+	header @app Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.alquran.cloud https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob:; frame-src https://*.google.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	import api
 
 	handle /webhooks/whatsapp {
