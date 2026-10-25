@@ -72,4 +72,4 @@ The procedure, recovery targets and the latest drill results are in [`infra/READ
 
 ## CI
 
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs `pnpm install --frozen-lockfile`, typecheck, lint, tests and the format check on every push, with least-privilege permissions and actions pinned to commit SHAs. It does not deploy.
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs `pnpm install --frozen-lockfile`, typecheck, lint, tests and the format check when started by hand (it no longer runs on push), with least-privilege permissions and actions pinned to commit SHAs. It does not deploy.

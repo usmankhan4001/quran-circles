@@ -2,12 +2,13 @@ name: ci
 
 # CI never deploys. Production on Dokploy pulls `main` from GitHub with auto-deploy on, so a push to
 # `main` goes live whether or not this workflow has finished. Treat a red check on `main` as a
-# reason to roll back or fix forward, and use branch protection (docs/engineering/github-settings.md)
-# so changes reach `main` only after `check` passes.
+# reason to roll back or fix forward. Branch protection (docs/engineering/github-settings.md)
+# so changes reach `main` only after `check` passes. Runs are manual (workflow_dispatch), so a push
+# never starts a run; run `pnpm check` locally before pushing.
 
 on:
-  push:
-  pull_request:
+  # Manual only: Actions > ci > Run workflow. Checks run locally with `pnpm check` instead.
+  workflow_dispatch:
 
 # Least privilege (SEC-14): the token can read the repository and nothing else. A job that needs
 # more asks for it in its own `permissions:` block.

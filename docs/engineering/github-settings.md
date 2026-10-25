@@ -21,7 +21,7 @@ The reason they matter: **Dokploy production pulls `main` from GitHub with auto-
 - [ ] Require a pull request before merging
 - [ ] Require approvals: 1 (the author never approves their own change)
 - [ ] Require review from Code Owners (`.github/CODEOWNERS` lists the sensitive paths)
-- [ ] Require status checks to pass: `check` (the job in `.github/workflows/ci.yml`). Add `e2e` later, once it has been green for a while
+- [ ] Require status checks: leave this off while CI is manual (a required check that never runs blocks every merge). Turn it on, with `check`, if CI triggers are restored
 - [ ] Require branches to be up to date before merging
 - [ ] Require conversation resolution before merging
 - [ ] Block force pushes and deletion of `main`
@@ -32,10 +32,14 @@ Until this rule is on, work lands on `main` in small commits (see [CONTRIBUTING.
 **Settings > Code security**
 
 - [ ] Private vulnerability reporting on (the link in [SECURITY.md](../../SECURITY.md) depends on it)
-- [ ] Dependabot alerts and security updates on (version updates come from `.github/dependabot.yml`)
+- [ ] Dependabot alerts and security updates on. Version updates are off (`open-pull-requests-limit: 0` in `.github/dependabot.yml`) while CI is manual
 - [ ] Secret scanning and push protection on
 
 **Settings > Actions > General**
+
+CI is manual (`workflow_dispatch` only), so pushes start no runs and leave no red checks.
+
+- [ ] Optional: choose **Disable actions** to turn Actions off entirely, or keep them on and run `ci` by hand from the Actions tab. If you disable them, the manual `ci` run is unavailable until you re-enable them
 
 - [ ] Workflow permissions: read repository contents only (the workflow already asks for `contents: read`)
 - [ ] Allow GitHub Actions and actions from verified creators; the workflow pins third-party actions to commit SHAs

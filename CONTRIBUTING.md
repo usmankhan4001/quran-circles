@@ -46,7 +46,7 @@ The full rules are in [`docs/engineering/branches-and-review.md`](docs/engineeri
 - Pull requests use [`.github/pull_request_template.md`](.github/pull_request_template.md). A reviewer who did not write the change approves it.
 - Sensitive areas need a human approval: sign-in, scope checks, migrations, WhatsApp, account deletion, infrastructure and anything that stores personal data. [`.github/CODEOWNERS`](.github/CODEOWNERS) lists the paths.
 
-**`main` deploys production.** Dokploy pulls `main` from GitHub with auto-deploy on, so a push to `main` goes live. Push your work to your lane branch, and merge to `main` only when it is meant to go live. Do not open pull requests or wait on GitHub Actions unless the owner asks. Branch protection for `main` is a checklist in [`docs/engineering/github-settings.md`](docs/engineering/github-settings.md).
+**`main` deploys production.** Dokploy pulls `main` from GitHub with auto-deploy on, so a push to `main` goes live. Push your work to your lane branch, and merge to `main` only when it is meant to go live. Checks run locally with `pnpm check`; the CI workflow is manual only (Actions > ci > Run workflow), so pushes start no runs. Do not open pull requests unless the owner asks. Branch protection for `main` is a checklist in [`docs/engineering/github-settings.md`](docs/engineering/github-settings.md).
 
 Branch names and line endings: use lowercase `lane/<lane>/<topic>` (or `release/<name>`), and let `.gitattributes` keep files LF, whatever your `core.autocrlf` is. To see which old branches are merged, run `pnpm branches` (list only).
 

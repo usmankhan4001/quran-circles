@@ -1,3 +1,5 @@
+# Dependabot version updates are OFF while CI is manual: `open-pull-requests-limit: 0` on every
+# ecosystem below opens no pull requests. Raise the limits (5, 3, 3) to turn them back on.
 # Dependency updates arrive as pull requests; nothing reaches `main` (and so production) until a
 # person merges one. Updates are grouped weekly so they do not flood the review queue.
 version: 2
@@ -7,7 +9,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     commit-message:
       prefix: 'chore(deps)'
     groups:
@@ -19,7 +21,7 @@ updates:
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     commit-message:
       prefix: 'chore(ci)'
 
@@ -27,6 +29,6 @@ updates:
     directory: /infra/docker
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     commit-message:
       prefix: 'chore(infra)'

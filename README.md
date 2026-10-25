@@ -110,7 +110,7 @@ Then start the API and worker as described in [Getting started](docs/getting-sta
 
 ## Deployment
 
-Production runs on [Dokploy](https://dokploy.com), which pulls this repository's `main` branch from GitHub with auto-deploy on. **A push to `main` deploys to production**, so work happens on `lane/<lane>/<topic>` branches and reaches `main` only when it is meant to go live. CI (`.github/workflows/ci.yml`) checks the code but never deploys and does not hold a deploy back, so protect `main` as described in [GitHub settings](docs/engineering/github-settings.md).
+Production runs on [Dokploy](https://dokploy.com), which pulls this repository's `main` branch from GitHub with auto-deploy on. **A push to `main` deploys to production**, so work happens on `lane/<lane>/<topic>` branches and reaches `main` only when it is meant to go live. Checks run locally: run `pnpm check` before you push. CI (`.github/workflows/ci.yml`) is manual only (Actions > ci > Run workflow); pushes do not start it. It never deploys and does not hold a deploy back.
 
 The stack is the Compose file in `infra/` ([deployment overview](docs/deployment.md), runbook in [`infra/README.md`](infra/README.md)). Environment values are set in Dokploy and never committed.
 
@@ -118,7 +118,7 @@ Environment variables:
 
 - `.env.example`: development-only values for running the API and worker locally.
 - `infra/.env.example`: the template for staging and production, with fake placeholders.
-- [`infra/ENV.md`](infra/ENV.md): every variable, who reads it and whether it is required. `pnpm env:check` fails if an `.env.example` file names a variable that `ENV.md` does not document, and CI runs it.
+- [`infra/ENV.md`](infra/ENV.md): every variable, who reads it and whether it is required. `pnpm env:check` fails if an `.env.example` file names a variable that `ENV.md` does not document, and `pnpm check` should be followed by it when you change variables.
 
 ## Documentation
 
