@@ -19,3 +19,5 @@ export * from './providers/http-sms';
 export * from './outbox-draft';
 export * from './http2-fetch';
 export * from './env';
+export * as email from './email';
+export { render as renderEmail } from './email';
