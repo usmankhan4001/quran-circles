@@ -58,11 +58,26 @@ export function normalizePhone(input: string, options: PhoneOptions = {}): Phone
   return E164_PATTERN.test(e164) ? { ok: true, e164, kind } : { ok: false, issue: 'invalid' };
 }
 
-/** `+923001234567` becomes `+92••••567`: enough to tell two numbers apart, not enough to call. */
-export const maskPhone = (e164: string): string => `${e164.slice(0, 3)}••••${e164.slice(-3)}`;
+const MASK = '••• •••';
 
-/** The last digits a screen reader can use to tell rows apart, such as `567`. */
-export const phoneTail = (e164: string): string => e164.slice(-3);
+/**
+ * `+923001234567` becomes `+92 ••• •••4567`: the country code and the last four digits, enough to
+ * tell two numbers apart, not enough to call. Show it left to right and isolated (`<Phone>` wraps
+ * it in `<bdi dir="ltr">`). Anything that is not E.164 keeps only its last four digits, and a value
+ * with fewer than four digits shows the mask alone.
+ */
+export function maskPhone(e164: string): string {
+  const value = e164.trim();
+  if (/^\+[1-9][0-9]{7,14}$/.test(value)) return `${value.slice(0, 3)} ${MASK}${value.slice(-4)}`;
+  const digits = toAsciiDigits(value).replace(/[^0-9]/g, '');
+  return digits.length >= 4 ? `${MASK}${digits.slice(-4)}` : MASK;
+}
+
+/** The last four digits a screen reader can use to tell rows apart, such as `4567`. */
+export const phoneTail = (e164: string): string =>
+  toAsciiDigits(e164)
+    .replace(/[^0-9]/g, '')
+    .slice(-4);
 
 /** `+923001234567` becomes `+92 300 1234567`. Anything else is returned unchanged. */
 export function formatPhone(e164: string): string {

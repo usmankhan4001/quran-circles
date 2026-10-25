@@ -317,7 +317,7 @@ describe('coordinator import dry run', () => {
       coordCtx(),
     );
     expect(r.rows[0]?.label).not.toContain('0000021');
-    expect(maskPhone('+923000000021')).toBe('+92••••021');
+    expect(maskPhone('+923000000021')).toBe('+92 ••• •••0021');
   });
 });
 

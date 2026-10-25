@@ -72,7 +72,7 @@ const venueMatches = (v: Venue, text: string) =>
   sameText(v.name.en, text) ||
   (v.name.ur !== null && sameText(v.name.ur, text));
 
-/** A phone number shown as `+92 3•• •••• 567` in reports, so a shared report stays private. */
+/** A phone number shown as `+92 ••• •••4567` in reports, so a shared report stays private. */
 
 const scopeKey = (role: Role, cityId: string | null, venueId: string | null): string =>
   role === 'national_admin'
