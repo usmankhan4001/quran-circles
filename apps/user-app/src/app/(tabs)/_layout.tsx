@@ -3,11 +3,9 @@ import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { TabBar, useTheme, type TabItem } from '@qc/ui';
 import { useI18n } from '../../i18n/I18nProvider';
-import { useUnreadCount } from '../../features/updates/hooks';
 import { useInsets } from '../../providers/insets';
 import { TAB_ROUTES, type TabRoute } from '../../nav/routes';
 import { tabIcon } from '../../ui/tabIcons';
-import { useNav } from '../../nav/NavProvider';
 import { prefetchTabLater } from '../../boot/routeChunks';
 import { prefetchNearbyList } from '../../boot/startQueries';
 import { useServices } from '../../providers/services';
@@ -53,26 +51,20 @@ function BottomTabs({
   onChange: (key: string) => void;
 }) {
   const { t } = useI18n();
-  const unread = useUnreadCount();
   const insets = useInsets();
   const theme = useTheme();
-  const nav = useNav();
-  // The dock of the drawings (D17): the four tabs, then Profile, which opens as its own page.
-  const items: TabItem[] = [
-    ...TAB_ROUTES.map((key) => ({
-      key,
-      label: t(LABELS[key]),
-      icon: tabIcon(key),
-      ...(key === 'home' && unread > 0 ? { badge: { count: unread } } : {}),
-    })),
-    { key: 'profile', label: t('profile.title'), icon: tabIcon('profile') },
-  ];
+  // Four tabs, each with a word under its icon. Profile opens from the avatar on Home.
+  const items: TabItem[] = TAB_ROUTES.map((key) => ({
+    key,
+    label: t(LABELS[key]),
+    icon: tabIcon(key),
+  }));
   return (
     <View style={{ paddingBottom: insets.bottom, backgroundColor: theme.colors.background }}>
       <TabBar
         items={items}
         activeKey={activeKey}
-        onChange={(key) => (key === 'profile' ? nav.go({ name: 'profile' }) : onChange(key))}
+        onChange={onChange}
         accessibilityLabel={t('app.name')}
       />
     </View>

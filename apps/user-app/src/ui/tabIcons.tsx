@@ -6,7 +6,7 @@ export type DockKey = TabRoute | 'profile';
 
 const ICONS: Record<DockKey, IconName> = {
   home: 'home',
-  nearby: 'compass',
+  nearby: 'pin',
   quran: 'book',
   journey: 'bookmark',
   profile: 'user',

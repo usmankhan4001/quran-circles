@@ -1,4 +1,4 @@
-import { LOCALES, type Locale } from '@qc/contracts';
+import { LOCALES, SECTIONS, type Locale, type Section } from '@qc/contracts';
 import { textSizeSteps, type TextSizeStep } from '@qc/ui';
 import { Observable } from './observable';
 import { readJson, writeJson, type KeyValueStore } from './storage';
@@ -15,6 +15,10 @@ export interface Preferences {
   cityId: string | null;
   /** The area used to sort by distance, picked from our place list. */
   areaId: string | null;
+  /** The section the person joins (women or men), asked once at sign up and kept on the device. */
+  section: Section | null;
+  /** True once the Welcome screen has been shown, so it is not shown again. */
+  welcomed: boolean;
 }
 
 export const PREFERENCES_KEY = 'qc.preferences.v1';
@@ -32,6 +36,8 @@ export function defaultPreferences(deviceLanguages: readonly string[] = []): Pre
     color: 'system',
     cityId: null,
     areaId: null,
+    section: null,
+    welcomed: false,
   };
 }
 
@@ -55,6 +61,10 @@ export function sanitizePreferences(
     color,
     cityId: idOrNull(stored.cityId, fallback.cityId),
     areaId: idOrNull(stored.areaId, fallback.areaId),
+    section:
+      SECTIONS.find((s) => s === stored.section) ??
+      (stored.section === null ? null : fallback.section),
+    welcomed: typeof stored.welcomed === 'boolean' ? stored.welcomed : fallback.welcomed,
   };
 }
 

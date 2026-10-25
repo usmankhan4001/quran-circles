@@ -448,9 +448,8 @@ describe('Profile, Updates and Sign-in (B)', () => {
 
   it('opens sign-in on white with a back button and a big heading (D17)', async () => {
     const view = await renderScreen(<SignInScreen />);
-    const header = view.getByTestId('screen-header');
-    expect(within(header).getByLabelText(en['ui.back'])).toBeTruthy();
-    expect(view.getByRole('heading', { level: 2 }).textContent).toBe(en['signIn.heading']);
+    expect(view.getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['signIn.welcomeBack']);
   });
 
   it('takes the sign-in code in boxed cells and accepts digits only', async () => {
