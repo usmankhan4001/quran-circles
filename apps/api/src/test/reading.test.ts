@@ -12,7 +12,14 @@ import {
 } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { createHarness, type Actor, type ApiResult, type Harness } from './harness';
-import { auditRows, createCircle, createSession, register } from './fixtures';
+import {
+  READING_FEATURES,
+  auditRows,
+  createCircle,
+  createSession,
+  register,
+  setFeatures,
+} from './fixtures';
 
 /**
  * Contract 1.0.0-rc.4: days read, the community total, the ayah of the day (public and staff
@@ -29,6 +36,8 @@ afterAll(() => h.close());
 beforeEach(async () => {
   await h.reset();
   admin = await h.nationalAdmin();
+  // Each feature ships behind its switch; the API refuses a switched-off one (see the end).
+  await setFeatures(h, READING_FEATURES);
 });
 
 const TODAY = '2026-10-16';
@@ -768,5 +777,135 @@ describe('profile fields and account deletion', () => {
     ).toEqual([]);
     expect(await h.db.select().from(schema.readingDays)).toHaveLength(1);
     expect(await community()).toEqual({ date: TODAY, readersToday: 2, pagesTogether: 4 });
+  });
+});
+
+describe('feature switches (enforced by the API, not only the apps)', () => {
+  type Feature = (typeof READING_FEATURES)[number];
+  type Call = [string, (who: Actor | null) => Promise<ApiResult>];
+  const asOf = (who: Actor | null) => (who ? { as: who } : {});
+  const pick = { date: TODAY, scope: { type: 'national' }, surah: 1, ayah: 1 };
+  const calls: Record<Feature, Call[]> = {
+    reading_days: [
+      [
+        'readingDays.record',
+        (who) => h.api('readingDays.record', { ...asOf(who), body: { source: 'manual' } }),
+      ],
+      [
+        'readingDays.list',
+        (who) => h.api('readingDays.list', { ...asOf(who), query: { from: TODAY, to: TODAY } }),
+      ],
+    ],
+    community_today: [['community.today', (who) => h.api('community.today', asOf(who))]],
+    ayah_of_the_day: [
+      ['ayahOfTheDay.get', (who) => h.api('ayahOfTheDay.get', asOf(who))],
+      [
+        'adminDailyAyahs.list',
+        (who) => h.api('adminDailyAyahs.list', { ...asOf(who), query: { from: TODAY, to: TODAY } }),
+      ],
+      ['adminDailyAyahs.put', (who) => h.api('adminDailyAyahs.put', { ...asOf(who), body: pick })],
+      [
+        'adminDailyAyahs.delete',
+        (who) => h.api('adminDailyAyahs.delete', { ...asOf(who), params: { dailyAyahId: NIL } }),
+      ],
+    ],
+    memorisation: [
+      ['memorisation.list', (who) => h.api('memorisation.list', asOf(who))],
+      [
+        'memorisation.put',
+        (who) =>
+          h.api('memorisation.put', {
+            ...asOf(who),
+            params: { surah: '1' },
+            body: { status: 'learning' },
+          }),
+      ],
+      [
+        'memorisation.delete',
+        (who) => h.api('memorisation.delete', { ...asOf(who), params: { surah: '1' } }),
+      ],
+    ],
+  };
+
+  for (const key of READING_FEATURES) {
+    it(`refuses every ${key} endpoint with forbidden while the switch is off, for every kind of caller`, async () => {
+      const callers: [string, Actor | null][] = [
+        ['national admin', admin],
+        ['city coordinator', await h.cityCoordinator(h.world.cityA.id)],
+        ['venue coordinator', await h.venueCoordinator(h.world.venueA1)],
+        ['person', await h.person()],
+        ['nobody', null],
+      ];
+      const on: Record<string, number> = {};
+      for (const [endpoint, call] of calls[key]) {
+        for (const [name, who] of callers) on[`${endpoint}/${name}`] = (await call(who)).status;
+      }
+      await setFeatures(h, [key], false);
+      for (const [endpoint, call] of calls[key]) {
+        for (const [name, who] of callers) {
+          const res = await call(who);
+          const label = `${endpoint} as ${name}`;
+          // Sign-in is still checked first (401); then the switch, before anything else.
+          if (on[`${endpoint}/${name}`] === 401) expect(res.status, label).toBe(401);
+          else expect(code(res), label).toBe('forbidden');
+        }
+      }
+      // With the switch on, the same calls got past it: some caller was let in on each endpoint
+      // (deleting an unknown pick is then not_found, not forbidden).
+      for (const [endpoint] of calls[key]) {
+        const statuses = callers.map(([name]) => on[`${endpoint}/${name}`]);
+        expect(
+          statuses.some((s) => s !== undefined && s !== 401 && s !== 403),
+          endpoint,
+        ).toBe(true);
+      }
+      // The other switches are untouched.
+      for (const other of READING_FEATURES.filter((k) => k !== key)) {
+        const [, call] = calls[other][0]!;
+        expect((await call(admin)).status, other).toBeLessThan(300);
+      }
+    });
+  }
+
+  it('writes nothing while a switch is off', async () => {
+    const person = await h.person();
+    await setFeatures(h, ['reading_days', 'memorisation', 'ayah_of_the_day'], false);
+    expect(code(await record(person, { source: 'manual' }))).toBe('forbidden');
+    expect(
+      code(
+        await h.api('memorisation.put', {
+          as: person,
+          params: { surah: '1' },
+          body: { status: 'learning' },
+        }),
+      ),
+    ).toBe('forbidden');
+    expect(code(await h.api('adminDailyAyahs.put', { as: admin, body: pick }))).toBe('forbidden');
+    expect(await h.db.select().from(schema.readingDays)).toEqual([]);
+    expect(await h.db.select().from(schema.communityDays)).toEqual([]);
+    expect(await h.db.select().from(schema.memorisation)).toEqual([]);
+    expect(await h.db.select().from(schema.dailyAyahs)).toEqual([]);
+    expect((await auditRows(h)).filter((r) => r.entityType === 'daily_ayah')).toEqual([]);
+  });
+
+  it('counts a switch that is on for one city only as on, as GET /v1/config shows it for that city', async () => {
+    await setFeatures(h, ['community_today'], false);
+    expect(code(await h.api('community.today'))).toBe('forbidden');
+    await setFeatures(h, ['community_today'], true, h.world.cityB.id);
+    expect((await h.api('community.today')).status).toBe(200);
+    const config = await h.api('config.get', { query: { cityId: h.world.cityB.id } });
+    expect(
+      config.json<{ featureFlags: Record<string, boolean> }>().featureFlags['community_today'],
+    ).toBe(true);
+  });
+
+  it('treats a switch with no row at all as off, like GET /v1/config', async () => {
+    await h.db.delete(schema.featureFlags);
+    const config = (await h.api('config.get')).json<{ featureFlags: Record<string, boolean> }>();
+    for (const key of READING_FEATURES) expect(config.featureFlags[key], key).toBe(false);
+    expect(code(await h.api('community.today'))).toBe('forbidden');
+    expect(code(await h.api('ayahOfTheDay.get'))).toBe('forbidden');
+    expect(code(await record(await h.person(), { source: 'manual' }))).toBe('forbidden');
+    expect(code(await h.api('memorisation.list', { as: await h.person() }))).toBe('forbidden');
   });
 });

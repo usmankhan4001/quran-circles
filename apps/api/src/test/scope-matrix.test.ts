@@ -14,7 +14,7 @@ import {
 } from '@qc/contracts';
 import { schema } from '@qc/db';
 import { createHarness, type Actor, type CallOptions, type Harness } from './harness';
-import { createSession, finishPoster, seedPosterTemplates } from './fixtures';
+import { createSession, finishPoster, seedPosterTemplates, setFeatures } from './fixtures';
 
 /**
  * Every staff endpoint against every kind of caller, with the scope engine as the oracle: the
@@ -640,6 +640,8 @@ async function build(): Promise<{
 }> {
   await h.reset();
   const { world } = h;
+  // The ayah of the day picks are refused while their switch is off everywhere.
+  await setFeatures(h, ['ayah_of_the_day']);
   const admin = await h.nationalAdmin();
   const session = await createSession(h, { venueId: world.venueA1, as: admin });
   const occurrenceId = (
