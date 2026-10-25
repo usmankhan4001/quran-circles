@@ -10,12 +10,17 @@
 import { LOCALES } from '@qc/contracts';
 import {
   EMAIL_FROM,
+  EMAIL_LOGO_URL,
   EMAIL_TEMPLATE_NAMES,
   renderTemplateSource,
   type EmailTemplateName,
 } from '../src/email';
 
 const API = 'https://api.resend.com';
+/** Until a release serves the logo at `EMAIL_LOGO_URL`, set `QC_EMAIL_LOGO_URL` to a reachable copy. */
+const logoUrl = process.env.QC_EMAIL_LOGO_URL || EMAIL_LOGO_URL;
+if (!/^https:\/\/[^\s?#]+$/.test(logoUrl))
+  throw new Error('QC_EMAIL_LOGO_URL must be an https URL without a query string.');
 const dryRun = process.argv.includes('--dry-run');
 const key = process.env.RESEND_API_KEY;
 if (!dryRun && !key) throw new Error('Set RESEND_API_KEY in this shell first, or pass --dry-run.');
@@ -48,7 +53,7 @@ if (!dryRun) {
 for (const template of EMAIL_TEMPLATE_NAMES) {
   for (const locale of LOCALES) {
     const name = `qc-${names[template]}-${locale}`;
-    const src = renderTemplateSource(template, locale);
+    const src = renderTemplateSource(template, locale, { logoUrl });
     const payload = {
       name,
       from: EMAIL_FROM,
