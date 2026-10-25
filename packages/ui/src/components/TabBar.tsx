@@ -70,6 +70,8 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
   const theme = useTheme();
   const c = theme.colors;
   const [slots, setSlots] = useState<Record<string, Slot>>({});
+  const [pillWidth, setPillWidth] = useState(0);
+  const rtl = theme.direction === 'rtl';
   const x = useRef(new Animated.Value(0)).current;
   const w = useRef(new Animated.Value(0)).current;
   const placed = useRef(false);
@@ -79,7 +81,15 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
     return fade.current[key]!;
   };
 
-  const active = slots[activeKey];
+  // Measured positions are from the physical left; the capsule is placed from the start edge, so
+  // in right-to-left it is counted from the right.
+  const measured = slots[activeKey];
+  const active =
+    measured && rtl
+      ? pillWidth > 0
+        ? { x: pillWidth - measured.x - measured.width, width: measured.width }
+        : undefined
+      : measured;
   // Slide and resize the capsule to the chosen tab. The first placement and reduced motion jump.
   useEffect(() => {
     if (!active) return;
@@ -98,7 +108,7 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
       Animated.timing(x, { toValue: active.x, ...config }),
       Animated.timing(w, { toValue: active.width, ...config }),
     ]).start();
-  }, [active?.x, active?.width, theme.reduceMotion, x, w, active]);
+  }, [active, theme.reduceMotion, x, w]);
 
   // The chosen tab's word fades in as the capsule grows around it.
   useEffect(() => {
@@ -130,6 +140,7 @@ export function TabBar({ items, activeKey, onChange, accessibilityLabel, testID 
     <View role="navigation" style={styles.wrap}>
       <View
         testID={testID}
+        onLayout={(e) => setPillWidth(e.nativeEvent.layout.width)}
         role="tablist"
         aria-label={accessibilityLabel}
         style={[
