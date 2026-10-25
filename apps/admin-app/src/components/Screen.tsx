@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { IconButton, Text, screenGutter, spacing, useTheme } from '@qc/ui';
+import { IconButton, ScreenHeader, Text, screenGutter, spacing, useTheme } from '@qc/ui';
 
 export interface ScreenProps {
   /** The screen title. A hero screen may leave it out when its content carries the heading. */
@@ -83,8 +83,9 @@ function PlainHeader({
 }
 
 /**
- * The flat top of a tab screen (design: no coloured band): a small muted line, the title in ink,
- * the scope pill or avatar beside it, and whatever the screen leads with underneath.
+ * The flat top of a tab screen (design: no coloured band): the kit's ScreenHeader (a muted line,
+ * the title in ink, a small control at the end), then the scope pill and whatever the screen leads
+ * with underneath.
  */
 function FlatHeader({
   title,
@@ -98,35 +99,18 @@ function FlatHeader({
   children?: ReactNode;
 }) {
   const { colors } = useTheme();
-  const hasTop = Boolean(eyebrow || actions || leading);
   return (
     <View
       testID={testID}
       style={{
         backgroundColor: colors.background,
         paddingHorizontal: screenGutter,
-        paddingTop: spacing.md,
+        paddingBottom: spacing.sm,
         gap: spacing.sm,
       }}
     >
-      {hasTop ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48 }}>
-          <View style={{ flex: 1, gap: spacing.xxs }}>
-            {eyebrow ? (
-              <Text variant="caption" color="textSecondary">
-                {eyebrow}
-              </Text>
-            ) : null}
-            {leading}
-          </View>
-          {actions}
-        </View>
-      ) : null}
-      {title ? (
-        <Text variant="title1" heading={1}>
-          {title}
-        </Text>
-      ) : null}
+      <ScreenHeader title={title ?? ''} meta={eyebrow} trailing={actions} />
+      {leading ? <View style={{ alignItems: 'flex-start' }}>{leading}</View> : null}
       {subtitle ? (
         <Text variant="caption" color="textSecondary">
           {subtitle}
