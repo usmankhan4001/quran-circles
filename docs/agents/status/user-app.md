@@ -265,3 +265,20 @@ From the WP11 end-to-end run of the PWA (web export, `EXPO_PUBLIC_API_URL` = rea
 - F-04 (admin-app finding; user app aligned 2026-10-17): the phone step (`signIn.phone.intro`) now says "We will send a code on WhatsApp, or by SMS if WhatsApp is not available.", the same as the admin app. Urdu draft updated together; test in `screens/SignInScreen.test.tsx`.
 - F-06 (low, fixed 2026-10-17): this file now names the maps key `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`, as `src/platform/env.ts` reads it; `app.config.ts` lists the public variables. The root `.env.example` is the platform lane's (note under Questions).
 - F-10 (low, fixed 2026-10-17): the offline banner now follows the platform's connection state as well as failed calls. `core/connectivity.ts` combines two signals: the device state (`watch(source)`) and the last call. `platform/networkStatus.ts` gives the web target a source from `navigator.onLine` and the `online`/`offline` events, wired in `bootstrap.ts` through `createServices({ network })`: the banner shows at once on an offline start or when the connection drops, and clears when it returns. Native has no network-status module installed (no new dependency added), so it keeps the failed-call signal only. Tests: `core/connectivity.test.ts`, `platform/networkStatus.test.ts`, `platform/networkStatus.androidOs.test.ts`, and two in `screens/NearbyScreen.test.tsx` (banner over the saved list as soon as the device goes offline, with no API call, and gone when back online; banner on an offline start).
+
+## Test pass and fixes (2026-10-25)
+
+Full local run (Postgres, API, worker, PWA, admin app, console) in English and Urdu at phone width. All unit tests pass. The e2e run passes 23 of 24 flows.
+
+Fixed after the 20 Oct "Halqa discovery, join sheet, habit tracking" commit:
+
+- Lint (12 errors) and Prettier (4 files): unused state, imports and variables in `JoinHalqaSheet.tsx`, `SessionScreen.test.tsx` and the console showcase artboards.
+- Text: the profile alerts switch showed a raw `{venue}` (argument was `name`); "WhatsApp & SMS Reminders" and "WhatsApp / SMS Alerts" were hard-coded English (new keys `session.reminders.title`, `venue.followBadge`, with Urdu drafts); the follow sheet showed the Hijri moon-sighting note and then said "No updates yet. Follow a venue" after following (new key `venue.followDone`).
+- Journey showed a "Days read" heading with an endless skeleton when `reading_days` is off; it now follows the feature flag, with a test.
+- The Prayer view on the Quran tab asked "Choose your city" although Home had a city; it now falls back to the app's city, with a test.
+- `tests/e2e` console flow: the invite button is now "Send Scoped Invite".
+
+Open, for the orchestrator:
+
+- **Seat booking is unreachable (high).** The session screen's primary button now follows the venue; nothing opens `register/[sessionId]`, so people cannot reserve a seat. `tests/e2e/src/flows/pwa/attendee.spec.ts` ("register for a session") fails for this reason. Decide whether registration returns or the e2e flow and `registerState` are retired.
+- Map shows a list of places without `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`; the Quran text needs api.alquran.cloud; reader audio ("Recitation coming soon") is not built; "Host not listed yet" and "Join online" are stand-ins.
