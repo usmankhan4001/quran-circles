@@ -13,7 +13,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run --passWithNoTests",
     "email:previews": "tsx scripts/render-email-previews.ts",
-    "email:publish": "node --env-file=.env.local --import tsx scripts/publish-resend-templates.ts"
+    "email:publish": "tsx scripts/publish-resend-templates.ts"
   },
   "dependencies": {
     "@qc/contracts": "workspace:*",

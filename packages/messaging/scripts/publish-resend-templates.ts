@@ -3,9 +3,9 @@
  * show in the Resend dashboard under Templates. Safe to run again: a template with the same name is
  * updated, not duplicated.
  *
- * The API key is read from `RESEND_API_KEY`. Keep it in the git-ignored `packages/messaging/.env.local`:
- *   node --env-file=packages/messaging/.env.local --import tsx packages/messaging/scripts/publish-resend-templates.ts
- * or `pnpm --filter @qc/messaging email:publish`. The key is never printed.
+ * Run: `pnpm --filter @qc/messaging email:publish` (add `-- --dry-run` to only list what would be
+ * uploaded, with no key and no network). The API key is read from the `RESEND_API_KEY` environment
+ * variable and is never printed.
  */
 import { LOCALES } from '@qc/contracts';
 import {
@@ -16,8 +16,9 @@ import {
 } from '../src/email';
 
 const API = 'https://api.resend.com';
+const dryRun = process.argv.includes('--dry-run');
 const key = process.env.RESEND_API_KEY;
-if (!key) throw new Error('Set RESEND_API_KEY (packages/messaging/.env.local).');
+if (!dryRun && !key) throw new Error('Set RESEND_API_KEY in this shell first, or pass --dry-run.');
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${API}${path}`, {
@@ -39,8 +40,10 @@ const names: Record<EmailTemplateName, string> = {
 };
 
 const existing = new Map<string, string>();
-const list = await call<{ data?: { id: string; name: string }[] }>('GET', '/templates');
-for (const t of list.data ?? []) existing.set(t.name, t.id);
+if (!dryRun) {
+  const list = await call<{ data?: { id: string; name: string }[] }>('GET', '/templates');
+  for (const t of list.data ?? []) existing.set(t.name, t.id);
+}
 
 for (const template of EMAIL_TEMPLATE_NAMES) {
   for (const locale of LOCALES) {
@@ -58,6 +61,11 @@ for (const template of EMAIL_TEMPLATE_NAMES) {
         ...(v.fallbackValue ? { fallback_value: v.fallbackValue } : {}),
       })),
     };
+    if (dryRun) {
+      const vars = src.variables.map((v) => v.key).join(', ');
+      console.log(`would upload ${name} (${src.html.length} bytes html; variables: ${vars})`);
+      continue;
+    }
     const id = existing.get(name);
     const saved = id
       ? await call<{ id: string }>('PATCH', `/templates/${id}`, payload)
