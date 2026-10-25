@@ -52,7 +52,7 @@ test.describe('console against the real API', () => {
     await page.locator('#invite-venue').selectOption(SEED.venueNoor);
     await page.locator('#invite-phone').fill(invitee);
     await page.locator('#invite-name').fill('E2E Console Invitee');
-    await page.getByRole('button', { name: 'Send invite' }).click();
+    await page.getByRole('button', { name: 'Send Scoped Invite' }).click();
     await expect(page.getByText('Invite sent.')).toBeVisible();
 
     const { rows } = await db().query<{ status: string; venue_id: string }>(
