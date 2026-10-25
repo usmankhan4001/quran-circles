@@ -26,6 +26,7 @@ type AttendanceView = {
 type AuditItem = {
   id: string;
   actorName: string | null;
+  actorPhoneLast4?: string | null;
   action: string;
   entityType: string;
   entityId: string | null;
@@ -320,6 +321,18 @@ describe('the audit log', () => {
     expect(page.items.every((i) => i.cityId === h.world.cityA.id)).toBe(true);
     expect(page.items.map((i) => i.action)).not.toContain('settings.update');
     expect(page.items.some((i) => i.venueId === h.world.venueB1)).toBe(false);
+  });
+
+  it('gives only the last four phone digits, never the full number', async () => {
+    await makeHistory();
+    const page = await list(admin, { limit: 100 });
+    const [me] = await h.db
+      .select({ phone: schema.users.phoneE164 })
+      .from(schema.users)
+      .where(eq(schema.users.id, admin.userId));
+    const row = page.items.find((i) => i.action === 'settings.update');
+    expect(row?.actorPhoneLast4).toBe(me!.phone.slice(-4));
+    expect(JSON.stringify(page)).not.toContain(me!.phone);
   });
 
   it('keeps venue coordinators and ordinary people out', async () => {

@@ -29,6 +29,7 @@ const byName: Record<string, string> = {
   userName: 'Sample Person',
   authorName: 'Sample Coordinator',
   actorName: 'Sample Coordinator',
+  actorPhoneLast4: '0000',
   teacherName: 'Sample Teacher',
   accessToken: 'mock-user',
   refreshToken: 'mock-refresh-token-0000',

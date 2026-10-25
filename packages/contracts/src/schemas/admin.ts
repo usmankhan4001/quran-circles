@@ -355,6 +355,11 @@ export const AuditEntry = lazy(() =>
   z.object({
     id: z.string(),
     actorName: z.string().nullable(),
+    /**
+     * Last four digits of the actor's phone, so staff can tell apart people with no name on their
+     * account. Never the full number. Null when the account is gone; absent from older servers.
+     */
+    actorPhoneLast4: z.string().length(4).nullable().optional(),
     action: z.string(),
     entityType: z.string(),
     entityId: z.string().nullable(),

@@ -35,7 +35,7 @@ export async function listAudit(
     before = Number((m as RegExpExecArray)[1]);
   }
   const rows = await db
-    .select({ row: auditLog, actorName: users.displayName })
+    .select({ row: auditLog, actorName: users.displayName, actorPhone: users.phoneE164 })
     .from(auditLog)
     .leftJoin(users, eq(users.id, auditLog.actorUserId))
     .where(
@@ -55,9 +55,10 @@ export async function listAudit(
   const page = hasMore ? rows.slice(0, query.limit) : rows;
   const last = page[page.length - 1];
   return {
-    items: page.map(({ row, actorName }) => ({
+    items: page.map(({ row, actorName, actorPhone }) => ({
       id: String(row.id),
       actorName: actorName ? visibleName(actorName) : null,
+      actorPhoneLast4: actorPhone ? actorPhone.slice(-4) : null,
       action: row.action,
       entityType: row.entityType,
       entityId: row.entityId,

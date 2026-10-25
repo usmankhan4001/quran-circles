@@ -34,15 +34,17 @@ describe('auditActor', () => {
   });
 
   it('shows the masked number when the API sends one and there is no name', () => {
-    expect(auditActor(entry({ actorName: null, actorPhone: '+923001234567' }))).toEqual({
+    expect(auditActor(entry({ actorName: null, actorPhoneLast4: '4567' }))).toEqual({
       kind: 'phone',
-      phone: '+923001234567',
+      phone: '4567',
     });
-    expect(auditActor(entry({ actorName: null, actorPhone: '' }))).toEqual({ kind: 'unnamed' });
+    expect(auditActor(entry({ actorName: null, actorPhoneLast4: null }))).toEqual({
+      kind: 'unnamed',
+    });
   });
 
   it('prefers the name over the number', () => {
-    expect(auditActor(entry({ actorName: 'Test Admin', actorPhone: '+923001234567' }))).toEqual({
+    expect(auditActor(entry({ actorName: 'Test Admin', actorPhoneLast4: '4567' }))).toEqual({
       kind: 'name',
       name: 'Test Admin',
     });
