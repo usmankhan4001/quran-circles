@@ -738,6 +738,23 @@ a {
   gap: var(--space-lg);
   padding: var(--space-xl);
 }
+.settings-form {
+  max-inline-size: 38.75rem;
+  border: 0;
+  padding: 0;
+}
+.settings-fields .fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.settings-fields .fieldset > legend,
+.settings-fields .fieldset > .field-hint {
+  grid-column: 1 / -1;
+}
 .settings-fields {
   display: grid;
   gap: var(--space-lg);

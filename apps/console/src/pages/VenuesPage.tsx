@@ -4,6 +4,7 @@ import type { Venue } from '@qc/contracts';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
 import { usePaged } from '../api/hooks';
+import { venueStats } from '../lib/kpis';
 import {
   AddLink,
   Badge,
@@ -15,6 +16,7 @@ import {
   Loading,
   NoMatch,
   PageHeader,
+  StatRow,
   Phone,
   TableCard,
   type Column,
@@ -47,6 +49,7 @@ export default function VenuesPage() {
   );
 
   const loaded = list.status === 'ready' ? list.items : [];
+  const venueStat = venueStats(loaded);
   const rows = useMemo(
     () =>
       filterBySearch(loaded, query, (v) => [
@@ -97,7 +100,24 @@ export default function VenuesPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.venues.title')} intro={t('console.venues.intro')} hidden />
+      <PageHeader title={t('console.venues.title')} intro={t('console.venues.intro')} />
+      {list.status === 'ready' ? (
+        <StatRow
+          label={t('console.kpi.label')}
+          partial={list.status === 'ready' && list.hasMore}
+          stats={[
+            { id: 'venues', label: t('console.kpi.venues'), value: venueStat.active },
+            { id: 'women', label: t('console.kpi.womenSection'), value: venueStat.womenSection },
+            {
+              id: 'contact',
+              label: t('console.kpi.noContact'),
+              value: venueStat.noContact,
+              tone: 'notice',
+            },
+            { id: 'archived', label: t('console.kpi.archived'), value: venueStat.archived },
+          ]}
+        />
+      ) : null}
       <TableCard
         tabs={
           <>

@@ -5,8 +5,8 @@ import type { Locale } from '../i18n';
 import { renderConsole, screen, text } from '../test/harness';
 
 /**
- * The console home (the first page, Sessions) draws no figure tiles. Nothing on it is a number the
- * API does not back, and a count of loaded rows is never shown as a total while more pages exist.
+ * The console home (the first page, Sessions) draws number cards, but only counts the loaded rows
+ * back (never check-ins or seats), and says so while more pages exist.
  */
 
 const listed = sessions.map((s) => ({ ...s, circleStatus: null })) as AdminSession[];
@@ -14,7 +14,7 @@ const fill = (message: string, params: Record<string, string>) =>
   message.replace(/\{(\w+)\}/g, (_, k: string) => params[k] ?? '');
 
 describe.each<Locale>(['en', 'ur'])('the console home (%s)', (locale) => {
-  it('draws no figure tiles and no check-in or seats-reserved figure', async () => {
+  it('draws number cards, but no check-in or seats-reserved figure', async () => {
     renderConsole({
       role: 'national',
       locale,
@@ -22,7 +22,7 @@ describe.each<Locale>(['en', 'ur'])('the console home (%s)', (locale) => {
       handlers: { 'adminSessions.list': () => ({ items: listed, nextCursor: null }) },
     });
     await screen.findByRole('table', { name: text('console.sessions.title', locale) });
-    expect(screen.queryByRole('region', { name: text('console.kpi.label', locale) })).toBeNull();
+    expect(screen.getByRole('region', { name: text('console.kpi.label', locale) })).toBeTruthy();
     expect(screen.queryByText(text('console.sessions.kpi.reliability', locale))).toBeNull();
     expect(screen.queryByText(text('console.sessions.kpi.demand', locale))).toBeNull();
   });

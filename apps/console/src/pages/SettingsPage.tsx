@@ -156,7 +156,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       : t('console.settings.hijri.days', { days: `${n > 0 ? '+' : '−'}${number(Math.abs(n))}` });
 
   return (
-    <form className="form card" onSubmit={(e) => void submit(e)} noValidate>
+    <form className="form card settings-form" onSubmit={(e) => void submit(e)} noValidate>
       {done ? <Banner tone="success">{t('console.settings.saved')}</Banner> : null}
       {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
       {readOnly ? <Banner tone="info">{t('console.settings.readOnly')}</Banner> : null}

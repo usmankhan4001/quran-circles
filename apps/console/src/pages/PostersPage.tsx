@@ -96,7 +96,6 @@ export default function PostersPage() {
             : t('console.posters.title')
         }
         intro={t('console.posters.intro')}
-        hidden
       />
       <p className="back-link">
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>

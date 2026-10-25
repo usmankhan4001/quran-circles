@@ -22,6 +22,7 @@ import {
   Loading,
   NoMatch,
   PageHeader,
+  StatRow,
   Phone,
   SelectField,
   TableCard,
@@ -148,7 +149,6 @@ export default function RegistrationsPage() {
             : t('console.exports.registrations.title')
         }
         intro={`${t('console.exports.privacy')} ${t('console.exports.audited')}`}
-        hidden
       />
       <p className="back-link">
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>
@@ -157,6 +157,25 @@ export default function RegistrationsPage() {
         sessionId={sessionId}
         place={sessionData ? { cityId: sessionData.cityId, venueId: sessionData.venueId } : null}
       />
+      {list.status === 'ready' ? (
+        <StatRow
+          label={t('console.kpi.label')}
+          partial={list.status === 'ready' && list.hasMore}
+          stats={[
+            {
+              id: 'registrations',
+              label: t('console.kpi.registrations'),
+              value: totals?.registrations ?? 0,
+            },
+            {
+              id: 'optedIn',
+              label: t('console.kpi.optedIn'),
+              value:
+                list.status === 'ready' ? list.items.filter((r) => r.allowsWhatsapp).length : 0,
+            },
+          ]}
+        />
+      ) : null}
       <TableCard
         title={t('console.registrations.cardTitle')}
         subtitle={

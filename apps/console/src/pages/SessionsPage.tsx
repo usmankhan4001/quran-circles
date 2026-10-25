@@ -23,6 +23,7 @@ import {
   Loading,
   NoMatch,
   PageHeader,
+  StatRow,
   Phone,
   SelectField,
   TableCard,
@@ -249,7 +250,24 @@ export default function SessionsPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.sessions.title')} intro={t('console.sessions.intro')} hidden />
+      <PageHeader title={t('console.sessions.title')} intro={t('console.sessions.intro')} />
+      {list.status === 'ready' ? (
+        <StatRow
+          label={t('console.kpi.label')}
+          partial={list.status === 'ready' && list.hasMore}
+          stats={[
+            { id: 'masjids', label: t('console.kpi.activeMasjids'), value: dir.venues.length },
+            { id: 'circles', label: t('console.kpi.circles'), value: stats.total },
+            { id: 'week', label: t('console.kpi.thisWeek'), value: stats.thisWeek },
+            {
+              id: 'waiting',
+              label: t('console.kpi.waiting'),
+              value: stats.waitingApproval,
+              tone: 'notice',
+            },
+          ]}
+        />
+      ) : null}
       <div className="workspace">
         <TableCard
           tabs={

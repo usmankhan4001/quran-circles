@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router';
-import type { Role, SeasonMode } from '@qc/contracts';
+import type { Role } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useFeatures } from '../api/features';
@@ -100,8 +100,6 @@ interface MenuEntry {
   path: string;
   label: string;
   icon: IconName;
-  /** The small pill at the end of the row: a count where the console has one, else a dash. */
-  badge?: string;
   /** A hint for entries that open the sessions list first. */
   hint?: string;
   active(pathname: string): boolean;
@@ -115,11 +113,6 @@ const SCOPE_KEYS = {
   city_coordinator: 'console.shell.scope.city',
   venue_coordinator: 'console.shell.scope.venue',
 } as const satisfies Record<Role, MessageKey>;
-
-const SEASON_KEYS = {
-  dora: 'console.settings.season.dora',
-  circles: 'console.settings.season.circles',
-} as const satisfies Record<SeasonMode, MessageKey>;
 
 /** Up to two initials for the avatar, whatever the script. */
 export function initialsOf(name: string): string {
@@ -235,11 +228,10 @@ export function Shell() {
 }
 
 function ShellFrame() {
-  const { t, tx, number } = useI18n();
+  const { t, tx } = useI18n();
   const { me, principal, signOut } = useSignedIn();
   const features = useFeatures();
   const { pathname } = useLocation();
-  const dir = useDirectory();
   const visible = visibleNav(principal, features.flags);
   const entries: MenuEntry[] = MENU_ORDER.flatMap((id): MenuEntry[] => {
     if (id === 'registrations' || id === 'posters') {
@@ -251,7 +243,6 @@ function ShellFrame() {
           path: '/sessions',
           label: t(id === 'registrations' ? 'console.nav.registrations' : 'console.nav.posters'),
           icon: id === 'registrations' ? 'users-three' : 'qr-code',
-          badge: id === 'registrations' ? '—' : t('console.nav.posters.badge'),
           hint: t('console.nav.pickSession'),
           active: (path) => sessionPage(path, id),
         },
@@ -259,19 +250,12 @@ function ShellFrame() {
     }
     const item = visible.find((i) => i.id === id);
     if (!item) return [];
-    const badge =
-      id === 'venues'
-        ? number(dir.venues.length)
-        : id === 'sessions' || id === 'coordinators'
-          ? '—'
-          : undefined;
     return [
       {
         id,
         path: item.path,
         label: t(item.labelKey),
         icon: NAV_ICONS[item.id],
-        badge,
         active: (path) =>
           id === 'sessions'
             ? path.startsWith('/sessions') &&
@@ -303,21 +287,6 @@ function ShellFrame() {
               <span className="brand-sub">{t('console.shell.brandSub')}</span>
             </span>
           </div>
-          {features.seasonMode ? (
-            <p className="season-pill">
-              <span className="season-name">
-                <Icon name="moon-stars" size={13} weight="fill" />
-                <span>
-                  {t('console.shell.season', { season: t(SEASON_KEYS[features.seasonMode]) })}
-                </span>
-              </span>
-              {features.hijriOffsetDays !== null ? (
-                <span className="season-hijri">
-                  {t('console.shell.hijri', { days: number(features.hijriOffsetDays) })}
-                </span>
-              ) : null}
-            </p>
-          ) : null}
           <nav className="shell-nav" aria-label={t('console.shell.navLabel')}>
             <ul>
               {entries.map((entry) => {
@@ -332,11 +301,6 @@ function ShellFrame() {
                     >
                       <Icon name={entry.icon} size={16} weight={isActive ? 'fill' : 'duotone'} />
                       <span className="nav-label">{entry.label}</span>
-                      {entry.badge ? (
-                        <span className="nav-badge" aria-hidden="true">
-                          {entry.badge}
-                        </span>
-                      ) : null}
                     </Link>
                   </li>
                 );

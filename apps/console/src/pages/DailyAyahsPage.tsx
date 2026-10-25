@@ -285,11 +285,7 @@ export default function DailyAyahsPage() {
 
   return (
     <div className="page">
-      <PageHeader
-        title={t('console.dailyAyahs.title')}
-        intro={t('console.dailyAyahs.intro')}
-        hidden
-      />
+      <PageHeader title={t('console.dailyAyahs.title')} intro={t('console.dailyAyahs.intro')} />
       {notice ? (
         <Banner tone="success" onDismiss={() => setNotice(null)}>
           {notice}
