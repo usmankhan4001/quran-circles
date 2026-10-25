@@ -159,10 +159,11 @@ describe('redesign tokens as CSS variables', () => {
     expect(light['--font-urdu']).toMatch(/^'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', serif$/);
   });
 
-  it('turns shadows off and uses a hairline instead at night', () => {
-    expect(themeVariables('light')['--card-edge']).toBe('transparent');
-    expect(themeVariables('dark')['--shadow-low']).toBe('none');
-    expect(themeVariables('dark')['--card-edge']).not.toBe('transparent');
+  it('has no resting shadows and draws a hairline instead, in both themes', () => {
+    for (const mode of ['light', 'dark'] as const) {
+      expect(themeVariables(mode)['--shadow-low']).toBe('none');
+      expect(themeVariables(mode)['--card-edge']).not.toBe('transparent');
+    }
   });
 
   it('keeps sidebar text readable on both ends of the green gradient, in light and dark', () => {
@@ -189,17 +190,16 @@ describe('initials', () => {
 describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
   const dir = directionForLocale(locale);
 
-  it('puts the menu, the scope and the display settings in the sidebar, the person in the top bar', async () => {
+  it('puts the menu, the signed-in person with their scope and the display settings in the sidebar', async () => {
     const { container } = renderConsole({ role: 'national', locale, path: '/sessions' });
     await shellReady(locale);
     expect(document.documentElement.dir).toBe(dir);
     const sidebar = container.querySelector('.sidebar') as HTMLElement;
     expect(sidebar).toBeTruthy();
-    // The emerald brand block tops the white rail; no eight-point pattern any more (D17).
+    // The brand tops the grey rail with no band; no eight-point pattern any more.
     expect(sidebar.querySelector('.brand')).toBeTruthy();
     expect(sidebar.querySelector('svg.pattern')).toBeNull();
     expect(within(sidebar).getByRole('navigation')).toBeTruthy();
-    expect(within(sidebar).getByText(text('console.shell.scope.national', locale))).toBeTruthy();
     // Every icon sits beside a label, so none is read out.
     for (const icon of sidebar.querySelectorAll('svg')) {
       expect(icon.getAttribute('aria-hidden')).toBe('true');
@@ -208,11 +208,11 @@ describe.each<Locale>(['en', 'ur'])('shell and sidebar (%s)', (locale) => {
     const tools = screen.getByRole('region', { name: text('console.shell.toolsLabel', locale) });
     expect(sidebar.contains(tools)).toBe(true);
     expect(within(tools).getAllByRole('combobox')).toHaveLength(3);
-    // Who is signed in: the initials and the name in the top bar's pill.
+    // Who is signed in: the name, role and scope in the card at the foot of the rail.
     const who = screen.getByRole('region', { name: text('console.shell.signedInLabel', locale) });
-    expect(sidebar.contains(who)).toBe(false);
+    expect(sidebar.contains(who)).toBe(true);
+    expect(who.textContent).toContain(text('console.shell.scope.national', locale));
     expect(within(who).getByText('Test Coordinator')).toBeTruthy();
-    expect(within(who).getByText('TC')).toBeTruthy();
   });
 
   it('marks the current page in the menu', async () => {
@@ -315,7 +315,7 @@ describe.each<Locale>(['en', 'ur'])('restyled pages in %s', (locale) => {
     expect(document.querySelector('.table-card-foot .privacy-note')).toBeTruthy();
   });
 
-  it('draws the sign-in page as one card with an emerald top and the display settings above it', async () => {
+  it('draws the sign-in page as one white card with the logo, and the display settings above it', async () => {
     const { container } = renderConsole({ locale, path: '/sign-in', signedIn: false });
     const heading = await screen.findByRole('heading', {
       level: 1,
@@ -324,7 +324,7 @@ describe.each<Locale>(['en', 'ur'])('restyled pages in %s', (locale) => {
     expect(document.documentElement.dir).toBe(dir);
     const card = container.querySelector('.auth-card') as HTMLElement;
     expect(card.querySelector('.auth-hero')).toBeTruthy();
-    expect(card.querySelector('.auth-hero .brand-mark')).toBeTruthy();
+    expect(card.querySelector('.auth-hero .brand-logo')).toBeTruthy();
     expect(card.contains(heading)).toBe(true);
     const tools = screen.getByRole('group', { name: text('console.shell.toolsLabel', locale) });
     expect(card.contains(tools)).toBe(false);

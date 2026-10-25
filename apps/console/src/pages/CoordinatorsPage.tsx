@@ -370,7 +370,7 @@ export default function CoordinatorsPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.nav.coordinators')} intro={t('console.invites.intro')} hidden />
+      <PageHeader title={t('console.nav.coordinators')} intro={t('console.invites.intro')} />
       {notice ? (
         <Banner tone="success" onDismiss={() => setNotice(null)}>
           {t(notice.key)}

@@ -19,6 +19,7 @@ import SessionsPage from './pages/SessionsPage';
 import SettingsPage from './pages/SettingsPage';
 import SignInPage from './pages/SignInPage';
 import VenuesPage from './pages/VenuesPage';
+import WelcomePage from './pages/WelcomePage';
 import { ThemeProvider, type ThemeChoice } from './theme';
 import type { TextSizeStep } from './lib/ui-tokens';
 
@@ -73,7 +74,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const location = useLocation();
   if (status === 'loading') return <Loading />;
   if (status === 'signedOut')
-    return <Navigate to="/sign-in" replace state={{ from: location.pathname + location.search }} />;
+    return <Navigate to="/welcome" replace state={{ from: location.pathname + location.search }} />;
   return (
     <FeaturesProvider>
       <DirectoryProvider>{children}</DirectoryProvider>
@@ -135,6 +136,7 @@ function NotFound() {
 export function AppRoutes() {
   return (
     <Routes>
+      <Route path="/welcome" element={<WelcomePage />} />
       <Route path="/sign-in" element={<SignInPage />} />
       <Route
         element={

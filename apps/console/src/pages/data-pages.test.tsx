@@ -489,10 +489,10 @@ describe('settings page', () => {
         'adminSettings.update': (c: { body: unknown }) => ({ ...SETTINGS, ...(c.body as object) }),
       },
     });
-    const hijri = await screen.findByLabelText(text('console.settings.hijri.label'));
+    const hijri = await screen.findByRole('group', { name: text('console.settings.hijri.label') });
     const save = screen.getByRole('button', { name: text('console.settings.save') });
     expect(save).toHaveProperty('disabled', true);
-    await user.selectOptions(hijri, '-1');
+    await user.click(within(hijri).getByRole('button', { name: '−1' }));
     await user.click(save);
     expect(await screen.findByText(text('console.settings.saved'))).toBeTruthy();
     const patch = calls.filter((c) => c.method === 'PATCH' && c.path === '/v1/admin/settings');
@@ -534,9 +534,10 @@ describe('settings page', () => {
       path: '/settings',
       forceError: (c) => (c.method === 'PATCH' ? 'forbidden' : undefined),
     });
-    await user.selectOptions(
-      await screen.findByLabelText(text('console.settings.hijri.label')),
-      '1',
+    await user.click(
+      within(
+        await screen.findByRole('group', { name: text('console.settings.hijri.label') }),
+      ).getByRole('button', { name: '+1' }),
     );
     await user.click(screen.getByRole('button', { name: text('console.settings.save') }));
     expect(await screen.findByText(text('errors.forbidden'))).toBeTruthy();

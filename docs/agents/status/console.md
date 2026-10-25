@@ -1,7 +1,38 @@
 # Status: console
 
-Updated: 2026-10-25
-Branch: main
+Updated: 2026-10-26
+Branch: lane/console/redesign
+
+## Console redesign (26 Oct 2026, approved canvas: Welcome, Sign in, Enter the code and 11 screens)
+
+Branch `lane/console/redesign`. Built on the console's own CSS-variable theme; the shared kit from the member-app thread (`lane/ui/member-redesign`) had not landed, and it has since been merged in: the colours now come from `@qc/ui` semantic colours (my temporary console copy was removed); only the float shadow (`consoleFloatShadow`) and the radii are console-side.
+
+Done:
+- **Look.** White page, grey (`fill`) sidebar with a flat brand, one green (#0A6938 day, #4FC386 night), hairlines instead of shadows (only dialogs and menus float), controls and fields radius 12, cards 16, dialogs 20; chips, tags and counters stay pills. The current menu entry is a white row with a hairline and a green label.
+- **Shell.** The signed-in person (name, role, scope) is a card at the foot of the sidebar; the top bar has the search, city chips and an EN / اردو switch (the Language, Colours and Text size settings stay in the rail's panel).
+- **Welcome** (`pages/WelcomePage.tsx`, `/welcome`): signed-out people land here, one Sign in link; a signed-in person is sent on. Logo is the app icon (`public/logo.png`), 72 px on the green panel.
+- **Sign in** uses the 80 px logo on a plain white card. **Enter the code** is six boxes over one real input (paste and one-time-code fill work), "We sent a 6-digit code on WhatsApp to …", a m:ss resend timer, a check icon on Sign in, "Different number".
+- **Registrations** no longer show party size (pledge rule): one Section column, and the card subtitle drops the people count.
+- **Settings** are read-only for anyone who can read but not change them (fields disabled, no Save, a note); only national admins change them (contract unchanged).
+- **Sessions**: editing stays shown as not available yet (Save disabled with the note).
+- Strings: `console.welcome.*`, `console.signIn.code.title/sent`, `console.signIn.resendTimer`, `console.shell.languageSwitch`, `console.settings.readOnly`, `console.registrations.col.section` (English and Urdu draft; Urdu carries the review marker). Removed `console.registrations.sectionParty` and `…col.sectionParty`.
+- Tests: new `pages/welcome.test.tsx`; sign-in, shell and theme tests follow the Welcome landing page and the new sidebar.
+
+Page-by-page pass (same day):
+- Page titles and intros are visible again on every page, as on the boards; Daily ayahs is named "Daily ayahs" everywhere.
+- Number cards on Sessions (active masjids, circles, meeting this week, waiting for approval), Venues (venues, women's section, no contact number, archived) and Registrations (registrations, opted in to WhatsApp). Only counts of loaded rows; "load more" note while more pages exist; no check-in, seat or made-up figures.
+- Sidebar matches the boards: no season pill, no count or PDF badges.
+- Settings form is narrow (620 px) with the two reminder times side by side.
+- Checked on screen against the mock API: Sessions, Coordinators, Daily ayahs, Settings, Import, Sign in, Welcome. Not compared one by one: Posters, Exports, Audit, Venues, Registrations tables (colours, radii and cards follow the new look).
+- Board gaps closed: Daily ayahs has the seven-day strip (press a day to show only that day; the date range, scope filter and picks logic are unchanged); Settings uses segmented controls for Hijri adjustment and season; the Exports form is a single 640 px column. Also checked on screen: Exports, Audit, Venues.
+
+- **Venue location picker** (`components/LocationPicker.tsx`, opened from "Set location" on each venue row in `pages/VenuesPage.tsx`, and a "Map pin" column showing pinned or not): drag the map under a fixed centre pin, arrow keys and +/- zoom buttons work too, "Use this location" saves the centre rounded to six places through `adminVenues.update` (`venue.update` permission; the button is hidden without it). No address search. The map maths is copied from `apps/admin-app/src/features/venues/location/tiles.ts` into `lib/map/tiles.ts` (apps may not import each other; move the three copies to a shared package when the ui or contracts lane offers one). Tests: `pages/venue-location.test.tsx`, `lib/map/tiles.test.ts`.
+- **Needs the platform lane:** the console's Content-Security-Policy in `infra/caddy/Caddyfile` (`@console`) allows images only from 'self', so the map tiles will not load in production until `https://tile.openstreetmap.org` is added to its `img-src` (the app one already has it). I did not touch infra.
+- Registrations checked on screen (no party size, number cards, export button).
+
+Not done:
+- "Send it by SMS" on the code screen: no API for a second channel (left out on the coordinator's say).
+- Poster maker files belong to the "Build poster maker" thread; untouched.
 
 ## Halaqa flyer fields in the poster maker (25 Oct 2026, orchestrator task)
 

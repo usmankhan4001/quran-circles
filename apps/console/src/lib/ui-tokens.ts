@@ -69,3 +69,9 @@ export const consoleTagColors = {
     slateSubtle: '#1e293b',
   },
 } as const;
+
+/** The one shadow of the redesign: what floats above the page (dialogs and menus). */
+export const consoleFloatShadow = {
+  light: '0 -12px 40px rgba(14, 21, 18, 0.10)',
+  dark: '0 -12px 40px rgba(0, 0, 0, 0.6)',
+} as const;

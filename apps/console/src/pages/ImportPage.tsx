@@ -251,7 +251,7 @@ export default function ImportPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.import.title')} intro={t('console.import.intro')} hidden />
+      <PageHeader title={t('console.import.title')} intro={t('console.import.intro')} />
       <section className="card validator-card" aria-labelledby="validator-title">
         <div className="validator-head">
           <span className="validator-icon" aria-hidden="true">

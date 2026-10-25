@@ -146,7 +146,7 @@ export default function AuditPage() {
 
   return (
     <div className="page">
-      <PageHeader title={t('console.audit.title')} intro={t('console.audit.intro')} hidden />
+      <PageHeader title={t('console.audit.title')} intro={t('console.audit.intro')} />
       <TableCard
         title={t('console.audit.card.title')}
         subtitle={

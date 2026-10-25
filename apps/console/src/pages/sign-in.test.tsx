@@ -1,6 +1,6 @@
 import { ERROR_CODES, makeApiError } from '@qc/contracts';
 import { describe, expect, it } from 'vitest';
-import { renderConsole, screen, text } from '../test/harness';
+import { phoneField, renderConsole, screen, text } from '../test/harness';
 import type { Locale } from '../i18n';
 
 const codeRequests = (calls: { path: string }[]) => calls.filter((c) => c.path === '/v1/auth/code');
@@ -10,10 +10,7 @@ async function askForCode(
   number: string,
   locale: Locale = 'en',
 ) {
-  await user.type(
-    await screen.findByLabelText(new RegExp(text('console.signIn.phone.label', locale))),
-    number,
-  );
+  await user.type(await phoneField(user, locale), number);
   await user.click(screen.getByRole('button', { name: text('console.signIn.sendCode', locale) }));
 }
 
