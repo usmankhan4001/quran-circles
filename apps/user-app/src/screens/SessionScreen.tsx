@@ -36,7 +36,6 @@ import { useAuthStatus } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { shareText } from '../platform/share';
 import { useToast } from '../providers/Toasts';
-import { ComingSoon } from '../ui/ComingSoon';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.md + spacing.xxs },
@@ -295,42 +294,39 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                   onPress={() => nav.go({ name: 'venue', venueId: s.venueId })}
                   testID="session-venue"
                 />
-                <View style={[styles.rule, { backgroundColor: c.hairline }]} />
-                <InfoRow
-                  leading={<Initials text={hostName ? initialsOf(hostName) : '—'} />}
-                  title={hostName ?? t('session.host.unknown')}
-                  titleComingSoon={!hostName}
-                  {...(circle?.teacherName
-                    ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
-                    : { subtitle: t('session.host.inPerson') })}
-                  testID="session-circle"
-                />
-                <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                {/* Host and online rows only when there is something to show: a teacher's or circle's
+                    name, an online link. No placeholder rows. */}
+                {hostName ? (
+                  <>
+                    <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                    <InfoRow
+                      leading={<Initials text={initialsOf(hostName)} />}
+                      title={hostName}
+                      {...(circle?.teacherName
+                        ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
+                        : { subtitle: t('session.host.inPerson') })}
+                      testID="session-circle"
+                    />
+                  </>
+                ) : null}
                 {onlineUrl ? (
-                  <Pressable
-                    role="link"
-                    aria-label={t('session.online')}
-                    onPress={() => void openUrl(onlineUrl)}
-                    style={styles.infoRow}
-                    testID="session-online"
-                  >
-                    <IconTile icon="video-camera" />
-                    <Text variant="label" color="textAccent" strong style={styles.grow}>
-                      {t('session.online')}
-                    </Text>
-                    <Icon name="arrow-forward" size={16} color={c.textAccent} />
-                  </Pressable>
-                ) : (
-                  // No online link for this circle: drawn, but nothing to open (owner, 25 Oct 2026).
-                  <ComingSoon role="link" label={t('session.online')} testID="session-online">
-                    <View style={styles.infoRow}>
+                  <>
+                    <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                    <Pressable
+                      role="link"
+                      aria-label={t('session.online')}
+                      onPress={() => void openUrl(onlineUrl)}
+                      style={styles.infoRow}
+                      testID="session-online"
+                    >
                       <IconTile icon="video-camera" />
-                      <Text variant="label" color="textSecondary" style={styles.grow}>
+                      <Text variant="label" color="textAccent" strong style={styles.grow}>
                         {t('session.online')}
                       </Text>
-                    </View>
-                  </ComingSoon>
-                )}
+                      <Icon name="arrow-forward" size={16} color={c.textAccent} />
+                    </Pressable>
+                  </>
+                ) : null}
               </Card>
 
               {/* What the person has done, and what happens next (joined), or what joining brings. */}
@@ -522,7 +518,6 @@ function InfoRow({
   leading,
   title,
   titleLang,
-  titleComingSoon = false,
   subtitle,
   subtitleLang,
   trailing,
@@ -532,8 +527,6 @@ function InfoRow({
   leading: ReactNode;
   title: string;
   titleLang?: 'en' | 'ur';
-  /** The title stands in for data the app does not have yet, such as the teacher's name. */
-  titleComingSoon?: boolean;
   subtitle?: string;
   subtitleLang?: 'en' | 'ur';
   trailing?: ReactNode;
@@ -550,13 +543,7 @@ function InfoRow({
     <>
       {leading}
       <View style={styles.grow}>
-        {titleComingSoon ? (
-          <ComingSoon label={title} {...(testID ? { testID: `${testID}-soon` } : {})}>
-            {titleText}
-          </ComingSoon>
-        ) : (
-          titleText
-        )}
+        {titleText}
         {subtitle ? (
           <Text variant="caption" color="textSecondary" lang={subtitleLang}>
             {subtitle}

@@ -244,6 +244,8 @@ The approved redesign (D1 to D16) is applied to `apps/user-app`. Behaviour, hook
 
 ## Done
 
+- 2026-10-25 (proposed to the owner, branch `lane/user-app/session-hide-placeholders`, not on main until they agree): the session page leaves out the host row when no circle or teacher is known and the "Join online" row when there is no link, instead of drawing them greyed with "Coming soon". The photo's "Coming soon" badge is unchanged. `comingSoon.test.tsx` now checks the rows are absent; `@qc/user-app` 1135 tests pass.
+
 Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the web target; native device and store builds were not attempted.
 
 - Shell: expo-router with four tabs (Home, Nearby, My Journey, Quran & Prayer) and Profile from the avatar. Providers: typed API client with one retry after a single-flight refresh on `token_expired`, i18n en/ur with RTL, `ThemeProvider` from `@qc/ui` (light, dark, high contrast, four text sizes, reduce motion from the device), season mode from `config.get`.

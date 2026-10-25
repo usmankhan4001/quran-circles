@@ -12,7 +12,8 @@ import { VenueScreen } from './VenueScreen';
 /**
  * Every feature that is drawn but has nothing behind it yet wears the one "Coming soon"
  * treatment (owner's decision, 25 Oct 2026): it stays on the screen with the badge, takes no
- * press, and screen readers hear it as turned off. The Ramadan row on Home is checked in
+ * press, and screen readers hear it as turned off. On the session page the host and online rows
+ * are left out instead when there is nothing to show. The Ramadan row on Home is checked in
  * `HomeScreen.test.tsx`, the treatment itself in `ui/ComingSoon.test.tsx`.
  */
 
@@ -38,22 +39,14 @@ const circleRequestsOn = {
 };
 
 describe('Session page placeholders', () => {
-  it.each(LOCALES)(
-    '"Join online" without a link is coming soon and opens nothing (%s)',
-    async (locale) => {
-      const words = messages[locale];
-      const s = SESSIONS.circle;
-      expect(s.circle?.onlineLink).toBeNull();
-      const view = await renderScreen(<SessionScreen sessionId={s.id} />, { locale });
-      await view.findByTestId('facilities');
-      const online = view.getByTestId('session-online');
-      expectComingSoon(online, words['session.online'], locale, { role: 'link' });
-      expect(online.textContent).toContain(words['session.online']);
-      fireEvent.click(online);
-      fireEvent.click(within(online).getByText(words['session.online']));
-      expect(view.world.opened).toEqual([]);
-    },
-  );
+  it('leaves out "Join online" when the circle has no link', async () => {
+    const s = SESSIONS.circle;
+    expect(s.circle?.onlineLink).toBeNull();
+    const view = await renderScreen(<SessionScreen sessionId={s.id} />);
+    await view.findByTestId('facilities');
+    expect(view.queryByTestId('session-online')).toBeNull();
+    expect(view.queryByText(messages.en['session.online'])).toBeNull();
+  });
 
   it('"Join online" with a link stays a working link, with no badge', async () => {
     const s = SESSIONS.circle;
@@ -72,16 +65,15 @@ describe('Session page placeholders', () => {
   });
 
   it.each(LOCALES)(
-    '"Host not listed yet" is coming soon when no teacher is known (%s)',
+    'leaves out the host row when no circle or teacher is known (%s)',
     async (locale) => {
       const words = messages[locale];
       const s = SESSIONS.taraweeh;
       expect(s.circle).toBeNull();
       const view = await renderScreen(<SessionScreen sessionId={s.id} />, { locale });
       await view.findByTestId('facilities');
-      const host = view.getByTestId('session-circle-soon');
-      expectComingSoon(host, words['session.host.unknown'], locale, { role: 'group' });
-      expect(host.textContent).toContain(words['session.host.unknown']);
+      expect(view.queryByTestId('session-circle')).toBeNull();
+      expect(view.queryByText(words['session.host.unknown'])).toBeNull();
     },
   );
 
