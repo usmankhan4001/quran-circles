@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS, followFor, registrationFor } from '../test/factories';
 import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import { configWith } from '../test/nextFeatures';
 import { JourneyScreen } from './JourneyScreen';
 
 const en = messages.en;
@@ -22,6 +23,26 @@ function mine(regs = [registrationFor(SESSIONS.taraweeh)], follows = [followFor(
 }
 
 describe('JourneyScreen', () => {
+  it('shows days read only when the reading_days feature is on', async () => {
+    for (const on of [false, true]) {
+      const world = await createWorld({
+        signedIn: true,
+        mock: {
+          handlers: {
+            ...mine().handlers,
+            ...configWith(on ? ['reading_days'] : []),
+            'reading.days': () => ({ days: [], goal: null }),
+          },
+        },
+      });
+      const view = await renderScreen(<JourneyScreen />, { world });
+      expect(await view.findByTestId(`registration-${REG_ID}`)).toBeTruthy();
+      if (on) expect(await view.findByTestId('journey-reading')).toBeTruthy();
+      else expect(view.queryByTestId('journey-reading')).toBeNull();
+      view.unmount();
+    }
+  });
+
   it('asks a signed-out person to sign in and returns here afterwards', async () => {
     const view = await renderScreen(<JourneyScreen />);
     expect(view.getByTestId('journey-signed-out')).toBeTruthy();

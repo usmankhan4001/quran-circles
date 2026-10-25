@@ -27,6 +27,7 @@ import {
   useMyRegistrations,
 } from '../features/journey/hooks';
 import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
+import { useFeature } from '../features/reading/hooks';
 import { venueMapUrl } from '../features/session/links';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
@@ -295,6 +296,7 @@ function JourneyContent() {
   const toast = useToast();
   const registrations = useMyRegistrations();
   const follows = useMyFollows();
+  const daysRead = useFeature('reading_days');
   const cancel = useCancelRegistration();
   const [cancelling, setCancelling] = useState<Registration | null>(null);
 
@@ -366,9 +368,11 @@ function JourneyContent() {
         </QueryBoundary>
       </View>
 
-      <View style={styles.block} testID="journey-reading">
-        <DaysReadCard />
-      </View>
+      {daysRead.on ? (
+        <View style={styles.block} testID="journey-reading">
+          <DaysReadCard />
+        </View>
+      ) : null}
 
       <MemorisationEntryCard />
 
