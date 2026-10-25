@@ -42,7 +42,7 @@ export function PlacesScreen() {
         <IconButton
           testID="places-account"
           icon="user"
-          variant="onHero"
+         
           accessibilityLabel={t('admin.tabs.account')}
           onPress={() => nav.push(routes.account())}
         />

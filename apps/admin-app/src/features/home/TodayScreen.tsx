@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import type { Session } from '@qc/contracts';
-import { EmptyState, IconButton, SessionCard, Text, spacing } from '@qc/ui';
+import { EmptyState, Icon, IconButton, ListItem, SessionCard, Text, spacing } from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi, useAuth } from '../../auth/AuthProvider';
@@ -18,20 +18,11 @@ import {
 } from '../../lib/time';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
-import { canPostAnywhere } from '../post-update/scopes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { TODAY_LIMIT, takeEarlyToday } from './earlyToday';
 import { AttendanceTrend } from './AttendanceTrend';
 import { NextSessionCard, QuickActions } from './NextSessionCard';
 import { whenSummary } from './sessionText';
-
-const hidden = {
-  position: 'absolute' as const,
-  width: 1,
-  height: 1,
-  overflow: 'hidden' as const,
-  opacity: 0,
-};
 
 export interface TodayScreenProps {
   /** The moment "today" is taken from. Tests pass a fixed one. */
@@ -48,7 +39,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
   const api = useApi();
   const nav = useNavigation();
   const { me } = useAuth();
-  const { active, filter, principal } = useWorkingScope();
+  const { active, filter } = useWorkingScope();
 
   const query = useQuery(async () => {
     // Asked while the app was starting, for this person and this scope (earlyToday.ts)?
@@ -87,33 +78,26 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
 
   const sessions = query.data;
   const next = sessions ? nextOf(sessions) : null;
-  const heading = `${t('admin.home.title')} · ${formatLocalDate(pkDateOf(now), locale)}`;
 
   return (
     <Screen
+      eyebrow={formatLocalDate(pkDateOf(now), locale)}
+      title={
+        me?.displayName
+          ? t('admin.home.greeting', { name: me.displayName })
+          : t('admin.home.greetingPlain')
+      }
       leading={<ScopePill />}
       actions={
-        canPostAnywhere(principal) ? (
-          <IconButton
-            testID="today-post-update"
-            icon="bell"
-            variant="onHero"
-            accessibilityLabel={t('admin.home.postUpdate')}
-            onPress={() => nav.push(routes.postUpdate())}
-          />
-        ) : undefined
+        <IconButton
+          testID="today-account"
+          icon="user"
+          variant="tonal"
+          accessibilityLabel={t('admin.tabs.account')}
+          onPress={() => nav.push(routes.account())}
+        />
       }
-      hero={
-        <View>
-          {/* The page heading for screen readers; the artboard draws none (D17). */}
-          <View style={hidden}>
-            <Text variant="caption" color="textOnHero" heading={1}>
-              {heading}
-            </Text>
-          </View>
-          {next ? <NextSessionCard session={next} now={now} /> : null}
-        </View>
-      }
+      hero={next ? <NextSessionCard session={next} now={now} /> : null}
       testID="today"
     >
       <QueryBoundary query={query} testID="today-data">
@@ -136,6 +120,20 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
             <View style={{ gap: spacing.lg }}>
               {next ? <QuickActions session={next} /> : null}
               {next ? <AttendanceTrend session={next} now={now} /> : null}
+              {next ? (
+                <View style={{ gap: spacing.xs }}>
+                  <Text variant="body" strong heading={2}>
+                    {t('admin.home.tools')}
+                  </Text>
+                  <ListItem
+                    testID="today-tool-daily-ayah"
+                    title={t('admin.dailyAyah.title')}
+                    subtitle={t('admin.dailyAyah.entry.action')}
+                    leading={<Icon name="book" size={22} />}
+                    onPress={() => nav.push(routes.dailyAyah({ venueId: next.venue.id }))}
+                  />
+                </View>
+              ) : null}
               {todays.length > 0 ? (
                 <View style={{ gap: spacing.md }}>
                   <Text variant="body" strong heading={2}>

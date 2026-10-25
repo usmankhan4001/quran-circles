@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import type { AdminOccurrence, StaffRegistration } from '@qc/contracts';
-import { Button, Card, EmptyState, Select, SearchField, Text, isolate, spacing } from '@qc/ui';
+import {
+  Avatar,
+  Button,
+  Card,
+  EmptyState,
+  IconButton,
+  Select,
+  SearchField,
+  Text,
+  isolate,
+  spacing,
+  useTheme,
+} from '@qc/ui';
 import { useQuery } from '../../api/query';
 import { useT } from '../../appearance/AppearanceProvider';
 import { useApi } from '../../auth/AuthProvider';
@@ -9,7 +21,6 @@ import { ErrorNotice } from '../../components/ErrorNotice';
 import { NotAvailable } from '../../components/NotAvailable';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { FilterPills } from '../../components/FilterPills';
-import { PillButton } from '../../components/PillButton';
 import { Screen } from '../../components/Screen';
 import { pickLocalized } from '../../lib/localized';
 import { type ContactKind } from '../../lib/phone';
@@ -123,7 +134,7 @@ export function RegistrantsScreen({
       actions={
         list.totals ? (
           <Text testID="registrants-total-people" variant="caption" color="textAccent" strong>
-            {t('admin.registrants.peopleCount', { count: n(list.totals.people) })}
+            {t('admin.registrants.peopleCount', { count: n(list.totals.registrations) })}
           </Text>
         ) : undefined
       }
@@ -149,6 +160,24 @@ export function RegistrantsScreen({
         </Card>
       ) : (
         <View style={{ gap: spacing.md }}>
+          {list.totals && status === 'confirmed' ? (
+            <View testID="registrants-stats" style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Stat value={n(list.totals.registrations)} label={t('admin.registrants.confirmed')} />
+              {/* The split is counted on the people loaded, so it shows once all are loaded. */}
+              {!list.hasMore ? (
+                <>
+                  <Stat
+                    value={n(list.items.filter((r) => r.section === 'women').length)}
+                    label={t('admin.registrants.section.women')}
+                  />
+                  <Stat
+                    value={n(list.items.filter((r) => r.section === 'men').length)}
+                    label={t('admin.registrants.section.men')}
+                  />
+                </>
+              ) : null}
+            </View>
+          ) : null}
           <SearchField
             testID="registrants-search"
             accessibilityLabel={t('admin.registrants.search')}
@@ -244,6 +273,29 @@ export function RegistrantsScreen({
   );
 }
 
+function Stat({ value, label }: { value: string; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        gap: spacing.xxs,
+        padding: spacing.md,
+        borderRadius: 12,
+        backgroundColor: colors.surfaceMuted,
+      }}
+    >
+      <Text variant="title1" lang="en">
+        {value}
+      </Text>
+      <Text variant="caption" color="textSecondary">
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+/** One person (design: Registrants): initial, name, section, and a call and a WhatsApp button. */
 function RegistrantCard({
   registrant: r,
   onContact,
@@ -251,57 +303,58 @@ function RegistrantCard({
   registrant: StaffRegistration;
   onContact: ContactOpener;
 }) {
-  const { t, n } = useT();
+  const { t } = useT();
+  const { colors } = useTheme();
   const name = r.name ?? t('admin.registrants.noName');
   const contact = (kind: ContactKind) => {
     if (r.phone) onContact(kind, contactUrl(kind, r.phone));
   };
   return (
-    <Card testID={`registrant-${r.id}`} padding="md">
-      <View style={{ gap: spacing.sm }}>
-        <View style={{ gap: spacing.xxs }}>
-          <Text variant="label" strong>
-            {r.name ? isolate(r.name) : name}
-          </Text>
+    <View
+      testID={`registrant-${r.id}`}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        paddingVertical: spacing.sm,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.hairline,
+      }}
+    >
+      <Avatar name={name} size="sm" />
+      <View style={{ flex: 1, gap: spacing.xxs }}>
+        <Text variant="label" strong>
+          {r.name ? isolate(r.name) : name}
+        </Text>
+        <Text variant="caption" color="textSecondary">
+          {t(`admin.registrants.section.${r.section}`)}
+          {r.status === 'waitlisted' ? ` · ${t('admin.registrants.waitlisted')}` : ''}
+        </Text>
+        {r.phone ? null : (
           <Text variant="caption" color="textSecondary">
-            {t('admin.registrants.party', { count: n(r.partySize) })} ·{' '}
-            {t(`admin.registrants.section.${r.section}`)}
-            {r.status === 'waitlisted' ? ` · ${t('admin.registrants.waitlisted')}` : ''}
+            {t('admin.registrants.noPhone')}
           </Text>
-          {r.phone ? null : (
-            <Text variant="caption" color="textSecondary">
-              {t('admin.registrants.noPhone')}
-            </Text>
-          )}
-        </View>
-        {/* Owner decision 2026-10-17: the number is never shown. The buttons carry the name. */}
-        {r.phone ? (
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            {r.allowsWhatsapp ? (
-              <View style={{ flex: 1 }}>
-                <PillButton
-                  testID={`registrant-${r.id}-whatsapp`}
-                  label={t('admin.registrants.whatsappShort')}
-                  tone="tint"
-                  icon="whatsapp-logo"
-                  iconWeight="fill"
-                  accessibilityLabel={t('admin.registrants.whatsappName', { name })}
-                  onPress={() => contact('whatsapp')}
-                />
-              </View>
-            ) : null}
-            <View style={{ flex: 1 }}>
-              <PillButton
-                testID={`registrant-${r.id}-call`}
-                label={t('admin.registrants.call')}
-                icon="phone-call"
-                accessibilityLabel={t('admin.registrants.callName', { name })}
-                onPress={() => contact('call')}
-              />
-            </View>
-          </View>
-        ) : null}
+        )}
       </View>
-    </Card>
+      {/* Owner decision 2026-10-17: the number is never shown. The buttons carry the name. */}
+      {r.phone ? (
+        <View style={{ flexDirection: 'row' }}>
+          <IconButton
+            testID={`registrant-${r.id}-call`}
+            icon="phone-call"
+            accessibilityLabel={t('admin.registrants.callName', { name })}
+            onPress={() => contact('call')}
+          />
+          {r.allowsWhatsapp ? (
+            <IconButton
+              testID={`registrant-${r.id}-whatsapp`}
+              icon="whatsapp-logo"
+              accessibilityLabel={t('admin.registrants.whatsappName', { name })}
+              onPress={() => contact('whatsapp')}
+            />
+          ) : null}
+        </View>
+      ) : null}
+    </View>
   );
 }

@@ -29,6 +29,7 @@ import { routes } from '../../navigation/routes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
 import { AyahPickCard } from '../daily-ayah/AyahPickCard';
 import { loadVenue } from './loadVenue';
+import { LocationPicker } from './location/LocationPicker';
 import {
   emptyVenueForm,
   FACILITY_KEYS,
@@ -102,6 +103,7 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
     original ? venueFormOf(original) : emptyVenueForm(creatableCities[0]?.id ?? null),
   );
   const [errors, setErrors] = useState<VenueErrors>({});
+  const [picking, setPicking] = useState(false);
   const create = useMutation(api.adminVenues.create);
   const update = useMutation(api.adminVenues.update);
   const patch = (p: Partial<VenueForm>) => setForm((f) => ({ ...f, ...p }));
@@ -139,6 +141,23 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
       if (saved) nav.back();
     }
   };
+
+  if (picking) {
+    const lat = Number.parseFloat(form.lat);
+    const lng = Number.parseFloat(form.lng);
+    return (
+      <LocationPicker
+        initial={Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null}
+        address={form.address[locale]}
+        onAddressChange={(text) => patch({ address: { ...form.address, [locale]: text } })}
+        onUse={(place) => {
+          patch({ lat: String(place.lat), lng: String(place.lng) });
+          setPicking(false);
+        }}
+        onCancel={() => setPicking(false)}
+      />
+    );
+  }
 
   return (
     <View style={{ gap: spacing.lg }} testID="venue-editor-form">
@@ -202,6 +221,14 @@ function VenueEditorFlow({ loaded }: { loaded: Loaded }) {
           <Text variant="title3" heading={2}>
             {t('admin.venueEditor.pin.label')}
           </Text>
+          <Button
+            testID="venue-pick-on-map"
+            label={t('admin.venueEditor.location.open')}
+            icon="map-pin"
+            variant="secondary"
+            fullWidth
+            onPress={() => setPicking(true)}
+          />
           <TextField
             testID="venue-lat"
             label={t('admin.venueEditor.lat.label')}

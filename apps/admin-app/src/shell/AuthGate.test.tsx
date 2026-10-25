@@ -6,7 +6,7 @@ import { TOKENS_KEY } from '../auth/AuthProvider';
 import { createMemoryStore } from '../storage/storage';
 import { WORKING_SCOPE_KEY, useWorkingScope } from '../scope/WorkingScopeProvider';
 import { createBackend, meFor, STAFF_TOKEN, type Backend } from '../test/backend';
-import { BASE_URL, tokens } from '../test/render';
+import { BASE_URL, tokens, passWelcome } from '../test/render';
 import { AppProviders } from './AppProviders';
 import { AuthGate } from './AuthGate';
 
@@ -71,6 +71,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: meFor('venue') });
     const { tokenStore } = mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '0300 1234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
@@ -87,6 +88,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '12');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     expect(await screen.findByText(/Enter a Pakistan mobile number/)).toBeTruthy();
@@ -97,6 +99,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '03001234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
@@ -110,6 +113,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '03001234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
@@ -124,6 +128,7 @@ describe('AuthGate and phone-code sign-in', () => {
     backend.failWith('auth.requestCode', 'rate_limited');
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '03001234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     const notice = await screen.findByTestId('sign-in-notice');
@@ -135,6 +140,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     backend.setOffline(true);
     type('sign-in-phone', '03001234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
@@ -144,6 +150,7 @@ describe('AuthGate and phone-code sign-in', () => {
   it('lets the person go back and use another number', async () => {
     mountApp(createBackend({ me: meFor('venue') }));
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '03001234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
@@ -155,6 +162,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: { ...fx.fixtureMe, roles: [] } });
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     type('sign-in-phone', '03001234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
@@ -186,6 +194,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
+    await passWelcome();
     const helper = messages.en['admin.signIn.phoneHelper'];
     expect(helper).toMatch(/WhatsApp/);
     expect(helper).toMatch(/SMS/);
@@ -199,7 +208,8 @@ describe('AuthGate and phone-code sign-in', () => {
 
   it('shows the sign-in screen in Urdu, right to left', async () => {
     mountApp(createBackend({ me: meFor('venue') }), { locale: 'ur' });
-    const root = await screen.findByTestId('sign-in');
+    await passWelcome();
+    const root = screen.getByTestId('sign-in');
     expect(root.closest('[dir]')?.getAttribute('dir')).toBe('rtl');
     expect(screen.getByTestId('sign-in-send-code').textContent).toBe('کوڈ بھیجیں');
     expect(screen.getByText(messages.ur['admin.signIn.phoneHelper'])).toBeTruthy();

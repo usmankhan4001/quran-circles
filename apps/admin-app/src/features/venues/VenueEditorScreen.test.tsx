@@ -290,3 +290,27 @@ describe.each(combos)('VenueEditorScreen circles in $name', (combo) => {
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
   });
 });
+
+describe('VenueEditorScreen location picker', () => {
+  it('opens the map on the typed pin and brings the chosen place back to the form', async () => {
+    renderScreen(<VenueEditorScreen />, { backend: createBackend({ me: meFor('city') }) });
+    await fillNewVenue();
+    fireEvent.click(screen.getByTestId('venue-pick-on-map'));
+    expect(await screen.findByTestId('venue-location-map')).toBeTruthy();
+    expect(screen.queryByTestId('venue-editor-form')).toBeNull();
+    fireEvent.click(screen.getByTestId('venue-location-use'));
+    await screen.findByTestId('venue-editor-form');
+    // The map has not moved, so the pin is where it was typed.
+    expect((screen.getByTestId('venue-lat') as HTMLInputElement).value).toBe('33.6');
+    expect((screen.getByTestId('venue-lng') as HTMLInputElement).value).toBe('73.05');
+  });
+
+  it('goes back to the form without changing the pin on cancel', async () => {
+    renderScreen(<VenueEditorScreen />, { backend: createBackend({ me: meFor('city') }) });
+    await fillNewVenue();
+    fireEvent.click(screen.getByTestId('venue-pick-on-map'));
+    fireEvent.click(await screen.findByTestId('venue-location-cancel'));
+    await screen.findByTestId('venue-editor-form');
+    expect((screen.getByTestId('venue-lat') as HTMLInputElement).value).toBe('33.6');
+  });
+});

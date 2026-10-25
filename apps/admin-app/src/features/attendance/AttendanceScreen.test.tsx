@@ -49,21 +49,21 @@ describe('AttendanceScreen', () => {
     expect(backend.callsTo('adminAttendance.put')[0]!.path).toContain(occ.id);
   });
 
-  it('counts a tick by the size of the party and saves who came', async () => {
+  it('counts each tick as one person and saves who came', async () => {
     const { backend } = await open();
     await screen.findByTestId('attendance-form');
     const one = await screen.findByTestId(`attendance-tick-${registrant(0).id}`);
     const three = await screen.findByTestId(`attendance-tick-${registrant(2).id}`);
-    fireEvent.click(one); // party of 1
-    fireEvent.click(three); // party of 3
-    expect((screen.getByTestId('attendance-headcount-input') as HTMLInputElement).value).toBe('4');
+    fireEvent.click(one);
+    fireEvent.click(three);
+    expect((screen.getByTestId('attendance-headcount-input') as HTMLInputElement).value).toBe('2');
     fireEvent.click(screen.getByTestId('attendance-save'));
     await screen.findByTestId('attendance-saved');
     expect(putBody(backend)).toEqual({
-      headcount: 4,
+      headcount: 2,
       entries: [
         { registrationId: registrant(0).id, name: null, count: 1 },
-        { registrationId: registrant(2).id, name: null, count: 3 },
+        { registrationId: registrant(2).id, name: null, count: 1 },
       ],
     });
   });
@@ -82,7 +82,7 @@ describe('AttendanceScreen', () => {
     const total = backend.state.registrants
       .get(ids.sessionDora)!
       .filter((r) => r.status === 'confirmed')
-      .reduce((sum, r) => sum + r.partySize, 0);
+      .length;
     expect((screen.getByTestId('attendance-headcount-input') as HTMLInputElement).value).toBe(
       String(total),
     );
@@ -110,8 +110,10 @@ describe('AttendanceScreen', () => {
 
   it('refuses a headcount lower than the people ticked', async () => {
     const { backend } = await open();
-    const three = await screen.findByTestId(`attendance-tick-${registrant(2).id}`);
-    fireEvent.click(three);
+    const first = await screen.findByTestId(`attendance-tick-${registrant(0).id}`);
+    const second = await screen.findByTestId(`attendance-tick-${registrant(1).id}`);
+    fireEvent.click(first);
+    fireEvent.click(second);
     typeInto('attendance-headcount-input', '1');
     fireEvent.click(screen.getByTestId('attendance-save'));
     expect((await screen.findByTestId('attendance-error')).textContent).toBe(

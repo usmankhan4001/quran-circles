@@ -55,10 +55,10 @@ describe('colours', () => {
     }
   });
 
-  it('uses the kit green header on every screen, not a local copy', () => {
+  it("uses the kit's flat ScreenHeader on every tab screen, not a local copy", () => {
     const frame = files.find((f) => f.path === 'components/Screen.tsx')!;
-    expect(frame.text).toMatch(/import \{[^}]*\bHeroHeader\b[^}]*\} from '@qc\/ui'/);
-    expect(files.some((f) => f.path === 'components/HeroHeader.tsx')).toBe(false);
+    expect(frame.text).toMatch(/import \{[^}]*\bScreenHeader\b[^}]*\} from '@qc\/ui'/);
+    expect(files.some((f) => f.path === 'components/ScreenHeader.tsx')).toBe(false);
   });
 
   it('draws locally only the icons the kit line set does not have', () => {

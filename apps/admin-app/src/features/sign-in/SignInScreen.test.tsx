@@ -5,7 +5,7 @@ import { AuthGate } from '../../shell/AuthGate';
 import { AppProviders } from '../../shell/AppProviders';
 import { createMemoryStore } from '../../storage/storage';
 import { createBackend, meFor, type Backend } from '../../test/backend';
-import { BASE_URL } from '../../test/render';
+import { BASE_URL, passWelcome } from '../../test/render';
 
 /** The sign-in screen as the app shows it to someone with nothing saved. */
 async function mountSignIn(backend: Backend, locale: 'en' | 'ur' = 'en') {
@@ -24,6 +24,7 @@ async function mountSignIn(backend: Backend, locale: 'en' | 'ur' = 'en') {
     </AppProviders>,
   );
   await screen.findByTestId('sign-in');
+  await passWelcome();
   return view;
 }
 
@@ -121,5 +122,42 @@ describe('SignInScreen: only Pakistani mobile numbers', () => {
     const notice = await screen.findByTestId('sign-in-notice');
     expect(notice.textContent).toContain(messages.en['errors.validation_failed']);
     expect(screen.queryByText(messages.en['issues.phone_not_pakistan_mobile'])).toBeNull();
+  });
+});
+
+describe('SignInScreen: welcome first', () => {
+  const mountBare = async (locale: 'en' | 'ur') => {
+    const prefsStore = createMemoryStore({});
+    render(
+      <AppProviders
+        baseUrl={BASE_URL}
+        tokenStore={createMemoryStore({})}
+        prefsStore={prefsStore}
+        fetch={createBackend({ me: meFor('venue') }).fetch}
+        initialAppearance={{ locale, colorChoice: 'light', textSize: 0 }}
+      >
+        <AuthGate prefsStore={prefsStore}>
+          <div />
+        </AuthGate>
+      </AppProviders>,
+    );
+    await screen.findByTestId('welcome');
+  };
+
+  it.each(['en', 'ur'] as const)('opens on the invitation-only welcome (%s)', async (locale) => {
+    await mountBare(locale);
+    expect(screen.queryByTestId('sign-in-phone')).toBeNull();
+    expect(screen.getByText(messages[locale]['admin.signIn.welcome.tag'])).toBeTruthy();
+    expect(screen.getByText(messages[locale]['admin.signIn.inviteOnly'])).toBeTruthy();
+    await passWelcome();
+  });
+
+  it('shows what the app does from "What can I do here?" and signs in from there', async () => {
+    await mountBare('en');
+    fireEvent.click(screen.getByTestId('welcome-features'));
+    expect(await screen.findByTestId('features')).toBeTruthy();
+    expect(screen.getByText(messages.en['admin.signIn.features.2.title'])).toBeTruthy();
+    fireEvent.click(screen.getByTestId('features-sign-in'));
+    expect(await screen.findByTestId('sign-in-phone')).toBeTruthy();
   });
 });

@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { HeroHeader, IconButton, Text, screenGutter, spacing, useTheme } from '@qc/ui';
+import { IconButton, ScreenHeader, Text, screenGutter, spacing, useTheme } from '@qc/ui';
 
 export interface ScreenProps {
   /** The screen title. A hero screen may leave it out when its content carries the heading. */
@@ -82,6 +82,45 @@ function PlainHeader({
   );
 }
 
+/**
+ * The flat top of a tab screen (design: no coloured band): the kit's ScreenHeader (a muted line,
+ * the title in ink, a small control at the end), then the scope pill and whatever the screen leads
+ * with underneath.
+ */
+function FlatHeader({
+  title,
+  subtitle,
+  eyebrow,
+  actions,
+  leading,
+  children,
+  testID,
+}: Pick<ScreenProps, 'title' | 'subtitle' | 'eyebrow' | 'actions' | 'leading' | 'testID'> & {
+  children?: ReactNode;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View
+      testID={testID}
+      style={{
+        backgroundColor: colors.background,
+        paddingHorizontal: screenGutter,
+        paddingBottom: spacing.sm,
+        gap: spacing.sm,
+      }}
+    >
+      <ScreenHeader title={title ?? ''} meta={eyebrow} trailing={actions} />
+      {leading ? <View style={{ alignItems: 'flex-start' }}>{leading}</View> : null}
+      {subtitle ? (
+        <Text variant="caption" color="textSecondary">
+          {subtitle}
+        </Text>
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
 /** Lets a form deep inside a screen put its main action in the pinned bar at the bottom. */
 const FooterSlot = createContext<((node: ReactNode) => void) | null>(null);
 
@@ -137,18 +176,16 @@ export function Screen({
           actions={actions}
         />
       ) : (
-        <HeroHeader
+        <FlatHeader
           testID={testID ? `${testID}-hero` : undefined}
           title={title}
           subtitle={subtitle}
           eyebrow={eyebrow}
-          onBack={onBack}
-          backLabel={backLabel}
           actions={actions}
           leading={leading}
         >
           {hero}
-        </HeroHeader>
+        </FlatHeader>
       )}
       {plain && hero ? <View style={{ paddingHorizontal: screenGutter }}>{hero}</View> : null}
       <ScrollView

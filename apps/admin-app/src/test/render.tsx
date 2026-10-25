@@ -131,3 +131,9 @@ export function typeInto(testId: string, value: string): void {
       : (el.querySelector('input, textarea') ?? el);
   fireEvent.change(input, { target: { value } });
 }
+
+/** Gets past the welcome screen to the phone field. */
+export async function passWelcome(): Promise<void> {
+  fireEvent.click(await screen.findByTestId('welcome-sign-in'));
+  await screen.findByTestId('sign-in-phone');
+}
