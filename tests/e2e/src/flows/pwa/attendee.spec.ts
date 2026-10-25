@@ -61,12 +61,12 @@ test.describe.serial('PWA attendee: find, sign in with a code, join, read update
     await page.getByTestId('register-button').click();
     await expect(page.getByTestId('registration-party')).toHaveCount(0);
     await expect(page.getByTestId('registration-form')).toBeVisible();
-    await page.getByTestId('registration-city').click();
-    await page.getByTestId(`registration-city-option-${SEED.rawalpindi}`).click();
+    // The area sheet holds the city pills and the areas of the chosen city.
     await page.getByTestId('registration-area').click();
+    await page.getByTestId(`area-city-${SEED.rawalpindi}`).click();
     await page.getByTestId(`area-option-${SEED.areaSaddar}`).click();
     // A family session takes women, men or a family; nothing is preselected.
-    await page.getByTestId('registration-section').getByRole('radio', { name: 'Family' }).click();
+    await page.getByTestId('registration-section-family').click();
     await page.getByTestId('registration-submit').click();
     await expect(page.getByTestId('registration-confirmation')).toBeVisible();
 
