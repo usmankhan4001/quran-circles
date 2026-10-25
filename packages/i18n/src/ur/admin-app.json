@@ -584,5 +584,18 @@
   "admin.dailyAyah.textInApp": "لوگ ایپ میں عربی، اردو اور انگریزی دیکھتے ہیں۔",
   "admin.venueEditor.profile.unnamed": "نئی مسجد",
   "admin.venueEditor.profile.pin": "پن: {lat}، {lng}",
-  "admin.venueEditor.profile.noPin": "ابھی پن نہیں۔ نیچے نقاط درج کریں۔"
+  "admin.venueEditor.profile.noPin": "ابھی پن نہیں۔ نیچے نقاط درج کریں۔",
+  "admin.signIn.back": "واپس",
+  "admin.signIn.welcome.tag": "کوآرڈینیٹرز کے لیے · صرف دعوت پر",
+  "admin.signIn.welcome.title": "قرآن سرکلز",
+  "admin.signIn.welcome.tagline": "اپنے حلقے کو اپنے فون سے چلائیں۔",
+  "admin.signIn.welcome.start": "اپنے فون سے سائن ان کریں",
+  "admin.signIn.welcome.features": "یہاں میں کیا کر سکتا ہوں؟",
+  "admin.signIn.features.title": "آپ کیا کر سکتے ہیں",
+  "admin.signIn.features.1.title": "آج رات ایک نظر میں",
+  "admin.signIn.features.1.body": "اپنا سیشن اور آنے والے لوگ دیکھیں، اور ایک ٹیپ میں حاضری لگائیں۔",
+  "admin.signIn.features.2.title": "لوگوں کو بتائیں کیا بدلا",
+  "admin.signIn.features.2.body": "شامل ہونے والے سب لوگوں کو اطلاع، وقت کی تبدیلی اور یاد دہانی بھیجیں۔",
+  "admin.signIn.features.3.title": "ایک منٹ میں پوسٹر",
+  "admin.signIn.features.3.body": "کیو آر کوڈ والا پوسٹر بنائیں اور پی ڈی ایف یا اسٹیٹس کے طور پر شیئر کریں۔"
 }

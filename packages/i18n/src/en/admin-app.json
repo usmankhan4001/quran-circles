@@ -583,5 +583,18 @@
   "admin.dailyAyah.textInApp": "People see the Arabic, Urdu and English in the app.",
   "admin.venueEditor.profile.unnamed": "New masjid",
   "admin.venueEditor.profile.pin": "Pin at {lat}, {lng}",
-  "admin.venueEditor.profile.noPin": "No pin yet. Enter the coordinates below."
+  "admin.venueEditor.profile.noPin": "No pin yet. Enter the coordinates below.",
+  "admin.signIn.back": "Back",
+  "admin.signIn.welcome.tag": "For coordinators · By invitation",
+  "admin.signIn.welcome.title": "Quran Circles",
+  "admin.signIn.welcome.tagline": "Run your halqa from your phone.",
+  "admin.signIn.welcome.start": "Sign in with your phone",
+  "admin.signIn.welcome.features": "What can I do here?",
+  "admin.signIn.features.title": "What you can do",
+  "admin.signIn.features.1.title": "Tonight at a glance",
+  "admin.signIn.features.1.body": "See your session, who is coming, and mark attendance in a tap.",
+  "admin.signIn.features.2.title": "Tell people what changed",
+  "admin.signIn.features.2.body": "Post updates, time changes and reminders to everyone who joins.",
+  "admin.signIn.features.3.title": "Posters in a minute",
+  "admin.signIn.features.3.body": "Make a flyer with a QR code and share it as a PDF or a status."
 }
