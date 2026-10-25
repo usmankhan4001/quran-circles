@@ -254,6 +254,10 @@ export default function SessionsPage() {
   const weekly = loaded.filter((s) => s.program === 'circles').length;
   const dora = loaded.length - weekly;
   const reserved = loaded.reduce((sum, s) => sum + (s.registration.seatsTaken ?? 0), 0);
+  // Counts of loaded rows are exact only when there is no next page. Otherwise they are shown as
+  // "at least" ("50+"), never as a total; an exact total needs `total` on the list response.
+  const exact = !(list.status === 'ready' && list.hasMore);
+  const shownCount = (n: number) => (exact ? number(n) : `${number(n)}+`);
 
   return (
     <div className="page">
@@ -274,18 +278,26 @@ export default function SessionsPage() {
               }),
               icon: 'mosque',
             },
-            {
-              id: 'circles',
-              label: t('console.sessions.kpi.total'),
-              value: stats.total,
-              display: t('console.sessions.kpi.totalValue', { count: number(stats.total) }),
-              sub: t('console.sessions.kpi.totalSub', {
-                weekly: number(weekly),
-                dora: number(dora),
-              }),
-              icon: 'calendar-blank',
-              iconTone: 'sky',
-            },
+            // The number of circles is a total only when every page is loaded: the list returns
+            // `{ items, nextCursor }` and no total. Wire an exact count here once
+            // `adminSessions.list` returns `total` (or a count endpoint exists); until then the
+            // card is left out rather than showing the loaded rows as if they were all of them.
+            ...(exact
+              ? [
+                  {
+                    id: 'circles',
+                    label: t('console.sessions.kpi.total'),
+                    value: stats.total,
+                    display: t('console.sessions.kpi.totalValue', { count: number(stats.total) }),
+                    sub: t('console.sessions.kpi.totalSub', {
+                      weekly: number(weekly),
+                      dora: number(dora),
+                    }),
+                    icon: 'calendar-blank' as const,
+                    iconTone: 'sky' as const,
+                  },
+                ]
+              : []),
             {
               id: 'demand',
               label: t('console.sessions.kpi.demand'),
@@ -298,15 +310,11 @@ export default function SessionsPage() {
               icon: 'ticket',
               iconTone: 'amber',
             },
-            {
-              id: 'reliability',
-              label: t('console.sessions.kpi.reliability'),
-              value: 0,
-              display: t('console.sessions.kpi.reliabilityValue'),
-              sub: t('console.sessions.kpi.reliabilitySub'),
-              icon: 'check-circle',
-              iconTone: 'mint',
-            },
+            // Not shown: "Field Reliability" (coordinator check-ins), registrations this month and
+            // the share who turned up are drawn on the artboard but no endpoint returns them.
+            // Wire them here as cards when the API has them, for example
+            // `GET /v1/admin/reports/attendance?from&to` (headcount against registrations) and a
+            // registrations count by date range in scope; never show a placeholder figure.
           ]}
         />
       ) : null}
@@ -315,7 +323,7 @@ export default function SessionsPage() {
           tabs={
             <>
               <span className="tab-pill tab-pill-on" aria-current="page">
-                {t('console.sessions.tab.sessions', { count: number(loaded.length) })}
+                {t('console.sessions.tab.sessions', { count: shownCount(loaded.length) })}
               </span>
               {isNavAllowed(principal, 'venues') ? (
                 <Link className="tab-pill" to="/venues">
@@ -323,7 +331,7 @@ export default function SessionsPage() {
                 </Link>
               ) : null}
               <span className="tag tag-amber tag-awaiting">
-                {t('console.sessions.awaiting', { count: number(waiting) })}
+                {t('console.sessions.awaiting', { count: shownCount(waiting) })}
               </span>
               {canAdd ? (
                 <Link className="btn btn-outline btn-small btn-tool" to="/import?kind=sessions">
@@ -363,7 +371,7 @@ export default function SessionsPage() {
                 <span>
                   {t('console.sessions.showing', {
                     shown: number(rows.length),
-                    total: number(loaded.length),
+                    total: shownCount(loaded.length),
                   })}
                 </span>
                 <span className="card-foot-hint">{t('console.sessions.clickHint')}</span>
