@@ -1,7 +1,27 @@
 # Status: console
 
-Updated: 2026-10-18
+Updated: 2026-10-25
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## UI fix pass (25 Oct 2026, orchestrator task)
+
+Seven console fixes, each with tests (failure paths included). Booking, registration flows and the seat count were not touched (another team is replacing booking with a join pledge).
+
+- **Tables on a phone.** `DataTable` (`components/ui.tsx`) puts each column header on its body cells as `data-label` and writes the table roles out. One shared `@media (max-width: 40rem)` block at the end of `styles.css` turns rows into "label: value" cards, hides the header row visually and drops the 36rem minimum, so sessions, venues, coordinators, audit, registrations, daily ayahs and import tables fit at 390 px; wide screens keep the table. The Exports page has a form, not a table. Tests: `components/data-table.test.tsx`.
+- **Urdu dates and times.** New `lib/datetime.ts` is the one formatter (the `I18n` object's `dateTime`, `date`, and new `time`, `localDateTime`, `weekdays` call it). Urdu: every figure run in first-strong isolates, the part of the day before the figures (no Latin PM), parts joined with "،". English: "25 Oct 2026, 9:05 pm" (12-hour, as the posters already were). The sessions schedule line is no longer forced `dir="ltr"` and its raw `YYYY-MM-DD HH:MM` is formatted. `formatLocalTime` in `lib/posters.ts` now calls the helper. Tests: `lib/datetime.test.ts`, `pages/dates-rtl.test.tsx`.
+- **Audit actor.** Cause: `listAudit` (`apps/api/src/modules/oversight/service.ts`) sends `actorName: null` when the actor's `users.display_name` is empty (or the user was deleted); every row has an actor (`AuditEntryInput.actorUserId` is required), but the console showed every null as "System". `lib/audit.ts` now gives the name, else "No name given" (`console.invites.unnamed`); it also reads `actorPhone` (shown masked) and `actorKind: 'system'` once they exist. Showing a masked phone and real system rows needs the API: see questions. Tests: `lib/audit.test.ts`, `pages/audit-actor.test.tsx`.
+- **Masked coordinator numbers.** `maskPhone` writes `+92 ••• •••4567`; `phoneTail` gives four digits. The role holders table and the handover picker show the masked number (LTR `bdi`, or an isolate inside option text). Tests: `lib/phone.test.ts`, `pages/coordinators.test.tsx`.
+- **Disabled buttons.** Removed the page rules that gave a disabled Save (session inspector) and bulk download (posters) their enabled colours back. `.btn:disabled, .btn[aria-disabled='true']` share muted colours, no shadow, 0.75 opacity and `cursor: not-allowed`; `Button` sets `aria-disabled` with `disabled` and while busy; the inspector Save uses `Button`. Tests: `components/button.test.tsx`.
+- **Home figures.** The console home (Sessions) no longer draws the "Field Reliability" card (placeholder, no data). The circles total is left out while the list has more pages, and loaded-row counts in the tab, the approvals tag and the footer read "50+". Code comments in `pages/SessionsPage.tsx` say where to wire check-ins, registrations this month, attendance and an exact total. The seats card is unchanged (booking is being replaced). Tests: `pages/home-figures.test.tsx`; `pages/table-pages.test.tsx` now expects three cards.
+- **Surah names.** `lib/surahs.ts` reads names read-only from `packages/content/src/meta/surahs.ts` by relative path (as `lib/ui-tokens.ts` does; `@qc/content` is not a console dependency and its main entry bundles React Native screens). Daily ayah references, the surah picker, the preview, the not-in-surah error and the sessions' portion pill read "Surah Ar-Ra'd (13), ayah 28"; Urdu shows the Arabic name and the isolated number. Tests: `lib/surahs.test.ts`, `pages/daily-ayahs.test.tsx`.
+- No i18n keys were added (packages are another lane); existing keys were reused (`console.invites.unnamed`, `console.posters.listSeparator`, `time.period.*`).
+- Checks: `pnpm --filter @qc/console typecheck`, `test` (499 passing, 33 files), `build`; `pnpm exec eslint apps/console`; `pnpm exec prettier --check apps/console`. jsdom only; no browser pass at 390 px yet.
+
+Questions for the orchestrator:
+
+1. Contract change request for the audit log: add `actorPhone` (E.164, or already masked) and `actorKind: 'person' | 'system'` to `AuditEntry` (`packages/contracts/src/schemas/admin.ts`), filled by `listAudit` from `users.phone` and from whether `audit_log.actor_user_id` is null. The console reads both already.
+2. A web-safe `@qc/content/meta` dependency for the console would replace the relative import in `lib/surahs.ts`.
+3. The new disabled look and the phone cards need a visual check in a real browser (light and dark, all four text sizes, Urdu).
 
 ## Urdu times and worded API issues (2026-10-18, orchestrator task)
 
