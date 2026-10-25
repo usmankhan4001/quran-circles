@@ -39,11 +39,14 @@ export function Button({
   children,
   ...rest
 }: ButtonProps) {
+  const off = Boolean(disabled || busy);
   return (
     <button
       type={type}
       className={`btn btn-${variant}${className ? ` ${className}` : ''}`}
-      disabled={disabled || busy}
+      disabled={off}
+      // Said out loud as well as drawn: `.btn:disabled` and `[aria-disabled]` share one muted look.
+      aria-disabled={off || undefined}
       aria-busy={busy || undefined}
       {...rest}
     >

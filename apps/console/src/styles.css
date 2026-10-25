@@ -786,12 +786,17 @@ a.btn {
 .btn:active:not(:disabled) {
   transform: scale(0.98);
 }
-.btn:disabled {
+/* One disabled look for every button, whatever its variant: muted colours, no shadow, a
+   not-allowed cursor and a little transparency, so it never looks pressable. No variant or
+   page rule may bring the enabled colours back on a disabled button. */
+.btn:disabled,
+.btn[aria-disabled='true'] {
   cursor: not-allowed;
   background: var(--c-disabled-background);
   color: var(--c-disabled-text);
   border-color: transparent;
   box-shadow: none;
+  opacity: 0.75;
 }
 .btn[aria-busy='true'] {
   cursor: progress;
@@ -2295,12 +2300,6 @@ html[dir='rtl'] .card-foot-hint::after {
   min-block-size: 2.25rem;
   border-color: transparent;
 }
-.inspector-actions .inspector-save:disabled {
-  opacity: 1;
-  background: var(--c-cta);
-  color: var(--c-text-on-cta);
-  cursor: not-allowed;
-}
 .workspace .table-filters .field-label {
   position: absolute;
   inline-size: 1px;
@@ -2730,10 +2729,6 @@ html[dir='rtl'] .validator-commit::after {
 .btn-emerald {
   background: var(--c-sidebar-from);
   color: var(--c-sidebar-text);
-}
-.btn-emerald:disabled {
-  opacity: 1;
-  cursor: not-allowed;
 }
 .poster-column .poster-source {
   padding: 0.625rem 0.75rem;

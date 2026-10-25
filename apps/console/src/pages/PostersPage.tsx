@@ -203,6 +203,7 @@ function PostersWorkspace({ session, canCreate }: { session: AdminSession; canCr
             type="button"
             className="btn btn-small btn-emerald"
             disabled
+            aria-disabled="true"
             title={t('console.posters.generator.bulkSoon')}
           >
             <Icon name="file-pdf" size={13} weight="fill" />

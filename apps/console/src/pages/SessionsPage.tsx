@@ -15,6 +15,7 @@ import { Icon } from '../components/icons';
 import { useShellCity, useShellSearch } from '../components/ShellFilters';
 import {
   Badge,
+  Button,
   DataTable,
   EmptyState,
   ErrorState,
@@ -530,15 +531,15 @@ function SessionInspector({ session }: { session: AdminSession }) {
       </div>
       <div className="inspector-actions">
         {/* Drawn on the artboard; the console has no session editor yet, so it stays off. */}
-        <button
-          type="button"
-          className="btn btn-primary btn-small inspector-save"
+        <Button
+          variant="primary"
+          className="btn-small inspector-save"
           disabled
           title={t('console.sessions.inspector.saveSoon')}
         >
           <Icon name="check-circle" size={14} weight="fill" />
           <span>{t('console.sessions.inspector.save')}</span>
-        </button>
+        </Button>
         {can(principal, 'registration.list', place) ? (
           <Link
             className="btn btn-outline btn-small"
