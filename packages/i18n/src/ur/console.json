@@ -450,6 +450,8 @@
   "console.dailyAyahs.kpi.venue": "مقام کے انتخاب",
   "console.dailyAyahs.kpi.circle": "حلقہ کے انتخاب",
   "console.dailyAyahs.kpi.gaps": "بلٹ اِن فہرست والے دن",
+  "console.dailyAyahs.strip.label": "دن چنیں",
+  "console.dailyAyahs.strip.today": "آج",
   "console.dailyAyahs.list.title": "انتخاب",
   "console.dailyAyahs.filter.from": "سے",
   "console.dailyAyahs.filter.to": "تک",

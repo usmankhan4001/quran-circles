@@ -24,7 +24,7 @@ Page-by-page pass (same day):
 - Sidebar matches the boards: no season pill, no count or PDF badges.
 - Settings form is narrow (620 px) with the two reminder times side by side.
 - Checked on screen against the mock API: Sessions, Coordinators, Daily ayahs, Settings, Import, Sign in, Welcome. Not compared one by one: Posters, Exports, Audit, Venues, Registrations tables (colours, radii and cards follow the new look).
-- Not matched to the boards, by choice: Daily ayahs keeps its date range and picks list instead of the board's seven-day strip (it has working logic the board does not show); Settings keeps dropdowns for Hijri adjustment and season instead of segmented controls.
+- Board gaps closed: Daily ayahs has the seven-day strip (press a day to show only that day; the date range, scope filter and picks logic are unchanged); Settings uses segmented controls for Hijri adjustment and season; the Exports form is a single 640 px column. Also checked on screen: Exports, Audit, Venues.
 
 Not done:
 - "Send it by SMS" on the code screen: no API for a second channel (left out on the coordinator's say).

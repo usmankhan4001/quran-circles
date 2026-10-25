@@ -104,6 +104,49 @@ function useReference() {
     });
 }
 
+/** Seven days from today as buttons: one press shows just that day's picks. */
+function DayStrip({
+  today,
+  from,
+  to,
+  onPick,
+}: {
+  today: string;
+  from: string;
+  to: string;
+  onPick(day: string): void;
+}) {
+  const { t, number, locale } = useI18n();
+  const weekday = new Intl.DateTimeFormat(locale === 'ur' ? 'ur-PK-u-nu-latn' : 'en-GB', {
+    weekday: 'short',
+    timeZone: 'UTC',
+  });
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
+  return (
+    <nav className="day-strip" aria-label={t('console.dailyAyahs.strip.label')}>
+      {days.map((day, i) => {
+        const chosen = from === day && to === day;
+        return (
+          <button
+            key={day}
+            type="button"
+            className="day-chip"
+            aria-pressed={chosen}
+            onClick={() => onPick(day)}
+          >
+            <span className="day-chip-name">
+              {i === 0
+                ? t('console.dailyAyahs.strip.today')
+                : weekday.format(new Date(`${day}T00:00:00Z`))}
+            </span>
+            <span className="day-chip-number">{number(Number(day.slice(8, 10)))}</span>
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 /**
  * The ayah of the day list (rc.4). National admins set national picks; coordinators set picks for
  * the venues and circles in their scope and see national picks read-only. Shown only when the
@@ -302,6 +345,16 @@ export default function DailyAyahsPage() {
         spanDays={rangeReady ? stats.days : null}
         counts={picks.status === 'ready' && rangeReady ? stats : null}
         onSchedule={canSetAny ? () => openForm() : null}
+      />
+
+      <DayStrip
+        today={today}
+        from={from}
+        to={to}
+        onPick={(day) => {
+          setFrom(day);
+          setTo(day);
+        }}
       />
 
       <div className={canSetAny ? 'split' : undefined}>

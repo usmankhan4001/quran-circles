@@ -10,7 +10,7 @@ import {
   ErrorState,
   Loading,
   PageHeader,
-  SelectField,
+  SegmentedControl,
   TextField,
 } from '../components/ui';
 import { useI18n } from '../i18n';
@@ -151,9 +151,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
   };
 
   const offsetLabel = (n: number) =>
-    n === 0
-      ? t('console.settings.hijri.none')
-      : t('console.settings.hijri.days', { days: `${n > 0 ? '+' : '−'}${number(Math.abs(n))}` });
+    n === 0 ? t('console.settings.hijri.none') : `${n > 0 ? '+' : '−'}${number(Math.abs(n))}`;
 
   return (
     <form className="form card settings-form" onSubmit={(e) => void submit(e)} noValidate>
@@ -161,24 +159,28 @@ function SettingsForm({ initial }: { initial: Settings }) {
       {failure ? <Banner tone="danger">{t(errorMessageKeyOf(failure))}</Banner> : null}
       {readOnly ? <Banner tone="info">{t('console.settings.readOnly')}</Banner> : null}
       <fieldset className="settings-fields" disabled={readOnly}>
-        <SelectField
-          id="setting-hijri"
-          label={t('console.settings.hijri.label')}
-          hint={t('console.settings.hijri.hint')}
-          value={hijri}
-          error={errors.hijriOffsetDays}
-          onChange={(e) => setHijri(e.target.value)}
-          options={OFFSETS.map((n) => ({ value: String(n), label: offsetLabel(n) }))}
-        />
-        <SelectField
-          id="setting-season"
-          label={t('console.settings.season.label')}
-          hint={t('console.settings.season.hint')}
-          value={season}
-          error={errors.seasonMode}
-          onChange={(e) => setSeason(e.target.value as Settings['seasonMode'])}
-          options={SEASON_MODES.map((m) => ({ value: m, label: t(SEASON_KEYS[m]) }))}
-        />
+        <div className="field">
+          <span className="field-label">{t('console.settings.hijri.label')}</span>
+          <SegmentedControl
+            label={t('console.settings.hijri.label')}
+            value={hijri}
+            onChange={setHijri}
+            options={OFFSETS.map((n) => ({ value: String(n), label: offsetLabel(n) }))}
+          />
+          <p className="field-hint">{t('console.settings.hijri.hint')}</p>
+          {errors.hijriOffsetDays ? <p className="field-error">{errors.hijriOffsetDays}</p> : null}
+        </div>
+        <div className="field">
+          <span className="field-label">{t('console.settings.season.label')}</span>
+          <SegmentedControl
+            label={t('console.settings.season.label')}
+            value={season}
+            onChange={(v) => setSeason(v as Settings['seasonMode'])}
+            options={SEASON_MODES.map((m) => ({ value: m, label: t(SEASON_KEYS[m]) }))}
+          />
+          <p className="field-hint">{t('console.settings.season.hint')}</p>
+          {errors.seasonMode ? <p className="field-error">{errors.seasonMode}</p> : null}
+        </div>
         <TextField
           id="setting-cap"
           type="number"

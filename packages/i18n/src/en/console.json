@@ -449,6 +449,8 @@
   "console.dailyAyahs.kpi.venue": "Venue picks",
   "console.dailyAyahs.kpi.circle": "Circle picks",
   "console.dailyAyahs.kpi.gaps": "Days on the built-in list",
+  "console.dailyAyahs.strip.label": "Pick a day",
+  "console.dailyAyahs.strip.today": "Today",
   "console.dailyAyahs.list.title": "Picks",
   "console.dailyAyahs.filter.from": "From",
   "console.dailyAyahs.filter.to": "To",
