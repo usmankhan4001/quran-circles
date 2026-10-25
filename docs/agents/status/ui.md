@@ -85,3 +85,11 @@ Owner decision: bundle the fonts. The `fonts` tokens now name the real families 
 ## Contract change requests
 
 - None filed yet. The bulk import calls and an attendance export are candidates; see the console specs' open questions. I did not edit contracts.
+
+## Kit changes on 25 Oct 2026 (made by the session-screens thread, for ui-lane review)
+
+Direction from the look-and-feel board: green is the only action colour, and Urdu Nastaliq reads too small.
+
+- `semanticColors.light.cta` / `ctaPressed` are now the emerald and deep emerald, so the kit's `primary` Button, EmptyState action and the like are green in light mode. Dark and high contrast keep their own pairs. All 954 kit tests, including the contrast pairs, pass.
+- `scriptSizeFactor.urdu` went from 1.1 to 1.25. Every Urdu size grows by about 14%, so check long Urdu lines on the other screens (the console reads the same factor through `--scale-urdu`).
+- Not done: the clip-art photo on cards, a labelled tab bar and a large-text mode (all on the board, none of them session screens).

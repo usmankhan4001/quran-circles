@@ -119,8 +119,10 @@ const light: SemanticColors = {
   warningSubtle: colors.gold[100],
   textOnWarningSubtle: colors.gold[800],
 
-  cta: colors.brand.charcoal,
-  ctaPressed: colors.grey[800],
+  // Green is the only action colour (look-and-feel direction, 25 Oct 2026). Dark and high
+  // contrast keep their own pairs.
+  cta: colors.brand.emerald,
+  ctaPressed: colors.brand.deep,
   textOnCta: colors.white,
 
   border: colors.grey[200],

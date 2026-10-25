@@ -258,10 +258,10 @@ export const lineHeightRatio: Record<Script, number> = {
   quran: 2.2,
 };
 
-/** Nastaliq looks smaller than the Latin face at the same size, so Urdu text is set a little larger (D5). */
+/** Nastaliq looks smaller than the Latin face at the same size, so Urdu text is set larger (D5; 1.1 became 1.25 on 25 Oct 2026 because the Nastaliq read too small on a phone). */
 export const scriptSizeFactor: Record<Script, number> = {
   latin: 1,
-  urdu: 1.1,
+  urdu: 1.25,
   quran: 1,
 };
 

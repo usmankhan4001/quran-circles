@@ -115,7 +115,7 @@ describe('semantic colours across modes', () => {
   it('keeps the brand colours in light mode', () => {
     expect(semanticColors.light.background).toBe(colors.white);
     expect(semanticColors.light.surfaceMuted).toBe(colors.brand.cloud);
-    expect(semanticColors.light.cta).toBe(colors.brand.charcoal);
+    expect(semanticColors.light.cta).toBe(colors.brand.emerald);
     expect(semanticColors.light.accent).toBe(colors.brand.emerald);
     expect(semanticColors.light.text).toBe(colors.brand.ink);
   });
