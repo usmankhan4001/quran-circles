@@ -1,8 +1,8 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
-import { fonts, semanticColors, textScale } from '@qc/ui';
-import { ARABIC_ZOOM_STEPS } from '../quran/prefs';
+import { fonts, semanticColors, typeStyle } from '@qc/ui';
+import { ARABIC_ZOOM_STEPS, DEFAULT_READER_PREFS } from '../quran/prefs';
 import { FAKE_OPENING, fakeArabic, fakeEnglish, fakeUrdu } from '../test/fakes';
 import { createTestServices, matrix, renderContent, type TestServices } from '../test/render';
 import { QuranReaderScreen } from './QuranReaderScreen';
@@ -64,15 +64,15 @@ describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
       expect(screen.queryByText(fakeUrdu(1, 1))).toBeNull();
     }
     expect(getComputedStyle(translation).fontFamily).not.toContain(fonts.quran);
-    // D17: the translation is quieter than the Arabic, in the secondary text colour.
-    expect(getComputedStyle(translation).color).toBe(
-      rgbOf(semanticColors[combo.mode].textSecondary),
-    );
+    // The translation is body text in the theme's text colour.
+    expect(getComputedStyle(translation).color).toBe(rgbOf(semanticColors[combo.mode].text));
 
     // The Arabic follows the app's text size (four steps) at the reader's default zoom, and the
     // colour mode: the text colour is the theme's.
-    // D17: the artboard sets the reader's Arabic at 21 px.
-    expect(parseFloat(ar.style.fontSize)).toBe(Math.round(21 * textScale[combo.textSize]));
+    // The kit's Quran size for this text size, times the reader's default zoom (1).
+    expect(parseFloat(ar.style.fontSize)).toBe(
+      Math.round(typeStyle('quran', 'quran', combo.textSize).fontSize * ARABIC_ZOOM_STEPS[1]),
+    );
     expect(getComputedStyle(ar).color).toBe(rgbOf(semanticColors[combo.mode].text));
 
     // The header and the controls speak the app language.
@@ -84,24 +84,18 @@ describe.each(matrix)('QuranReaderScreen in $name', (combo) => {
 });
 
 describe.each(matrix)('QuranReaderScreen marks and credit in $name', (combo) => {
-  it('puts each ayah number in the star at the start of its Arabic, read right to left', async () => {
+  it('labels each ayah with its number, in the app language, under its text', async () => {
     const t = createTestServices();
     open(t, { kind: 'surah', id: 1 }, { combo: { combo } });
     await screen.findByTestId('arabic-1-1');
-    const star = screen.getByTestId('ayah-number-1-7');
-    expect(star.textContent).toBe('7');
-    expect(star.getAttribute('role')).toBe('img');
-    expect(star.getAttribute('aria-label')).toBe(
+    const label = screen.getByTestId('ayah-number-1-7');
+    expect(label.textContent).toBe(
       msg(combo.locale, 'quran.ayah.number', { number: 7 }),
     );
-
-    // Star and Arabic share a row that runs right to left in both app languages, star first.
-    const pair = star.parentElement as HTMLElement;
-    expect(pair.contains(arabicOf(1, 7))).toBe(true);
-    expect(getComputedStyle(pair).flexDirection).toBe(
-      combo.direction === 'rtl' ? 'row' : 'row-reverse',
-    );
-    expect(pair.firstElementChild).toBe(star);
+    // The label sits in the same ayah as its Arabic.
+    const verse = screen.getByTestId('verse-1-7');
+    expect(verse.contains(label)).toBe(true);
+    expect(verse.contains(arabicOf(1, 7))).toBe(true);
   });
 
   it('credits the source of the Arabic text under the passage', async () => {
@@ -140,18 +134,31 @@ describe('QuranReaderScreen', () => {
     expect(screen.queryByTestId('bismillah')).toBeNull();
   });
 
-  it('shows the Arabic only when the translation is switched off, and remembers the choice', async () => {
+  it('hides the translation from the settings switch, and remembers the choice', async () => {
     const t = createTestServices();
     open(t, { kind: 'surah', id: 1 });
     await screen.findByTestId('translation-1-1');
     fireEvent.click(screen.getByTestId('reader-settings'));
-    // D17: translation choice pills; "Arabic only" switches the translation off.
-    fireEvent.click(
-      await screen.findByRole('radio', { name: msg('en', 'quran.reader.arabicOnly') }),
-    );
+    fireEvent.click(await screen.findByTestId('translation-switch'));
     await waitFor(() => expect(screen.queryByTestId('translation-1-1')).toBeNull());
     expect(arabicOf(1, 1)).toBeTruthy();
     await waitFor(async () => expect((await t.services.prefs.load()).showTranslation).toBe(false));
+  });
+
+  it('turns to the Mushaf page from the reading switch, and back to ayah by ayah', async () => {
+    const t = createTestServices();
+    open(t, { kind: 'surah', id: 1 });
+    await screen.findByTestId('translation-1-1');
+    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.reader.arabicOnly') }));
+    await waitFor(async () => expect((await t.services.prefs.load()).layout).toBe('mushaf'));
+    expect(await screen.findByTestId('reader-mushaf')).toBeTruthy();
+    expect(screen.queryByTestId('translation-1-1')).toBeNull();
+    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.reader.withTranslation') }));
+    expect(await screen.findByTestId('translation-1-1')).toBeTruthy();
+    await waitFor(async () => {
+      const prefs = await t.services.prefs.load();
+      expect(prefs).toMatchObject({ layout: 'ayah', showTranslation: true });
+    });
   });
 
   it('says so when an ayah has no translation', async () => {
@@ -182,7 +189,7 @@ describe('QuranReaderScreen', () => {
 
   it('respects the translation switch on an Urdu screen too', async () => {
     const t = createTestServices();
-    await t.services.prefs.save({ showTranslation: false, arabicZoomIndex: 1 });
+    await t.services.prefs.save({ ...DEFAULT_READER_PREFS, showTranslation: false, arabicZoomIndex: 1 });
     open(t, { kind: 'surah', id: 1 }, { combo: { combo: { locale: 'ur' } } });
     await screen.findByTestId('arabic-1-1');
     await waitFor(() => expect(screen.queryByTestId('translation-1-1')).toBeNull());
@@ -196,12 +203,13 @@ describe('QuranReaderScreen', () => {
     const size = () => parseFloat(arabicOf(1, 1).style.fontSize);
     const base = size();
     fireEvent.click(screen.getByTestId('reader-settings'));
-    expect(screen.getByTestId('zoom-value').textContent).toBe(
+    const track = () => screen.getByTestId('zoom-track');
+    expect(track().getAttribute('aria-valuetext')).toBe(
       msg('en', 'quran.reader.sizeValue', { step: 2, total: ARABIC_ZOOM_STEPS.length }),
     );
     fireEvent.click(screen.getByTestId('zoom-larger'));
     await waitFor(() => expect(size()).toBeGreaterThan(base));
-    expect(screen.getByTestId('zoom-value').textContent).toContain('3');
+    expect(track().getAttribute('aria-valuenow')).toBe('3');
     fireEvent.click(screen.getByTestId('zoom-smaller'));
     fireEvent.click(screen.getByTestId('zoom-smaller'));
     await waitFor(() => expect(size()).toBeLessThan(base));
@@ -217,12 +225,10 @@ describe('QuranReaderScreen', () => {
     const t = createTestServices();
     open(t, { kind: 'surah', id: 18, ayah: 60 });
     const verse = await screen.findByTestId('verse-18-60');
-    // D17: an emerald outline marks the ayah the person asked for.
-    expect(within(verse).getByTestId('verse-card-18-60').getAttribute('style')).toMatch(
-      /border-top-width: 1.5px/,
-    );
-    expect(screen.getByTestId('verse-card-18-59').getAttribute('style')).toMatch(
-      /border-top-width: 1px/,
+    // A heavier green rule under the ayah the person asked for.
+    expect(verse.getAttribute('style')).toMatch(/border-bottom-width: 2px/);
+    expect(screen.getByTestId('verse-18-59').getAttribute('style')).toMatch(
+      /border-bottom-width: 1px/,
     );
   });
 
@@ -231,8 +237,8 @@ describe('QuranReaderScreen', () => {
     open(t, { kind: 'surah', id: 18 });
     await screen.findByTestId('arabic-18-1');
 
-    // The jump field is in the reading settings sheet (D17).
-    fireEvent.click(screen.getByTestId('reader-settings'));
+    // The jump field is in the surah sheet, opened from the title.
+    fireEvent.click(screen.getByTestId('reader-surahs'));
     const input = await screen.findByTestId('jump-input');
     fireEvent.change(input, { target: { value: '999' } });
     fireEvent.click(screen.getByTestId('jump-go'));
@@ -253,8 +259,8 @@ describe('QuranReaderScreen', () => {
     const t = createTestServices();
     open(t, { kind: 'juz', id: 30 });
     await screen.findByTestId('arabic-78-1');
-    // The jump field is in the reading settings sheet (D17).
-    fireEvent.click(screen.getByTestId('reader-settings'));
+    // The jump field is in the surah sheet, opened from the title.
+    fireEvent.click(screen.getByTestId('reader-surahs'));
     const input = await screen.findByTestId('jump-input');
     fireEvent.change(input, { target: { value: '2:255' } });
     fireEvent.click(screen.getByTestId('jump-go'));
@@ -271,9 +277,9 @@ describe('QuranReaderScreen', () => {
     const t = createTestServices();
     open(t, { kind: 'juz', id: 30 });
     await screen.findByTestId('arabic-78-1');
-    expect(
-      screen.getByRole('heading', { name: msg('en', 'quran.juz.title', { number: 30 }) }),
-    ).toBeTruthy();
+    expect(screen.getByTestId('reader-title').textContent).toBe(
+      msg('en', 'quran.juz.title', { number: 30 }),
+    );
     expect(
       screen.getAllByText(msg('en', 'quran.surah.title', { name: 'An-Naba' })).length,
     ).toBeGreaterThan(0);
@@ -342,18 +348,17 @@ describe('QuranReaderScreen', () => {
     fireEvent.click(screen.getByTestId('reader-next-surah'));
     await screen.findByTestId('arabic-2-1');
     expect(onTargetChange).toHaveBeenLastCalledWith({ kind: 'surah', id: 2 });
-    expect(
-      screen.getByRole('heading', { name: msg('en', 'quran.surah.title', { name: 'Al-Baqarah' }) }),
-    ).toBeTruthy();
+    expect(screen.getByTestId('reader-title').textContent).toBe('Al-Baqarah');
   });
 
-  it('orders previous and next like the Quran turns, right to left, in both languages', async () => {
+  it('puts previous at the start and next at the end of the line, in each direction', async () => {
+    // The pager follows the screen: previous at the start of the line, next at the end.
     for (const locale of ['en', 'ur'] as const) {
       const t = createTestServices();
       const view = open(t, { kind: 'surah', id: 5 }, { combo: { combo: { locale } } });
       await screen.findByTestId('arabic-5-1');
       const pager = screen.getByTestId('reader-previous-surah').parentElement as HTMLElement;
-      const direction = locale === 'en' ? 'row-reverse' : 'row';
+      const direction = locale === 'en' ? 'row' : 'row-reverse';
       expect(getComputedStyle(pager).flexDirection).toBe(direction);
       view.unmount();
     }
@@ -380,9 +385,7 @@ describe('QuranReaderScreen', () => {
     fireEvent.click(screen.getByTestId('reader-next-surah'));
     expect(await screen.findByTestId('reader-error-notice')).toBeTruthy();
     expect(screen.getByTestId('arabic-1-1')).toBeTruthy();
-    expect(
-      screen.getByRole('heading', { name: msg('en', 'quran.surah.title', { name: 'Al-Fatihah' }) }),
-    ).toBeTruthy();
+    expect(screen.getByTestId('reader-title').textContent).toBe('Al-Fatihah');
 
     t.quranApi.offline = false;
     fireEvent.click(within(screen.getByTestId('reader-error-notice')).getByRole('button'));

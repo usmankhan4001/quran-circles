@@ -8,9 +8,8 @@ import {
   ListItem,
   SearchField,
   Skeleton,
-  StarNumber,
+  Tag,
   Text,
-  minTouchTarget,
   screenGutter,
   spacing,
   useTheme,
@@ -18,7 +17,7 @@ import {
 import type { BookmarkEntry } from '../bookmarks/service';
 import { JUZ_STARTS } from '../meta/juz';
 import { searchSurahs } from '../meta/search';
-import { getSurah, JUZ_COUNT, SURAH_COUNT, type SurahInfo } from '../meta/surahs';
+import { getSurah, JUZ_COUNT, type SurahInfo } from '../meta/surahs';
 import { ContinueReadingCard } from './ContinueReadingCard';
 import { useContent } from './context';
 import { surahName } from './format';
@@ -27,7 +26,7 @@ import { useContentI18n, type ContentI18n } from './i18n';
 import { targetForBookmark, type ReaderTarget } from './reader';
 import { V1ImportBanner } from './V1ImportBanner';
 import { useArtSize } from './art';
-import { Medallion, PillTabs, RoundButton, WhiteCard } from './parts';
+import { NumberRing, UnderlineTabs } from './parts';
 
 type Tab = 'surahs' | 'juz' | 'bookmarks';
 
@@ -71,7 +70,6 @@ export function QuranIndexScreen({
   const saved = useSavedSurahs();
   const [tab, setTab] = useState<Tab>(initialTab);
   const [query, setQuery] = useState('');
-  const [searching, setSearching] = useState(false);
 
   const results = useMemo(() => searchSurahs(query), [query]);
 
@@ -94,16 +92,9 @@ export function QuranIndexScreen({
   }, [tab, results, bookmarks.items]);
 
   const header = (
-    <View style={{ paddingBottom: spacing.md }}>
+    <View style={{ paddingBottom: spacing.sm }}>
       {hero}
-      {/* The lead cards sit half on the green fade (D17). */}
-      <View
-        style={{
-          gap: spacing.md,
-          paddingHorizontal: screenGutter,
-          marginTop: hero ? -spacing.xxl : spacing.xs,
-        }}
-      >
+      <View style={{ gap: spacing.md, paddingHorizontal: screenGutter }}>
         <V1ImportBanner />
         {lead}
         <ContinueReadingCard
@@ -111,43 +102,18 @@ export function QuranIndexScreen({
           onOpen={({ surah, ayah }) => onOpen({ kind: 'surah', id: surah, ayah })}
         />
         {extra}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: spacing.sm,
-            marginTop: 2,
-          }}
-        >
-          <PillTabs<Tab>
-            accessibilityLabel={i18n.t('quran.tab.label')}
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: 'surahs', label: `${i18n.t('quran.tab.surah')} (${i18n.n(SURAH_COUNT)})` },
-              { value: 'juz', label: `${i18n.t('quran.tab.juz')} (${i18n.n(JUZ_COUNT)})` },
-              {
-                value: 'bookmarks',
-                label: bookmarks.loading
-                  ? i18n.t('quran.tab.saved')
-                  : `${i18n.t('quran.tab.saved')} (${i18n.n(bookmarks.items.length)})`,
-              },
-            ]}
-            testID="quran-tabs"
-          />
-          <RoundButton
-            icon={searching ? 'close' : 'search'}
-            accessibilityLabel={i18n.t('quran.search')}
-            onPress={() => {
-              if (searching) setQuery('');
-              else setTab('surahs');
-              setSearching(!searching);
-            }}
-            testID="surah-search-toggle"
-          />
-        </View>
-        {tab === 'surahs' && (searching || query) ? (
+        <UnderlineTabs<Tab>
+          accessibilityLabel={i18n.t('quran.tab.label')}
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'surahs', label: i18n.t('quran.tab.surah') },
+            { value: 'juz', label: i18n.t('quran.tab.juz') },
+            { value: 'bookmarks', label: i18n.t('quran.tab.saved') },
+          ]}
+          testID="quran-tabs"
+        />
+        {tab === 'surahs' ? (
           <SearchField
             accessibilityLabel={i18n.t('quran.search')}
             placeholder={i18n.t('quran.search.placeholder')}
@@ -157,7 +123,7 @@ export function QuranIndexScreen({
           />
         ) : null}
         {tab === 'bookmarks' && !signedIn ? (
-          <Text color="textSecondary" variant="caption" testID="bookmarks-local-note">
+          <Text color="textMuted" variant="caption" testID="bookmarks-local-note">
             {i18n.t('quran.bookmarks.localOnly')}
           </Text>
         ) : null}
@@ -212,7 +178,13 @@ export function QuranIndexScreen({
   function renderRow(item: Item) {
     if (item.type === 'surah')
       return (
-        <SurahRow surah={item.surah} saved={saved.has(item.surah.id)} onOpen={onOpen} i18n={i18n} />
+        <SurahRow
+          surah={item.surah}
+          saved={saved.has(item.surah.id)}
+          {...(portionTags?.[item.surah.id] ? { portion: portionTags[item.surah.id] as string } : {})}
+          onOpen={onOpen}
+          i18n={i18n}
+        />
       );
     if (item.type === 'juz') return <JuzRow juz={item.juz} onOpen={onOpen} i18n={i18n} />;
     return (
@@ -227,8 +199,8 @@ export function QuranIndexScreen({
 }
 
 /**
- * A surah as drawn (Q1): its number in the eight-point star, the name and verse count, the
- * Arabic name in the Quran font at the row end, and a mark when it is saved on this phone.
+ * A surah: its number in a ring, the name and the ayah count (with a tick when it is saved on
+ * this phone), and the Arabic name at the end of the row.
  */
 function SurahRow({
   surah,
@@ -246,82 +218,55 @@ function SurahRow({
   const c = useTheme().colors;
   const size = useArtSize();
   const count = i18n.tn('quran.surah.ayahs', surah.ayahCount);
-  const subtitle = `${surah.nameEnglish} · ${count}`;
-  const label = [`${i18n.n(surah.id)}. ${surah.nameSimple}. ${subtitle}`];
+  const label = [`${i18n.n(surah.id)}. ${surah.nameSimple}. ${count}`];
   if (portion) label.push(portion);
   if (saved) label.push(i18n.t('quran.offline.saved'));
   return (
-    <View style={{ marginBottom: 7 }}>
-      <Pressable
-        role="button"
-        aria-label={label.join('. ')}
-        testID={`surah-row-${surah.id}`}
-        onPress={() => onOpen({ kind: 'surah', id: surah.id })}
-      >
-        {({ pressed }) => (
-          <WhiteCard radius={15} padding={0} style={pressed ? { opacity: 0.85 } : undefined}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-                paddingVertical: 9,
-                paddingHorizontal: 12,
-                minHeight: minTouchTarget,
-              }}
-            >
-              <Medallion value={surah.id} testID={`surah-number-${surah.id}`} />
-              <View style={{ flex: 1 }}>
-                <View
-                  style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}
-                >
-                  <Text variant="label" strong decorative>
-                    {surah.nameSimple}
-                  </Text>
-                  {portion ? <PortionTag label={portion} /> : null}
-                </View>
-                <Text variant="caption" color="textSecondary" decorative>
-                  {subtitle}
-                </Text>
-              </View>
-              <Text
-                variant="quran"
-                lang="ar"
-                decorative
-                style={size(17, 'quran', 'quran')}
-                testID={`surah-arabic-${surah.id}`}
-              >
-                {surah.nameArabic}
-              </Text>
-              {saved ? (
-                <View aria-hidden testID={`surah-saved-${surah.id}`}>
-                  <Icon name="check-circle" weight="fill" size={14} color={c.progress} />
-                </View>
-              ) : null}
-            </View>
-          </WhiteCard>
-        )}
-      </Pressable>
-    </View>
-  );
-}
-
-/** The small green tag on a surah that is a circle's portion, such as "Tonight · 1–31". */
-function PortionTag({ label }: { label: string }) {
-  const c = useTheme().colors;
-  return (
-    <View
-      style={{
-        backgroundColor: c.accentSubtle,
-        borderRadius: 999,
-        paddingHorizontal: 6,
-        paddingVertical: 1,
-      }}
+    <Pressable
+      role="button"
+      aria-label={label.join('. ')}
+      testID={`surah-row-${surah.id}`}
+      onPress={() => onOpen({ kind: 'surah', id: surah.id })}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md + 2,
+        minHeight: 64,
+        paddingVertical: spacing.sm + 2,
+        borderBottomWidth: 1,
+        borderBottomColor: c.hairline,
+        opacity: pressed ? 0.7 : 1,
+      })}
     >
-      <Text variant="caption" color="textOnAccentSubtle" strong>
-        {label}
+      <NumberRing value={surah.id} testID={`surah-number-${surah.id}`} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+          <Text variant="label" decorative>
+            {surah.nameSimple}
+          </Text>
+          {portion ? <Tag kind="gilt" label={portion} /> : null}
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text variant="caption" color="textMuted" decorative>
+            {count}
+          </Text>
+          {saved ? (
+            <View aria-hidden testID={`surah-saved-${surah.id}`}>
+              <Icon name="cloud-check" size={16} color={c.textMuted} />
+            </View>
+          ) : null}
+        </View>
+      </View>
+      <Text
+        variant="quran"
+        lang="ar"
+        decorative
+        style={size(22, 'quran', 'quran')}
+        testID={`surah-arabic-${surah.id}`}
+      >
+        {surah.nameArabic}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -346,7 +291,7 @@ function JuzRow({
       testID={`juz-row-${juz}`}
       title={title}
       accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
-      leading={<StarNumber value={juz} testID={`juz-number-${juz}`} />}
+      leading={<NumberRing value={juz} testID={`juz-number-${juz}`} />}
       {...(subtitle ? { subtitle } : {})}
       divider
       onPress={() => onOpen({ kind: 'juz', id: juz })}

@@ -217,6 +217,7 @@ export function createV1Importer(options: V1ImporterOptions): V1Importer {
       if (options.prefs && (summary.fontSizeRem !== null || summary.showTranslation !== null)) {
         const current = await options.prefs.load();
         await options.prefs.save({
+          ...current,
           showTranslation: summary.showTranslation ?? current.showTranslation,
           arabicZoomIndex:
             summary.fontSizeRem !== null

@@ -274,7 +274,7 @@ export function TileMapView(props: MapViewProps) {
           />
         ) : null}
 
-        <View style={styles.controls}>
+        <View style={[styles.controls, props.controlsInset ? { top: props.controlsInset } : null]}>
           {[
             {
               icon: 'plus' as const,

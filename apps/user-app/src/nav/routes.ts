@@ -12,6 +12,10 @@ export type Route =
   | { name: 'credits' }
   | { name: 'memorisation' }
   | { name: 'updates' }
+  | { name: 'welcome' }
+  | { name: 'map'; venueId?: string }
+  | { name: 'features' }
+  | { name: 'signUp'; returnTo?: Route }
   | { name: 'signIn'; returnTo?: Route }
   | { name: 'venue'; venueId: string }
   | { name: 'session'; sessionId: string }
@@ -44,6 +48,16 @@ export function routeToHref(route: Route): string {
       return '/memorisation';
     case 'updates':
       return '/updates';
+    case 'welcome':
+      return '/welcome';
+    case 'map':
+      return route.venueId ? `/map?venueId=${encodeURIComponent(route.venueId)}` : '/map';
+    case 'features':
+      return '/features';
+    case 'signUp':
+      return route.returnTo
+        ? `/sign-up?returnTo=${encodeURIComponent(routeToHref(route.returnTo))}`
+        : '/sign-up';
     case 'signIn':
       return route.returnTo
         ? `/sign-in?returnTo=${encodeURIComponent(routeToHref(route.returnTo))}`
@@ -95,6 +109,8 @@ export function hrefToRoute(href: string): Route | null {
     case 'credits':
     case 'memorisation':
     case 'updates':
+    case 'welcome':
+    case 'features':
       return { name: first };
     case 'venue':
       return second ? { name: 'venue', venueId: second } : null;
@@ -106,6 +122,10 @@ export function hrefToRoute(href: string): Route | null {
       return occurrenceId
         ? { name: 'register', sessionId: second, occurrenceId }
         : { name: 'register', sessionId: second };
+    }
+    case 'map': {
+      const venueId = url.searchParams.get('venueId');
+      return venueId ? { name: 'map', venueId } : { name: 'map' };
     }
     case 'page':
       return second ? { name: 'page', slug: second } : null;

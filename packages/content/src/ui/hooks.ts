@@ -4,6 +4,7 @@ import type { AyahRef } from '../meta/ayah';
 import { nextPrayer, toCountdown, type Countdown, type NextPrayer } from '../prayer/next';
 import type { PrayerPlace } from '../prayer/calc';
 import { DEFAULT_READER_PREFS, clampZoomIndex, type ReaderPrefs } from '../quran/prefs';
+import type { MushafPage } from '../quran/pages';
 import {
   isAbortError,
   type PassageRef,
@@ -113,6 +114,8 @@ export interface ReaderPrefsState {
   loaded: boolean;
   setShowTranslation: (show: boolean) => void;
   setZoomIndex: (index: number) => void;
+  /** Changes several settings at once (the layout switch also turns the translation on). */
+  update: (patch: Partial<ReaderPrefs>) => void;
 }
 
 export function useReaderPrefs(): ReaderPrefsState {
@@ -149,6 +152,7 @@ export function useReaderPrefs(): ReaderPrefsState {
     loaded,
     setShowTranslation: useCallback((show: boolean) => change({ showTranslation: show }), [change]),
     setZoomIndex: useCallback((index: number) => change({ arabicZoomIndex: index }), [change]),
+    update: change,
   };
 }
 
@@ -326,4 +330,92 @@ export function useNextPrayer(place: PrayerPlace): NextPrayerState {
   }
   const next: NextPrayer = { ...cached.value, msUntil: cached.value.at.getTime() - now.getTime() };
   return { next, countdown: toCountdown(next.msUntil), now };
+}
+
+export type MushafPageState =
+  | { status: 'loading'; previous: MushafPage | null }
+  | { status: 'ready'; page: MushafPage }
+  | {
+      status: 'error';
+      error: QuranSourceError | Error;
+      previous: MushafPage | null;
+      reload: () => void;
+    };
+
+/**
+ * One mushaf page (Arabic only). While the next page loads, `previous` still holds the last one
+ * shown, so turning the page does not blank the screen.
+ */
+export function useMushafPage(page: number | null): MushafPageState & { reload: () => void } {
+  const { services } = useContent();
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<
+    | { status: 'loading' }
+    | { status: 'ready'; page: MushafPage }
+    | { status: 'error'; error: QuranSourceError | Error }
+  >({ status: 'loading' });
+  const lastReady = useRef<MushafPage | null>(null);
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+
+  useEffect(() => {
+    if (page === null) return;
+    const controller = new AbortController();
+    setState({ status: 'loading' });
+    services.pages.getPage(page, { signal: controller.signal }).then(
+      (result) => {
+        if (controller.signal.aborted) return;
+        lastReady.current = result;
+        setState({ status: 'ready', page: result });
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted || isAbortError(error)) return;
+        setState({
+          status: 'error',
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      },
+    );
+    return () => controller.abort();
+  }, [services, page, attempt]);
+
+  if (state.status === 'ready') return { status: 'ready', page: state.page, reload };
+  if (state.status === 'error') {
+    return { status: 'error', error: state.error, previous: lastReady.current, reload };
+  }
+  return { status: 'loading', previous: lastReady.current, reload };
+}
+
+export interface MushafPageLookup {
+  /** The page, or null while it is being looked up (or if it could not be). */
+  page: number | null;
+  /** Set when the lookup failed, such as with no connection. */
+  error: Error | null;
+  reload: () => void;
+}
+
+/** The mushaf page an ayah is printed on. Nothing is asked while `enabled` is false. */
+export function useMushafPageOf(surah: number, ayah: number, enabled = true): MushafPageLookup {
+  const { services } = useContent();
+  const [attempt, setAttempt] = useState(0);
+  const [state, setState] = useState<{ page: number | null; error: Error | null }>({
+    page: null,
+    error: null,
+  });
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
+  useEffect(() => {
+    setState({ page: null, error: null });
+    if (!enabled) return;
+    const controller = new AbortController();
+    services.pages.pageOf(surah, ayah, { signal: controller.signal }).then(
+      (result) => {
+        if (!controller.signal.aborted) setState({ page: result, error: null });
+      },
+      (error: unknown) => {
+        if (controller.signal.aborted || isAbortError(error)) return;
+        setState({ page: null, error: error instanceof Error ? error : new Error(String(error)) });
+      },
+    );
+    return () => controller.abort();
+  }, [services, surah, ayah, enabled, attempt]);
+  return { page: state.page, error: state.error, reload };
 }

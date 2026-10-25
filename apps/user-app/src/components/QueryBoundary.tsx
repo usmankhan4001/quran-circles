@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
-import { ErrorState, Skeleton, Text, spacing } from '@qc/ui';
+import { Skeleton, Text, spacing } from '@qc/ui';
 import { errorMessageKey } from '../core/errors';
 import { useI18n } from '../i18n/I18nProvider';
+import { LoadErrorState, OfflineState } from './StateView';
 import type { QueryResult } from '../data/useQuery';
 
 export interface QueryBoundaryProps<T> {
@@ -25,11 +26,14 @@ export function QueryBoundary<T>({ query, children, loading }: QueryBoundaryProp
   }
   if (query.status === 'error' || query.data === undefined) {
     const code = query.error?.code ?? 'unknown';
-    return (
-      <ErrorState
-        kind={code === 'network_error' ? 'offline' : 'generic'}
-        description={t(errorMessageKey(code))}
-        onRetry={() => void query.refetch()}
+    const retry = () => void query.refetch();
+    return code === 'network_error' ? (
+      <OfflineState onRetry={retry} retrying={query.fetching} />
+    ) : (
+      <LoadErrorState
+        title={t('ui.errorTitle')}
+        body={t(errorMessageKey(code))}
+        onRetry={retry}
         retrying={query.fetching}
       />
     );

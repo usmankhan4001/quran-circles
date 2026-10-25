@@ -27,25 +27,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: radii.pill,
   },
+  pillEdge: { borderWidth: 1 },
   goal: { gap: spacing.sm },
   week: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md + spacing.xxs,
-    borderRadius: radii.section,
+    padding: spacing.md,
+    borderRadius: radii.control,
   },
   day: { alignItems: 'center', gap: spacing.sm, flex: 1 },
   dot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  foot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
 });
 
@@ -74,8 +82,7 @@ function WeekDots({
   readToday: boolean;
 }) {
   const { t } = useI18n();
-  const theme = useTheme();
-  const c = theme.colors;
+  const c = useTheme().colors;
   const monday = weekStart(today);
   const read = new Set((days ?? []).filter((d) => d.sources.length > 0).map((d) => d.date));
   if (readToday) read.add(today);
@@ -94,16 +101,14 @@ function WeekDots({
               style={[
                 styles.dot,
                 {
-                  backgroundColor: done ? c.successSubtle : c.border,
+                  backgroundColor: done ? c.accent : c.surface,
+                  borderColor: done ? c.accent : c.borderStrong,
                 },
-                theme.mode === 'highContrast'
-                  ? { borderWidth: 1, borderColor: c.borderStrong }
-                  : null,
               ]}
             >
-              {done ? <Icon name="check" size={12} color={c.textSuccess} /> : null}
+              {done ? <Icon name="check" size={16} color={c.textOnAccent} /> : null}
             </View>
-            <Text variant="caption" strong decorative>
+            <Text variant="caption" color="textSecondary" decorative>
               {t(key)}
             </Text>
           </View>
@@ -152,7 +157,7 @@ function DaysReadCardContent() {
   const summary = status === 'signedIn' ? reading.summary : undefined;
   const readToday = summary ? summary.todaySources.length > 0 : false;
   const goalToday = summary ? summary.todaySources.includes('goal') : false;
-  // The small pill at the end of the title row (D17): "+ I read today", then "Today is counted".
+  // The pill under the dots: "+ I read today", then "Today is counted".
   const pill = !summary ? null : readToday ? (
     <View style={[styles.pill, { backgroundColor: c.accentSubtle }]} testID="days-read-today-done">
       <Icon name="check" size={14} color={c.textOnAccentSubtle} />
@@ -171,7 +176,13 @@ function DaysReadCardContent() {
       style={styles.pillHit}
     >
       {({ pressed }) => (
-        <View style={[styles.pill, { backgroundColor: pressed ? c.border : c.surfaceMuted }]}>
+        <View
+          style={[
+            styles.pill,
+            styles.pillEdge,
+            { borderColor: c.borderStrong, backgroundColor: pressed ? c.surfaceMuted : c.surface },
+          ]}
+        >
           <Icon name="plus" size={14} color={c.text} />
           <Text variant="caption" strong decorative>
             {t('daysRead.markToday')}
@@ -187,7 +198,11 @@ function DaysReadCardContent() {
         <Text variant="title3" heading={2}>
           {t('daysRead.title')}
         </Text>
-        {pill}
+        {summary ? (
+          <Text variant="caption" color="textSecondary" testID="days-read-month">
+            {t('daysRead.month', { count: summary.month })}
+          </Text>
+        ) : null}
       </View>
       {status !== 'signedIn' ? (
         <Card variant="flat">
@@ -208,17 +223,11 @@ function DaysReadCardContent() {
             return (
               <View style={styles.stack}>
                 <WeekDots days={reading.query.data} today={summary.today} readToday={readToday} />
-                <Text variant="caption" color="textSecondary">
-                  <Text variant="caption" strong testID="days-read-week">
-                    {t('daysRead.week', {
-                      read: formatNumber(summary.week, locale),
-                      total: formatNumber(7, locale),
-                    })}
-                  </Text>
-                  {t('schedule.separator')}
-                  <Text variant="caption" color="textSecondary" testID="days-read-month">
-                    {t('daysRead.month', { count: summary.month })}
-                  </Text>
+                <Text variant="caption" strong testID="days-read-week">
+                  {t('daysRead.week', {
+                    read: formatNumber(summary.week, locale),
+                    total: formatNumber(7, locale),
+                  })}
                 </Text>
                 {goal ? (
                   <View style={styles.goal}>
@@ -255,9 +264,12 @@ function DaysReadCardContent() {
                     {t(errorMessageKey(record.error.code))}
                   </Text>
                 ) : null}
-                <Text variant="caption" color="textMuted">
-                  {t('daysRead.private')}
-                </Text>
+                <View style={styles.foot}>
+                  {pill}
+                  <Text variant="caption" color="textMuted">
+                    {t('daysRead.private')}
+                  </Text>
+                </View>
               </View>
             );
           }}

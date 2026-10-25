@@ -1,12 +1,10 @@
 import { StyleSheet, View } from 'react-native';
-import { Card, Icon, Text, spacing, useTheme } from '@qc/ui';
+import { Banner, Card, Text, spacing } from '@qc/ui';
 import { MapPin } from '../../ui/MapPin';
 import type { MapViewProps } from './types';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.sm },
-  notice: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  noticeText: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   text: { flex: 1 },
 });
@@ -23,15 +21,9 @@ export function ListOnlyMapView({
   accessibilityLabel,
   unavailableLabel,
 }: MapViewProps) {
-  const c = useTheme().colors;
   return (
     <View testID="map-list-only" role="group" aria-label={accessibilityLabel} style={styles.stack}>
-      <View style={styles.notice} testID="map-unavailable">
-        <Icon name="map-pin" size={16} color={c.textSecondary} />
-        <Text variant="caption" color="textSecondary" style={styles.noticeText}>
-          {unavailableLabel}
-        </Text>
-      </View>
+      <Banner kind="offline" title={unavailableLabel} testID="map-unavailable" />
       {markers.map((marker) => (
         <Card
           key={marker.id}

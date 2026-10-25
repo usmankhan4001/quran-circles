@@ -1,21 +1,31 @@
 import { StyleSheet, View } from 'react-native';
 import { issueMessageKey } from '@qc/contracts';
 import { Button, CodeField, Text, TextField, spacing } from '@qc/ui';
-import { ScreenFrame } from '../components/ScreenFrame';
+import { Page } from '../components/Page';
 import { errorMessageKey } from '../core/errors';
+import { formatPhoneForDisplay, normalizePhone } from '../core/phone';
 import { retryAfterText } from '../core/wait';
 import { useSignIn } from '../features/auth/useSignIn';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { hrefToRoute, type Route } from '../nav/routes';
 
-const styles = StyleSheet.create({ stack: { gap: spacing.lg }, row: { gap: spacing.sm } });
+const styles = StyleSheet.create({
+  stack: { gap: spacing.xl },
+  intro: { gap: spacing.sm },
+  center: { alignItems: 'center', gap: spacing.xs },
+});
 
 /** Where to go after sign-in: back to what the person was doing, or Home. */
 export function routeAfterSignIn(returnTo: string | undefined): Route {
   return (returnTo ? hrefToRoute(returnTo) : null) ?? { name: 'home' };
 }
 
+/**
+ * Sign in with a mobile number: the number, then "Enter the code" (WhatsApp first, SMS as a
+ * fallback). A person whose account has no name yet is asked for one last. Creating an account
+ * has its own screens (`SignUpScreen`).
+ */
 export function SignInScreen({ returnTo }: { returnTo?: string }) {
   const { t } = useI18n();
   const nav = useNav();
@@ -41,109 +51,85 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
                 : t(errorMessageKey(flow.error.code))
               : undefined;
 
-  return (
-    <ScreenFrame title={t('signIn.title')} onBack={() => nav.back()} plain testID="sign-in-screen">
-      <View style={styles.stack}>
-        <Text variant="title2" heading={2}>
-          {flow.step === 'name' ? t('signIn.name.heading') : t('signIn.heading')}
-        </Text>
-        {flow.step === 'phone' ? (
-          <>
-            <Text variant="body" color="textSecondary">
-              {t('signIn.phone.intro')}
-            </Text>
-            <TextField
-              label={t('signIn.phone.label')}
-              helper={t('signIn.phone.helper')}
-              value={flow.phoneInput}
-              onChangeText={flow.setPhoneInput}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              contentDirection="ltr"
-              required
-              error={problemText}
-              onSubmitEditing={() => void flow.submitPhone()}
-              testID="phone-input"
-            />
-            <Button
-              label={t('signIn.phone.submit')}
-              size="large"
-              fullWidth
-              loading={flow.working}
-              onPress={() => void flow.submitPhone()}
-              testID="send-code"
-            />
-          </>
-        ) : null}
+  const shownPhone = formatPhoneForDisplay(normalizePhone(flow.phoneInput) ?? flow.phoneInput);
+  const back = returnTo ? hrefToRoute(returnTo) : null;
 
-        {flow.step === 'code' ? (
-          <>
-            <Text variant="body" color="textSecondary">
-              {flow.channel === 'sms' ? t('signIn.code.introSms') : t('signIn.code.introWhatsapp')}
+  if (flow.step === 'code') {
+    return (
+      <Page
+        testID="sign-in-screen"
+        onBack={flow.changeNumber}
+        footer={
+          <Button
+            label={t('signIn.code.submit')}
+            icon="check"
+            size="large"
+            fullWidth
+            loading={flow.working}
+            onPress={() => void flow.submitCode()}
+            testID="verify-code"
+          />
+        }
+      >
+        <View style={styles.stack}>
+          <View style={styles.intro}>
+            <Text variant="display" heading={1}>
+              {t('signIn.code.title')}
             </Text>
-            <CodeField
-              accessibilityLabel={t('signIn.code.label')}
-              value={flow.codeInput}
-              onChangeText={flow.setCodeInput}
-              {...(problemText ? { error: problemText } : {})}
-              testID="code-input"
-            />
-            <Button
-              label={t('signIn.code.submit')}
-              size="large"
-              fullWidth
-              loading={flow.working}
-              onPress={() => void flow.submitCode()}
-              testID="verify-code"
-            />
-            <View style={styles.row}>
+            <Text variant="body" color="textMuted">
+              {t(flow.channel === 'sms' ? 'signIn.code.introSmsTo' : 'signIn.code.intro', {
+                phone: shownPhone,
+              })}
+            </Text>
+          </View>
+          <CodeField
+            accessibilityLabel={t('signIn.code.label')}
+            value={flow.codeInput}
+            onChangeText={flow.setCodeInput}
+            {...(problemText ? { error: problemText } : {})}
+            testID="code-input"
+          />
+          <View style={styles.center}>
+            {flow.resendIn > 0 ? (
+              <Text variant="caption" color="textMuted">
+                {t('signIn.code.resendIn', { count: flow.resendIn })}
+              </Text>
+            ) : (
               <Button
-                variant="secondary"
-                fullWidth
-                disabled={flow.resendIn > 0 || flow.working}
-                label={
-                  flow.resendIn > 0
-                    ? t('signIn.code.resendIn', { count: flow.resendIn })
-                    : t('signIn.code.resend')
-                }
+                variant="tertiary"
+                label={t('signIn.code.resend')}
+                disabled={flow.working}
                 onPress={() => void flow.resend('whatsapp')}
                 testID="resend-code"
               />
-              {flow.resendIn === 0 ? (
-                <Button
-                  variant="tertiary"
-                  fullWidth
-                  disabled={flow.working}
-                  label={t('signIn.code.useSms')}
-                  onPress={() => void flow.resend('sms')}
-                  testID="resend-sms"
-                />
-              ) : null}
+            )}
+            {flow.resendIn === 0 ? (
               <Button
                 variant="tertiary"
-                fullWidth
-                label={t('signIn.code.changeNumber')}
-                onPress={flow.changeNumber}
-                testID="change-number"
+                label={t('signIn.code.useSms')}
+                disabled={flow.working}
+                onPress={() => void flow.resend('sms')}
+                testID="resend-sms"
               />
-            </View>
-          </>
-        ) : null}
-
-        {flow.step === 'name' ? (
-          <>
-            <Text variant="body" color="textSecondary">
-              {t('signIn.name.intro')}
-            </Text>
-            <TextField
-              label={t('signIn.name.label')}
-              value={flow.nameInput}
-              onChangeText={flow.setNameInput}
-              autoComplete="name"
-              error={problemText}
-              onSubmitEditing={() => void flow.submitName()}
-              testID="name-input"
+            ) : null}
+            <Button
+              variant="tertiary"
+              label={t('signIn.code.changeNumber')}
+              onPress={flow.changeNumber}
+              testID="change-number"
             />
+          </View>
+        </View>
+      </Page>
+    );
+  }
+
+  if (flow.step === 'name' || flow.step === 'done') {
+    return (
+      <Page
+        testID="sign-in-screen"
+        footer={
+          <>
             <Button
               label={t('signIn.name.submit')}
               size="large"
@@ -160,8 +146,87 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
               testID="skip-name"
             />
           </>
-        ) : null}
+        }
+      >
+        <View style={styles.stack}>
+          <View style={styles.intro}>
+            <Text variant="display" heading={1}>
+              {t('signIn.name.heading')}
+            </Text>
+            <Text variant="body" color="textMuted">
+              {t('signIn.name.intro')}
+            </Text>
+          </View>
+          <TextField
+            label={t('signIn.name.label')}
+            value={flow.nameInput}
+            onChangeText={flow.setNameInput}
+            autoComplete="name"
+            error={problemText}
+            onSubmitEditing={() => void flow.submitName()}
+            testID="name-input"
+          />
+        </View>
+      </Page>
+    );
+  }
+
+  return (
+    <Page
+      testID="sign-in-screen"
+      onBack={() => nav.back()}
+      trailing={
+        <Button
+          variant="tertiary"
+          label={t('signIn.notNow')}
+          onPress={() => nav.back()}
+          testID="sign-in-not-now"
+        />
+      }
+      footer={
+        <>
+          <Button
+            label={t('signIn.phone.submit')}
+            icon="paper-plane-tilt"
+            size="large"
+            fullWidth
+            loading={flow.working}
+            onPress={() => void flow.submitPhone()}
+            testID="send-code"
+          />
+          <Button
+            variant="tertiary"
+            fullWidth
+            label={t('signIn.newHere')}
+            onPress={() => nav.replace({ name: 'signUp', ...(back ? { returnTo: back } : {}) })}
+            testID="sign-in-new-here"
+          />
+        </>
+      }
+    >
+      <View style={styles.stack}>
+        <View style={styles.intro}>
+          <Text variant="display" heading={1}>
+            {t('signIn.welcomeBack')}
+          </Text>
+          <Text variant="body" color="textMuted">
+            {t('signIn.intro')}
+          </Text>
+        </View>
+        <TextField
+          label={t('signIn.phone.label')}
+          helper={t('signIn.phone.helper')}
+          value={flow.phoneInput}
+          onChangeText={flow.setPhoneInput}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          contentDirection="ltr"
+          required
+          error={problemText}
+          onSubmitEditing={() => void flow.submitPhone()}
+          testID="phone-input"
+        />
       </View>
-    </ScreenFrame>
+    </Page>
   );
 }

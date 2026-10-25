@@ -1,14 +1,14 @@
 import { ActivityIndicator, StyleSheet, View, type GestureResponderEvent } from 'react-native';
 import { useTheme } from '../theme';
-import { elevation, radii, spacing } from '../tokens';
+import { radii, spacing } from '../tokens';
 import { Icon, type IconName } from './Icon';
 import { Text, type TextColor } from './Text';
 import { Touchable } from './Touchable';
 
 /**
- * D17 pills: `primary` charcoal (the one main action of a screen), `emerald` solid green,
- * `secondary` emerald tint, `outline` white with a hairline border and charcoal text,
- * `tertiary` text only, `danger` soft red with a red outline for careful actions.
+ * Design system buttons: `primary` solid green (the one main action of a screen; green is the only
+ * action colour), `emerald` the same, `secondary` the quiet grey fill, `outline` a thin edge,
+ * `tertiary` green text only, `danger` a red outline for stopping or removing.
  */
 export type ButtonVariant = 'primary' | 'emerald' | 'secondary' | 'outline' | 'tertiary' | 'danger';
 export type ButtonSize = 'regular' | 'large';
@@ -34,8 +34,8 @@ export interface ButtonProps {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   base: {
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.xl,
+    borderRadius: radii.control,
+    paddingHorizontal: spacing.lg + spacing.xs,
     paddingVertical: spacing.sm + spacing.xxs,
   },
   full: { alignSelf: 'stretch' },
@@ -66,30 +66,15 @@ export function Button({
   > = {
     primary: { bg: c.cta, pressed: c.ctaPressed, fg: 'textOnCta', border: c.cta },
     emerald: { bg: c.accent, pressed: c.accentPressed, fg: 'textOnAccent', border: c.accent },
-    secondary: {
-      bg: c.accentSubtle,
-      pressed: c.border,
-      fg: 'textOnAccentSubtle',
-      border: c.accentSubtle,
-    },
-    outline: {
-      bg: c.surface,
-      pressed: c.surfaceMuted,
-      fg: 'text',
-      border: theme.mode === 'highContrast' ? c.borderStrong : c.border,
-    },
+    secondary: { bg: c.surfaceMuted, pressed: c.border, fg: 'text', border: c.surfaceMuted },
+    outline: { bg: 'transparent', pressed: c.surfaceMuted, fg: 'text', border: c.borderStrong },
     tertiary: {
       bg: 'transparent',
       pressed: c.accentSubtle,
       fg: 'textAccent',
       border: 'transparent',
     },
-    danger: {
-      bg: c.dangerSubtle,
-      pressed: c.surfaceMuted,
-      fg: 'textOnDangerSubtle',
-      border: c.textDanger,
-    },
+    danger: { bg: 'transparent', pressed: c.dangerSubtle, fg: 'textDanger', border: c.textDanger },
   };
   const p = palette[variant];
   const fgKey: TextColor = off ? 'disabledText' : p.fg;
@@ -106,7 +91,7 @@ export function Button({
       style={({ pressed }) => [
         styles.row,
         styles.base,
-        { minHeight: size === 'large' ? 56 : 48 },
+        { minHeight: size === 'large' ? 56 : 52 },
         fullWidth ? styles.full : undefined,
         {
           backgroundColor: off
@@ -118,8 +103,6 @@ export function Button({
               : p.bg,
           borderWidth: variant === 'outline' || variant === 'danger' ? 1 : 0,
           borderColor: off ? (variant === 'outline' ? c.disabledText : 'transparent') : p.border,
-          boxShadow:
-            variant === 'primary' && !off && theme.mode === 'light' ? elevation.medium : undefined,
           transform: pressed && !off && !theme.reduceMotion ? [{ scale: 0.98 }] : undefined,
         },
       ]}

@@ -1,13 +1,6 @@
-import {
-  PAKISTAN_CITIES,
-  createContentServices,
-  createMemoryStorage,
-  createViewStateStore,
-} from '@qc/content';
-import { fireEvent } from '@testing-library/react';
+import { createContentServices, createMemoryStorage, createViewStateStore } from '@qc/content';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
-import { within } from '@testing-library/react';
 import { MATRIX, NOW, createWorld, directionOf, renderScreen, waitFor } from '../../test/harness';
 import { pakistanDate, resolveDailyAyah } from '@qc/contracts';
 import { fixtures } from '@qc/contracts/fixtures';
@@ -78,18 +71,6 @@ describe('the Quran & Prayer package inside the app', () => {
     expect(view.queryByTestId('quran-unavailable')).toBeNull();
   });
 
-  it('shows the prayer strip on Home with no times until a city is chosen, and opens the tab from it', async () => {
-    const { content } = modules();
-    const view = await renderScreen(<HomeScreen />, { content });
-    const strip = await view.findByTestId('home-prayer-strip', {}, { timeout: 4000 });
-    // As drawn, the five prayers stay; the times read "--:--" and the strip asks for a city.
-    expect(within(strip).getAllByRole('listitem')).toHaveLength(5);
-    expect(strip.textContent).toContain('--:--');
-    expect(strip.getAttribute('aria-label')).toContain(en['prayer.noCity.title']);
-    fireEvent.click(strip);
-    expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'quran' } });
-  });
-
   it('shows the Quran & Prayer tab under one title: the app header', async () => {
     const { content } = modules();
     const view = await renderScreen(<QuranPrayerScreen />, { content });
@@ -105,17 +86,6 @@ describe('the Quran & Prayer package inside the app', () => {
     const view = await renderScreen(<QuranPrayerScreen />, { content, cityId: CITY_RAWALPINDI.id });
     await waitFor(() => expect(view.getAllByText(en['prayer.fajr']).length).toBeGreaterThan(0));
     expect(view.queryByTestId('no-city')).toBeNull();
-  });
-
-  it("shows today's five prayers in the strip on Home once a city is chosen", async () => {
-    const storage = createMemoryStorage();
-    await createViewStateStore(storage).update({ placeId: PAKISTAN_CITIES[0]!.id });
-    const { content } = modules(storage);
-    const view = await renderScreen(<HomeScreen />, { content });
-    const strip = await view.findByTestId('home-prayer-strip', {}, { timeout: 4000 });
-    expect(within(strip).getAllByRole('listitem')).toHaveLength(5);
-    expect(strip.textContent).toContain(en['prayer.fajr']);
-    expect(strip.textContent).toContain(en['prayer.isha']);
   });
 
   it('keeps just the reference on the ayah card when the Quran text cannot be fetched', async () => {

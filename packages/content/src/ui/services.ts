@@ -3,6 +3,7 @@ import { createV1Importer, type V1Importer, type V1Reader } from '../bookmarks/v
 import type { GetContentApi } from '../account/api';
 import { createAlQuranCloudSource } from '../quran/alquranCloud';
 import { createCachedQuranSource, type CachedQuranSource } from '../quran/cache';
+import { createMushafPageSource, type MushafPageSource } from '../quran/pages';
 import { createReaderPrefsStore, type ReaderPrefsStore } from '../quran/prefs';
 import { createReadingPositionService, type ReadingPositionService } from '../reading/position';
 import { createViewStateStore, type ViewStateStore } from '../state/viewState';
@@ -13,6 +14,8 @@ import type { KeyValueStorage } from '../storage/types';
 export interface ContentServices {
   /** The Quran text, cached on the device. */
   source: CachedQuranSource;
+  /** Whole mushaf pages, Arabic only, for the page view. */
+  pages: MushafPageSource;
   bookmarks: BookmarkService;
   readingPosition: ReadingPositionService;
   prefs: ReaderPrefsStore;
@@ -70,8 +73,16 @@ export function createContentServices(options: CreateContentServicesOptions): Co
         now,
       })
     : null;
+  const pages = createMushafPageSource({
+    fetch: options.fetch,
+    storage: withPrefix(options.cacheStorage ?? storage, 'qc.quran.cache.'),
+    now,
+    cache: options.cacheMaxPassages !== 0,
+    ...(options.baseUrl ? { baseUrl: options.baseUrl } : {}),
+  });
   return {
     source,
+    pages,
     bookmarks,
     readingPosition,
     prefs,

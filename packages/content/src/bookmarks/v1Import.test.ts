@@ -186,7 +186,7 @@ describe('V1 importer', () => {
     const outcome = await importer.run();
     expect(outcome).toMatchObject({ ok: true, positionSet: true });
     expect(await readingPosition.getLocal()).toMatchObject({ surah: 18, ayah: 1 });
-    expect(await prefs.load()).toEqual({ showTranslation: false, arabicZoomIndex: 3 });
+    expect(await prefs.load()).toMatchObject({ showTranslation: false, arabicZoomIndex: 3 });
   });
 
   it('does not overwrite a reading position the person already has', async () => {

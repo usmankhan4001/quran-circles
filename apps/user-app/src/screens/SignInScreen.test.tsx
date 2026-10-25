@@ -1,4 +1,4 @@
-import { fireEvent, within } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { makeApiError } from '@qc/contracts';
 import { messages } from '@qc/i18n';
@@ -39,7 +39,7 @@ describe('SignInScreen', () => {
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
     fireEvent.click(view.getByTestId('send-code'));
     const code = await view.findByTestId('code-input');
-    expect(view.getByText(en['signIn.code.introWhatsapp'])).toBeTruthy();
+    expect(view.getByText(/6-digit code on WhatsApp/)).toBeTruthy();
     fireEvent.change(code, { target: { value: '123456' } });
     fireEvent.click(view.getByTestId('verify-code'));
     await waitFor(() => expect(world.nav.last()).toBeDefined());
@@ -175,7 +175,8 @@ describe('SignInScreen', () => {
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
     fireEvent.click(view.getByTestId('send-code'));
     await view.findByTestId('code-input');
-    expect(view.getByTestId('resend-code').textContent).toContain('30');
+    expect(view.getByText(/Send again in 30 seconds/)).toBeTruthy();
+    expect(view.queryByTestId('resend-code')).toBeNull();
     expect(view.queryByTestId('resend-sms')).toBeNull();
   });
 
@@ -188,7 +189,7 @@ describe('SignInScreen', () => {
     world.clock.advance(31_000);
     fireEvent.change(code, { target: { value: '1' } });
     fireEvent.click(await view.findByTestId('resend-sms'));
-    await waitFor(() => expect(view.getByText(en['signIn.code.introSms'])).toBeTruthy());
+    await waitFor(() => expect(view.getByText(/6-digit code by SMS/)).toBeTruthy());
     fireEvent.click(view.getByTestId('change-number'));
     expect(await view.findByTestId('phone-input')).toBeTruthy();
   });
@@ -207,16 +208,16 @@ describe('SignInScreen', () => {
   });
 
   it('says the code goes on WhatsApp, with SMS as the fallback', () => {
-    expect(en['signIn.phone.intro']).toMatch(/WhatsApp/);
-    expect(en['signIn.phone.intro']).toMatch(/SMS/);
-    expect(ur['signIn.phone.intro']).toMatch(/واٹس ایپ/);
-    expect(ur['signIn.phone.intro']).toMatch(/ایس ایم ایس/);
+    expect(en['signIn.intro']).toMatch(/WhatsApp/);
+    expect(en['signIn.intro']).toMatch(/SMS/);
+    expect(ur['signIn.intro']).toMatch(/واٹس ایپ/);
+    expect(ur['signIn.intro']).toMatch(/ایس ایم ایس/);
   });
 
   it('keeps the phone number left to right inside an Urdu screen', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await openWorld({}, 'ur') });
     expect(view.getByTestId('phone-input').getAttribute('dir')).toBe('ltr');
-    expect(view.getByText(ur['signIn.phone.intro'])).toBeTruthy();
+    expect(view.getByText(ur['signIn.intro'])).toBeTruthy();
   });
 
   describe.each(MATRIX)('in $name', ({ locale, color, textSize }) => {
@@ -224,12 +225,10 @@ describe('SignInScreen', () => {
       const view = await renderScreen(<SignInScreen />, { locale, color, textSize });
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
       const words = locale === 'ur' ? ur : en;
-      // A plain white top with back and the title in the middle, then a big heading (D17).
-      expect(
-        within(view.getByTestId('screen-header')).getByText(words['signIn.title']),
-      ).toBeTruthy();
-      expect(view.getByText(words['signIn.heading'])).toBeTruthy();
-      expect(view.getByText(words['signIn.phone.intro'])).toBeTruthy();
+      // A plain white page with a back button, then a big heading.
+      expect(view.getByLabelText(words['ui.back'])).toBeTruthy();
+      expect(view.getByText(words['signIn.welcomeBack'])).toBeTruthy();
+      expect(view.getByText(words['signIn.intro'])).toBeTruthy();
       expect(view.getByTestId('send-code')).toBeTruthy();
     });
   });

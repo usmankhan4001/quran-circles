@@ -120,8 +120,8 @@ describe('semantic colours across modes', () => {
     expect(semanticColors.light.text).toBe(colors.brand.ink);
   });
 
-  it('puts the dark background on the night green', () => {
-    expect(semanticColors.dark.background).toBe(colors.brand.night);
+  it('puts the dark background on near-black night', () => {
+    expect(semanticColors.dark.background).toBe(colors.night.page);
   });
 
   it('makes high contrast stronger than light for primary text', () => {
@@ -197,9 +197,9 @@ describe('type scale', () => {
   });
 
   it('copies the artboard sizes at the default step (D17)', () => {
-    expect(typeStyle('body', 'latin', 0).fontSize).toBe(13);
-    expect(typeStyle('caption', 'latin', 0).fontSize).toBe(11.5);
-    expect(typeStyle('title3', 'latin', 0).fontSize).toBe(16);
+    expect(typeStyle('body', 'latin', 0).fontSize).toBe(16);
+    expect(typeStyle('caption', 'latin', 0).fontSize).toBe(13);
+    expect(typeStyle('title3', 'latin', 0).fontSize).toBe(17);
   });
 
   it('reaches 19 dp body and 17 dp captions at the largest step', () => {
@@ -216,7 +216,7 @@ describe('type scale', () => {
   it('never synthesises bold for Urdu or Quran text', () => {
     expect(typeStyle('title1', 'urdu', 0).fontWeight).toBe('400');
     expect(typeStyle('title1', 'quran', 0).fontWeight).toBe('400');
-    expect(typeStyle('title1', 'latin', 0).fontWeight).toBe('800');
+    expect(typeStyle('title1', 'latin', 0).fontWeight).toBe('700');
   });
 });
 
@@ -228,18 +228,19 @@ describe('spacing, radii, elevation and motion', () => {
       expect(values[i] as number).toBeGreaterThan(values[i - 1] as number);
   });
 
-  it('has increasing radii ending in a pill, with fields drawn as pills (D17)', () => {
+  it('has increasing radii ending in a pill, with controls at 12', () => {
     const values = Object.values(radii);
     for (let i = 1; i < values.length; i++)
       expect(values[i] as number).toBeGreaterThanOrEqual(values[i - 1] as number);
     expect(radii.pill).toBeGreaterThanOrEqual(999);
-    expect(radii.field).toBe(radii.pill);
+    expect(radii.field).toBe(radii.control);
   });
 
   it('has no shadow at level none and a shadow string above it', () => {
     expect(elevation.none).toBeUndefined();
-    for (const level of ['low', 'medium', 'high'] as const)
-      expect(elevation[level]).toMatch(/^0px \d+px \d+px (-?\d+px )?rgba\(/);
+    expect(elevation.high).toMatch(/^0px -?\d+px \d+px (-?\d+px )?rgba\(/);
+    // The design is flat: cards have a hairline, only the sheet floats.
+    expect(elevation.low).toBeUndefined();
   });
 
   it('has motion durations that grow, starting at zero', () => {

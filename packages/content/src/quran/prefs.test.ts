@@ -20,8 +20,13 @@ describe('reader preferences', () => {
 
   it('remembers the choice', async () => {
     const storage = createMemoryStorage();
-    await createReaderPrefsStore(storage).save({ showTranslation: false, arabicZoomIndex: 4 });
+    await createReaderPrefsStore(storage).save({
+      ...DEFAULT_READER_PREFS,
+      showTranslation: false,
+      arabicZoomIndex: 4,
+    });
     expect(await createReaderPrefsStore(storage).load()).toEqual({
+      ...DEFAULT_READER_PREFS,
       showTranslation: false,
       arabicZoomIndex: 4,
     });
@@ -33,7 +38,7 @@ describe('reader preferences', () => {
     expect(clampZoomIndex(2.9)).toBe(2);
     expect(clampZoomIndex(Number.NaN)).toBe(DEFAULT_ARABIC_ZOOM_INDEX);
     const store = createReaderPrefsStore(createMemoryStorage());
-    expect((await store.save({ showTranslation: true, arabicZoomIndex: 50 })).arabicZoomIndex).toBe(
+    expect((await store.save({ ...DEFAULT_READER_PREFS, arabicZoomIndex: 50 })).arabicZoomIndex).toBe(
       ARABIC_ZOOM_STEPS.length - 1,
     );
   });

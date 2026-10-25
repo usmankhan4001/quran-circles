@@ -106,7 +106,7 @@ describe('Text', () => {
     expect(el.getAttribute('dir')).toBe('rtl');
     const t = typeStyle('quran', 'quran', 0);
     expect(px(el.style.lineHeight)).toBe(t.lineHeight);
-    expect(t.lineHeight / t.fontSize).toBeCloseTo(2.2, 1);
+    expect(t.lineHeight / t.fontSize).toBeCloseTo(2.1, 1);
   });
 
   it('keeps English runs in the Latin face and left-to-right on an Urdu screen', () => {
@@ -191,12 +191,19 @@ describe('Button', () => {
   it.each([
     ['primary', 'cta', 'textOnCta'],
     ['emerald', 'accent', 'textOnAccent'],
-    ['danger', 'dangerSubtle', 'textOnDangerSubtle'],
+    ['secondary', 'surfaceMuted', 'text'],
   ] as const)('%s uses the %s fill and %s label', (variant, bg, fg) => {
     renderThemed(<Button label="Go" variant={variant} />, { mode: 'dark' });
     const b = screen.getByRole('button');
     expect(b.style.backgroundColor).toBe(rgb(semanticColors.dark[bg]));
     expect(screen.getByText('Go').style.color).toBe(rgb(semanticColors.dark[fg]));
+  });
+
+  it('draws danger as a red outline on the page, not a fill', () => {
+    renderThemed(<Button label="Go" variant="danger" />, { mode: 'dark' });
+    const b = screen.getByRole('button');
+    expect(b.style.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(screen.getByText('Go').style.color).toBe(rgb(semanticColors.dark.textDanger));
   });
 
   it('uses the disabled colours when disabled', () => {

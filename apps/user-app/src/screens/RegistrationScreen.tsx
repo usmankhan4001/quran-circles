@@ -1,189 +1,91 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { issueMessageKey, type Registration, type Section, type Session } from '@qc/contracts';
 import {
   Button,
-  Card,
   Checkbox,
+  Chip,
+  CodeField,
   Icon,
-  Select,
+  QuranPortion,
   Text,
   TextField,
-  elevation,
-  minTouchTarget,
   radii,
   spacing,
+  elevation,
   useTheme,
-  type IconName,
 } from '@qc/ui';
-import { SECTIONS, type Registration, type Section, type Session } from '@qc/contracts';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
+import { Page } from '../components/Page';
 import { QueryBoundary } from '../components/QueryBoundary';
-import { ReminderToggle } from '../components/ReminderToggle';
-import { ScreenFrame } from '../components/ScreenFrame';
 import { errorMessageKey } from '../core/errors';
-import { formatPhoneForDisplay } from '../core/phone';
-import { allowedSections, isWaitlisted } from '../features/registration/form';
-import { useRegistration } from '../features/registration/useRegistration';
-import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
+import { formatPhoneForDisplay, normalizePhone } from '../core/phone';
+import { retryAfterText } from '../core/wait';
+import { useSignIn } from '../features/auth/useSignIn';
+import { splitClock } from '../features/home/clock';
+import { describeWhenParts } from '../features/nearby/schedule';
 import { useSession } from '../features/nearby/useSessions';
-import { useAreas, useCities } from '../features/places/usePlaces';
+import { useAreas } from '../features/places/usePlaces';
+import {
+  allowedSections,
+  isWaitlisted,
+  validateRegistration,
+  type RegistrationProblems,
+} from '../features/registration/form';
+import { useRegistration } from '../features/registration/useRegistration';
+import { describePortion } from '../features/session/portion';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
 import { useAuthState } from '../providers/hooks';
-import { ChoiceCards } from '../ui/ChoiceCards';
-import { SectionIcon } from '../ui/SectionIcon';
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.lg },
-  center: { alignItems: 'center', gap: spacing.md },
-  actions: { gap: spacing.sm },
+  summary: { gap: spacing.lg },
+  head: { gap: 4 },
+  line: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  when: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
+  detail: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 32 },
+  panel: {
+    borderTopStartRadius: radii.sheet,
+    borderTopEndRadius: radii.sheet,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  grab: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   group: { gap: spacing.sm },
-  summary: { gap: spacing.xs },
-  pillRow: {
+  areaBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: minTouchTarget + spacing.xs,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.pill,
+    gap: spacing.sm,
+    minHeight: 52,
     borderWidth: 1,
+    borderRadius: radii.control,
+    paddingHorizontal: spacing.md,
   },
   grow: { flex: 1 },
-  codeHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  codeRow: { flexDirection: 'row', gap: spacing.sm },
-  codeBox: {
-    flex: 1,
-    height: 46,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  alert: {
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radii.card,
-    borderWidth: 1,
-  },
+  alert: { gap: spacing.sm, padding: spacing.md, borderRadius: radii.control },
+  center: { alignItems: 'center', gap: spacing.xs },
   tick: {
     width: 72,
     height: 72,
-    borderRadius: radii.pill,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
   },
+  done: { gap: spacing.xl, paddingTop: spacing.xxl },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
 });
 
-/** The heading and the session in one line under it (D17), so the person knows what they join. */
-function FormHeading({ session }: { session: Session }) {
-  const { t, l, locale } = useI18n();
-  const title = l(session.title);
-  const venue = l(session.venue.name);
-  const when = session.nextOccurrence
-    ? describeOccurrence(session.nextOccurrence, session.timezone, locale)
-    : describeSchedule(session, t, locale);
-  return (
-    <View style={styles.summary}>
-      <Text variant="title2" heading={2}>
-        {t('registration.heading')}
-      </Text>
-      <Text variant="body" color="textSecondary" testID="registration-summary">
-        <Text variant="body" color="textSecondary" lang={title.lang}>
-          {title.text}
-        </Text>
-        {' · '}
-        <Text variant="body" color="textSecondary" lang={venue.lang}>
-          {venue.text}
-        </Text>
-        {' · '}
-        {when}
-      </Text>
-    </View>
-  );
-}
-
 /**
- * A field the person filled before (D17's pill with a leading icon), shown read-only: the name
- * on the account and the number they signed in with.
+ * Joining is a pledge, not a booking: no seat is reserved and no party size is asked. The page
+ * shows the session; the pledge sheet sits under it. A signed-in person only picks a section
+ * (when the session has more than one) and ticks the WhatsApp reminder. A first-time visitor also
+ * gives a name, the WhatsApp number and the area, and checks the number with a code inside the
+ * same sheet; the pledge is recorded as soon as the code is right. Sign in is never a separate
+ * step the person is sent away to.
  */
-function ReadOnlyPill({
-  label,
-  icon,
-  value,
-  active,
-  ltr,
-  testID,
-}: {
-  label: string;
-  icon: IconName;
-  value: string;
-  active?: boolean;
-  ltr?: boolean;
-  testID?: string;
-}) {
-  const theme = useTheme();
-  const c = theme.colors;
-  const hc = theme.mode === 'highContrast';
-  return (
-    <View style={styles.group} testID={testID}>
-      <Text variant="label">{label}</Text>
-      <View
-        style={[
-          styles.pillRow,
-          active
-            ? { backgroundColor: c.accentSubtle, borderColor: hc ? c.borderStrong : c.progress }
-            : { backgroundColor: c.surfaceMuted, borderColor: hc ? c.borderStrong : c.border },
-          active ? { borderWidth: 1.5 } : null,
-        ]}
-      >
-        <Icon name={icon} size={18} color={active ? c.textOnAccentSubtle : c.textSecondary} />
-        <View style={styles.grow}>
-          <Text variant="body" {...(ltr ? { lang: 'en' as const, direction: 'ltr' as const } : {})}>
-            {value}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-/**
- * The artboard's six code boxes. Registering needs no second code: the number was checked
- * with a code at sign-in, so the boxes are drawn greyed with a line saying so.
- */
-function VerifiedCodeRow() {
-  const { t } = useI18n();
-  const theme = useTheme();
-  const c = theme.colors;
-  return (
-    <View style={styles.group} testID="registration-code" aria-disabled>
-      <View style={styles.codeHead}>
-        <Text variant="label">{t('registration.code.label')}</Text>
-        <Text variant="caption" color="textSuccess" strong>
-          {t('registration.code.verified')}
-        </Text>
-      </View>
-      <View style={styles.codeRow} aria-hidden>
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <View
-            key={i}
-            style={[
-              styles.codeBox,
-              {
-                backgroundColor: c.surfaceMuted,
-                borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.border,
-              },
-            ]}
-          >
-            <Icon name="check" size={16} color={c.textMuted} />
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
 export function RegistrationScreen({
   sessionId,
   occurrenceId,
@@ -191,280 +93,398 @@ export function RegistrationScreen({
   sessionId: string;
   occurrenceId?: string;
 }) {
-  const { t } = useI18n();
   const nav = useNav();
-  const auth = useAuthState();
   const session = useSession(sessionId);
-
-  // Registering needs an account: browsing does not.
-  useEffect(() => {
-    if (auth.status === 'signedOut') {
-      nav.replace({
-        name: 'signIn',
-        returnTo: { name: 'register', sessionId, ...(occurrenceId ? { occurrenceId } : {}) },
-      });
-    }
-  }, [auth.status, nav, sessionId, occurrenceId]);
-
   return (
-    <ScreenFrame
-      title={t('registration.topTitle')}
-      onBack={() => nav.back()}
-      plain
-      testID="registration-screen"
-    >
+    <Page onBack={() => nav.back()} testID="registration-screen">
       <QueryBoundary query={session}>
-        {(s) =>
-          auth.status === 'signedIn' ? (
-            <RegistrationBody session={s} {...(occurrenceId ? { occurrenceId } : {})} />
-          ) : null
-        }
+        {(s) => <JoinBody session={s} {...(occurrenceId ? { occurrenceId } : {})} />}
       </QueryBoundary>
-    </ScreenFrame>
+    </Page>
   );
 }
 
-function RegistrationBody({ session, occurrenceId }: { session: Session; occurrenceId?: string }) {
-  const { t, l } = useI18n();
+function SessionSummary({ session }: { session: Session }) {
+  const { t, l, locale } = useI18n();
+  const c = useTheme().colors;
+  const venue = l(session.venue.name);
+  const when = describeWhenParts(session, t, locale, true);
+  const clock = splitClock(when.time);
+  const portion = session.nextOccurrence
+    ? describePortion(session.nextOccurrence, t, locale)
+    : null;
+  return (
+    <View style={styles.summary} testID="registration-summary">
+      <View style={styles.head}>
+        <Text variant="eyebrow" color="textAccent">
+          {when.day}
+        </Text>
+        <Text variant="display" heading={1} lang={venue.lang}>
+          {venue.text}
+        </Text>
+        <View style={styles.line}>
+          <Icon name="pin" size={14} color={c.textMuted} />
+          <Text variant="caption" color="textMuted">
+            {l(session.title).text}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.when}>
+        <Text variant="countdown" lang="en" direction="ltr">
+          {clock.clock}
+        </Text>
+        {clock.period ? (
+          <Text variant="caption" color="textMuted">
+            {clock.period}
+          </Text>
+        ) : null}
+      </View>
+      {portion ? <QuranPortion label={portion} /> : null}
+      <View style={styles.detail}>
+        <Icon name="people" size={18} color={c.textMuted} />
+        <Text variant="body">{t(`sections.${session.section}`)}</Text>
+      </View>
+    </View>
+  );
+}
+
+function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: string }) {
+  const { t, l, locale } = useI18n();
   const nav = useNav();
-  const { me } = useAuthState();
-  const flow = useRegistration({
+  const c = useTheme().colors;
+  const auth = useAuthState();
+  const me = auth.me;
+  const signedIn = auth.status === 'signedIn';
+  const reg = useRegistration({
     session,
     ...(occurrenceId ? { occurrenceId } : {}),
     displayName: me?.displayName ?? null,
   });
-  const cities = useCities();
-  const areas = useAreas(flow.form.cityId);
+  const signIn = useSignIn(() => void reg.submit(), { presetName: reg.form.name });
+  const areas = useAreas(reg.form.cityId);
   const [showAreas, setShowAreas] = useState(false);
-  const theme = useTheme();
+  const [local, setLocal] = useState<RegistrationProblems>({});
 
-  useEffect(() => {
-    if (flow.signInRequired) {
-      nav.replace({
-        name: 'signIn',
-        returnTo: { name: 'register', sessionId: session.id },
-      });
-    }
-  }, [flow.signInRequired, nav, session.id]);
-
-  if (flow.result) {
-    return <Confirmation registration={flow.result} session={session} />;
+  if (reg.result) {
+    return <JoinDone registration={reg.result} session={session} />;
   }
 
   const sections = allowedSections(session);
-  const area = areas.data?.find((a) => a.id === flow.form.areaId);
-  const cityOptions = (cities.data ?? []).map((c) => ({ value: c.id, label: l(c.name).text }));
-  const failure = flow.error;
+  const area = areas.data?.find((a) => a.id === reg.form.areaId);
+  const when = describeWhenParts(session, t, locale, true);
+  const problems = { ...reg.problems, ...local };
+  const codeStep = !signedIn && signIn.step !== 'phone';
+
+  const problemText =
+    signIn.problem === 'invalid_phone'
+      ? t('signIn.problem.phone')
+      : signIn.problem === 'phone_not_pakistan_mobile'
+        ? t(issueMessageKey('phone_not_pakistan_mobile'))
+        : signIn.problem === 'invalid_code'
+          ? t('signIn.problem.code')
+          : signIn.error
+            ? signIn.error.code === 'rate_limited' || signIn.error.code === 'otp_too_many_attempts'
+              ? [
+                  t(errorMessageKey(signIn.error.code)),
+                  retryAfterText(t, signIn.error.retryAfterSeconds),
+                ]
+                  .filter(Boolean)
+                  .join(' ')
+              : t(errorMessageKey(signIn.error.code))
+            : undefined;
+
+  const send = async () => {
+    if (signedIn) {
+      await reg.submit();
+      return;
+    }
+    const found = validateRegistration(reg.form, { needsName: true, session });
+    setLocal(found);
+    if (Object.keys(found).length > 0) return;
+    await signIn.submitPhone();
+  };
+
+  const failure = reg.error;
+  const panelLook = {
+    backgroundColor: c.surface,
+    borderColor: c.hairline,
+    boxShadow: elevation.high,
+  };
 
   return (
-    <View style={styles.stack} testID="registration-form">
-      <FormHeading session={session} />
-      <Text variant="body">{t('registration.intro')}</Text>
-
-      {flow.needsName ? (
-        <TextField
-          label={t('registration.name.label')}
-          value={flow.form.name}
-          onChangeText={(name) => flow.setForm({ name })}
-          autoComplete="name"
-          required
-          {...(flow.problems.name ? { error: t(flow.problems.name) } : {})}
-          testID="registration-name"
-        />
-      ) : (
-        <ReadOnlyPill
-          label={t('registration.name.label')}
-          icon="user"
-          value={me?.displayName ?? ''}
-          active
-          testID="registration-name-known"
-        />
-      )}
-
-      {me ? (
-        <ReadOnlyPill
-          label={t('registration.phone.passLabel')}
-          icon="phone"
-          value={formatPhoneForDisplay(me.phone)}
-          ltr
-          testID="registration-phone"
-        />
-      ) : null}
-
-      <VerifiedCodeRow />
-
-      <Select
-        label={t('registration.city.label')}
-        required
-        options={cityOptions}
-        value={flow.form.cityId ?? undefined}
-        onChange={(cityId) => flow.setForm({ cityId, areaId: null })}
-        testID="registration-city"
-      />
-
-      <View style={styles.group}>
-        <Text variant="label">{t('registration.area.label')}</Text>
-        <Pressable
-          role="button"
-          aria-label={`${t('registration.area.label')}, ${area ? l(area.name).text : t('registration.area.placeholder')}`}
-          onPress={() => setShowAreas(true)}
-          testID="registration-area"
-          style={({ pressed }) => [
-            styles.pillRow,
-            {
-              backgroundColor: pressed ? theme.colors.border : theme.colors.surfaceMuted,
-              borderColor:
-                theme.mode === 'highContrast' ? theme.colors.borderStrong : theme.colors.border,
-            },
-          ]}
-        >
-          <Icon name="pin" size={20} color={theme.colors.textSecondary} />
-          <View style={styles.grow}>
-            <Text variant="body" color={area ? 'text' : 'textSecondary'}>
-              {area ? l(area.name).text : t('registration.area.placeholder')}
+    <View testID="registration-form" style={{ gap: spacing.xl }}>
+      <SessionSummary session={session} />
+      <View style={[styles.panel, panelLook]} role="group" aria-label={t('registration.heading')}>
+        <View style={[styles.grab, { backgroundColor: c.borderStrong }]} aria-hidden />
+        {codeStep ? (
+          <>
+            <Text variant="title2" heading={2}>
+              {t('join.code.title')}
             </Text>
-          </View>
-          <Icon name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-        </Pressable>
-        {flow.problems.area ? (
-          <Text variant="caption" color="textDanger" testID="registration-area-problem">
-            {t(flow.problems.area)}
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={styles.group}>
-        <Text variant="label">{t('registration.section.label')}</Text>
-        {/* A family session takes women, men or the family; a single-section session offers
-            only its own, and the others fade (D10). */}
-        <ChoiceCards<Section>
-          accessibilityLabel={t('registration.section.label')}
-          value={flow.form.section}
-          onChange={(section) => flow.setForm({ section })}
-          options={SECTIONS.map((x) => ({
-            value: x,
-            label: t(`sections.${x}`),
-            disabled: !sections.includes(x),
-            icon: (color: string) => <SectionIcon section={x} size={28} color={color} />,
-          }))}
-          testID="registration-section"
-        />
-        {sections.length === 1 ? (
-          <Text variant="body" color="textSecondary" testID="registration-section-fixed">
-            {t('registration.section.fixed', { section: t(`sections.${sections[0] ?? 'family'}`) })}
-          </Text>
-        ) : null}
-        {flow.problems.section ? (
-          <Text variant="caption" color="textDanger">
-            {t(flow.problems.section)}
-          </Text>
-        ) : null}
-      </View>
-
-      <Card variant="flat">
-        <Checkbox
-          label={t('registration.consent.whatsapp')}
-          description={t('registration.consent.help')}
-          checked={flow.form.allowWhatsapp}
-          onChange={(allowWhatsapp) => flow.setForm({ allowWhatsapp })}
-          testID="registration-consent"
-        />
-      </Card>
-
-      {failure && !flow.signInRequired ? (
-        <View
-          role="alert"
-          testID="registration-error"
-          style={[
-            styles.alert,
-            {
-              backgroundColor: theme.colors.dangerSubtle,
-              borderColor:
-                theme.mode === 'highContrast' ? theme.colors.borderStrong : theme.colors.border,
-            },
-          ]}
-        >
-          <Text variant="body" color="textOnDangerSubtle" strong>
-            {t(errorMessageKey(failure.code))}
-          </Text>
-          {failure.code === 'already_registered' ? (
-            <Button
-              variant="secondary"
-              fullWidth
-              label={t('registration.success.journey')}
-              onPress={() => nav.tab({ name: 'journey' })}
+            <Text variant="body" color="textMuted">
+              {t(signIn.channel === 'sms' ? 'signUp.code.introSms' : 'signUp.code.intro', {
+                phone: formatPhoneForDisplay(
+                  normalizePhone(signIn.phoneInput) ?? signIn.phoneInput,
+                ),
+              })}
+            </Text>
+            <CodeField
+              accessibilityLabel={t('signIn.code.label')}
+              value={signIn.codeInput}
+              onChangeText={signIn.setCodeInput}
+              {...(problemText ? { error: problemText } : {})}
+              testID="code-input"
             />
-          ) : null}
-        </View>
-      ) : null}
+            {failure ? (
+              <Text variant="body" color="textDanger" testID="registration-error">
+                {t(errorMessageKey(failure.code))}
+              </Text>
+            ) : null}
+            <View style={styles.center}>
+              {signIn.resendIn > 0 ? (
+                <Text variant="caption" color="textMuted">
+                  {t('signIn.code.resendIn', { count: signIn.resendIn })}
+                </Text>
+              ) : (
+                <>
+                  <Button
+                    variant="tertiary"
+                    label={t('signIn.code.resend')}
+                    onPress={() => void signIn.resend('whatsapp')}
+                    testID="resend-code"
+                  />
+                  <Button
+                    variant="tertiary"
+                    label={t('signIn.code.useSms')}
+                    onPress={() => void signIn.resend('sms')}
+                    testID="resend-sms"
+                  />
+                </>
+              )}
+              <Button
+                variant="tertiary"
+                label={t('signIn.code.changeNumber')}
+                onPress={signIn.changeNumber}
+                testID="change-number"
+              />
+            </View>
+            <Button
+              label={t('registration.pledge')}
+              size="large"
+              fullWidth
+              loading={signIn.working || reg.submitting}
+              onPress={() => void signIn.submitCode()}
+              testID="verify-code"
+            />
+          </>
+        ) : (
+          <>
+            <Text variant="title2" heading={2}>
+              {t('join.title', { when: when.day, venue: l(session.venue.name).text })}
+            </Text>
+            <Text variant="body" color="textMuted">
+              {t('join.noSeat')}
+            </Text>
 
-      <Button
-        variant="emerald"
-        label={t('registration.pledge')}
-        size="large"
-        fullWidth
-        trailingIcon="arrow-forward"
-        loading={flow.submitting}
-        onPress={() => void flow.submit()}
-        testID="registration-submit"
-      />
+            {!signedIn ? (
+              <>
+                <TextField
+                  label={t('signUp.name.label')}
+                  value={reg.form.name}
+                  onChangeText={(name) => reg.setForm({ name })}
+                  autoComplete="name"
+                  required
+                  {...(problems.name ? { error: t(problems.name) } : {})}
+                  testID="registration-name"
+                />
+                <TextField
+                  label={t('signUp.phone.label')}
+                  helper={t('join.firstTime')}
+                  value={signIn.phoneInput}
+                  onChangeText={signIn.setPhoneInput}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  contentDirection="ltr"
+                  required
+                  {...(problemText ? { error: problemText } : {})}
+                  testID="phone-input"
+                />
+              </>
+            ) : null}
 
+            {!signedIn || !reg.form.areaId ? (
+              <View style={styles.group}>
+                <Text variant="label">{t('registration.area.label')}</Text>
+                <Pressable
+                  role="button"
+                  aria-label={`${t('registration.area.label')}, ${area ? l(area.name).text : t('registration.area.placeholder')}`}
+                  onPress={() => setShowAreas(true)}
+                  testID="registration-area"
+                  style={[
+                    styles.areaBox,
+                    {
+                      borderColor: problems.area ? c.danger : c.borderStrong,
+                      backgroundColor: c.surface,
+                    },
+                  ]}
+                >
+                  <Icon name="pin" size={20} color={c.textMuted} />
+                  <View style={styles.grow}>
+                    <Text variant="body" color={area ? 'text' : 'textMuted'}>
+                      {area ? l(area.name).text : t('registration.area.placeholder')}
+                    </Text>
+                  </View>
+                  <Icon name="chevron-forward" size={20} color={c.textMuted} />
+                </Pressable>
+                {problems.area ? (
+                  <Text variant="caption" color="textDanger" testID="registration-area-problem">
+                    {t(problems.area)}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
+            {sections.length > 1 ? (
+              <View style={styles.group}>
+                <Text variant="label">{t('registration.section.label')}</Text>
+                <View
+                  style={styles.chips}
+                  role="group"
+                  aria-label={t('registration.section.label')}
+                >
+                  {sections.map((x: Section) => (
+                    <Chip
+                      key={x}
+                      label={t(`sections.${x}`)}
+                      selected={reg.form.section === x}
+                      onPress={() => reg.setForm({ section: x })}
+                      testID={`registration-section-${x}`}
+                    />
+                  ))}
+                </View>
+                {problems.section ? (
+                  <Text variant="caption" color="textDanger">
+                    {t(problems.section)}
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <Text variant="body" color="textMuted" testID="registration-section-fixed">
+                {t('registration.section.fixed', {
+                  section: t(`sections.${sections[0] ?? 'family'}`),
+                })}
+              </Text>
+            )}
+
+            <Checkbox
+              label={t('join.remind')}
+              checked={reg.form.allowWhatsapp}
+              onChange={(allowWhatsapp) => reg.setForm({ allowWhatsapp })}
+              testID="registration-consent"
+            />
+
+            {failure && !reg.signInRequired ? (
+              <View
+                role="alert"
+                testID="registration-error"
+                style={[styles.alert, { backgroundColor: c.dangerSubtle }]}
+              >
+                <Text variant="body" color="textOnDangerSubtle" strong>
+                  {t(errorMessageKey(failure.code))}
+                </Text>
+                {failure.code === 'already_registered' ? (
+                  <Button
+                    variant="secondary"
+                    fullWidth
+                    label={t('registration.success.journey')}
+                    onPress={() => nav.tab({ name: 'journey' })}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+
+            <View style={{ gap: spacing.sm }}>
+              <Button
+                label={t('registration.pledge')}
+                size="large"
+                fullWidth
+                loading={reg.submitting || signIn.working}
+                onPress={() => void send()}
+                testID="registration-submit"
+              />
+              <Button
+                variant="tertiary"
+                label={t('join.notNow')}
+                onPress={() => nav.back()}
+                testID="registration-not-now"
+              />
+            </View>
+          </>
+        )}
+      </View>
       <AreaPickerSheet
         visible={showAreas}
         onClose={() => setShowAreas(false)}
-        cityId={flow.form.cityId}
-        value={flow.form.areaId}
-        onChange={(areaId) => flow.setForm({ areaId })}
+        cityId={reg.form.cityId}
+        value={reg.form.areaId}
+        onCityChange={(cityId) => reg.setForm({ cityId, areaId: null })}
+        onChange={(areaId) => reg.setForm({ areaId })}
       />
     </View>
   );
 }
 
-function Confirmation({ registration, session }: { registration: Registration; session: Session }) {
+function JoinDone({ registration, session }: { registration: Registration; session: Session }) {
   const { t, l, locale } = useI18n();
   const nav = useNav();
-  const theme = useTheme();
+  const c = useTheme().colors;
   const waitlisted = isWaitlisted(registration);
   const venue = l(session.venue.name);
+  const when = describeWhenParts(session, t, locale, true);
   return (
-    <View style={styles.stack} testID="registration-confirmation">
-      <View style={styles.center}>
-        <View
-          style={[
-            styles.tick,
-            {
-              backgroundColor: theme.colors.successSubtle,
-              borderColor:
-                theme.mode === 'highContrast' ? theme.colors.borderStrong : theme.colors.border,
-              boxShadow: theme.mode === 'light' ? elevation.low : undefined,
-            },
-          ]}
-        >
-          <Icon name="success" size={40} color={theme.colors.success} />
-        </View>
-        <Text variant="title2" align="center" heading={2}>
-          {waitlisted ? t('registration.waitlist.title') : t('registration.success.title')}
+    <View style={styles.done} testID="registration-confirmation">
+      <View style={[styles.tick, { backgroundColor: c.accentSubtle }]}>
+        <Icon name="check" size={36} color={c.textAccent} />
+      </View>
+      <View style={{ gap: spacing.sm }}>
+        <Text variant="display" heading={1}>
+          {waitlisted ? t('registration.waitlist.title') : t('join.done.title')}
         </Text>
-        <Text variant="body" align="center" color="textSecondary">
-          {waitlisted ? t('registration.waitlist.body') : t('registration.success.body')}
+        <Text variant="body" color="textMuted">
+          {waitlisted ? t('registration.waitlist.body') : t('join.done.body')}
         </Text>
       </View>
-      <Card>
-        <Text variant="label" lang={l(session.title).lang}>
+      <View
+        style={[
+          styles.panel,
+          { borderBottomWidth: 1, borderRadius: radii.card, borderColor: c.hairline },
+        ]}
+      >
+        <Text variant="title3" lang={l(session.title).lang}>
           {l(session.title).text}
         </Text>
-        <Text variant="body" lang={venue.lang}>
-          {venue.text}
-        </Text>
-        <Text variant="body" color="textSecondary">
-          {describeSchedule(session, t, locale)}
-        </Text>
-      </Card>
-      {!waitlisted ? <ReminderToggle sessionId={session.id} registration={registration} /> : null}
-      <View style={styles.actions}>
+        <View style={styles.line}>
+          <Icon name="pin" size={14} color={c.textMuted} />
+          <Text variant="caption" color="textMuted" lang={venue.lang}>
+            {venue.text}
+          </Text>
+        </View>
+        <View style={styles.line}>
+          <Icon name="clock" size={14} color={c.textMuted} />
+          <Text variant="caption" color="textMuted">
+            {`${when.day}, ${when.time}`}
+          </Text>
+        </View>
+        <View style={styles.statusRow}>
+          <Icon name="check" size={16} color={c.textAccent} />
+          <Text variant="label" color="textAccent">
+            {t('join.done.status', { section: t(`sections.${registration.section}`) })}
+          </Text>
+        </View>
+      </View>
+      <View style={{ gap: spacing.sm }}>
         <Button
-          variant="emerald"
-          label={t('registration.success.journey')}
+          label={t('join.done.journey')}
           size="large"
           fullWidth
           onPress={() => nav.tab({ name: 'journey' })}
@@ -472,9 +492,9 @@ function Confirmation({ registration, session }: { registration: Registration; s
         />
         <Button
           variant="tertiary"
-          fullWidth
-          label={t('registration.backToSession')}
+          label={t('join.done.done')}
           onPress={() => nav.replace({ name: 'session', sessionId: session.id })}
+          testID="join-done"
         />
       </View>
     </View>

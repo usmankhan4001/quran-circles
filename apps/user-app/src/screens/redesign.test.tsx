@@ -47,30 +47,19 @@ function circleRequestsIn(...cityIds: string[]) {
 }
 
 describe('Home (H4)', () => {
-  it('holds the next circle in the green header, then search, pictures, map and ayah (D17)', async () => {
+  it('holds the next circle, then the other circles and the ayah, on the white page', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('home-lead-card')).toBeTruthy();
-    expect(view.getByTestId('home-search')).toBeTruthy();
-    expect(await view.findByTestId('home-map')).toBeTruthy();
+    expect(await view.findByTestId('home-lead-card')).toBeTruthy();
+    expect(view.getByTestId('screen-header')).toBeTruthy();
     expect(view.getByTestId('home-ayah')).toBeTruthy();
-    // The drawings end Home with the reading cards: the old "Also in the app" row is gone.
+    // No coloured band, no search field, no map card, no "Also in the app" row.
+    expect(view.queryByTestId('home-search')).toBeNull();
+    expect(view.queryByTestId('home-map')).toBeNull();
     expect(view.queryByTestId('home-also')).toBeNull();
   });
 
-  it('opens Nearby from the search field, the filter button and the map card', async () => {
-    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
-    const view = await renderScreen(<HomeScreen />, { world });
-    for (const id of ['home-search', 'home-filters']) {
-      fireEvent.click(view.getByTestId(id));
-      expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
-    }
-    fireEvent.click(await view.findByTestId('home-map'));
-    expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
-  });
-
-  it('shows circles near you as picture cards that open the session', async () => {
+  it('shows circles near you as rows that open the session', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
     await view.findByTestId('home-lead-card');
@@ -130,7 +119,7 @@ describe('Nearby (N2)', () => {
     const header = await view.findByTestId('screen-header');
     expect(within(header).getByTestId('nearby-search')).toBeTruthy();
     expect(within(header).getByTestId('nearby-view')).toBeTruthy();
-    expect(within(header).getByRole('heading', { name: en['nearby.heading'] })).toBeTruthy();
+    expect(within(header).getByRole('heading', { name: en['nearby.title'] })).toBeTruthy();
   });
 
   it('ends the list with "Ask for a circle near you" when the flag is on, its action marked coming soon', async () => {
@@ -157,7 +146,7 @@ describe('Nearby (N2)', () => {
     const view = await renderScreen(<NearbyScreen />, { world });
     const list = await view.findByTestId('nearby-list');
     await waitFor(() => expect(world.http.callsTo('GET /v1/config').length).toBeGreaterThan(0));
-    expect(within(list).getAllByText(SESSIONS.taraweeh.title.en).length).toBeGreaterThan(0);
+    expect(within(list).getAllByText(SESSIONS.taraweeh.venue.name.en).length).toBeGreaterThan(0);
     expect(view.queryByTestId('nearby-ask')).toBeNull();
     expect(view.queryByText(en['nearby.ask.title'])).toBeNull();
   });
@@ -210,32 +199,28 @@ describe('Nearby (N2)', () => {
     expect(within(withoutRequest).queryByText(en['nearby.request.action'])).toBeNull();
   });
 
-  it('shows small cards for the nearest places on the map and selects one when tapped', async () => {
+  it('selects a place on the map and shows its card with Join and Details', async () => {
     const view = await renderScreen(<NearbyScreen />, { cityId: CITY_RAWALPINDI.id });
     await view.findByTestId('nearby-list');
     fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
-    const nearest = await view.findByTestId('map-nearest');
-    const card = nearest.querySelector<HTMLElement>('[data-testid^="map-nearest-"]');
-    expect(card).not.toBeNull();
-    fireEvent.click(card!);
+    fireEvent.click(await view.findByTestId(`map-marker-${SESSIONS.taraweeh.venueId}`));
     expect(await view.findByTestId('map-selection')).toBeTruthy();
+    expect(view.getByTestId(`map-open-${SESSIONS.taraweeh.id}`)).toBeTruthy();
   });
 });
 
 describe('Session and venue (S1)', () => {
-  it('has a photo area on top, tags for who it is for, and one Register bar', async () => {
+  it('has the time, who it is for, and one Join button', async () => {
     const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('session-photo')).toBeTruthy();
+    expect(await view.findByTestId('session-time')).toBeTruthy();
     expect(await view.findByTestId('register-button')).toBeTruthy();
     expect(view.getAllByTestId('register-button')).toHaveLength(1);
     expect(view.getAllByText(en['sections.family']).length).toBeGreaterThan(0);
   });
 
-  it('has the photo area on the venue page too', async () => {
+  it('has the map card on the venue page', async () => {
     const view = await renderScreen(<VenueScreen venueId={noor.id} />);
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('venue-photo')).toBeTruthy();
+    expect(await view.findByTestId('venue-map-card')).toBeTruthy();
   });
 });
 
@@ -244,12 +229,11 @@ describe('Session and venue top (S1)', () => {
     Reflect.deleteProperty(window.navigator, 'share');
   });
 
-  it('draws the place, not a photo placeholder, with back and share buttons on it', async () => {
+  it('has a back button and a share button in the plain top bar, and no photo', async () => {
     const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('session-photo').getAttribute('aria-hidden')).toBe('true');
-    expect(await within(header).findByTestId('screen-share')).toBeTruthy();
-    expect(within(header).getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(await view.findByTestId('screen-share')).toBeTruthy();
+    expect(view.getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(view.queryByTestId('session-photo')).toBeNull();
   });
 
   it('shares the session with its venue and time through the system share', async () => {
@@ -289,15 +273,13 @@ describe('Registration (R2)', () => {
     return { world, view };
   }
 
-  it('opens full screen with a back button, a big heading and the session under it (D17)', async () => {
+  it('opens with a back button, the session on the page and the pledge sheet under it', async () => {
     const { world, view } = await open();
-    const header = view.getByTestId('screen-header');
-    expect(within(header).getByText(en['registration.topTitle'])).toBeTruthy();
-    expect(view.getByText(en['registration.heading'])).toBeTruthy();
     expect(view.getByTestId('registration-summary').textContent).toContain(
       SESSIONS.taraweeh.venue.name.en,
     );
-    fireEvent.click(view.getByTestId('screen-back'));
+    expect(view.getByText(en['join.noSeat'])).toBeTruthy();
+    fireEvent.click(view.getByTestId('page-back'));
     expect(world.nav.last()).toEqual({ type: 'back' });
   });
 
@@ -306,9 +288,7 @@ describe('Registration (R2)', () => {
     async (section) => {
       const { world, view } = await open();
       for (const s of ['women', 'men', 'family']) {
-        expect(
-          view.getByTestId(`registration-section-${s}`).getAttribute('aria-disabled'),
-        ).not.toBe('true');
+        expect(view.getByTestId(`registration-section-${s}`)).toBeTruthy();
       }
       fireEvent.click(view.getByTestId('registration-area'));
       fireEvent.click(await view.findByTestId(`area-option-${AREA_SADDAR.id}`));
@@ -322,25 +302,10 @@ describe('Registration (R2)', () => {
     },
   );
 
-  it('fades the sections a women-only session does not offer', async () => {
+  it('shows no section choice for a women-only session, only the fixed one', async () => {
     const { view } = await open(SESSIONS.womenFull);
-    expect(view.getByTestId('registration-section-women').getAttribute('aria-checked')).toBe(
-      'true',
-    );
-    expect(view.getByTestId('registration-section-men').getAttribute('aria-disabled')).toBe('true');
-    expect(view.getByTestId('registration-section-family').getAttribute('aria-disabled')).toBe(
-      'true',
-    );
+    expect(view.queryByTestId('registration-section-men')).toBeNull();
     expect(view.getByTestId('registration-section-fixed')).toBeTruthy();
-  });
-
-  it('draws a picture on each section card', async () => {
-    const { view } = await open();
-    for (const s of ['women', 'men', 'family']) {
-      const card = view.getByTestId(`registration-section-${s}`);
-      expect(card.querySelector('[aria-hidden="true"]')).not.toBeNull();
-      expect(card.textContent).toContain(en[`sections.${s}` as 'sections.women']);
-    }
   });
 
   it('has no seat count: joining sends one person, with no stepper on the form', async () => {
@@ -402,18 +367,16 @@ describe('My Journey (J1)', () => {
 });
 
 describe('Profile, Updates and Sign-in (B)', () => {
-  it('opens the profile on white with quick tiles as cards under the account (D17)', async () => {
+  it('opens the profile on white with a flat list and no quick tiles (D17)', async () => {
     const world = await createWorld({ signedIn: true });
     const view = await renderScreen(<ProfileScreen />, { world });
     const header = view.getByTestId('screen-header');
     expect(within(header).queryByTestId('profile-tiles')).toBeNull();
-    expect(view.getByTestId('profile-tiles')).toBeTruthy();
-    fireEvent.click(view.getByTestId('profile-tile-journey'));
-    expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'journey' } });
-    fireEvent.click(view.getByTestId('profile-tile-updates'));
-    expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'updates' } });
-    fireEvent.click(view.getByTestId('profile-tile-help'));
+    expect(view.queryByTestId('profile-tiles')).toBeNull();
+    fireEvent.click(view.getByTestId('profile-help'));
     expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'page', slug: 'faq' } });
+    fireEvent.click(view.getByTestId('profile-about'));
+    expect(world.nav.last()).toEqual({ type: 'go', route: { name: 'page', slug: 'about' } });
   });
 
   it('shows each update as a card that opens its session', async () => {
@@ -448,9 +411,8 @@ describe('Profile, Updates and Sign-in (B)', () => {
 
   it('opens sign-in on white with a back button and a big heading (D17)', async () => {
     const view = await renderScreen(<SignInScreen />);
-    const header = view.getByTestId('screen-header');
-    expect(within(header).getByLabelText(en['ui.back'])).toBeTruthy();
-    expect(view.getByRole('heading', { level: 2 }).textContent).toBe(en['signIn.heading']);
+    expect(view.getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['signIn.welcomeBack']);
   });
 
   it('takes the sign-in code in boxed cells and accepts digits only', async () => {

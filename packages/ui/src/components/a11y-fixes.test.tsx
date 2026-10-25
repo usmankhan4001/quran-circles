@@ -111,17 +111,17 @@ describe('TabBar landmarks and badge (A-08, A-10)', () => {
     expect(nav.contains(screen.getByRole('tablist', { name: 'Main menu' }))).toBe(true);
   });
 
-  // D17 draws icon tabs without a visible label, so a badge can no longer cover one (A-10).
+  // Every tab shows its word under the icon; the badge sits on the icon, clear of the label (A-10).
   // The name and the count stay in the tab's accessible name.
   it.each(matrix.filter((c) => c.textSize === 3))(
-    'keeps the badge in the name and draws no label to cover in $name',
+    'keeps the badge in the name and the label visible in $name',
     ({ mode, locale, textSize }) => {
       renderThemed(<TabBar items={items} activeKey="home" onChange={() => {}} />, {
         mode,
         locale,
         textSize,
       });
-      expect(screen.queryByText('Home')).toBeNull();
+      expect(screen.getByText('Home')).toBeTruthy();
       expect(screen.getByRole('tab', { name: /^Home, / })).toBeTruthy();
     },
   );
