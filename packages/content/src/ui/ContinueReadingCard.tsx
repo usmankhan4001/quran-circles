@@ -1,13 +1,10 @@
 import { View } from 'react-native';
 import { Button, Card, Icon, Text, radii, spacing, useTheme } from '@qc/ui';
-import { splitBismillah } from '../quran/bismillah';
 import { getSurah } from '../meta/surahs';
 import { surahName } from './format';
-import { useAyah, useReadingPosition } from './hooks';
+import { useReadingPosition } from './hooks';
 import { useContentI18n } from './i18n';
 import { QuranLeadCard } from './QuranLeadCard';
-import { Medallion } from './parts';
-import { useArtSize } from './art';
 
 export interface ContinueReadingCardProps {
   /** Opens the reader at the saved place, or at the first surah when nothing has been read. */
@@ -125,8 +122,8 @@ export function ContinueReadingCard({
 }
 
 /**
- * The lead card of the Quran list (D17): where the person stopped, how far through the surah,
- * the Arabic of that ayah when it can be had, and an outline pill to carry on.
+ * The lead card of the Quran list: where the person stopped, and how far through the surah.
+ * It carries on from there when tapped.
  */
 function TabCard({
   surah,
@@ -142,47 +139,23 @@ function TabCard({
   testID?: string;
 }) {
   const i18n = useContentI18n();
-  const theme = useTheme();
   const info = getSurah(surah);
-  const words = useAyah(surah, ayah);
-  const size = useArtSize();
-  const arabic = words.status === 'ready' ? splitBismillah(words.ayah.verse).text : null;
   return (
     <QuranLeadCard
       {...(testID ? { testID } : {})}
+      quiet
       status={i18n.t('home.reading.title')}
       {...(info
-        ? { progress: `${i18n.n(ayah)} / ${i18n.n(info.ayahCount)}`, arabicName: info.nameArabic }
+        ? {
+            progress: i18n.t('quran.progress', {
+              ayah: i18n.n(ayah),
+              total: i18n.n(info.ayahCount),
+            }),
+          }
         : {})}
       title={info ? surahName(i18n, info) : place}
       detail={place}
       detailTestID="continue-reading-place"
-      preview={
-        arabic ? (
-          <View
-            testID="continue-reading-preview"
-            style={{
-              flexDirection: theme.direction === 'rtl' ? 'row' : 'row-reverse',
-              alignItems: 'center',
-              gap: spacing.sm,
-            }}
-          >
-            <Medallion value={ayah} px={24} />
-            <View style={{ flex: 1 }}>
-              <Text
-                variant="quran"
-                lang="ar"
-                align="center"
-                numberOfLines={1}
-                decorative
-                style={size(19, 'quran', 'quran')}
-              >
-                {arabic}
-              </Text>
-            </View>
-          </View>
-        ) : undefined
-      }
       actionLabel={i18n.t('quran.continueAt', { ayah: i18n.n(ayah) })}
       onAction={() => onOpen({ surah, ayah })}
       actionTestID="continue-reading-button"

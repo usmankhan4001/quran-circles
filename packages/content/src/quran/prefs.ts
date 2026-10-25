@@ -9,21 +9,41 @@ import type { KeyValueStorage } from '../storage/types';
 export const ARABIC_ZOOM_STEPS = [0.8, 1, 1.25, 1.5, 1.85, 2.2] as const;
 export const DEFAULT_ARABIC_ZOOM_INDEX = 1;
 
+/** Ayah by ayah, each with its translation, or the Arabic-only Mushaf page. */
+export type ReaderLayout = 'ayah' | 'mushaf';
+/**
+ * The Arabic script. Only Uthmani is built (the bundled KFGQPC face and the Uthmani text); IndoPak
+ * is kept as a value so a later change needs no new storage format.
+ */
+export type ReaderScript = 'uthmani' | 'indopak';
+/** The reader's own look. `auto` follows the app (light, night or high contrast). */
+export type ReaderTheme = 'auto' | 'light' | 'night';
+
 export interface ReaderPrefs {
   /** Show the translation under each ayah (Urdu on an Urdu screen, English on an English one). */
   showTranslation: boolean;
   /** An index into ARABIC_ZOOM_STEPS. */
   arabicZoomIndex: number;
+  layout: ReaderLayout;
+  script: ReaderScript;
+  theme: ReaderTheme;
 }
 
 export const DEFAULT_READER_PREFS: ReaderPrefs = {
   showTranslation: true,
   arabicZoomIndex: DEFAULT_ARABIC_ZOOM_INDEX,
+  layout: 'ayah',
+  script: 'uthmani',
+  theme: 'auto',
 };
 
+// Anything saved before the layout, script and theme existed still loads: those fall back.
 const PrefsSchema = z.object({
   showTranslation: z.boolean(),
   arabicZoomIndex: z.number().int(),
+  layout: z.enum(['ayah', 'mushaf']).catch('ayah'),
+  script: z.enum(['uthmani', 'indopak']).catch('uthmani'),
+  theme: z.enum(['auto', 'light', 'night']).catch('auto'),
 });
 const KEY = 'qc.quran.prefs.v1';
 
@@ -60,23 +80,26 @@ export interface ReaderPrefsStore {
   save(prefs: ReaderPrefs): Promise<ReaderPrefs>;
 }
 
+function clean(prefs: ReaderPrefs): ReaderPrefs {
+  return {
+    showTranslation: prefs.showTranslation,
+    arabicZoomIndex: clampZoomIndex(prefs.arabicZoomIndex),
+    layout: prefs.layout,
+    script: prefs.script,
+    theme: prefs.theme,
+  };
+}
+
 export function createReaderPrefsStore(storage: KeyValueStorage): ReaderPrefsStore {
   return {
     async load() {
       const saved = await readJson(storage, KEY, PrefsSchema);
-      if (!saved) return DEFAULT_READER_PREFS;
-      return {
-        showTranslation: saved.showTranslation,
-        arabicZoomIndex: clampZoomIndex(saved.arabicZoomIndex),
-      };
+      return saved ? clean(saved) : DEFAULT_READER_PREFS;
     },
     async save(prefs) {
-      const clean = {
-        showTranslation: prefs.showTranslation,
-        arabicZoomIndex: clampZoomIndex(prefs.arabicZoomIndex),
-      };
-      await writeJson(storage, KEY, clean);
-      return clean;
+      const next = clean(prefs);
+      await writeJson(storage, KEY, next);
+      return next;
     },
   };
 }

@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
-import { Text, spacing } from '@qc/ui';
+import { Pressable, View } from 'react-native';
+import { Text, spacing, useTheme } from '@qc/ui';
 import { useArtSize } from './art';
-import { PillCta, StatusLine, WhiteCard } from './parts';
+import { StatusLine, WhiteCard } from './parts';
 
 export interface QuranLeadCardProps {
   /** The short status line by the green dot, such as "Continue reading". */
@@ -15,19 +15,21 @@ export interface QuranLeadCardProps {
   detailTestID?: string;
   /** The surah's Arabic name, at the end of the title row. */
   arabicName?: string;
-  /** A short preview under the title, such as the Arabic of the ayah to read next. */
+  /** A short preview under the title. */
   preview?: ReactNode;
+  /** Kept for callers that show a labelled action; the whole card opens the place. */
   actionLabel: string;
   actionAccessibilityLabel?: string;
   onAction: () => void;
   actionTestID?: string;
+  /** Grey fill instead of the hairline, for the second lead card. */
+  quiet?: boolean;
   testID?: string;
 }
 
 /**
- * The card that leads the Quran half of the tab (D17), half on the green: a green dot and a
- * status line, the title with the surah's Arabic name at its end, an optional preview, and an
- * outline pill to carry on.
+ * The card that leads the Quran half of the tab: a green dot and a status line, the title with
+ * the surah's Arabic name at its end, and one quiet line. The whole card is the button.
  */
 export function QuranLeadCard({
   status,
@@ -41,65 +43,69 @@ export function QuranLeadCard({
   actionAccessibilityLabel,
   onAction,
   actionTestID,
+  quiet,
   testID,
 }: QuranLeadCardProps) {
   const size = useArtSize();
+  const c = useTheme().colors;
   return (
-    <WhiteCard testID={testID} padding={16}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: spacing.sm,
-          marginBottom: 6,
-        }}
-      >
-        <StatusLine label={status} />
-        {progress ? (
-          <Text
-            variant="caption"
-            color="textSuccess"
-            strong
-
-            testID="lead-progress"
+    <Pressable
+      role="button"
+      aria-label={actionAccessibilityLabel ?? `${status}. ${title}. ${actionLabel}`}
+      onPress={onAction}
+      testID={actionTestID}
+    >
+      {({ pressed }) => (
+        <WhiteCard
+          testID={testID}
+          padding={16}
+          style={[
+            { gap: spacing.sm },
+            quiet ? { backgroundColor: c.surfaceMuted, borderColor: c.surfaceMuted } : null,
+            pressed ? { opacity: 0.85 } : null,
+          ]}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: spacing.sm,
+            }}
           >
-            {progress}
-          </Text>
-        ) : null}
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={{ flex: 1 }}>
-          <Text variant="title3" heading={2} testID="lead-title">
-            {title}
-          </Text>
-          {detail ? (
-            <Text
-              variant="caption"
-              color="textSecondary"
-              style={{ marginTop: 2 }}
-              testID={detailTestID}
-            >
-              {detail}
-            </Text>
-          ) : null}
-        </View>
-        {arabicName ? (
-          <Text variant="quran" lang="ar" decorative style={size(20, 'quran', 'quran')}>
-            {arabicName}
-          </Text>
-        ) : null}
-      </View>
-      {preview ? <View style={{ marginTop: 10, marginBottom: 4 }}>{preview}</View> : null}
-      <View style={{ marginTop: 8 }}>
-        <PillCta
-          label={actionLabel}
-          height={36}
-          onPress={onAction}
-          {...(actionAccessibilityLabel ? { accessibilityLabel: actionAccessibilityLabel } : {})}
-          {...(actionTestID ? { testID: actionTestID } : {})}
-        />
-      </View>
-    </WhiteCard>
+            <StatusLine label={status} />
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'baseline',
+              justifyContent: 'space-between',
+              gap: spacing.md,
+            }}
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text variant="title3" heading={2} testID="lead-title">
+                {title}
+              </Text>
+              {detail ? (
+                <Text variant="caption" color="textMuted" testID={detailTestID}>
+                  {detail}
+                </Text>
+              ) : null}
+            </View>
+            {arabicName ? (
+              <Text variant="quran" lang="ar" decorative style={size(22, 'quran', 'quran')}>
+                {arabicName}
+              </Text>
+            ) : progress ? (
+              <Text variant="caption" color="textMuted" testID="lead-progress">
+                {progress}
+              </Text>
+            ) : null}
+          </View>
+          {preview}
+        </WhiteCard>
+      )}
+    </Pressable>
   );
 }

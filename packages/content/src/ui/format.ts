@@ -159,3 +159,13 @@ export function cityName(i18n: ContentI18n, city: { id: string; name: string }):
   const key = CITY_KEYS[city.id];
   return key ? i18n.t(key) : city.name;
 }
+
+const ARABIC_INDIC_ZERO = 0x0660;
+
+/** Digits as printed in the mushaf (Arabic-Indic), for ayah end marks and page numbers. */
+export function arabicIndic(value: number): string {
+  return String(Math.trunc(value))
+    .split('')
+    .map((d) => String.fromCharCode(ARABIC_INDIC_ZERO + Number(d)))
+    .join('');
+}
