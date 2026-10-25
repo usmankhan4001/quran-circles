@@ -34,6 +34,7 @@ import { useI18n } from '../i18n';
 import { sessionStats, venueStats } from '../lib/kpis';
 import { canSomewhere, isNavAllowed } from '../lib/permissions';
 import { filterBySearch } from '../lib/search';
+import { surahLabel } from '../lib/surahs';
 
 export const SESSION_STATUS_KEYS = {
   draft: 'console.sessions.status.draft',
@@ -67,7 +68,7 @@ export const LANGUAGE_KEYS = {
 
 /** Sessions in the person's scope. The API filters by scope; the filters here only narrow it. */
 export default function SessionsPage() {
-  const { t, localized, number, time, weekdays, localDateTime } = useI18n();
+  const { t, localized, number, time, weekdays, localDateTime, locale } = useI18n();
   const { api, principal } = useSignedIn();
   const dir = useDirectory();
   const [cityId] = useShellCity();
@@ -127,10 +128,10 @@ export default function SessionsPage() {
       case 'para':
         return t('console.sessions.portion.para', { para: number(p.para) });
       case 'surah':
-        return t('console.sessions.portion.surah', { surah: number(p.surah) });
+        return t('console.sessions.portion.surah', { surah: surahLabel(p.surah, locale, number) });
       case 'ayah_range':
         return t('console.sessions.portion.range', {
-          surah: number(p.surah),
+          surah: surahLabel(p.surah, locale, number),
           from: number(p.fromAyah),
           to: number(p.toAyah),
         });
