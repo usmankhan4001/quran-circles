@@ -76,7 +76,7 @@ describe('the Quran & Prayer package inside the app', () => {
     const view = await renderScreen(<QuranPrayerScreen />, { content });
     await view.findByTestId('section-switch');
     expect(view.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['quran.hub.title']);
+    expect(view.getByRole('heading', { level: 1 }).textContent).toBe(en['tabs.quranPrayer']);
   });
 
   it('uses the city chosen for the app when no city was chosen in the prayer view', async () => {

@@ -21,6 +21,8 @@ const at = (path: string): string => `${stack().adminUrl ?? ''}${path}`;
 
 async function adminSignIn(page: Page, phone: string): Promise<void> {
   await page.goto(at('/'));
+  // Before sign-in the app opens on its welcome screen (design: Welcome); one tap goes on.
+  await page.getByTestId('welcome-sign-in').click();
   await page.getByTestId('sign-in-phone').fill(phone);
   await page.getByTestId('sign-in-send-code').click();
   await page.getByTestId('sign-in-code').fill(stack().fixedCode);
