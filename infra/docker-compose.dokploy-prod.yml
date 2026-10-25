@@ -41,6 +41,7 @@ services:
         PUBLIC_API_URL: https://${QC_DOMAIN:?set QC_DOMAIN in the env file}/api
         GOOGLE_MAPS_WEB_KEY: ${QC_GOOGLE_MAPS_WEB_KEY:-}
         VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+        CONTACT_EMAIL: ${QC_CONTACT_EMAIL:-}
     restart: unless-stopped
     depends_on:
       api:

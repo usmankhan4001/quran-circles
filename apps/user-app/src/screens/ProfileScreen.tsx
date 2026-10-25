@@ -548,6 +548,18 @@ function SupportSection() {
         onPress={() => nav.go({ name: 'credits' })}
         testID="profile-credits"
       />
+      <LinkRow
+        icon="info"
+        title={t('profile.privacy')}
+        onPress={() => nav.go({ name: 'privacy' })}
+        testID="profile-privacy"
+      />
+      <LinkRow
+        icon="info"
+        title={t('profile.terms')}
+        onPress={() => nav.go({ name: 'terms' })}
+        testID="profile-terms"
+      />
       <View style={[styles.centre, { paddingTop: spacing.lg }]}>
         <Text variant="caption" color="textSecondary" testID="profile-version">
           {t('profile.support.version', { version: appVersion })}
