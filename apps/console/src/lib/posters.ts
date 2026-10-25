@@ -1,6 +1,8 @@
 import {
+  POSTER_ADDRESS_MAX,
   POSTER_DETAILS_MAX,
   POSTER_FAILURE_RETRYABLE,
+  POSTER_PHONE_MAX,
   POSTER_TITLE_MAX,
   PosterCreate,
   posterLanguagesOf,
@@ -164,9 +166,18 @@ export interface PosterForm {
   titleUr: string;
   detailsEn: string;
   detailsUr: string;
+  /** The halaqa flyer's own lines (address, phone, the two QR links); only the Quranic Circles template prints them. */
+  addressEn: string;
+  addressUr: string;
+  phone: string;
+  whatsappUrl: string;
+  locationUrl: string;
   accent: PosterAccent;
   qrTarget: PosterQrTarget;
 }
+
+/** The template that prints the flyer lines; the form asks for them only with it. */
+export const FLYER_TEMPLATE_KEY = 'quranic_circles';
 
 export type PosterFormField =
   | 'template'
@@ -176,6 +187,11 @@ export type PosterFormField =
   | 'titleUr'
   | 'detailsEn'
   | 'detailsUr'
+  | 'addressEn'
+  | 'addressUr'
+  | 'phone'
+  | 'whatsappUrl'
+  | 'locationUrl'
   | 'accent'
   | 'qrTarget';
 
@@ -192,6 +208,11 @@ export const POSTER_ISSUE_FIELDS: Readonly<Record<string, PosterFormField>> = {
   'fields.title': 'titleEn',
   'fields.details.en': 'detailsEn',
   'fields.details.ur': 'detailsUr',
+  'fields.flyer.address.en': 'addressEn',
+  'fields.flyer.address.ur': 'addressUr',
+  'fields.flyer.phone': 'phone',
+  'fields.flyer.whatsappUrl': 'whatsappUrl',
+  'fields.flyer.locationUrl': 'locationUrl',
   'fields.accent': 'accent',
   'fields.qrTarget': 'qrTarget',
 };
@@ -223,6 +244,11 @@ export function initialPosterForm(
     titleUr: fits(sessionTitle?.ur),
     detailsEn: '',
     detailsUr: '',
+    addressEn: '',
+    addressUr: '',
+    phone: '',
+    whatsappUrl: '',
+    locationUrl: '',
     accent: 'tanzeem',
     qrTarget: 'register',
   };
@@ -238,6 +264,11 @@ export function formFromPoster(poster: Poster): PosterForm {
     titleUr: poster.fields.title.ur ?? '',
     detailsEn: poster.fields.details?.en ?? '',
     detailsUr: poster.fields.details?.ur ?? '',
+    addressEn: poster.fields.flyer?.address?.en ?? '',
+    addressUr: poster.fields.flyer?.address?.ur ?? '',
+    phone: poster.fields.flyer?.phone ?? '',
+    whatsappUrl: poster.fields.flyer?.whatsappUrl ?? '',
+    locationUrl: poster.fields.flyer?.locationUrl ?? '',
     accent: poster.fields.accent,
     qrTarget: poster.fields.qrTarget,
   };
@@ -264,6 +295,11 @@ const valuesOf = (form: PosterForm): Record<PosterFormField, string> => ({
   titleUr: form.titleUr,
   detailsEn: form.detailsEn,
   detailsUr: form.detailsUr,
+  addressEn: form.addressEn,
+  addressUr: form.addressUr,
+  phone: form.phone,
+  whatsappUrl: form.whatsappUrl,
+  locationUrl: form.locationUrl,
   accent: form.accent,
   qrTarget: form.qrTarget,
 });
@@ -293,6 +329,14 @@ export function buildPosterCreate(
     ...(shown.includes('ur') && ur.trim() ? { ur: ur.trim() } : {}),
   });
   const details = pick(form.detailsEn, form.detailsUr);
+  const address = pick(form.addressEn, form.addressUr);
+  const flyer = {
+    ...(Object.keys(address).length > 0 ? { address } : {}),
+    ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
+    ...(form.whatsappUrl.trim() ? { whatsappUrl: form.whatsappUrl.trim() } : {}),
+    ...(form.locationUrl.trim() ? { locationUrl: form.locationUrl.trim() } : {}),
+  };
+  const sendFlyer = form.templateKey === FLYER_TEMPLATE_KEY && Object.keys(flyer).length > 0;
   const body: PosterCreateInput = {
     templateKey: form.templateKey,
     language: form.language,
@@ -300,6 +344,7 @@ export function buildPosterCreate(
     fields: {
       title: pick(form.titleEn, form.titleUr),
       ...(Object.keys(details).length > 0 ? { details } : {}),
+      ...(sendFlyer ? { flyer } : {}),
       accent: form.accent,
       qrTarget: form.qrTarget,
     },
@@ -336,7 +381,7 @@ export function serverPosterErrors(
   return out;
 }
 
-export { POSTER_DETAILS_MAX, POSTER_TITLE_MAX };
+export { POSTER_ADDRESS_MAX, POSTER_DETAILS_MAX, POSTER_PHONE_MAX, POSTER_TITLE_MAX };
 
 /**
  * "21:30" as the person reads it: "9:30 pm", or in Urdu the part of the day and then the figures,

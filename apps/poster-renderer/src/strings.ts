@@ -11,6 +11,8 @@ export type PosterLocale = Locale;
 export const POSTER_KEYS = [
   'poster.scanToRegister',
   'poster.scanToOpen',
+  'poster.whatsappGroup',
+  'poster.googleLocation',
   'poster.dailyAt',
   'poster.onDateAt',
   'poster.listAnd',

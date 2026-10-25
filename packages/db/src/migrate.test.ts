@@ -823,6 +823,43 @@ describe('migration 0013: message template catalog', () => {
   });
 });
 
+describe('migration 0014: poster template catalog', () => {
+  const NAME = '0014_poster_template_catalog';
+  const upTo = (count: number) => prefixDir(count);
+  const keys = async (test: Awaited<ReturnType<typeof freshDb>>) =>
+    (
+      await test.exec.query<{ key: string }>(`SELECT key FROM poster_templates ORDER BY key`)
+    ).rows.map((r) => r.key);
+
+  it('is the fourteenth migration', () => {
+    expect(listMigrations()[13]?.name).toBe(NAME);
+  });
+
+  it('writes the renderer templates on an empty table, and leaves an existing row alone', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(13) });
+    expect(await keys(test)).toEqual([]);
+    await test.exec.query(
+      `INSERT INTO poster_templates (key, name_en, name_ur, formats) VALUES ('night', 'Own name', 'x', '{story}')`,
+    );
+    expect(await migrateUp(test.exec, { dir: upTo(14) })).toEqual([NAME]);
+    expect(await keys(test)).toEqual(['cloud', 'night', 'quranic_circles']);
+    const { rows } = await test.exec.query<{ name_en: string }>(
+      `SELECT name_en FROM poster_templates WHERE key = 'night'`,
+    );
+    expect(rows[0]?.name_en).toBe('Own name');
+  });
+
+  it('rolls back to an empty catalog, and applies again', async () => {
+    const test = await freshDb();
+    await migrateUp(test.exec, { dir: upTo(14) });
+    expect(await migrateDown(test.exec, { dir: upTo(14) })).toEqual([NAME]);
+    expect(await keys(test)).toEqual([]);
+    expect(await migrateUp(test.exec, { dir: upTo(14) })).toEqual([NAME]);
+    expect(await keys(test)).toHaveLength(3);
+  });
+});
+
 describe('rollback arguments', () => {
   it('defaults to one migration', () => {
     expect(parseRollbackArgs([])).toEqual({ all: false });

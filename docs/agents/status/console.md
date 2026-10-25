@@ -3,6 +3,13 @@
 Updated: 2026-10-25
 Branch: main
 
+## Halaqa flyer fields in the poster maker (25 Oct 2026, orchestrator task)
+
+- **Form.** With the Quranic Circles template picked, the poster form also asks for the address (English and Urdu, as the languages shown), a contact number, a WhatsApp group link and a map location link; the two links become QR codes on the poster. Only filled lines are sent, only for that template, and the form refuses a link that is not `https` with the contract's own schema. Keys `console.posters.form.address*`, `phone`, `whatsappUrl`, `locationUrl`, `linkHint` in `packages/i18n` (Urdu drafts). Tests: `lib/posters.test.ts` ("the halaqa flyer lines").
+- **Production blocker found.** The poster templates were only written by the development seed, so a live database had no template to pick. Fixed by migration 0014 (see `docs/engineering/change-requests/2026-10-25-halaqa-flyer.md`).
+- Verified: console 504 tests, e2e `poster-maker.spec.ts` (two flows, real worker and Chromium) passing.
+- Not done: a live preview before pressing Make (needs a render call that stores nothing), saved halaqa presets (a session already holds the day, time and venue, so the poster reads those), a bulk download (needs an API endpoint), and the other Canva designs as templates.
+
 ## Look-and-feel pass and poster maker (25 Oct 2026, orchestrator task)
 
 Console only, following the look-and-feel board (sentence case, no figure tiles, words on every status, edit panel on the right, cards on a phone) without a redesign.

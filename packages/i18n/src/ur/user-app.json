@@ -18,6 +18,8 @@
   "days.sun": "اتوار",
   "poster.scanToRegister": "اندراج کے لیے اسکین کریں",
   "poster.scanToOpen": "ایپ میں کھولنے کے لیے اسکین کریں",
+  "poster.whatsappGroup": "واٹس ایپ گروپ",
+  "poster.googleLocation": "گوگل لوکیشن",
   "poster.dailyAt": "ہر روز {time} بجے",
   "poster.onDateAt": "{date}، {time} بجے",
   "poster.listAnd": " اور ",

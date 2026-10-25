@@ -37,7 +37,9 @@ test.describe('poster maker', () => {
     const admin = await bootstrapNationalAdmin();
     const sessionId = SEED.sessionTaraweehNoor;
     const { items: templates } = await admin.api.adminPosters.templates();
-    expect(templates.map((t) => t.key)).toEqual(expect.arrayContaining(['cloud', 'night']));
+    expect(templates.map((t) => t.key)).toEqual(
+      expect.arrayContaining(['cloud', 'night', 'quranic_circles']),
+    );
 
     const request = (language: PosterCreateInput['language']): PosterCreateInput => ({
       templateKey: 'cloud',
@@ -78,5 +80,40 @@ test.describe('poster maker', () => {
         expect(bytes.length).toBeGreaterThan(5_000);
       }
     }
+  });
+
+  test('the Quranic Circles flyer prints the address, the phone and two QR codes', async () => {
+    const admin = await bootstrapNationalAdmin();
+    const sessionId = SEED.sessionTaraweehNoor;
+    const made = await admin.api.adminPosters.create({
+      params: { sessionId },
+      body: {
+        templateKey: 'quranic_circles',
+        language: 'ur',
+        formats: ['story'],
+        fields: {
+          title: { ur: 'ہفتہ وار درسِ قرآن' },
+          flyer: {
+            address: { ur: 'مکان 12، گلی 4، نمونہ ٹاؤن' },
+            phone: '0300 0000000',
+            whatsappUrl: 'https://chat.whatsapp.com/SAMPLE',
+            locationUrl: 'https://maps.example.org/place/sample',
+          },
+          accent: 'tanzeem',
+          qrTarget: 'register',
+        },
+      },
+    });
+    const [poster] = await ready(
+      admin.api,
+      sessionId,
+      made.items.map((p) => p.id),
+    );
+    expect(poster?.fields.flyer?.phone).toBe('0300 0000000');
+    const bytes = Buffer.from(
+      await admin.api.adminPosters.file({ params: { posterId: poster!.id } }),
+    );
+    expect(bytes.subarray(0, 8).equals(PNG)).toBe(true);
+    expect(bytes.readUInt32BE(20)).toBe(1920);
   });
 });

@@ -10758,6 +10758,43 @@
                         },
                         "additionalProperties": false
                       },
+                      "flyer": {
+                        "type": "object",
+                        "properties": {
+                          "address": {
+                            "type": "object",
+                            "properties": {
+                              "en": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              },
+                              "ur": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 120
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "phone": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "whatsappUrl": {
+                            "type": "string",
+                            "maxLength": 300,
+                            "format": "uri"
+                          },
+                          "locationUrl": {
+                            "type": "string",
+                            "maxLength": 300,
+                            "format": "uri"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
                       "accent": {
                         "default": "tanzeem",
                         "type": "string",
@@ -10884,6 +10921,43 @@
                                     "type": "string",
                                     "minLength": 1,
                                     "maxLength": 140
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "flyer": {
+                                "type": "object",
+                                "properties": {
+                                  "address": {
+                                    "type": "object",
+                                    "properties": {
+                                      "en": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 120
+                                      },
+                                      "ur": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 120
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "phone": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "whatsappUrl": {
+                                    "type": "string",
+                                    "maxLength": 300,
+                                    "format": "uri"
+                                  },
+                                  "locationUrl": {
+                                    "type": "string",
+                                    "maxLength": 300,
+                                    "format": "uri"
                                   }
                                 },
                                 "additionalProperties": false
@@ -11415,6 +11489,43 @@
                                 },
                                 "additionalProperties": false
                               },
+                              "flyer": {
+                                "type": "object",
+                                "properties": {
+                                  "address": {
+                                    "type": "object",
+                                    "properties": {
+                                      "en": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 120
+                                      },
+                                      "ur": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 120
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "phone": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "whatsappUrl": {
+                                    "type": "string",
+                                    "maxLength": 300,
+                                    "format": "uri"
+                                  },
+                                  "locationUrl": {
+                                    "type": "string",
+                                    "maxLength": 300,
+                                    "format": "uri"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
                               "accent": {
                                 "default": "tanzeem",
                                 "type": "string",
@@ -11925,6 +12036,43 @@
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 140
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "flyer": {
+                          "type": "object",
+                          "properties": {
+                            "address": {
+                              "type": "object",
+                              "properties": {
+                                "en": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 120
+                                },
+                                "ur": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 120
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "phone": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "whatsappUrl": {
+                              "type": "string",
+                              "maxLength": 300,
+                              "format": "uri"
+                            },
+                            "locationUrl": {
+                              "type": "string",
+                              "maxLength": 300,
+                              "format": "uri"
                             }
                           },
                           "additionalProperties": false

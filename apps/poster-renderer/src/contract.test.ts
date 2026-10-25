@@ -248,6 +248,8 @@ describe('poster wording comes from @qc/i18n', () => {
   const ENGLISH: Record<(typeof POSTER_KEYS)[number], string> = {
     'poster.scanToRegister': 'Scan to register',
     'poster.scanToOpen': 'Scan to open in the app',
+    'poster.whatsappGroup': 'WhatsApp group',
+    'poster.googleLocation': 'Google location',
     'poster.dailyAt': 'Every day at {time}',
     'poster.onDateAt': '{date} at {time}',
     'poster.listAnd': ' and ',

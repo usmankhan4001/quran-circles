@@ -86,3 +86,59 @@ describe('locked templates', () => {
     );
   });
 });
+
+describe('the halaqa flyer fields', () => {
+  const flyer = {
+    address: { en: 'House 12, Street 4, Sample Town', ur: 'مکان 12، گلی 4، نمونہ ٹاؤن' },
+    phone: '0300 0000000',
+    whatsappUrl: 'https://chat.whatsapp.com/SAMPLE',
+    locationUrl: 'https://maps.example.org/place/sample',
+  };
+  const request = (language: 'en' | 'ur' | 'en_ur') => {
+    const base = sampleRequest({ templateId: 'quranic_circles' as 'cloud', language });
+    return RenderRequest.parse({ ...base, fields: { ...base.fields, flyer } });
+  };
+
+  it('prints the address and phone and draws the two captioned codes instead of the register code', () => {
+    const html = TEMPLATES.quranic_circles.build(buildView(request('en'), 'story'));
+    expect(html).toContain('House 12, Street 4, Sample Town');
+    expect(html).toContain('0300 0000000');
+    expect(html).toContain('WhatsApp group');
+    expect(html).toContain('Google location');
+    expect(html.match(/<div class="card code">/g)).toHaveLength(2);
+    expect(html).not.toContain('Scan to register');
+  });
+
+  it('captions the codes in Urdu on an Urdu poster', () => {
+    const html = TEMPLATES.quranic_circles.build(buildView(request('ur'), 'story'));
+    expect(html).toContain('واٹس ایپ گروپ');
+    expect(html).toContain('گلی');
+  });
+
+  it('keeps the register code and omits the flyer lines when the request has none', () => {
+    const plain = RenderRequest.parse(sampleRequest({ templateId: 'quranic_circles' as 'cloud' }));
+    const html = TEMPLATES.quranic_circles.build(buildView(plain, 'story'));
+    expect(html).not.toContain('card code');
+    expect(html).toContain('Scan to register');
+  });
+
+  it('leaves the link preview without codes or flyer lines', () => {
+    const html = TEMPLATES.quranic_circles.build(buildView(request('en'), 'link_preview'));
+    expect(html).not.toContain('card code');
+    expect(html).not.toContain('0300 0000000');
+  });
+
+  it('refuses a link that is not https', () => {
+    const base = sampleRequest({ templateId: 'quranic_circles' as 'cloud' });
+    const bad = RenderRequest.safeParse({
+      ...base,
+      fields: { ...base.fields, flyer: { whatsappUrl: 'javascript:alert(1)' } },
+    });
+    expect(bad.success).toBe(false);
+    const http = RenderRequest.safeParse({
+      ...base,
+      fields: { ...base.fields, flyer: { locationUrl: 'http://maps.example.org/x' } },
+    });
+    expect(http.success).toBe(false);
+  });
+});

@@ -96,7 +96,7 @@ describe('adminPosters.templates', () => {
     const res = await h.api('adminPosters.templates', { as: admin });
     expect(res.status).toBe(200);
     const items = res.json<{ items: PosterTemplate[] }>().items;
-    expect(items.map((t) => t.key)).toEqual(['cloud', 'night']);
+    expect(items.map((t) => t.key)).toEqual(['cloud', 'night', 'quranic_circles']);
     expect(items[0]).toEqual({
       id: templates.get('cloud'),
       key: 'cloud',

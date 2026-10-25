@@ -11,6 +11,8 @@ export interface PosterBlock {
   venue: string;
   area: string | null;
   details: string | null;
+  /** The flyer's street address in this language, when given. */
+  address: string | null;
 }
 
 /** Everything a template needs to draw one format. Built by the renderer from a checked request. */
@@ -22,6 +24,13 @@ export interface PosterView {
   blocks: PosterBlock[];
   /** Null for the link preview. */
   qr: QrCode | null;
+  /** The flyer's contact number, when given. */
+  phone: string | null;
+  /**
+   * The flyer's own QR codes (a WhatsApp group, a map pin), each with its caption in every language
+   * shown. Empty unless the request carries links; then they stand in for the registration code.
+   */
+  codes: Array<{ label: Array<{ locale: PosterLocale; text: string }>; qr: QrCode }>;
   /** "Scan to register" in each language shown. */
   scan: Array<{ locale: PosterLocale; text: string }>;
   appName: Array<{ locale: PosterLocale; text: string }>;

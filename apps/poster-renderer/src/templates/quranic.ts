@@ -29,7 +29,7 @@ const icon = (name: keyof typeof ICONS): string =>
   `<svg viewBox="0 0 24 24" aria-hidden="true" class="icon" fill="none" stroke="${CREAM}" ` +
   `stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
 
-type Part = 'title' | 'details' | 'when' | 'venue' | 'area';
+type Part = 'title' | 'details' | 'when' | 'venue' | 'area' | 'address' | 'phone';
 
 /** Starting size, floor and line limit in design units, for one language or for two. */
 const SIZES: Record<'single' | 'bilingual' | 'preview', Record<Part, [number, number, number]>> = {
@@ -39,6 +39,8 @@ const SIZES: Record<'single' | 'bilingual' | 'preview', Record<Part, [number, nu
     when: [52, 36, 2],
     venue: [40, 32, 2],
     area: [34, 32, 1],
+    address: [34, 30, 2],
+    phone: [38, 30, 1],
   },
   bilingual: {
     title: [118, 56, 2],
@@ -46,6 +48,8 @@ const SIZES: Record<'single' | 'bilingual' | 'preview', Record<Part, [number, nu
     when: [42, 34, 2],
     venue: [36, 32, 2],
     area: [32, 32, 1],
+    address: [30, 28, 2],
+    phone: [34, 28, 1],
   },
   preview: {
     title: [96, 44, 2],
@@ -53,6 +57,8 @@ const SIZES: Record<'single' | 'bilingual' | 'preview', Record<Part, [number, nu
     when: [36, 30, 1],
     venue: [32, 28, 1],
     area: [28, 28, 1],
+    address: [26, 24, 1],
+    phone: [28, 24, 1],
   },
 };
 
@@ -97,7 +103,48 @@ function venue(view: PosterView, blocks: PosterBlock[]): string {
   const lead = blocks[0];
   const lines = blocks.map((b) => text(view, 'venue', b, b.venue));
   if (lead?.area) lines.push(text(view, 'area', lead, lead.area));
+  const full = view.spec.format !== 'link_preview';
+  // Like the area, the address is printed once, in the leading language that has one.
+  const addressed = blocks.find((b) => b.address);
+  if (full && addressed?.address) lines.push(text(view, 'address', addressed, addressed.address));
+  if (full && view.phone && lead) {
+    lines.push(
+      fitText(view.spec, {
+        field: 'phone',
+        locale: 'en',
+        value: view.phone,
+        className: 'phone',
+        size: SIZES[view.blocks.length > 1 ? 'bilingual' : 'single'].phone[0],
+        min: SIZES.single.phone[1],
+        lines: 1,
+      }),
+    );
+  }
   return `<div class="place">${icon('pin')}<div class="lines">${lines.join('')}</div></div>`;
+}
+
+/** The flyer's own codes, each under its caption; the registration code only when there are none. */
+function codeCards(view: PosterView): string {
+  if (view.codes.length === 0) return qrCard(view);
+  const cards = view.codes
+    .map((code, i) => {
+      const caption = code.label
+        .map((l) =>
+          fitText(view.spec, {
+            field: `code${i}.${l.locale}`,
+            locale: l.locale,
+            value: l.text,
+            className: 'scan',
+            size: 26,
+            min: 24,
+            lines: 1,
+          }),
+        )
+        .join('');
+      return `<div class="card code"><div class="qr">${code.qr.svg}</div><div class="scan-text">${caption}</div></div>`;
+    })
+    .join('');
+  return `<div class="codes">${cards}</div>`;
 }
 
 function qrCard(view: PosterView): string {
@@ -140,9 +187,13 @@ function portrait(view: PosterView): string {
   const art = artDataUrl('quranicCircles');
   // Two languages need more room, so their text may start higher, over the faded arm. The fade
   // follows, so the text below the photo always sits on BASE (the contrast pairs assume it).
-  const top = view.blocks.length > 1 ? 340 : 520;
+  // With the flyer's own codes (two cards, address, phone) the text block is taller, so it starts higher.
+  const stacked = view.codes.length > 0;
+  const top = view.blocks.length > 1 ? (stacked ? 240 : 340) : stacked ? 300 : 520;
   // At least 280 px of code on a story (QR test); print scales it, and 280 units is 54 mm on A4.
   const qr = spec.output === 'pdf' ? 280 : 330;
+  // The flyer's two codes sit side by side; on a bilingual page they shrink to leave the text room.
+  const codeSize = view.blocks.length > 1 ? 230 : 290;
   const css = `${sharedCss(view)}
 main.poster{position:relative;width:100%;height:100%;overflow:hidden;background:${BASE};color:${COLOURS.white}}
 .art{position:absolute;inset:0 0 auto 0;height:${u(1350)};
@@ -155,6 +206,14 @@ main.poster{position:relative;width:100%;height:100%;overflow:hidden;background:
 .band .icon{width:${u(52)};height:${u(52)}}
 .foot{display:flex;align-items:center;gap:${u(32)}}
 .foot .place{flex:1 1 auto;min-width:0}
+.foot.stacked{flex-direction:column;align-items:stretch;gap:${u(22)}}
+.codes{display:flex;justify-content:center;gap:${u(48)}}
+.card.code{width:${u(codeSize)}}
+.card.code .qr{width:${u(codeSize)};height:${u(codeSize)}}
+.phone{color:${CREAM};font-weight:700;letter-spacing:.04em;line-height:1.2}
+.phone{text-align:${lead === 'ur' ? 'right' : 'left'}}
+.address{color:${COLOURS.white}}
+.address[lang=en]{font-weight:500;line-height:1.25}
 .place .icon{width:${u(44)};height:${u(44)};margin-top:${u(6)}}
 .card{flex:none;display:flex;flex-direction:column;align-items:center;gap:${u(8)};width:${u(qr)}}
 .qr{width:${u(qr)};height:${u(qr)};padding:${u(14)};background:${COLOURS.white};border-radius:${u(16)}}
@@ -172,7 +231,7 @@ main.poster{position:relative;width:100%;height:100%;overflow:hidden;background:
     `<main class="poster" dir="${dirOf(lead)}">` +
     `<div class="art" aria-hidden="true"></div><div class="fade" aria-hidden="true"></div>` +
     `<section class="content" data-box="content">${headline(view)}${band(view, view.blocks)}` +
-    `<div class="foot">${venue(view, view.blocks)}${qrCard(view)}</div>${host}</section></main>`;
+    `<div class="foot${view.codes.length > 0 ? ' stacked' : ''}">${venue(view, view.blocks)}${codeCards(view)}</div>${host}</section></main>`;
   return page(spec, lead, css, body);
 }
 

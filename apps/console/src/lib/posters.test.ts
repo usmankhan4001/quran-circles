@@ -54,6 +54,11 @@ const form = (patch: Partial<PosterForm> = {}): PosterForm => ({
   titleEn: 'Taraweeh with Dora',
   titleUr: 'تراویح مع دورہ',
   detailsEn: '',
+  addressEn: '',
+  addressUr: '',
+  phone: '',
+  whatsappUrl: '',
+  locationUrl: '',
   detailsUr: '',
   accent: 'tanzeem',
   qrTarget: 'register',
@@ -274,6 +279,11 @@ describe('the form', () => {
       titleUr: 'تراویح مع دورہ',
       detailsEn: '',
       detailsUr: '',
+      addressEn: '',
+      addressUr: '',
+      phone: '',
+      whatsappUrl: '',
+      locationUrl: '',
       accent: 'night',
       qrTarget: 'session',
     });
@@ -359,5 +369,56 @@ describe('the form', () => {
         form({ titleUr: '', detailsEn: 'long' }),
       ),
     ).toEqual({ titleUr: 'required', formats: 'notOffered', detailsEn: 'tooLong' });
+  });
+});
+
+describe('the halaqa flyer lines', () => {
+  const quranic = { ...cloud, key: 'quranic_circles' } as typeof cloud;
+  const filled = {
+    templateKey: 'quranic_circles',
+    addressEn: ' House 12, Street 4 ',
+    addressUr: 'مکان 12',
+    phone: '0300 0000000',
+    whatsappUrl: 'https://chat.whatsapp.com/SAMPLE',
+    locationUrl: 'https://maps.example.org/place/sample',
+  };
+
+  it('sends them with the Quranic Circles template, only in the languages shown', () => {
+    const both = buildPosterCreate(form(filled), quranic);
+    expect(both.errors).toEqual({});
+    expect(both.body?.fields.flyer).toEqual({
+      address: { en: 'House 12, Street 4', ur: 'مکان 12' },
+      phone: '0300 0000000',
+      whatsappUrl: 'https://chat.whatsapp.com/SAMPLE',
+      locationUrl: 'https://maps.example.org/place/sample',
+    });
+    const english = buildPosterCreate(form({ ...filled, language: 'en' }), quranic);
+    expect(english.body?.fields.flyer?.address).toEqual({ en: 'House 12, Street 4' });
+  });
+
+  it('leaves them out for other templates and when they are empty', () => {
+    expect(
+      buildPosterCreate(form({ ...filled, templateKey: 'cloud' }), cloud).body?.fields,
+    ).not.toHaveProperty('flyer');
+    expect(
+      buildPosterCreate(form({ templateKey: 'quranic_circles' }), quranic).body?.fields,
+    ).not.toHaveProperty('flyer');
+  });
+
+  it('refuses a link that is not https, on the field that holds it', () => {
+    const { body, errors } = buildPosterCreate(
+      form({ ...filled, whatsappUrl: 'http://chat.example.org/x', locationUrl: 'not a link' }),
+      quranic,
+    );
+    expect(body).toBeNull();
+    expect(errors).toEqual({ whatsappUrl: 'invalid', locationUrl: 'invalid' });
+  });
+
+  it("puts a failed poster's flyer lines back in the form", () => {
+    const poster = {
+      ...fx.posters[0]!,
+      fields: { ...fx.posters[0]!.fields, flyer: { phone: '0300 0000000' } },
+    };
+    expect(formFromPoster(poster).phone).toBe('0300 0000000');
   });
 });

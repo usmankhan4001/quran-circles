@@ -33,12 +33,15 @@ import { errorKind, errorMessageKeyOf, issuesOf } from '../lib/errors';
 import {
   OUT_OF_DATE_KEYS,
   POSTER_ACCENT_KEYS,
+  FLYER_TEMPLATE_KEY,
+  POSTER_ADDRESS_MAX,
   POSTER_DETAILS_MAX,
   POSTER_FAILURE_KEYS,
   POSTER_FORMAT_HINT_KEYS,
   POSTER_FORMAT_KEYS,
   POSTER_LANGUAGE_KEYS,
   POSTER_QR_HINT_KEYS,
+  POSTER_PHONE_MAX,
   POSTER_QR_KEYS,
   POSTER_STATUS_KEYS,
   POSTER_TITLE_MAX,
@@ -825,6 +828,71 @@ function PosterFormBody({
           dir="rtl"
           optional
         />
+      ) : null}
+      {form.templateKey === FLYER_TEMPLATE_KEY ? (
+        <>
+          {shown.includes('en') ? (
+            <TextField
+              id={`${ids}-address-en`}
+              label={t('console.posters.form.addressEn')}
+              hint={t('console.posters.form.addressHint', { max: POSTER_ADDRESS_MAX })}
+              value={form.addressEn}
+              onChange={(e) => patch({ addressEn: e.target.value })}
+              error={problem('addressEn', POSTER_ADDRESS_MAX)}
+              lang="en"
+              dir="ltr"
+              optional
+            />
+          ) : null}
+          {shown.includes('ur') ? (
+            <TextField
+              id={`${ids}-address-ur`}
+              label={t('console.posters.form.addressUr')}
+              hint={t('console.posters.form.addressHint', { max: POSTER_ADDRESS_MAX })}
+              value={form.addressUr}
+              onChange={(e) => patch({ addressUr: e.target.value })}
+              error={problem('addressUr', POSTER_ADDRESS_MAX)}
+              lang="ur"
+              dir="rtl"
+              optional
+            />
+          ) : null}
+          <TextField
+            id={`${ids}-phone`}
+            label={t('console.posters.form.phone')}
+            value={form.phone}
+            onChange={(e) => patch({ phone: e.target.value })}
+            error={problem('phone', POSTER_PHONE_MAX)}
+            lang="en"
+            dir="ltr"
+            inputMode="tel"
+            optional
+          />
+          <TextField
+            id={`${ids}-whatsapp`}
+            label={t('console.posters.form.whatsappUrl')}
+            hint={t('console.posters.form.linkHint')}
+            value={form.whatsappUrl}
+            onChange={(e) => patch({ whatsappUrl: e.target.value })}
+            error={problem('whatsappUrl', 300)}
+            lang="en"
+            dir="ltr"
+            inputMode="url"
+            optional
+          />
+          <TextField
+            id={`${ids}-location`}
+            label={t('console.posters.form.locationUrl')}
+            hint={t('console.posters.form.linkHint')}
+            value={form.locationUrl}
+            onChange={(e) => patch({ locationUrl: e.target.value })}
+            error={problem('locationUrl', 300)}
+            lang="en"
+            dir="ltr"
+            inputMode="url"
+            optional
+          />
+        </>
       ) : null}
 
       <SelectField

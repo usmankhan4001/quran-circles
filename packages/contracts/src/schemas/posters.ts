@@ -71,6 +71,40 @@ const fieldText = (max: number) => SafeText(1, max);
 
 export const POSTER_TITLE_MAX = 80;
 export const POSTER_DETAILS_MAX = 140;
+export const POSTER_ADDRESS_MAX = 120;
+export const POSTER_PHONE_MAX = 32;
+export const POSTER_LINK_MAX = 300;
+
+const flyerLink = () =>
+  z
+    .url({ protocol: /^https$/, hostname: z.regexes.domain })
+    .max(POSTER_LINK_MAX)
+    .refine((v) => ![...v].some((c) => c.charCodeAt(0) <= 0x20 || c.charCodeAt(0) === 0x7f), {
+      message: 'no spaces or control characters',
+    });
+
+/**
+ * What a halaqa flyer prints beyond the session's own time and venue (change request
+ * `2026-10-25-halaqa-flyer`, additive and optional): where to find it and how to reach the
+ * coordinator, plus the two links the flyer turns into QR codes (a WhatsApp group and a map pin).
+ */
+export const PosterFlyer = lazy(() =>
+  z
+    .object({
+      address: z
+        .object({
+          en: fieldText(POSTER_ADDRESS_MAX).optional(),
+          ur: fieldText(POSTER_ADDRESS_MAX).optional(),
+        })
+        .strict()
+        .optional(),
+      phone: fieldText(POSTER_PHONE_MAX).optional(),
+      whatsappUrl: flyerLink().optional(),
+      locationUrl: flyerLink().optional(),
+    })
+    .strict(),
+);
+export type PosterFlyer = z.infer<typeof PosterFlyer>;
 
 /** The editable fields. Everything else on a template is locked. */
 export const PosterFields = lazy(() =>
@@ -90,6 +124,8 @@ export const PosterFields = lazy(() =>
         })
         .strict()
         .optional(),
+      /** Address, phone and the two QR links of a halaqa flyer; templates that do not use them ignore them. */
+      flyer: PosterFlyer.optional(),
       accent: PosterAccent.default('tanzeem'),
       /** What the QR code opens: registration (default, for posters) or the session page. */
       qrTarget: PosterQrTarget.default('register'),

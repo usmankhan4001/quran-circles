@@ -65,6 +65,7 @@ function blocksOf(request: RenderRequest): PosterBlock[] {
     venue: stripUnsafeText(pick(session.venue.name, locale) ?? session.venue.name.en),
     area: clean(pick(session.venue.area, locale)),
     details: clean(fields.details?.[locale] ?? null),
+    address: clean(fields.flyer?.address?.[locale] ?? null),
   }));
 }
 
@@ -79,12 +80,28 @@ export function buildView(
   const link = deepLinkOf(request, webBase);
   const scanKey =
     request.fields.qrTarget === 'register' ? 'poster.scanToRegister' : 'poster.scanToOpen';
+  const flyer = request.fields.flyer;
+  const codes = spec.qr
+    ? (
+        [
+          ['poster.whatsappGroup', flyer?.whatsappUrl],
+          ['poster.googleLocation', flyer?.locationUrl],
+        ] as const
+      )
+        .filter((c): c is readonly [(typeof c)[0], string] => Boolean(c[1]))
+        .map(([key, url]) => ({
+          label: locales.map((locale) => ({ locale, text: t(locale, key) })),
+          qr: makeQr(url),
+        }))
+    : [];
   return {
     spec,
     language: request.language,
     accent: request.fields.accent,
     blocks: blocksOf(request),
     qr: spec.qr ? makeQr(link) : null,
+    phone: clean(flyer?.phone ?? null),
+    codes,
     scan: locales.map((locale) => ({ locale, text: t(locale, scanKey) })),
     appName: locales.map((locale) => ({ locale, text: t(locale, 'app.name') })),
     host: webBase ? new URL(webBase).host : null,

@@ -101,6 +101,12 @@ describe('seed counts', () => {
 
   it('reports what it added on the first run', () => {
     for (const row of first.tables) {
+      // The poster templates are written by migration 0014 (production has no seed), so the seed
+      // finds them already there; `poster-templates.test.ts` checks them.
+      if (row.table === 'poster_templates') {
+        expect(row.total).toBe(3);
+        continue;
+      }
       expect(row.inserted).toBe(row.total);
       expect(row.inserted).toBeGreaterThan(0);
     }

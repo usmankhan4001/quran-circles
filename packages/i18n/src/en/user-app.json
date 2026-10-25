@@ -16,6 +16,8 @@
   "days.sun": "Sunday",
   "poster.scanToRegister": "Scan to register",
   "poster.scanToOpen": "Scan to open in the app",
+  "poster.whatsappGroup": "WhatsApp group",
+  "poster.googleLocation": "Google location",
   "poster.dailyAt": "Every day at {time}",
   "poster.onDateAt": "{date} at {time}",
   "poster.listAnd": " and ",
