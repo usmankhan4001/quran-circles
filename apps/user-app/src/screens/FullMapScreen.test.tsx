@@ -2,7 +2,7 @@ import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { CITY_RAWALPINDI, SESSIONS } from '../test/factories';
-import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import { MATRIX, directionOf, renderScreen, waitFor } from '../test/harness';
 import { FullMapScreen } from './FullMapScreen';
 
 const en = messages.en;

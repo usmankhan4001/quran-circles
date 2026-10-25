@@ -344,3 +344,11 @@ Direction: improve what exists, keep today's layouts (look-and-feel board, "Qura
 - Tests: `SessionScreen.test.tsx` (before and after joining), `JourneyScreen.test.tsx` (status tag).
 
 Open: "Host not listed yet" and "Join online" still read "Coming soon" (owner's earlier choice). The sample sessions all share one clip-art photo; the look-and-feel board proposes a calm pattern instead (not built here).
+
+## Member redesign: maps, session and venue pages (2026-10-26, branch lane/ui/member-redesign)
+
+- Done: map-unavailable/offline list fallback, full-screen map (close, search, filter chips, locate, bottom card with Join/Details), session page on the white frame (today's portion, about this circle), venue page with a map card above the Maps/Call/Follow row that opens the full map.
+- "Coming soon" rows are hidden until there is real data: the session host row (no teacher) and "Join online" (no link) are left out; the photo placeholders on session and venue are gone. `comingSoon.test.tsx` now checks they are absent.
+- New en and ur keys: `venue.mapsShort`, `venue.alerts`, `session.todaysPortion`, `session.about` (Urdu are drafts).
+- Checks on this branch: user-app typecheck, eslint on changed screens, and all 75 user-app test files pass; i18n tests pass.
+- Not touched (other threads): Quran, Prayer, My Journey, profile and states.

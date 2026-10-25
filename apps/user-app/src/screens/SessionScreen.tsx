@@ -3,11 +3,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Banner,
   Button,
-  Card,
   Icon,
+  IconButton,
+  QuranPortion,
+  SectionHeader,
   Tag,
   Text,
-  initialsOf,
   minTouchTarget,
   radii,
   spacing,
@@ -15,17 +16,20 @@ import {
 } from '@qc/ui';
 import type { Registration, Session, Occurrence } from '@qc/contracts';
 import { distanceParts, haversineMetres } from '../core/distance';
-import { IconTile } from '../components/IconTile';
 import { JoinHalqaSheet } from '../components/JoinHalqaSheet';
 import { useOrigin } from '../features/nearby/useOrigin';
 import { useAreas } from '../features/places/usePlaces';
 import { FacilityChips } from '../components/FacilitiesChecklist';
 import { QueryBoundary } from '../components/QueryBoundary';
-import { ScreenFrame } from '../components/ScreenFrame';
+import { Page } from '../components/Page';
+import { splitClock } from '../features/home/clock';
 import { toInstant } from '../features/home/useHome';
-import { useRequireAuth } from '../features/auth/useRequireAuth';
 import { useIsFollowing, useMyRegistrations } from '../features/journey/hooks';
-import { describeOccurrence, describeSchedule } from '../features/nearby/schedule';
+import {
+  describeOccurrence,
+  describeSchedule,
+  describeWhenParts,
+} from '../features/nearby/schedule';
 import { useSession, useSessionOccurrences, useVenue } from '../features/nearby/useSessions';
 import { registerState } from '../features/session/registerState';
 import { safeWebUrl, venueMapUrl, venuePhoneUrl } from '../features/session/links';
@@ -36,10 +40,19 @@ import { useAuthStatus } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { shareText } from '../platform/share';
 import { useToast } from '../providers/Toasts';
-import { ComingSoon } from '../ui/ComingSoon';
 
 const styles = StyleSheet.create({
-  stack: { gap: spacing.md + spacing.xxs },
+  stack: { gap: spacing.xl },
+  head: { gap: spacing.xs },
+  venueLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    minHeight: 32,
+  },
+  timeRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.sm },
+  length: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   overline: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   glass: {
     flexDirection: 'row',
@@ -114,34 +127,6 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Who the session is for and when, in a glass pill and a line over the picture (D17). */
-function SessionOverline({ session }: { session: Session }) {
-  const { t } = useI18n();
-  const c = useTheme().colors;
-  const dot = (
-    <Text variant="caption" color="textOnHero" strong decorative>
-      {' · '}
-    </Text>
-  );
-  return (
-    <View style={styles.overline}>
-      <View style={[styles.glass, { backgroundColor: c.heroGlass }]}>
-        <Text variant="caption" color="textOnHero" strong>
-          {t(`sections.${session.section}`)}
-        </Text>
-        {dot}
-        <Text variant="caption" color="textOnHero" strong>
-          {t(`profile.language.${session.language}`)}
-        </Text>
-        {dot}
-        <Text variant="caption" color="textOnHero" strong>
-          {t(`programs.${session.program}`)}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 export function SessionScreen({ sessionId }: { sessionId: string }) {
   const { t, l, locale } = useI18n();
   const nav = useNav();
@@ -157,7 +142,6 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
 
   const { follow, toggle: toggleFollow } = useIsFollowing(session.data?.venueId ?? '');
   const status = useAuthStatus();
-  const requireAuth = useRequireAuth();
   const mine = useMyRegistrations();
 
   const share = async (s: Session) => {
@@ -203,52 +187,19 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
   };
 
   return (
-    <ScreenFrame
-      title={session.data ? l(session.data.title).text : t('session.title')}
+    <Page
       onBack={() => nav.back()}
-      photo={{
-        seed: session.data?.venueId ?? sessionId,
-        testID: 'session-photo',
-        fade: 'dark',
-        ...(session.data
-          ? {
-              onShare: () => void share(session.data!),
-              overline: <SessionOverline session={session.data} />,
-            }
-          : {}),
-      }}
-      testID="session-screen"
-      floatingFooter
-      footer={
+      trailing={
         session.data ? (
-          <View style={styles.footerRow}>
-            <View style={styles.footerMain}>
-              <JoinButton
-                session={session.data}
-                mine={mine.data}
-                following={Boolean(follow)}
-                onJoin={() => {
-                  const target = { name: 'register', sessionId } as const;
-                  if (requireAuth(target)) nav.go(target);
-                }}
-                onJourney={() => nav.tab({ name: 'journey' })}
-                onFollow={() => void handleFollowPress()}
-              />
-            </View>
-            <View style={styles.footerSecondary}>
-              <Button
-                variant="outline"
-                label={t('journey.directions')}
-                icon="route"
-                size="large"
-                fullWidth
-                onPress={() => void openUrl(venueMapUrl(session.data!.venue))}
-                testID="session-directions-button"
-              />
-            </View>
-          </View>
+          <IconButton
+            icon="share"
+            accessibilityLabel={t('session.share')}
+            onPress={() => void share(session.data!)}
+            testID="screen-share"
+          />
         ) : undefined
       }
+      testID="session-screen"
     >
       <QueryBoundary query={session}>
         {(s) => {
@@ -257,6 +208,10 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
           const circle = s.circle;
           const onlineUrl = circle?.onlineLink ? safeWebUrl(circle.onlineLink) : null;
           const hostName = circle?.teacherName ?? (circle ? l(circle.name).text : null);
+          const title = l(s.title);
+          const when = describeWhenParts(s, t, locale, true);
+          const clock = splitClock(when.time);
+          const portion = s.nextOccurrence ? describePortion(s.nextOccurrence, t, locale) : null;
 
           return (
             <View style={styles.stack}>
@@ -264,48 +219,109 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 <Banner kind="error" title={t('session.cancelled')} testID="session-cancelled" />
               ) : null}
 
-              {/* Timing & Next Occurrence Card */}
-              {s.nextOccurrence ? (
-                <Card padding="md">
-                  <View style={styles.timingCard}>
-                    <View style={styles.timingRow}>
-                      <View style={[styles.liveDot, { backgroundColor: c.success }]} aria-hidden />
-                      <Text variant="title3" strong style={styles.grow}>
-                        {describeOccurrence(s.nextOccurrence, s.timezone, locale)}
-                      </Text>
-                    </View>
-                    <View style={[styles.subSchedule, { borderTopColor: c.hairline }]}>
-                      <Icon name="clock" size={14} color={c.textSecondary} />
-                      <Text variant="caption" color="textSecondary">
-                        {t('session.duration', { count: s.durationMinutes })}
-                      </Text>
-                      <Tag kind="ok" label={describeSchedule(s, t, locale)} />
-                    </View>
-                  </View>
-                </Card>
+              <View style={styles.head}>
+                <Text variant="eyebrow" color="textAccent">
+                  {s.nextOccurrence
+                    ? describeOccurrence(s.nextOccurrence, s.timezone, locale)
+                    : describeSchedule(s, t, locale)}
+                </Text>
+                <Text variant="display" heading={1} lang={title.lang}>
+                  {title.text}
+                </Text>
+                <Pressable
+                  role="button"
+                  aria-label={`${venueName.text}, ${venueLine(s)}`}
+                  onPress={() => nav.go({ name: 'venue', venueId: s.venueId })}
+                  style={styles.venueLink}
+                  testID="session-venue"
+                >
+                  <Icon name="pin" size={16} color={c.textAccent} />
+                  <Text variant="label" color="textAccent" lang={venueName.lang}>
+                    {venueName.text}
+                  </Text>
+                  <Text variant="caption" color="textMuted">
+                    {venueLine(s)}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.timeRow} testID="session-time">
+                <Text variant="countdown" lang="en" direction="ltr">
+                  {clock.clock}
+                </Text>
+                {clock.period ? (
+                  <Text variant="caption" color="textMuted">
+                    {clock.period}
+                  </Text>
+                ) : null}
+                <View style={styles.length}>
+                  <Icon name="clock" size={14} color={c.textMuted} />
+                  <Text variant="caption" color="textMuted">
+                    {t('session.duration', { count: s.durationMinutes })}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.footerRow}>
+                <View style={styles.footerMain}>
+                  <JoinButton
+                    session={s}
+                    mine={mine.data}
+                    following={Boolean(follow)}
+                    onJoin={() => nav.go({ name: 'register', sessionId })}
+                    onJourney={() => nav.tab({ name: 'journey' })}
+                    onFollow={() => void handleFollowPress()}
+                  />
+                </View>
+                <IconButton
+                  icon="route"
+                  variant="tonal"
+                  accessibilityLabel={t('journey.directions')}
+                  onPress={() => void openUrl(venueMapUrl(s.venue))}
+                  testID="session-directions-button"
+                />
+              </View>
+
+              <ReminderPromise joined={joinedTo(s, mine.data)} />
+
+              {portion ? (
+                <View style={styles.block}>
+                  <SectionHeader
+                    title={t('session.todaysPortion')}
+                    trailing={
+                      <IconButton
+                        icon="book"
+                        accessibilityLabel={t('readAlong.open')}
+                        onPress={() => nav.tab({ name: 'quran' })}
+                        testID="session-read-ahead"
+                      />
+                    }
+                  />
+                  <QuranPortion label={portion} />
+                </View>
               ) : null}
 
-              {/* Venue & Teacher Info Card */}
-              <Card padding="md">
+              <View style={styles.block}>
+                <SectionHeader title={t('session.about')} />
                 <InfoRow
-                  leading={<IconTile icon="masjid" />}
-                  title={venueName.text}
-                  titleLang={venueName.lang}
-                  subtitle={venueLine(s)}
-                  onPress={() => nav.go({ name: 'venue', venueId: s.venueId })}
-                  testID="session-venue"
+                  leading={<Icon name="calendar" size={20} color={c.textMuted} />}
+                  title={describeSchedule(s, t, locale)}
                 />
-                <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                {hostName ? (
+                  <InfoRow
+                    leading={<Icon name="user" size={20} color={c.textMuted} />}
+                    title={hostName}
+                    testID="session-circle"
+                  />
+                ) : null}
                 <InfoRow
-                  leading={<Initials text={hostName ? initialsOf(hostName) : '—'} />}
-                  title={hostName ?? t('session.host.unknown')}
-                  titleComingSoon={!hostName}
-                  {...(circle?.teacherName
-                    ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
-                    : { subtitle: t('session.host.inPerson') })}
-                  testID="session-circle"
+                  leading={<Icon name="people" size={20} color={c.textMuted} />}
+                  title={t(`sections.${s.section}`)}
                 />
-                <View style={[styles.rule, { backgroundColor: c.hairline }]} />
+                <InfoRow
+                  leading={<Icon name="translate" size={20} color={c.textMuted} />}
+                  title={t(`profile.language.${s.language}`)}
+                />
                 {onlineUrl ? (
                   <Pressable
                     role="link"
@@ -314,60 +330,37 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                     style={styles.infoRow}
                     testID="session-online"
                   >
-                    <IconTile icon="video-camera" />
-                    <Text variant="label" color="textAccent" strong style={styles.grow}>
+                    <Icon name="video-camera" size={20} color={c.textAccent} />
+                    <Text variant="label" color="textAccent" style={styles.grow}>
                       {t('session.online')}
                     </Text>
-                    <Icon name="arrow-forward" size={16} color={c.textAccent} />
                   </Pressable>
-                ) : (
-                  // No online link for this circle: drawn, but nothing to open (owner, 25 Oct 2026).
-                  <ComingSoon role="link" label={t('session.online')} testID="session-online">
-                    <View style={styles.infoRow}>
-                      <IconTile icon="video-camera" />
-                      <Text variant="label" color="textSecondary" style={styles.grow}>
-                        {t('session.online')}
-                      </Text>
-                    </View>
-                  </ComingSoon>
-                )}
-              </Card>
+                ) : null}
+              </View>
 
-              {/* What the person has done, and what happens next (joined), or what joining brings. */}
-              <ReminderPromise joined={joinedTo(s, mine.data)} />
-
-              {/* Upcoming Portions & Schedule */}
               <View style={styles.block}>
-                <Text variant="label" heading={2}>
-                  {t('session.upcomingPortions')}
-                </Text>
-                <Card padding="none">
-                  <View style={styles.listPad}>
-                    <QueryBoundary query={occurrences}>
-                      {(items) =>
-                        items.length === 0 ? (
-                          <View style={styles.occurrence}>
-                            <Text variant="caption" color="textSecondary">
-                              {t('session.noUpcoming')}
-                            </Text>
-                          </View>
-                        ) : (
-                          <OccurrenceRows
-                            session={s}
-                            items={items}
-                            onSelectPortion={() => nav.tab({ name: 'quran' })}
-                          />
-                        )
-                      }
-                    </QueryBoundary>
-                  </View>
-                </Card>
+                <SectionHeader title={t('session.upcomingPortions')} />
+                <QueryBoundary query={occurrences}>
+                  {(items) =>
+                    items.length === 0 ? (
+                      <Text variant="caption" color="textMuted">
+                        {t('session.noUpcoming')}
+                      </Text>
+                    ) : (
+                      <OccurrenceRows
+                        session={s}
+                        items={items}
+                        onSelectPortion={() => nav.tab({ name: 'quran' })}
+                      />
+                    )
+                  }
+                </QueryBoundary>
               </View>
 
               {venue.data ? <FacilityChips facilities={venue.data.facilities} /> : null}
 
               {description ? (
-                <Text variant="caption" color="textSecondary" lang={description.lang}>
+                <Text variant="caption" color="textMuted" lang={description.lang}>
                   {description.text}
                 </Text>
               ) : null}
@@ -399,7 +392,7 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
           );
         }}
       </QueryBoundary>
-    </ScreenFrame>
+    </Page>
   );
 }
 
@@ -505,24 +498,11 @@ function JoinButton({
   }
 }
 
-/** Two letters of a name in a circle. */
-function Initials({ text }: { text: string }) {
-  const c = useTheme().colors;
-  return (
-    <View aria-hidden style={[styles.initials, { backgroundColor: c.warningSubtle }]}>
-      <Text variant="caption" color="textOnWarningSubtle" strong>
-        {text}
-      </Text>
-    </View>
-  );
-}
-
 /** A row of the venue card: a tile, a name and a line under it, and a chevron or an action. */
 function InfoRow({
   leading,
   title,
   titleLang,
-  titleComingSoon = false,
   subtitle,
   subtitleLang,
   trailing,
@@ -532,8 +512,6 @@ function InfoRow({
   leading: ReactNode;
   title: string;
   titleLang?: 'en' | 'ur';
-  /** The title stands in for data the app does not have yet, such as the teacher's name. */
-  titleComingSoon?: boolean;
   subtitle?: string;
   subtitleLang?: 'en' | 'ur';
   trailing?: ReactNode;
@@ -550,13 +528,7 @@ function InfoRow({
     <>
       {leading}
       <View style={styles.grow}>
-        {titleComingSoon ? (
-          <ComingSoon label={title} {...(testID ? { testID: `${testID}-soon` } : {})}>
-            {titleText}
-          </ComingSoon>
-        ) : (
-          titleText
-        )}
+        {titleText}
         {subtitle ? (
           <Text variant="caption" color="textSecondary" lang={subtitleLang}>
             {subtitle}

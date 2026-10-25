@@ -1,5 +1,5 @@
 import { fireEvent, within } from '@testing-library/react';
-import { FIXTURE_NOW, fixtures } from '@qc/contracts/fixtures';
+import { FIXTURE_NOW } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { CITY_RAWALPINDI, SESSIONS } from '../test/factories';
@@ -7,7 +7,6 @@ import { expectComingSoon } from '../test/comingSoon';
 import { renderScreen, waitFor } from '../test/harness';
 import { NearbyScreen } from './NearbyScreen';
 import { SessionScreen } from './SessionScreen';
-import { VenueScreen } from './VenueScreen';
 
 /**
  * Every feature that is drawn but has nothing behind it yet wears the one "Coming soon"
@@ -38,22 +37,13 @@ const circleRequestsOn = {
 };
 
 describe('Session page placeholders', () => {
-  it.each(LOCALES)(
-    '"Join online" without a link is coming soon and opens nothing (%s)',
-    async (locale) => {
-      const words = messages[locale];
-      const s = SESSIONS.circle;
-      expect(s.circle?.onlineLink).toBeNull();
-      const view = await renderScreen(<SessionScreen sessionId={s.id} />, { locale });
-      await view.findByTestId('facilities');
-      const online = view.getByTestId('session-online');
-      expectComingSoon(online, words['session.online'], locale, { role: 'link' });
-      expect(online.textContent).toContain(words['session.online']);
-      fireEvent.click(online);
-      fireEvent.click(within(online).getByText(words['session.online']));
-      expect(view.world.opened).toEqual([]);
-    },
-  );
+  it('"Join online" without a link is not shown until there is a link', async () => {
+    const s = SESSIONS.circle;
+    expect(s.circle?.onlineLink).toBeNull();
+    const view = await renderScreen(<SessionScreen sessionId={s.id} />);
+    await view.findByTestId('facilities');
+    expect(view.queryByTestId('session-online')).toBeNull();
+  });
 
   it('"Join online" with a link stays a working link, with no badge', async () => {
     const s = SESSIONS.circle;
@@ -71,55 +61,21 @@ describe('Session page placeholders', () => {
     await waitFor(() => expect(view.world.opened).toEqual([link]));
   });
 
-  it.each(LOCALES)(
-    '"Host not listed yet" is coming soon when no teacher is known (%s)',
-    async (locale) => {
-      const words = messages[locale];
-      const s = SESSIONS.taraweeh;
-      expect(s.circle).toBeNull();
-      const view = await renderScreen(<SessionScreen sessionId={s.id} />, { locale });
-      await view.findByTestId('facilities');
-      const host = view.getByTestId('session-circle-soon');
-      expectComingSoon(host, words['session.host.unknown'], locale, { role: 'group' });
-      expect(host.textContent).toContain(words['session.host.unknown']);
-    },
-  );
+  it('the host row is left out when no teacher is known', async () => {
+    const s = SESSIONS.taraweeh;
+    expect(s.circle).toBeNull();
+    const view = await renderScreen(<SessionScreen sessionId={s.id} />);
+    await view.findByTestId('facilities');
+    expect(view.queryByTestId('session-circle')).toBeNull();
+    expect(view.queryByText(messages.en['session.host.unknown'])).toBeNull();
+  });
 
   it("shows the teacher's name as it is, with no badge, when the circle has one", async () => {
     const s = SESSIONS.circle;
     const view = await renderScreen(<SessionScreen sessionId={s.id} />);
     await view.findByTestId('facilities');
-    expect(view.queryByTestId('session-circle-soon')).toBeNull();
+    expect(view.getByTestId('session-circle')).toBeTruthy();
     expect(view.getByText(s.circle!.teacherName!)).toBeTruthy();
-  });
-
-  it.each(LOCALES)('the photo of the place is coming soon (%s)', async (locale) => {
-    const words = messages[locale];
-    const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />, {
-      locale,
-    });
-    const header = await view.findByTestId('screen-header');
-    const photo = within(header).getByTestId('session-photo-soon');
-    expectComingSoon(photo, words['comingSoon.photo'], locale, { badge: false, role: 'group' });
-    expect(within(photo).getByTestId('session-photo')).toBeTruthy();
-    expect(within(header).getByTestId('screen-photo-soon-badge').textContent).toBe(
-      words['comingSoon.badge'],
-    );
-    // The back and share buttons on the picture still work.
-    expect(await within(header).findByTestId('screen-share')).toBeTruthy();
-  });
-});
-
-describe('Venue page placeholders', () => {
-  it.each(LOCALES)('the photo of the place is coming soon (%s)', async (locale) => {
-    const words = messages[locale];
-    const view = await renderScreen(<VenueScreen venueId={fixtures.venues[0]!.id} />, { locale });
-    const header = await view.findByTestId('screen-header');
-    const photo = within(header).getByTestId('venue-photo-soon');
-    expectComingSoon(photo, words['comingSoon.photo'], locale, { badge: false, role: 'group' });
-    expect(within(header).getByTestId('screen-photo-soon-badge').textContent).toBe(
-      words['comingSoon.badge'],
-    );
   });
 });
 

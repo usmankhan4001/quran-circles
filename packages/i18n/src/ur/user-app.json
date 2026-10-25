@@ -778,5 +778,9 @@
   "map.locate": "میری جگہ دکھائیں",
   "map.search": "علاقہ یا مسجد تلاش کریں",
   "map.full.label": "آپ کے قریب حلقوں کا پورا نقشہ",
-  "venue.map.label": "{venue} کا نقشہ۔ پورا نقشہ کھلتا ہے۔"
+  "venue.map.label": "{venue} کا نقشہ۔ پورا نقشہ کھلتا ہے۔",
+  "venue.mapsShort": "نقشہ",
+  "venue.alerts": "واٹس ایپ یا ایس ایم ایس الرٹس",
+  "session.todaysPortion": "آج کا حصہ",
+  "session.about": "اس حلقے کے بارے میں"
 }

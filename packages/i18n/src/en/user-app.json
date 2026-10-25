@@ -776,5 +776,9 @@
   "map.locate": "Show my location",
   "map.search": "Search area or masjid",
   "map.full.label": "Full map of circles near you",
-  "venue.map.label": "Map showing {venue}. Opens the full map."
+  "venue.map.label": "Map showing {venue}. Opens the full map.",
+  "venue.mapsShort": "Maps",
+  "venue.alerts": "WhatsApp or SMS alerts",
+  "session.todaysPortion": "Today's portion",
+  "session.about": "About this circle"
 }

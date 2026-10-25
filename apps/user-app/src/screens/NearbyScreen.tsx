@@ -8,7 +8,6 @@ import {
   Chip,
   EmptyState,
   Icon,
-  QuranPortion,
   ScreenHeader,
   SearchField,
   SegmentedControl,
@@ -18,9 +17,6 @@ import {
   spacing,
   useTheme,
 } from '@qc/ui';
-import { useRequireAuth } from '../features/auth/useRequireAuth';
-import { useMyRegistrations } from '../features/journey/hooks';
-import { registerState } from '../features/session/registerState';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { MapSelectionCards } from '../components/MapSelectionCard';
 import { errorMessageKey } from '../core/errors';
@@ -45,7 +41,6 @@ import { useServices } from '../providers/services';
 import { ComingSoon } from '../ui/ComingSoon';
 import { TabFrame } from '../ui/TabFrame';
 import { describeWhenParts } from '../features/nearby/schedule';
-import { describePortion } from '../features/session/portion';
 
 const GUTTER = 20;
 const SECTION_CHIPS: readonly Section[] = ['women', 'men', 'family'];
@@ -75,8 +70,6 @@ type ViewMode = 'list' | 'map';
 export function NearbyScreen() {
   const { t, l, locale } = useI18n();
   const nav = useNav();
-  const requireAuth = useRequireAuth();
-  const mine = useMyRegistrations();
   const { MapView } = useServices();
   const prefs = usePreferences();
   const config = useAppConfig();

@@ -2,7 +2,7 @@ import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { SESSIONS, registrationFor } from '../test/factories';
-import { MATRIX, directionOf, expectGreenHeader, renderScreen, waitFor } from '../test/harness';
+import { MATRIX, directionOf, renderScreen, waitFor } from '../test/harness';
 import { SessionScreen } from './SessionScreen';
 
 const en = messages.en;
@@ -35,14 +35,14 @@ describe('SessionScreen', () => {
     });
   });
 
-  it('sends a guest to sign in first, and back to the join form after', async () => {
+  it('takes a guest to the pledge sheet, which signs them in itself', async () => {
     const s = SESSIONS.taraweeh;
     const view = await renderScreen(<SessionScreen sessionId={s.id} />);
     await view.findByTestId('facilities');
     fireEvent.click(view.getByTestId('register-button'));
     expect(view.world.nav.last()).toEqual({
       type: 'go',
-      route: { name: 'signIn', returnTo: { name: 'register', sessionId: s.id } },
+      route: { name: 'register', sessionId: s.id },
     });
   });
 
@@ -157,7 +157,8 @@ describe('SessionScreen', () => {
       });
       await view.findByTestId('facilities');
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
+      expect(view.getByTestId('session-time')).toBeTruthy();
+      expect(view.getByRole('heading', { level: 1 })).toBeTruthy();
       expect(view.getByTestId('register-button')).toBeTruthy();
       expect(view.getByTestId('facilities')).toBeTruthy();
     });

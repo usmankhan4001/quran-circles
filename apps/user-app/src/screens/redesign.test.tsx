@@ -210,19 +210,17 @@ describe('Nearby (N2)', () => {
 });
 
 describe('Session and venue (S1)', () => {
-  it('has a photo area on top, tags for who it is for, and one Register bar', async () => {
+  it('has the time, who it is for, and one Join button', async () => {
     const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('session-photo')).toBeTruthy();
+    expect(await view.findByTestId('session-time')).toBeTruthy();
     expect(await view.findByTestId('register-button')).toBeTruthy();
     expect(view.getAllByTestId('register-button')).toHaveLength(1);
     expect(view.getAllByText(en['sections.family']).length).toBeGreaterThan(0);
   });
 
-  it('has the photo area on the venue page too', async () => {
+  it('has the map card on the venue page', async () => {
     const view = await renderScreen(<VenueScreen venueId={noor.id} />);
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('venue-photo')).toBeTruthy();
+    expect(await view.findByTestId('venue-map-card')).toBeTruthy();
   });
 });
 
@@ -231,12 +229,11 @@ describe('Session and venue top (S1)', () => {
     Reflect.deleteProperty(window.navigator, 'share');
   });
 
-  it('draws the place, not a photo placeholder, with back and share buttons on it', async () => {
+  it('has a back button and a share button in the plain top bar, and no photo', async () => {
     const view = await renderScreen(<SessionScreen sessionId={SESSIONS.taraweeh.id} />);
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('session-photo').getAttribute('aria-hidden')).toBe('true');
-    expect(await within(header).findByTestId('screen-share')).toBeTruthy();
-    expect(within(header).getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(await view.findByTestId('screen-share')).toBeTruthy();
+    expect(view.getByLabelText(en['ui.back'])).toBeTruthy();
+    expect(view.queryByTestId('session-photo')).toBeNull();
   });
 
   it('shares the session with its venue and time through the system share', async () => {
