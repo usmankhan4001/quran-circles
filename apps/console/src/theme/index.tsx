@@ -98,8 +98,9 @@ export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   return vars;
 }
 
-export function resolveTheme(choice: ThemeChoice, systemDark: boolean): ResolvedTheme {
-  return choice === 'system' ? (systemDark ? 'dark' : 'light') : choice;
+export function resolveTheme(choice: ThemeChoice, _systemDark: boolean): ResolvedTheme {
+  // Light is the default; the computer's dark setting is not followed on its own (design system).
+  return choice === 'system' ? 'light' : choice;
 }
 
 export interface Theme {
