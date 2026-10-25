@@ -24,6 +24,7 @@ import {
 import { useI18n } from '../i18n/I18nProvider';
 import { useOffline } from '../providers/hooks';
 import { useInsets } from '../providers/insets';
+import { ComingSoon, ComingSoonBadge } from '../ui/ComingSoon';
 import { VenueArt } from '../ui/VenueArt';
 
 export interface ScreenPhoto {
@@ -137,6 +138,8 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   darkTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  photoActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  photoSoon: { alignSelf: 'stretch' },
   glassPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -172,6 +175,26 @@ const styles = StyleSheet.create({
   },
   plainTitle: { flex: 1 },
 });
+
+/**
+ * The contract has no photo of a place yet, so the drawn place stands in for one: faded, said
+ * as "Photos of this place, coming soon", with the badge on the header's button row (owner's
+ * decision, 25 Oct 2026). TODO(contracts): show the photo when the contract gains a photo field.
+ */
+function PhotoComingSoon({ photo, children }: { photo: ScreenPhoto; children: ReactNode }) {
+  const { t } = useI18n();
+  return (
+    <ComingSoon
+      label={t('comingSoon.photo')}
+      badge={false}
+      grow
+      style={styles.photoSoon}
+      testID={`${photo.testID ?? 'screen-photo'}-soon`}
+    >
+      {children}
+    </ComingSoon>
+  );
+}
 
 /**
  * The top of a place or session page (S1): the drawn place, a dark fade at the top for the
@@ -213,13 +236,15 @@ function PhotoHeader({
     : { paddingTop: spacing.lg, backgroundColor: c.hero };
   return (
     <View testID="screen-header" style={{ backgroundColor: c.hero }}>
-      <VenueArt seed={photo.seed} height={PHOTO_HEIGHT} testID={photo.testID ?? 'screen-photo'}>
-        <View
-          aria-hidden
-          pointerEvents="none"
-          style={[styles.photoTop, { bottom: PHOTO_HEIGHT / 2 }, topFade]}
-        />
-      </VenueArt>
+      <PhotoComingSoon photo={photo}>
+        <VenueArt seed={photo.seed} height={PHOTO_HEIGHT} testID={photo.testID ?? 'screen-photo'}>
+          <View
+            aria-hidden
+            pointerEvents="none"
+            style={[styles.photoTop, { bottom: PHOTO_HEIGHT / 2 }, topFade]}
+          />
+        </VenueArt>
+      </PhotoComingSoon>
       <View style={styles.photoTop}>
         {onBack ? (
           <IconButton
@@ -231,7 +256,8 @@ function PhotoHeader({
         ) : (
           <View />
         )}
-        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <View style={styles.photoActions}>
+          <ComingSoonBadge testID="screen-photo-soon-badge" />
           {actions}
           {photo.onShare ? (
             <IconButton
@@ -305,7 +331,9 @@ function DarkPhotoHeader({
       style={[styles.darkHeader, { backgroundColor: c.hero, minHeight: height }]}
     >
       <View style={styles.darkArt}>
-        <VenueArt seed={photo.seed} height={height} testID={photo.testID ?? 'screen-photo'} />
+        <PhotoComingSoon photo={photo}>
+          <VenueArt seed={photo.seed} height={height} testID={photo.testID ?? 'screen-photo'} />
+        </PhotoComingSoon>
       </View>
       <View aria-hidden pointerEvents="none" style={[styles.fill, fade]} />
       <View style={[styles.darkContent, { minHeight: height }]}>
@@ -330,7 +358,8 @@ function DarkPhotoHeader({
           ) : (
             <View />
           )}
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          <View style={styles.photoActions}>
+            <ComingSoonBadge testID="screen-photo-soon-badge" />
             {actions}
             {photo.onShare ? (
               <Pressable

@@ -133,7 +133,7 @@ describe('Nearby (N2)', () => {
     expect(within(header).getByRole('heading', { name: en['nearby.heading'] })).toBeTruthy();
   });
 
-  it('ends the list with "Ask for a circle near you" when the flag is on, which says it is coming soon', async () => {
+  it('ends the list with "Ask for a circle near you" when the flag is on, its action marked coming soon', async () => {
     const view = await renderScreen(<NearbyScreen />, {
       cityId: CITY_RAWALPINDI.id,
       mock: { handlers: circleRequestsIn(CITY_RAWALPINDI.id) },
@@ -142,8 +142,11 @@ describe('Nearby (N2)', () => {
     const ask = await within(list).findByTestId('nearby-ask');
     expect(within(ask).getByText(en['nearby.ask.title'])).toBeTruthy();
     expect(list.lastElementChild).toBe(ask);
-    fireEvent.click(within(ask).getByTestId('nearby-ask-action'));
-    expect(await view.findByText(en['nearby.request.soon'])).toBeTruthy();
+    const action = within(ask).getByTestId('nearby-ask-action');
+    expect(action.getAttribute('aria-disabled')).toBe('true');
+    expect(action.textContent).toContain(en['comingSoon.badge']);
+    fireEvent.click(action);
+    expect(view.queryByText(en['nearby.request.soon'])).toBeNull();
   });
 
   it('hides "Ask for a circle near you" while the circle requests flag is off', async () => {

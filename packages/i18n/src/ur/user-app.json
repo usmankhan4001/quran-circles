@@ -711,6 +711,9 @@
   "nearby.area.city": "شہر",
   "home.next.directions": "راستہ",
   "home.prayer.now": "ابھی",
-  "home.special.sampleWhen": "رمضان دورۂ قرآن · نمونہ",
-  "home.special.sampleTitle": "خصوصی دورۂ قرآن پروگرام یہاں دکھائے جائیں گے"
+  "home.special.sampleWhen": "رمضان دورۂ قرآن",
+  "home.special.sampleTitle": "خصوصی دورۂ قرآن پروگرام یہاں دکھائے جائیں گے",
+  "comingSoon.badge": "جلد آ رہا ہے",
+  "comingSoon.label": "{feature}، جلد آ رہا ہے",
+  "comingSoon.photo": "اس جگہ کی تصاویر"
 }

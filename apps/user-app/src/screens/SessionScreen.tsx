@@ -34,6 +34,7 @@ import { useAuthStatus } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { shareText } from '../platform/share';
 import { useToast } from '../providers/Toasts';
+import { ComingSoon } from '../ui/ComingSoon';
 
 const styles = StyleSheet.create({
   stack: { gap: spacing.md + spacing.xxs },
@@ -319,28 +320,35 @@ export function SessionScreen({ sessionId }: { sessionId: string }) {
                 <InfoRow
                   leading={<Initials text={hostName ? initialsOf(hostName) : '—'} />}
                   title={hostName ?? t('session.host.unknown')}
+                  titleComingSoon={!hostName}
                   {...(circle?.teacherName
                     ? { subtitle: l(circle.name).text, subtitleLang: l(circle.name).lang }
                     : { subtitle: t('session.host.inPerson') })}
                   trailing={
-                    <Pressable
-                      role="link"
-                      aria-disabled={!onlineUrl}
-                      disabled={!onlineUrl}
-                      onPress={() => (onlineUrl ? void openUrl(onlineUrl) : undefined)}
-                      hitSlop={spacing.sm}
-                      style={styles.online}
-                      testID="session-online"
-                    >
-                      <Text variant="caption" color={onlineUrl ? 'textAccent' : 'textMuted'} strong>
-                        {t('session.online')}
-                      </Text>
-                      <Icon
-                        name="arrow-forward"
-                        size={14}
-                        color={onlineUrl ? c.textAccent : c.textMuted}
-                      />
-                    </Pressable>
+                    onlineUrl ? (
+                      <Pressable
+                        role="link"
+                        onPress={() => void openUrl(onlineUrl)}
+                        hitSlop={spacing.sm}
+                        style={styles.online}
+                        testID="session-online"
+                      >
+                        <Text variant="caption" color="textAccent" strong>
+                          {t('session.online')}
+                        </Text>
+                        <Icon name="arrow-forward" size={14} color={c.textAccent} />
+                      </Pressable>
+                    ) : (
+                      // No online link for this circle: drawn, but nothing to open (owner, 25 Oct 2026).
+                      <ComingSoon role="link" label={t('session.online')} testID="session-online">
+                        <View style={styles.online}>
+                          <Text variant="caption" color="textSecondary" strong>
+                            {t('session.online')}
+                          </Text>
+                          <Icon name="arrow-forward" size={14} color={c.textSecondary} />
+                        </View>
+                      </ComingSoon>
+                    )
                   }
                   testID="session-circle"
                 />
@@ -448,6 +456,7 @@ function InfoRow({
   leading,
   title,
   titleLang,
+  titleComingSoon = false,
   subtitle,
   subtitleLang,
   trailing,
@@ -457,6 +466,8 @@ function InfoRow({
   leading: ReactNode;
   title: string;
   titleLang?: 'en' | 'ur';
+  /** The title stands in for data the app does not have yet, such as the teacher's name. */
+  titleComingSoon?: boolean;
   subtitle?: string;
   subtitleLang?: 'en' | 'ur';
   trailing?: ReactNode;
@@ -464,13 +475,22 @@ function InfoRow({
   testID?: string;
 }) {
   const c = useTheme().colors;
+  const titleText = (
+    <Text variant="label" lang={titleLang}>
+      {title}
+    </Text>
+  );
   const body = (
     <>
       {leading}
       <View style={styles.grow}>
-        <Text variant="label" lang={titleLang}>
-          {title}
-        </Text>
+        {titleComingSoon ? (
+          <ComingSoon label={title} {...(testID ? { testID: `${testID}-soon` } : {})}>
+            {titleText}
+          </ComingSoon>
+        ) : (
+          titleText
+        )}
         {subtitle ? (
           <Text variant="caption" color="textSecondary" lang={subtitleLang}>
             {subtitle}

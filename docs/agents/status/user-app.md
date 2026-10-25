@@ -10,6 +10,24 @@ Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committ
 - **V1 bookmarks import banner.** It is mounted: `QuranIndexScreen` (`@qc/content`) draws `V1ImportBanner` at the top of the Quran tab, and `platform/contentStorage.ts` passes `readV1` on the web, so the offer appears when the browser has V1 bookmarks or a last-read place and someone is signed in. The earlier note that it was not mounted was out of date. New tests in `features/content/contentPackage.test.tsx` pin it on the app's Quran tab (offered with V1 data, Urdu and right to left, hidden with no V1 data, with only invalid entries, and while signed out).
 - Tests: `core/wait.test.ts` (new), `screens/SignInScreen.test.tsx` (+5), `screens/NearbyScreen.test.tsx` (+5), `features/nearby/schedule.test.ts` (+4), `features/content/contentPackage.test.tsx` (+5). `pnpm --filter @qc/user-app test`: 1075 passing in 69 files.
 
+## Placeholders marked "Coming soon" (2026-10-25)
+
+Owner's decision: features drawn with no data or code behind them stay visible, faded, with a small "Coming soon" badge, take no press and are announced as turned off. Only `apps/user-app/**` and the user-app keys in `packages/i18n` were edited; booking, the seat pass, the session's main follow button and `JoinHalqaSheet` were left alone (the join-pledge work).
+
+- **One treatment:** `src/ui/ComingSoon.tsx`. `ComingSoon` draws either a greyed button face from its label (an action not built) or faded children (content), with the badge after it; the wrapper is one accessible stop with `aria-disabled`, a role (`button`, `link` or `group`) and the name "{visible text}, coming soon" (`comingSoon.label`), so the spoken name holds the visible words. The drawing inside is `aria-hidden` with no pointer events; high contrast fades less (0.75 against 0.5). `ComingSoonBadge` is the pill on its own, for layouts that place it themselves. Works LTR and RTL (row that wraps, start/end only), at all four text sizes, light, dark and high contrast.
+- **Labelled:**
+  - Session page: "Join online" when the circle has no online link (`session-online`, role link). With a link it is the working link it was.
+  - Session page: "Host not listed yet" when the session has no circle and so no teacher (`session-circle-soon`). A teacher's name, when the circle has one, shows as before.
+  - Session and venue pages: the drawn place standing in for a photo (`session-photo-soon`, `venue-photo-soon`, "Photos of this place, coming soon"), with the badge on the header's button row (`screen-photo-soon-badge`). Done once in `ScreenFrame`, so both photo headers have it.
+  - Home: the Ramadan special programme row shown when no other programme is coming (`home-special-sample`). It no longer opens Nearby; "· Sample" is gone from `home.special.sampleWhen` (the badge says it).
+  - Nearby, with `circle_requests` on: "Ask for a circle" at the end of the list (`nearby-ask-action`) and "Request a circle near me" under the empty list (`nearby-request`, no longer the empty state's secondary button). Neither shows the toast any more; with the flag off both stay hidden.
+- **Not labelled, and why:**
+  - Reciter audio and the day/night look in the Quran reader: drawn in `packages/content` (`QuranReaderScreen`), outside this lane; both already show switched off with "coming soon" in their names. To share this badge the content lane would need it (or the kit) to offer one.
+  - Livestream and GPS / "Use my location": not drawn anywhere in the user app (`nearby.location.*` keys are unused). Nothing to label.
+  - Picture cards (Home "Circles near you", Nearby map "nearest") use the same drawn place, but each card is a working link to the session or place; fading it would hide a real feature. Only the large photo headers carry the badge.
+- Keys (English and Urdu, Urdu drafts under the file's review marker): `comingSoon.badge`, `comingSoon.label`, `comingSoon.photo`; changed `home.special.sampleWhen`.
+- Tests: `ui/ComingSoon.test.tsx` (the 16-combination matrix, content in both languages, high contrast, no press, badge placement), `screens/comingSoon.test.tsx` (each placeholder in English and Urdu: label, badge, `aria-disabled` and role, nothing happens on press; the working online link and teacher name stay as they were), `HomeScreen.test.tsx` (Ramadan row in both languages), `redesign.test.tsx` (ask action). Helper `test/comingSoon.ts`. `pnpm --filter @qc/user-app test`: 1070 passing in 70 files; typecheck, `@qc/i18n` tests, eslint and prettier clean.
+
 ## App icon from the logo (2026-10-18)
 
 - The placeholder icons are replaced by the Quran Circles logo (the hand with the Quran, تنظیمِ اسلامی and the wordmark), generated with every inked pixel inside each platform's safe zone. Generator and the full set (iOS, Android legacy and adaptive, PWA, favicon, store icons): project files `store-assets/`.
@@ -288,4 +306,4 @@ Fixed after the 20 Oct "Halqa discovery, join sheet, habit tracking" commit:
 Open, for the orchestrator:
 
 - **Seat booking is unreachable (high).** The session screen's primary button now follows the venue; nothing opens `register/[sessionId]`, so people cannot reserve a seat. `tests/e2e/src/flows/pwa/attendee.spec.ts` ("register for a session") fails for this reason. Decide whether registration returns or the e2e flow and `registerState` are retired.
-- Map shows a list of places without `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`; the Quran text needs api.alquran.cloud; reader audio ("Recitation coming soon") is not built; "Host not listed yet" and "Join online" are stand-ins.
+- Map shows a list of places without `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`; the Quran text needs api.alquran.cloud; reader audio ("Recitation coming soon") is not built; "Host not listed yet" and "Join online" are stand-ins (now marked "Coming soon", 2026-10-25).

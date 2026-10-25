@@ -39,6 +39,7 @@ import { useNav } from '../nav/NavProvider';
 import { useAuthStatus, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useAreas, useCities } from '../features/places/usePlaces';
+import { ComingSoon } from '../ui/ComingSoon';
 import { MapPreviewCard } from '../ui/MapPreviewCard';
 import { PictureCard } from '../ui/PictureCard';
 import { SearchButton } from '../ui/SearchButton';
@@ -118,6 +119,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   specialText: { flex: 1 },
+  specialSoon: { flex: 1, gap: spacing.md },
   seeAll: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   below: { paddingTop: spacing.xl, paddingHorizontal: GUTTER, gap: spacing.xl },
 });
@@ -212,7 +214,7 @@ function AreaTrigger({ label, onPress }: { label: string; onPress: () => void })
 /**
  * The special programme row at the foot of the fold (D17): a white card with an amber line
  * (the programme and when), the title and venue in bold, and a chevron. It shows the season's
- * other programme when one is coming; until then a sample row, marked as one, opens Nearby.
+ * other programme when one is coming; until then the drawn Ramadan row shows as coming soon.
  */
 function SpecialProgramCard({ item }: { item: OccurrenceWithSession | undefined }) {
   const { t, l, locale } = useI18n();
@@ -220,57 +222,62 @@ function SpecialProgramCard({ item }: { item: OccurrenceWithSession | undefined 
   const theme = useTheme();
   const w = useTextWeight();
   const c = theme.colors;
-  let eyebrow: string;
-  let line: string;
-  let lineLang: 'en' | 'ur' | undefined;
-  let onPress: () => void;
-  let testID: string;
-  if (item) {
-    const session = occurrenceAsSession(item);
-    const title = l(session.title);
-    const venue = l(session.venue.name);
-    const when = describeOccurrence(item, session.timezone, locale);
-    eyebrow = t('home.dora.when', { program: t(`programs.${session.program}`), when });
-    line = `${title.text}${t('schedule.separator')}${venue.text}`;
-    lineLang = title.lang;
-    onPress = () => nav.go({ name: 'session', sessionId: item.sessionId });
-    testID = `home-other-${item.id}`;
-  } else {
-    eyebrow = t('home.special.sampleWhen');
-    line = t('home.special.sampleTitle');
-    onPress = () => nav.tab({ name: 'nearby' });
-    testID = 'home-special-sample';
+  const cardLook = (pressed: boolean) => ({
+    backgroundColor: pressed ? c.surfaceMuted : c.surface,
+    borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
+    boxShadow: theme.mode === 'light' ? elevation.low : undefined,
+  });
+  const words = (eyebrow: string, line: string, lineLang?: 'en' | 'ur') => (
+    <View style={styles.specialText}>
+      <Text color="textWarning" decorative numberOfLines={1} variant="caption" style={w('700')}>
+        {eyebrow}
+      </Text>
+      <Text
+        decorative
+        numberOfLines={2}
+        {...(lineLang ? { lang: lineLang } : {})}
+        variant="label"
+        style={[w('700'), { marginTop: 2 }]}
+      >
+        {line}
+      </Text>
+    </View>
+  );
+  if (!item) {
+    // No special programme data yet (Ramadan events): drawn, not pressable (owner, 25 Oct 2026).
+    const eyebrow = t('home.special.sampleWhen');
+    const line = t('home.special.sampleTitle');
+    return (
+      <View style={styles.special}>
+        <View style={[styles.specialCard, cardLook(false)]}>
+          <ComingSoon
+            label={`${eyebrow}, ${line}`}
+            grow
+            style={styles.specialSoon}
+            testID="home-special-sample"
+          >
+            {words(eyebrow, line)}
+          </ComingSoon>
+        </View>
+      </View>
+    );
   }
+  const session = occurrenceAsSession(item);
+  const title = l(session.title);
+  const venue = l(session.venue.name);
+  const when = describeOccurrence(item, session.timezone, locale);
+  const eyebrow = t('home.dora.when', { program: t(`programs.${session.program}`), when });
+  const line = `${title.text}${t('schedule.separator')}${venue.text}`;
   return (
     <View style={styles.special}>
       <Pressable
         role="button"
         aria-label={`${eyebrow}, ${line}`}
-        testID={testID}
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.specialCard,
-          {
-            backgroundColor: pressed ? c.surfaceMuted : c.surface,
-            borderColor: theme.mode === 'highContrast' ? c.borderStrong : c.hairline,
-            boxShadow: theme.mode === 'light' ? elevation.low : undefined,
-          },
-        ]}
+        testID={`home-other-${item.id}`}
+        onPress={() => nav.go({ name: 'session', sessionId: item.sessionId })}
+        style={({ pressed }) => [styles.specialCard, cardLook(pressed)]}
       >
-        <View style={styles.specialText}>
-          <Text color="textWarning" decorative numberOfLines={1} variant="caption" style={w('700')}>
-            {eyebrow}
-          </Text>
-          <Text
-            decorative
-            numberOfLines={2}
-            {...(lineLang ? { lang: lineLang } : {})}
-            variant="label"
-            style={[w('700'), { marginTop: 2 }]}
-          >
-            {line}
-          </Text>
-        </View>
+        {words(eyebrow, line, title.lang)}
         <Icon name="chevron-forward" size={15} color={c.textMuted} />
       </Pressable>
     </View>

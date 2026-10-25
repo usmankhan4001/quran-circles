@@ -20,6 +20,7 @@ import {
   renderScreen,
   waitFor,
 } from '../test/harness';
+import { expectComingSoon } from '../test/comingSoon';
 import { ayahOfTheDay } from '../features/home/ayah';
 import { armStartFrameDeferral } from '../ui/startFrame';
 import { HomeScreen } from './HomeScreen';
@@ -167,25 +168,38 @@ describe('HomeScreen', () => {
     } else {
       expect(row.getAttribute('aria-label')).toContain(en['home.special.sampleWhen']);
       fireEvent.click(row);
-      expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
+      expect(view.world.nav.last()).toBeUndefined();
     }
   });
 
-  it('shows the sample special row, marked as a sample, when no other programme is coming', async () => {
-    const view = await renderScreen(<HomeScreen />, {
-      cityId: CITY_RAWALPINDI.id,
-      mock: {
-        handlers: {
-          ...configFor('circles'),
-          'occurrences.list': () => ({ items: [], nextCursor: null }),
+  it.each(['en', 'ur'] as const)(
+    'shows the drawn Ramadan row as coming soon, not pressable, when no other programme is coming (%s)',
+    async (locale) => {
+      const words = messages[locale];
+      const view = await renderScreen(<HomeScreen />, {
+        locale,
+        cityId: CITY_RAWALPINDI.id,
+        mock: {
+          handlers: {
+            ...configFor('circles'),
+            'occurrences.list': () => ({ items: [], nextCursor: null }),
+          },
         },
-      },
-    });
-    const row = await view.findByTestId('home-special-sample');
-    expect(row.textContent).toContain(en['home.special.sampleTitle']);
-    fireEvent.click(row);
-    expect(view.world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
-  });
+      });
+      const row = await view.findByTestId('home-special-sample');
+      expect(row.textContent).toContain(words['home.special.sampleWhen']);
+      expect(row.textContent).toContain(words['home.special.sampleTitle']);
+      expectComingSoon(
+        row,
+        `${words['home.special.sampleWhen']}, ${words['home.special.sampleTitle']}`,
+        locale,
+        { role: 'group' },
+      );
+      fireEvent.click(row);
+      fireEvent.click(within(row).getByText(words['home.special.sampleTitle']));
+      expect(view.world.nav.last()).toBeUndefined();
+    },
+  );
 
   it('shows a prayer placeholder until the content package provides the strip', async () => {
     const view = await renderScreen(<HomeScreen />, { cityId: CITY_RAWALPINDI.id });
