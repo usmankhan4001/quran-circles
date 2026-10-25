@@ -97,7 +97,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
           <IconButton
             testID="today-post-update"
             icon="bell"
-            variant="onHero"
+           
             accessibilityLabel={t('admin.home.postUpdate')}
             onPress={() => nav.push(routes.postUpdate())}
           />
@@ -107,7 +107,7 @@ export function TodayScreen({ now = new Date() }: TodayScreenProps) {
         <View>
           {/* The page heading for screen readers; the artboard draws none (D17). */}
           <View style={hidden}>
-            <Text variant="caption" color="textOnHero" heading={1}>
+            <Text variant="caption" color="textSecondary" heading={1}>
               {heading}
             </Text>
           </View>

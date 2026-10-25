@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { HeroHeader, IconButton, Text, screenGutter, spacing, useTheme } from '@qc/ui';
+import { IconButton, Text, screenGutter, spacing, useTheme } from '@qc/ui';
 
 export interface ScreenProps {
   /** The screen title. A hero screen may leave it out when its content carries the heading. */
@@ -82,6 +82,61 @@ function PlainHeader({
   );
 }
 
+/**
+ * The flat top of a tab screen (design: no coloured band): a small muted line, the title in ink,
+ * the scope pill or avatar beside it, and whatever the screen leads with underneath.
+ */
+function FlatHeader({
+  title,
+  subtitle,
+  eyebrow,
+  actions,
+  leading,
+  children,
+  testID,
+}: Pick<ScreenProps, 'title' | 'subtitle' | 'eyebrow' | 'actions' | 'leading' | 'testID'> & {
+  children?: ReactNode;
+}) {
+  const { colors } = useTheme();
+  const hasTop = Boolean(eyebrow || actions || leading);
+  return (
+    <View
+      testID={testID}
+      style={{
+        backgroundColor: colors.background,
+        paddingHorizontal: screenGutter,
+        paddingTop: spacing.md,
+        gap: spacing.sm,
+      }}
+    >
+      {hasTop ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 48 }}>
+          <View style={{ flex: 1, gap: spacing.xxs }}>
+            {eyebrow ? (
+              <Text variant="caption" color="textSecondary">
+                {eyebrow}
+              </Text>
+            ) : null}
+            {leading}
+          </View>
+          {actions}
+        </View>
+      ) : null}
+      {title ? (
+        <Text variant="title1" heading={1}>
+          {title}
+        </Text>
+      ) : null}
+      {subtitle ? (
+        <Text variant="caption" color="textSecondary">
+          {subtitle}
+        </Text>
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
 /** Lets a form deep inside a screen put its main action in the pinned bar at the bottom. */
 const FooterSlot = createContext<((node: ReactNode) => void) | null>(null);
 
@@ -137,18 +192,16 @@ export function Screen({
           actions={actions}
         />
       ) : (
-        <HeroHeader
+        <FlatHeader
           testID={testID ? `${testID}-hero` : undefined}
           title={title}
           subtitle={subtitle}
           eyebrow={eyebrow}
-          onBack={onBack}
-          backLabel={backLabel}
           actions={actions}
           leading={leading}
         >
           {hero}
-        </HeroHeader>
+        </FlatHeader>
       )}
       {plain && hero ? <View style={{ paddingHorizontal: screenGutter }}>{hero}</View> : null}
       <ScrollView
