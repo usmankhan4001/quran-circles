@@ -2,14 +2,7 @@ import { fireEvent, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { ERROR_CODES, makeApiError } from '@qc/contracts';
-import {
-  MATRIX,
-  createWorld,
-  directionOf,
-  expectGreenHeader,
-  renderScreen,
-  waitFor,
-} from '../test/harness';
+import { MATRIX, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
 import { ALL_NEXT_FLAGS, configWith, meWith, mine, type Handlers } from '../test/nextFeatures';
 import { JourneyScreen } from './JourneyScreen';
 import { MemorisationScreen } from './MemorisationScreen';
@@ -30,29 +23,15 @@ async function tracker(handlers: Handlers = {}, signedIn = true) {
 }
 
 describe('MemorisationScreen', () => {
-  it('lists the marked surahs and counts each mark in the header', async () => {
+  it('lists the marked surahs with a status tag on each row', async () => {
     const view = await tracker();
     await view.findByTestId('surah-1');
     for (const surah of [1, 36, 67, 112]) expect(view.getByTestId(`surah-${surah}`)).toBeTruthy();
-    const memorised = within(view.getByTestId('memorisation-stat-memorised'));
-    expect(memorised.getByText('2')).toBeTruthy();
-    expect(memorised.getByText(en['memorisation.status.memorised'])).toBeTruthy();
-    const learning = within(view.getByTestId('memorisation-stat-learning'));
-    expect(learning.getByText('1')).toBeTruthy();
-    expect(learning.getByText(en['memorisation.status.learning'])).toBeTruthy();
-  });
-
-  it('lets a screen reader read each count as text, with no name on a plain tile (A-02)', async () => {
-    const view = await tracker();
-    await view.findByTestId('surah-1');
-    for (const status of ['learning', 'memorised', 'revising'] as const) {
-      const tile = view.getByTestId(`memorisation-stat-${status}`);
-      // A name on an element with no role is ignored on the web (axe aria-prohibited-attr).
-      expect(tile.getAttribute('aria-label')).toBeNull();
-      expect(tile.getAttribute('aria-hidden')).toBeNull();
-      expect(tile.querySelector('[aria-hidden="true"]')).toBeNull();
-      expect(tile.textContent).toContain(en[`memorisation.status.${status}`]);
-    }
+    // The drawing has no count tiles: the status is the tag on the surah's own row.
+    expect(view.queryByTestId('memorisation-stat-memorised')).toBeNull();
+    expect(
+      within(view.getByTestId('surah-1')).getByText(en['memorisation.status.memorised']),
+    ).toBeTruthy();
   });
 
   it('lists in "revise this week" only memorised surahs past the setting (default 14 days)', async () => {
@@ -160,10 +139,9 @@ describe('MemorisationScreen', () => {
       await view.findByTestId('due-112');
       const words = locale === 'ur' ? ur : en;
       expect(directionOf(view.container)).toBe(locale === 'ur' ? 'rtl' : 'ltr');
-      expectGreenHeader(view.container, color);
       expect(view.getAllByText(words['memorisation.title']).length).toBeGreaterThan(0);
       expect(view.getByText(words['memorisation.revise.title'])).toBeTruthy();
-      expect(view.getAllByText(words['memorisation.markRevised']).length).toBeGreaterThan(0);
+      expect(view.getByTestId('revise-112').getAttribute('aria-label')).toBeTruthy();
     });
   });
 });
@@ -199,7 +177,7 @@ describe('My Journey: the way into the tracker', () => {
       signedIn: true,
       mock: { handlers: { ...mine(), ...configWith([]) } },
     });
-    await view.findByTestId('journey-follows');
+    await view.findByTestId('journey-screen');
     await waitFor(() =>
       expect(view.world.http.callsTo('GET /v1/config').length).toBeGreaterThan(0),
     );

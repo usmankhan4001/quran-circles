@@ -44,7 +44,7 @@ export function TabFrame({ header, children, testID }: TabFrameProps) {
       >
         {header}
         {offline ? (
-          <Banner kind="offline" title={t('ui.offlineTitle')} testID="offline-banner" />
+          <Banner kind="offline" title={t('states.offline.banner')} testID="offline-banner" />
         ) : null}
         {children}
       </ScrollView>

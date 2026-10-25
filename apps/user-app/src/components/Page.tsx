@@ -65,7 +65,7 @@ export function Page({
       style={[styles.root, { backgroundColor: c.background, paddingTop: insets.top }]}
     >
       {onBack || barTitle || trailing ? (
-        <View style={styles.bar}>
+        <View style={styles.bar} testID="screen-header">
           {onBack ? (
             <IconButton
               icon="chevron-back"
@@ -87,7 +87,7 @@ export function Page({
         </View>
       ) : null}
       {offline ? (
-        <Banner kind="offline" title={t('ui.offlineTitle')} testID="offline-banner" />
+        <Banner kind="offline" title={t('states.offline.banner')} testID="offline-banner" />
       ) : null}
       {scroll ? (
         <ScrollView
