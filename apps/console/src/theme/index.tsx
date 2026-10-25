@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import {
   colors as palette,
-  consoleRedesign,
   consoleTagColors,
   consoleFloatShadow,
   fontFallbacks,
@@ -43,7 +42,7 @@ const rem = (px: number) => `${px / 16}rem`;
  */
 export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   const vars: Record<string, string> = {};
-  const colors: SemanticColors = { ...semanticColors[mode], ...consoleRedesign[mode] };
+  const colors: SemanticColors = semanticColors[mode];
   for (const [name, value] of Object.entries(colors)) vars[`--c-${kebab(name)}`] = value;
   // D17: the sidebar is white with a deep emerald brand block on top; these name that block.
   vars['--c-sidebar-from'] = colors.accentPressed;
