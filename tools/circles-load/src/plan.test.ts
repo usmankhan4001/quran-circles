@@ -58,6 +58,12 @@ describe('buildPlan', () => {
     const plan = buildPlan(rows, new Map([['https://maps.app.goo.gl/a', at(47.4, 8.5)]]));
     expect(plan.counts.pinsFromNotes.plusCodes).toBe(1);
   });
+  it('uses a geocoded pin for a venue with no link, and counts it', () => {
+    const rows = cleanRows([row({ id: '1' })]);
+    const key = rows[0]!.venueKey;
+    const plan = buildPlan(rows, new Map(), new Map([[key, { lat: 31.5, lng: 74.3 }]]));
+    expect(plan.counts).toMatchObject({ venuesImportable: 1, pinsFromGeocoding: 1 });
+  });
   it('does not import a held row or a row skipped as a duplicate', () => {
     const rows = cleanRows([
       row({ id: '71', map_link: 'https://maps.app.goo.gl/a' }),

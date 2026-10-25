@@ -37,6 +37,7 @@ export interface Plan {
     /** Rows whose venue has no trusted pin yet. */
     sessionsWaitingForLocation: number;
     pinsFromNotes: { coordinates: number; plusCodes: number };
+    pinsFromGeocoding: number;
   };
 }
 
@@ -53,6 +54,8 @@ export const linksOf = (rows: readonly CleanRow[]): string[] => [
 export function buildPlan(
   rows: readonly CleanRow[],
   resolutions: ReadonlyMap<string, Resolution>,
+  /** Pins found by geocoding, by venue key. Only high-confidence results belong here. */
+  geocoded: ReadonlyMap<string, LatLng> = new Map(),
 ): Plan {
   const groups = new Map<string, CleanRow[]>();
   for (const r of rows) groups.set(r.venueKey, [...(groups.get(r.venueKey) ?? []), r]);
@@ -98,7 +101,16 @@ export function buildPlan(
       fromPlus++;
     }
   }
-  if (fromPlus > 0) locations = locateVenues(inputs, resolutions);
+  let fromGeocoding = 0;
+  for (const input of inputs) {
+    const pin = geocoded.get(input.venueKey);
+    const loc = locations.find((l) => l.venueKey === input.venueKey);
+    if (pin && !input.given && loc?.status !== 'resolved') {
+      input.given = pin;
+      fromGeocoding++;
+    }
+  }
+  if (fromPlus > 0 || fromGeocoding > 0) locations = locateVenues(inputs, resolutions);
 
   const venues = [...groups.entries()].map(([key, group]): PlannedVenue => {
     const location = locations.find((l) => l.venueKey === key)!;
@@ -139,6 +151,7 @@ export function buildPlan(
         .filter((v) => !v.importable && v.location.status !== 'resolved')
         .reduce((n, v) => n + v.sessionRows.length, 0),
       pinsFromNotes: { coordinates: fromCoords, plusCodes: fromPlus },
+      pinsFromGeocoding: fromGeocoding,
     },
   };
 }
