@@ -26,6 +26,10 @@ Page-by-page pass (same day):
 - Checked on screen against the mock API: Sessions, Coordinators, Daily ayahs, Settings, Import, Sign in, Welcome. Not compared one by one: Posters, Exports, Audit, Venues, Registrations tables (colours, radii and cards follow the new look).
 - Board gaps closed: Daily ayahs has the seven-day strip (press a day to show only that day; the date range, scope filter and picks logic are unchanged); Settings uses segmented controls for Hijri adjustment and season; the Exports form is a single 640 px column. Also checked on screen: Exports, Audit, Venues.
 
+- **Venue location picker** (`components/LocationPicker.tsx`, opened from "Set location" on each venue row in `pages/VenuesPage.tsx`, and a "Map pin" column showing pinned or not): drag the map under a fixed centre pin, arrow keys and +/- zoom buttons work too, "Use this location" saves the centre rounded to six places through `adminVenues.update` (`venue.update` permission; the button is hidden without it). No address search. The map maths is copied from `apps/admin-app/src/features/venues/location/tiles.ts` into `lib/map/tiles.ts` (apps may not import each other; move the three copies to a shared package when the ui or contracts lane offers one). Tests: `pages/venue-location.test.tsx`, `lib/map/tiles.test.ts`.
+- **Needs the platform lane:** the console's Content-Security-Policy in `infra/caddy/Caddyfile` (`@console`) allows images only from 'self', so the map tiles will not load in production until `https://tile.openstreetmap.org` is added to its `img-src` (the app one already has it). I did not touch infra.
+- Registrations checked on screen (no party size, number cards, export button).
+
 Not done:
 - "Send it by SMS" on the code screen: no API for a second channel (left out on the coordinator's say).
 - Poster maker files belong to the "Build poster maker" thread; untouched.
