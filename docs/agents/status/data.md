@@ -19,9 +19,11 @@ Branch: lane/data/tanzeem-seed
 
 - `tools/circles-load` (`@qc/circles-load`): `report` command. Cleans the circles CSV (days, weeks of month, times, +92 phones), skips exact repeats, holds probable typos and wrong-city addresses, resolves map links (Google hosts only, redirects by hand), reads coordinates and plus codes from notes, rejects shared or far-off pins, and prints counts. Never writes to a database. 45 tests on synthetic rows.
 
+- Geocoding step (Google, owner's key kept outside the repo in a local env file), approximate pins flagged (owner chose to import them as test data), and the builders that turn planned venues and rows into API import rows, validated against the real contracts. 62 tests.
+
 ## In progress
 
-- Mapping the importable rows to the API import bodies (venues, sessions), the dry run through the API, and the batch manifest and rollback.
+- The dry run through the API, the batch manifest, and the rollback (archive exactly what was imported). Needs the API address and a sign-in.
 
 ## Blocked
 
