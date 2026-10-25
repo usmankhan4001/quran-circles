@@ -237,6 +237,8 @@ export const elevation = {
   medium: undefined,
   /** Bottom sheets only. */
   high: '0px -12px 40px rgba(14, 21, 18, 0.10)',
+  /** The floating tab bar, the other thing that lifts off the page. */
+  floating: '0px 10px 30px rgba(14, 21, 18, 0.14)',
 } as const;
 export type ElevationToken = keyof typeof elevation;
 
