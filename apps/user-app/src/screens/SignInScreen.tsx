@@ -3,6 +3,7 @@ import { issueMessageKey } from '@qc/contracts';
 import { Button, CodeField, Text, TextField, spacing } from '@qc/ui';
 import { ScreenFrame } from '../components/ScreenFrame';
 import { errorMessageKey } from '../core/errors';
+import { retryAfterText } from '../core/wait';
 import { useSignIn } from '../features/auth/useSignIn';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
@@ -31,11 +32,12 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
             ? t('signIn.problem.name')
             : flow.error
               ? flow.error.code === 'rate_limited' || flow.error.code === 'otp_too_many_attempts'
-                ? `${t(errorMessageKey(flow.error.code))}${
-                    flow.error.retryAfterSeconds
-                      ? ` ${t('signIn.retryAfter', { count: flow.error.retryAfterSeconds })}`
-                      : ''
-                  }`
+                ? [
+                    t(errorMessageKey(flow.error.code)),
+                    retryAfterText(t, flow.error.retryAfterSeconds),
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
                 : t(errorMessageKey(flow.error.code))
               : undefined;
 

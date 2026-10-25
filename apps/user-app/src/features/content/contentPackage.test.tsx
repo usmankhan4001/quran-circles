@@ -237,3 +237,63 @@ describe('the Quran & Prayer package inside the app', () => {
     expect(marks).toHaveLength(1);
   });
 });
+
+describe('the one-time import of V1 browser bookmarks on the Quran tab', () => {
+  type Options = Parameters<typeof createContentModules>[0];
+  /** A stand-in for the signed-in API client: the offer only asks whether there is one. */
+  const signedInApi = {} as unknown as NonNullable<ReturnType<Options['getApi']>>;
+
+  function withV1(v1: Record<string, string>, signedIn = true) {
+    return createContentModules({
+      storage: createMemoryStorage(),
+      fetch: async () => new Response('{}', { status: 503 }),
+      getApi: () => (signedIn ? signedInApi : null),
+      readV1: (key) => v1[key] ?? null,
+    });
+  }
+
+  /** Lets the banner's status check settle, so "not shown" is not just "not shown yet". */
+  const settle = () => new Promise((r) => setTimeout(r, 30));
+
+  it('offers to bring over the bookmarks the old browser app saved', async () => {
+    const content = withV1({ quran_bookmarks: JSON.stringify(['2:255', '1:1']) });
+    const view = await renderScreen(<QuranPrayerScreen />, { content, signedIn: true });
+    expect(await view.findByTestId('v1-import-run')).toBeTruthy();
+    expect(view.getByText(en['quran.import.title'])).toBeTruthy();
+  });
+
+  it('offers it in Urdu, right to left, on an Urdu screen', async () => {
+    const content = withV1({ quran_bookmarks: JSON.stringify(['2:255']) });
+    const view = await renderScreen(<QuranPrayerScreen />, {
+      content,
+      signedIn: true,
+      locale: 'ur',
+    });
+    await view.findByTestId('v1-import-run');
+    expect(view.getByText(ur['quran.import.title'])).toBeTruthy();
+    expect(directionOf(view.container)).toBe('rtl');
+  });
+
+  it('shows nothing when the browser has no V1 data', async () => {
+    const view = await renderScreen(<QuranPrayerScreen />, { content: withV1({}), signedIn: true });
+    await view.findByTestId('section-switch');
+    await settle();
+    expect(view.queryByTestId('v1-import-run')).toBeNull();
+  });
+
+  it('shows nothing when the V1 data holds no real ayah', async () => {
+    const content = withV1({ quran_bookmarks: JSON.stringify(['999:1', 'nonsense']) });
+    const view = await renderScreen(<QuranPrayerScreen />, { content, signedIn: true });
+    await view.findByTestId('section-switch');
+    await settle();
+    expect(view.queryByTestId('v1-import-run')).toBeNull();
+  });
+
+  it('waits for sign-in before offering it', async () => {
+    const content = withV1({ quran_bookmarks: JSON.stringify(['2:255']) }, false);
+    const view = await renderScreen(<QuranPrayerScreen />, { content });
+    await view.findByTestId('section-switch');
+    await settle();
+    expect(view.queryByTestId('v1-import-run')).toBeNull();
+  });
+});

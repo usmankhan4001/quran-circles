@@ -1,7 +1,14 @@
 # Status: user-app
 
-Updated: 2026-10-18
+Updated: 2026-10-25
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## Audit fixes (25 Oct 2026): sign-in wait, map list without coordinates, V1 import banner
+
+- **Sign-in wait in words.** The sign-in screen said "Try again in 847 seconds." It now says "Try again in about 15 minutes." (`core/wait.ts`: `waitOf` and `retryAfterText`; seconds under a minute, minutes up to 90, then hours, rounded up and "about" when not whole; nothing for a missing or unusable wait). New plural keys `signIn.wait.{seconds,minutes,aboutMinutes,hours,aboutHours}.{one,other}` (Urdu drafts). **Not changed:** `components/JoinHalqaSheet.tsx` still uses `signIn.retryAfter` (raw seconds) because the join flow is being replaced by the join pledge; whoever owns that rewrite should use `retryAfterText(t, seconds)`. The old `signIn.retryAfter.*` keys stay until then.
+- **Map list without a map key.** `ListOnlyMapView` no longer prints "31.5204, 74.3587" under each place. Each place shows its area and city in the reader's language and, when the person picked an area, how far it is ("Saddar, Rawalpindi · 2.1 km"), from `markersFromSessions(..., locationOf)` and `describeLocation` (`features/nearby/markers.ts`); `MapMarker.location` is new and optional. A place whose area and city cannot be read gets no location line. The "map unavailable" note has a pin icon and friendlier words (`nearby.map.unavailable`, Urdu draft).
+- **V1 bookmarks import banner.** It is mounted: `QuranIndexScreen` (`@qc/content`) draws `V1ImportBanner` at the top of the Quran tab, and `platform/contentStorage.ts` passes `readV1` on the web, so the offer appears when the browser has V1 bookmarks or a last-read place and someone is signed in. The earlier note that it was not mounted was out of date. New tests in `features/content/contentPackage.test.tsx` pin it on the app's Quran tab (offered with V1 data, Urdu and right to left, hidden with no V1 data, with only invalid entries, and while signed out).
+- Tests: `core/wait.test.ts` (new), `screens/SignInScreen.test.tsx` (+5), `screens/NearbyScreen.test.tsx` (+5), `features/nearby/schedule.test.ts` (+4), `features/content/contentPackage.test.tsx` (+5). `pnpm --filter @qc/user-app test`: 1075 passing in 69 files.
 
 ## App icon from the logo (2026-10-18)
 
@@ -249,7 +256,7 @@ Wave 2 of `docs/agents/briefs/user-app.md`, in `apps/user-app`. Proved on the we
 - Phone numbers assume Pakistan (+92) when typed without a country code. Other countries need the code typed.
 - Demographic profile fields (age band, prior reading) are not built; they are not in this wave's list.
 - Request-a-circle, session companion and the home-screen widget are later waves. The request-a-circle action shows a "coming soon" message.
-- `V1ImportBanner` from `@qc/content` is not mounted; the data-migration lane should say where it belongs.
+- `V1ImportBanner` from `@qc/content` is mounted on the Quran tab through `QuranIndexScreen` (checked 25 Oct 2026; see above).
 
 ## Contract change requests
 

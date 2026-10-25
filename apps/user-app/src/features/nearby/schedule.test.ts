@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createTranslator } from '../../i18n/translate';
 import { SESSIONS } from '../../test/factories';
 import { describeOccurrence, describeSchedule } from './schedule';
-import { markersFromSessions } from './markers';
+import { describeLocation, markersFromSessions } from './markers';
 
 const en = createTranslator('en');
 const ur = createTranslator('ur');
@@ -54,5 +54,50 @@ describe('markersFromSessions', () => {
   it('writes pins in Urdu when it can, and in English when there is no Urdu', () => {
     const urdu = markersFromSessions([SESSIONS.taraweeh], 'ur', () => '');
     expect(urdu[0]!.title).toBe(SESSIONS.taraweeh.venue.name.ur ?? SESSIONS.taraweeh.venue.name.en);
+  });
+
+  it('gives each pin the location its venue is worded with, and none when there is nothing', () => {
+    const [withPlace] = markersFromSessions(
+      [SESSIONS.taraweeh],
+      'en',
+      () => '',
+      (venue) => `area of ${venue.id}`,
+    );
+    expect(withPlace!.location).toBe(`area of ${SESSIONS.taraweeh.venueId}`);
+    const [without] = markersFromSessions(
+      [SESSIONS.taraweeh],
+      'en',
+      () => '',
+      () => undefined,
+    );
+    expect(without).not.toHaveProperty('location');
+    const [unasked] = markersFromSessions([SESSIONS.taraweeh], 'en', () => '');
+    expect(unasked).not.toHaveProperty('location');
+  });
+});
+
+describe('describeLocation', () => {
+  const marks = { comma: ', ', separator: ' · ' };
+
+  it('joins the area, the city and the distance', () => {
+    expect(
+      describeLocation({ ...marks, area: 'Saddar', city: 'Rawalpindi', distance: '2 km' }),
+    ).toBe('Saddar, Rawalpindi · 2 km');
+  });
+
+  it('leaves out what is not known', () => {
+    expect(describeLocation({ ...marks, city: 'Rawalpindi' })).toBe('Rawalpindi');
+    expect(describeLocation({ ...marks, area: 'Saddar', distance: '900 m' })).toBe(
+      'Saddar · 900 m',
+    );
+    expect(describeLocation({ ...marks, distance: '900 m' })).toBe('900 m');
+    expect(describeLocation({ ...marks, area: ' ', city: '' })).toBeUndefined();
+    expect(describeLocation(marks)).toBeUndefined();
+  });
+
+  it('uses the language’s comma', () => {
+    expect(describeLocation({ comma: '، ', separator: ' · ', area: 'صدر', city: 'راولپنڈی' })).toBe(
+      'صدر، راولپنڈی',
+    );
   });
 });

@@ -6,6 +6,11 @@ export interface MapMarker {
   lng: number;
   title: string;
   subtitle?: string;
+  /**
+   * Where the place is, in words: its area and city, and how far away it is when the person's
+   * area is known. The list-only map shows it instead of raw coordinates.
+   */
+  location?: string;
   /** How many circles are at the place; drawn on the pin when more than one. */
   count?: number;
 }

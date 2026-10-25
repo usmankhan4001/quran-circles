@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import {
   Button,
@@ -24,7 +24,7 @@ import {
   hasAnyFilter,
   type NearbyFilters,
 } from '../features/nearby/filters';
-import { markersFromSessions } from '../features/nearby/markers';
+import { describeLocation, markersFromSessions } from '../features/nearby/markers';
 import { useOrigin } from '../features/nearby/useOrigin';
 import { distanceParts, haversineMetres } from '../core/distance';
 import { useSessionList } from '../features/nearby/useSessions';
@@ -110,22 +110,38 @@ export function NearbyScreen() {
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
 
   const list = useSessionList(filters, { origin });
+  const distanceText = useCallback(
+    (to: { lat: number; lng: number }) => {
+      if (!origin) return undefined;
+      const parts = distanceParts(haversineMetres(origin, to), locale);
+      return parts.unit === 'km'
+        ? t('home.distance.km', { distance: parts.value })
+        : t('home.distance.metres', { distance: parts.value });
+    },
+    [origin, locale, t],
+  );
   const markers = useMemo(
     () =>
-      markersFromSessions(list.items, locale, (count, first) =>
-        count > 1 ? t('nearby.map.moreSessions', { count }) : first,
+      markersFromSessions(
+        list.items,
+        locale,
+        (count, first) => (count > 1 ? t('nearby.map.moreSessions', { count }) : first),
+        (venue) => {
+          const area = areas.data?.find((a) => a.id === venue.areaId);
+          const city = cities.data?.find((x) => x.id === venue.cityId);
+          return describeLocation({
+            area: area ? l(area.name).text : undefined,
+            city: city ? l(city.name).text : undefined,
+            distance: distanceText(venue),
+            comma: t('schedule.separator'),
+            separator: ' · ',
+          });
+        },
       ),
-    [list.items, locale, t],
+    [list.items, locale, t, l, areas.data, cities.data, distanceText],
   );
 
   const selectedCity = cities.data?.find((c) => c.id === prefs.cityId);
-  const distanceText = (to: { lat: number; lng: number }) => {
-    if (!origin) return undefined;
-    const parts = distanceParts(haversineMetres(origin, to), locale);
-    return parts.unit === 'km'
-      ? t('home.distance.km', { distance: parts.value })
-      : t('home.distance.metres', { distance: parts.value });
-  };
   const dayLabel =
     local.days.length > 0
       ? local.days.map((day) => t(DAY_KEYS[day] ?? 'days.sun')).join(t('schedule.separator'))

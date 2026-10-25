@@ -115,6 +115,61 @@ describe('SignInScreen', () => {
     expect(text.textContent).toContain('30 seconds');
   });
 
+  /** A world whose server refuses a code with this wait (null: no wait at all). */
+  async function refusedWorld(retryAfterSeconds: number | null, locale: 'en' | 'ur' = 'en') {
+    return createWorld({
+      locale,
+      mock: {
+        handlers: {
+          ...signInHandlers(),
+          'auth.requestCode': (_c: unknown, id: string) =>
+            new Response(
+              JSON.stringify(
+                makeApiError(
+                  'rate_limited',
+                  id,
+                  retryAfterSeconds === null ? undefined : { retryAfterSeconds },
+                ),
+              ),
+              { status: 429, headers: { 'content-type': 'application/json' } },
+            ),
+        },
+      },
+    });
+  }
+
+  it.each([
+    [847, 'Try again in about 15 minutes.'],
+    [60, 'Try again in 1 minute.'],
+    [7200, 'Try again in 2 hours.'],
+  ])('says a %j second wait in words, not raw seconds', async (seconds, words) => {
+    const view = await renderScreen(<SignInScreen />, { world: await refusedWorld(seconds) });
+    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.click(view.getByTestId('send-code'));
+    const text = await view.findByText(new RegExp(en['errors.rate_limited']));
+    expect(text.textContent).toBe(`${en['errors.rate_limited']} ${words}`);
+    expect(text.textContent).not.toContain(String(seconds));
+  });
+
+  it('says the wait in Urdu on an Urdu screen', async () => {
+    const view = await renderScreen(<SignInScreen />, { world: await refusedWorld(847, 'ur') });
+    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.click(view.getByTestId('send-code'));
+    const text = await view.findByText(new RegExp(ur['errors.rate_limited']));
+    const [before, after] = ur['signIn.wait.aboutMinutes.other'].split('{count}');
+    expect(text.textContent).toContain(before!);
+    expect(text.textContent).toContain(after!);
+    expect(text.textContent).not.toContain('847');
+  });
+
+  it('shows the refusal alone when the server gives no wait', async () => {
+    const view = await renderScreen(<SignInScreen />, { world: await refusedWorld(null) });
+    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.click(view.getByTestId('send-code'));
+    const text = await view.findByText(new RegExp(en['errors.rate_limited']));
+    expect(text.textContent).toBe(en['errors.rate_limited']);
+  });
+
   it('makes the person wait before asking for another code', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await openWorld() });
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });

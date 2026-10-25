@@ -100,6 +100,71 @@ describe('NearbyScreen', () => {
     });
   });
 
+  describe('the map list shown without a map provider', () => {
+    const venue = SESSIONS.taraweeh.venue;
+    const area = fixtures.areas.find((a) => a.id === venue.areaId)!;
+    const city = fixtures.cities.find((c) => c.id === venue.cityId)!;
+    /** "31.5204, 74.3587": what the list used to print under each place. */
+    const COORDINATES = /-?\d{1,3}\.\d{3,}\s*,\s*-?\d{1,3}\.\d{3,}/;
+
+    async function openMap(options: Parameters<typeof renderScreen>[1] = {}) {
+      const view = await renderScreen(<NearbyScreen />, { cityId: venue.cityId, ...options });
+      await view.findByTestId('nearby-list');
+      const words = options.locale === 'ur' ? ur : en;
+      fireEvent.click(within(view.getByTestId('nearby-view')).getByText(words['nearby.view.map']));
+      return { view, map: await view.findByTestId('map-list-only') };
+    }
+
+    it('says where each place is in words, never as coordinates', async () => {
+      const { view, map } = await openMap();
+      expect(map.textContent).not.toMatch(COORDINATES);
+      await waitFor(() =>
+        expect(view.getByTestId(`map-marker-location-${venue.id}`).textContent).toBe(
+          `${area.name.en}${en['schedule.separator']}${city.name.en}`,
+        ),
+      );
+    });
+
+    it('adds how far the place is from the area the person picked', async () => {
+      const { view, map } = await openMap({ areaId: area.id });
+      await waitFor(() =>
+        expect(view.getByTestId(`map-marker-location-${venue.id}`).textContent).toMatch(
+          / · \d+(\.\d)? (km|m)$/,
+        ),
+      );
+      expect(map.textContent).not.toMatch(COORDINATES);
+    });
+
+    it('writes the area and city in Urdu on an Urdu screen', async () => {
+      const { view } = await openMap({ locale: 'ur' });
+      await waitFor(() =>
+        expect(view.getByTestId(`map-marker-location-${venue.id}`).textContent).toBe(
+          `${area.name.ur ?? area.name.en}${ur['schedule.separator']}${city.name.ur ?? city.name.en}`,
+        ),
+      );
+    });
+
+    it('keeps a plain note that the map is not available', async () => {
+      const { map } = await openMap();
+      expect(within(map).getByTestId('map-unavailable').textContent).toBe(
+        en['nearby.map.unavailable'],
+      );
+    });
+
+    it('leaves the location line out when the places cannot be read', async () => {
+      const { view } = await openMap({
+        mock: {
+          handlers: {
+            'places.areas': () => new Response('{}', { status: 503 }),
+            'places.cities': () => new Response('{}', { status: 503 }),
+          },
+        },
+      });
+      expect(view.getByTestId(`map-marker-${venue.id}`)).toBeTruthy();
+      expect(view.queryByTestId(`map-marker-location-${venue.id}`)).toBeNull();
+    });
+  });
+
   it('says so when nothing matches, and clears the filters from there', async () => {
     const view = await renderScreen(<NearbyScreen />, {
       mock: { handlers: { 'sessions.list': () => ({ items: [], nextCursor: null }) } },
