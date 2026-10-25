@@ -18,11 +18,11 @@ describe.each(matrix)('QuranPrayerTab in $name', (combo) => {
     renderContent(<QuranPrayerTab />, t.services, { combo });
     expect(await screen.findByTestId('surah-row-1')).toBeTruthy();
     expect(
-      screen.getByRole('heading', { name: msg(combo.locale, 'quran.hub.title') }),
+      screen.getByRole('heading', { name: msg(combo.locale, 'tabs.quranPrayer') }),
     ).toBeTruthy();
     expect(screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.quran') })).toBeTruthy();
     expect(
-      screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.prayerShort') }),
+      screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.prayer') }),
     ).toBeTruthy();
   });
 });
@@ -32,7 +32,7 @@ describe('QuranPrayerTab', () => {
     const t = createTestServices({ now: AT_17_00 });
     const first = renderContent(<QuranPrayerTab />, t.services);
     await screen.findByTestId('surah-row-1');
-    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.tab.prayerShort') }));
+    fireEvent.click(screen.getByRole('radio', { name: msg('en', 'quran.tab.prayer') }));
     expect(await screen.findByText(msg('en', 'prayer.noCity.title'))).toBeTruthy();
     await waitFor(async () => expect((await t.services.viewState.load()).section).toBe('prayer'));
     first.unmount();
@@ -87,7 +87,7 @@ describe('QuranPrayerTab', () => {
     await t.services.bookmarks.toggleAyah({ surah: 36, ayah: 7 });
     renderContent(<QuranPrayerTab />, t.services);
     fireEvent.click(
-      await screen.findByRole('radio', { name: new RegExp(`^${msg('en', 'quran.tab.saved')}`) }),
+      await screen.findByRole('tab', { name: msg('en', 'quran.tab.saved') }),
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Ya-Sin, ayah 7' }));
     expect(await screen.findByTestId('verse-36-7')).toBeTruthy();

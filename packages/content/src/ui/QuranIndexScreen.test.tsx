@@ -80,12 +80,11 @@ describe.each(matrix)('QuranIndexScreen in $name', (combo) => {
   it('has a labelled search box and the three tabs', () => {
     const { services } = createTestServices();
     renderContent(<QuranIndexScreen onOpen={vi.fn()} />, services, { combo });
-    fireEvent.click(screen.getByRole('button', { name: msg(combo.locale, 'quran.search') }));
     expect(screen.getByRole('searchbox', { name: msg(combo.locale, 'quran.search') })).toBeTruthy();
-    // D17: compact tabs that carry their counts, such as "Surahs (114)".
+    // Underlined tabs: Surahs, Juz and Saved.
     for (const key of ['quran.tab.surah', 'quran.tab.juz', 'quran.tab.saved']) {
       expect(
-        screen.getByRole('radio', { name: new RegExp(`^${msg(combo.locale, key)}`) }),
+        screen.getByRole('tab', { name: msg(combo.locale, key) }),
       ).toBeTruthy();
     }
   });
@@ -131,7 +130,7 @@ describe('QuranIndexScreen juz and bookmarks', () => {
     const { services } = createTestServices();
     const onOpen = vi.fn();
     renderContent(<QuranIndexScreen onOpen={onOpen} />, services);
-    fireEvent.click(screen.getByRole('radio', { name: 'Juz (30)' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Juz' }));
     const row = screen.getByTestId('juz-row-2');
     expect(row.textContent).toContain('Juz 2');
     expect(row.textContent).toContain('Starts at Al-Baqarah, ayah 142');
@@ -211,7 +210,7 @@ describe('QuranIndexScreen juz and bookmarks', () => {
     const onOpen = vi.fn();
     renderContent(<QuranIndexScreen onOpen={onOpen} />, services);
     fireEvent.click(
-      await screen.findByRole('button', { name: msg('en', 'quran.continueAt', { ayah: 10 }) }),
+      await screen.findByRole('button', { name: new RegExp(msg('en', 'quran.continueAt', { ayah: 10 })) }),
     );
     expect(onOpen).toHaveBeenCalledWith({ kind: 'surah', id: 18, ayah: 10 });
   });

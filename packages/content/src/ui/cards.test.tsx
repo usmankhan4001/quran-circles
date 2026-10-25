@@ -1,7 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messages } from '@qc/i18n';
-import { scriptSizeFactor, semanticColors, textScale, typeRoles } from '@qc/ui';
+import { semanticColors, typeStyle } from '@qc/ui';
 import { hijriDate } from '../prayer/hijri';
 import { DEFAULT_PLACE, PAKISTAN_CITIES } from '../prayer/places';
 import { createTestServices, matrix, renderContent } from '../test/render';
@@ -58,10 +58,9 @@ describe.each(matrix)('NextPrayerCard in $name', (combo) => {
     expect(getComputedStyle(card).backgroundColor).toBe(rgbOf(semanticColors[combo.mode].surface));
     const line = screen.getByTestId('next-prayer-countdown');
     expect(getComputedStyle(line).color).toBe(rgbOf(semanticColors[combo.mode].text));
-    // title3 at step 0, set larger for Urdu script, scaled by the text size, to the half pixel.
-    const script = combo.locale === 'ur' ? scriptSizeFactor.urdu : scriptSizeFactor.latin;
+    // title3 for the script at this text size, as the kit resolves it.
     expect(parseFloat(line.style.fontSize)).toBe(
-      Math.round(typeRoles.title3.size * script * textScale[combo.textSize] * 2) / 2,
+      typeStyle('title3', combo.locale === 'ur' ? 'urdu' : 'latin', combo.textSize).fontSize,
     );
   });
 
@@ -215,11 +214,14 @@ describe('ContinueReadingCard', () => {
     await act(async () => {
       await services.readingPosition.save(18, 10);
     });
-    // D17: an outline pill that names the ayah, with how far through the surah at the top.
+    // The whole card is the button; its spoken name ends with the action, and how far through
+    // the surah sits at the end of the title row.
     const button = await screen.findByRole('button', {
-      name: msg('en', 'quran.continueAt', { ayah: 10 }),
+      name: new RegExp(msg('en', 'quran.continueAt', { ayah: 10 })),
     });
-    expect(screen.getByTestId('lead-progress').textContent).toBe('10 / 110');
+    expect(screen.getByTestId('lead-progress').textContent).toBe(
+      msg('en', 'quran.progress', { ayah: 10, total: 110 }),
+    );
     fireEvent.click(button);
     expect(onOpen).toHaveBeenCalledWith({ surah: 18, ayah: 10 });
   });
