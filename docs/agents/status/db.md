@@ -1,7 +1,13 @@
 # Status: db
 
-Updated: 2026-10-18 (migration 0012, occurrence start floor index)
+Updated: 2026-10-25 (migration 0013, message template catalog; withSeasonEnd)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits)
+
+## Done (2026-10-25)
+
+- **Migration 0013 `message_template_catalog`**: writes the contract template catalog (`TEMPLATES`, 8 keys x en/ur) in every environment; before, only the dev seed wrote it and production had none, so `GET /v1/admin/message-templates` was empty. English rows `approved` (approved by nobody, `approved_at` now), Urdu `draft` until reviewed. Idempotent: existing rows kept; a seeded English draft with the catalog wording is marked approved. Down removes the catalog rows nobody approved by hand. The seed no longer writes templates. Tests: `src/message-templates.test.ts` (parity with the contract: fails when `TEMPLATES` changes without a new migration), `migrate.test.ts` +1 describe, `seed.test.ts` updated. Note: the catalog still has the booking templates (`registration_confirmation`, `waitlist_promoted`); the join-pledge work will need a new migration when it changes `TEMPLATES`.
+- **`withSeasonEnd(spec, seasonEndsOn)`** in `src/jobs/occurrences.ts`, exported from `@qc/db`: one rule for "a session in a season stops at the season's last day", used by the daily top-up and the API. Tests in `jobs/top-up.test.ts`.
+- `@qc/db` 247 tests.
 
 ## Done
 
