@@ -1,9 +1,48 @@
 import type { Localized, Locale } from '@qc/contracts';
 
-/** The text in the person's language, falling back to English, as the contract promises. */
+/**
+ * The text in the person's language, falling back to English, as the contract promises. Use it
+ * for every venue, area, city and circle name: Urdu readers see the Urdu name wherever one was
+ * written. Blank Urdu counts as none.
+ */
 export function pickLocalized(value: Localized | null | undefined, locale: Locale): string {
   if (!value) return '';
-  return locale === 'ur' ? (value.ur ?? value.en) : value.en;
+  return locale === 'ur' && value.ur?.trim() ? value.ur : value.en;
+}
+
+/**
+ * What a search box matches a name against: both languages, so a coordinator reading in Urdu
+ * still finds a venue by the English name they know, and the other way round.
+ */
+export function localizedSearchText(value: Localized | null | undefined): string {
+  if (!value) return '';
+  return value.ur?.trim() ? `${value.en}\n${value.ur}` : value.en;
+}
+
+export interface ShownText {
+  text: string;
+  /** The language the text is in, for the font and the direction. */
+  lang: Locale;
+}
+
+/**
+ * Text being typed in both languages, as a preview shows it: the person's language first
+ * (falling back to the other one), and the other language second when it has its own text.
+ * Null when both are empty.
+ */
+export function shownBilingual(
+  v: BilingualFields,
+  locale: Locale,
+): { main: ShownText; second: ShownText | null } | null {
+  const own = (locale === 'ur' ? v.ur : v.en).trim();
+  const otherLocale: Locale = locale === 'ur' ? 'en' : 'ur';
+  const other = (locale === 'ur' ? v.en : v.ur).trim();
+  if (!own && !other) return null;
+  if (!own) return { main: { text: other, lang: otherLocale }, second: null };
+  return {
+    main: { text: own, lang: locale },
+    second: other && other !== own ? { text: other, lang: otherLocale } : null,
+  };
 }
 
 export interface BilingualFields {

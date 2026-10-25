@@ -1,7 +1,14 @@
 # Status: admin-app
 
-Updated: 2026-10-18
+Updated: 2026-10-25
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
+
+## Audit fixes (25 Oct 2026): names in Urdu, sign-in wait, surah names
+
+- **Names in the reader's language.** Every venue, area, city and circle name already went through `pickLocalized` (`lib/localized.ts`); Urdu shows wherever the server sends an Urdu name. The English seen in Urdu mode comes from the data, not the app: the seed (`packages/db/src/seed.ts`, `orEnglish`), the V1 migration plan (`tools/migration/src/plan.ts`, `nameUr: p.nameEn`) and the API on create/update (`apps/api/src/modules/venues/service.ts` and `circles/service.ts`, `nameUr: input.name.ur ?? input.name.en`) store the English text in `name_ur` when no Urdu was given, so the API returns English as the "Urdu" name. **Needs the data-migration, contracts/db and api-core lanes**: store null (or leave Urdu out) when there is none, and have coordinators fill in the Urdu names. App changes: `pickLocalized` treats blank Urdu as none; the Places search matches either language (`localizedSearchText`), so a coordinator reading in Urdu still finds a venue by its English name; the venue editor's profile card leads with the name and address in the reader's language, with the other language's name beside it (`shownBilingual`; it was always English first, address English only).
+- **Sign-in wait in words.** The rate-limit notice said "Please wait 847 seconds." It now says "Please wait about 15 minutes." (`lib/wait.ts` `waitOf`: seconds under a minute, minutes up to 90, then hours; rounded up and "about" when not whole; nothing for a missing or unusable wait). New plural keys `admin.signIn.wait.{seconds,minutes,aboutMinutes,hours,aboutHours}.{one,other}` (Urdu drafts); `admin.signIn.waitSeconds` removed. The test backend's `failWith` takes `retryAfterSeconds` (null sends none).
+- **Surah names in the ayah picker.** "Surah 13, ayah 28" is now "Surah Ar-Ra'd (13), ayah 28"; Urdu shows the Arabic-script name ("سورہ الرعد (13)، آیت 28"), as the user app does. Names come from `@qc/content/meta` (`getSurah`, read only; new workspace dependency, lockfile updated). The ayah-count hint and the not-in-surah error name the surah too. Keys `admin.dailyAyah.reference`, `ayahCount.*`, `error.notInSurah.*` take `{name}` (Urdu drafts).
+- Tests: `lib/wait.test.ts` (new), `lib/localized.test.ts` (+6), `features/daily-ayah/surahName.test.ts` (new), `SignInScreen.test.tsx` (+6: 847 s, 60 s, 30 s, 2 h, Urdu, no wait), `PlacesScreen.test.tsx` (+4: Urdu/English venue names, Urdu circle and venue names, English fallback, search across languages), `VenueEditorScreen.test.tsx` (+3), `DailyAyahScreen.test.tsx` (expectations now name the surah). `pnpm --filter @qc/admin-app test`: 886 passing in 53 files.
 
 ## App icon from the logo (2026-10-18)
 

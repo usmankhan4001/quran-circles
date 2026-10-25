@@ -22,7 +22,7 @@ import { QueryBoundary } from '../../components/QueryBoundary';
 import { VenueArt } from '../../components/VenueArt';
 import { Screen } from '../../components/Screen';
 import { ScopePill } from '../../components/ScopePill';
-import { pickLocalized } from '../../lib/localized';
+import { localizedSearchText, pickLocalized } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -123,7 +123,7 @@ function VenueList() {
                 value={search}
                 onChangeText={setSearch}
               />
-              {matching(venues, (v) => pickLocalized(v.name, locale), search).map((v) => (
+              {matching(venues, (v) => localizedSearchText(v.name), search).map((v) => (
                 <VenueCard
                   key={v.id}
                   testID={`venue-${v.id}`}
@@ -236,7 +236,7 @@ function CircleList() {
                 value={search}
                 onChangeText={setSearch}
               />
-              {matching(circles, (c) => pickLocalized(c.name, locale), search).map((c) => (
+              {matching(circles, (c) => localizedSearchText(c.name), search).map((c) => (
                 <PlaceCard
                   key={c.id}
                   testID={`circle-${c.id}`}

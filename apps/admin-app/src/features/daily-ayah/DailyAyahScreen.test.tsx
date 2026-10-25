@@ -5,6 +5,7 @@ import * as fx from '@qc/contracts/fixtures';
 import { FIXTURE_NOW, createBackend, ids, meFor, type RoleKind } from '../../test/backend';
 import { combos, renderScreen, typeInto } from '../../test/render';
 import { DailyAyahScreen } from './DailyAyahScreen';
+import { surahName } from './surahName';
 
 const iqra = fx.venues[1]!;
 const circleAlNoor = fx.circles[0]!;
@@ -32,7 +33,9 @@ describe.each(combos)('DailyAyahScreen in $name', (combo) => {
     expect(container.querySelector('[dir]')?.getAttribute('dir')).toBe(combo.dir);
     // Al-Noor's fixture pick for 2027-02-15 is 13:28; the national pick that day is 2:255.
     const ref = screen.getByTestId('daily-ayah-current-ref').textContent ?? '';
-    expect(ref).toMatch(combo.locale === 'en' ? 'Surah 13, ayah 28' : /سورہ/);
+    expect(ref).toMatch(
+      combo.locale === 'en' ? "Surah Ar-Ra'd (13), ayah 28" : 'سورہ الرعد (13)، آیت 28',
+    );
     expect(screen.getByTestId('daily-ayah-fallback-national')).toBeTruthy();
     expect(screen.getByTestId('daily-ayah-day-2027-02-15').getAttribute('aria-checked')).toBe(
       'true',
@@ -55,14 +58,18 @@ describe.each(combos)('DailyAyahScreen in $name', (combo) => {
     chooseDay('2027-02-17');
     typeInto('daily-ayah-surah', '1');
     expect(
-      await screen.findByText(combo.locale === 'en' ? 'Surah 1 has 7 ayahs.' : /میں .* آیات ہیں/),
+      await screen.findByText(
+        combo.locale === 'en'
+          ? 'Surah Al-Fatihah (1) has 7 ayahs.'
+          : 'سورہ الفاتحة (1) میں 7 آیات ہیں۔',
+      ),
     ).toBeTruthy();
     typeInto('daily-ayah-ayah', '8');
     fireEvent.click(screen.getByTestId('daily-ayah-save'));
     expect(
       await screen.findByText(
         combo.locale === 'en'
-          ? 'Surah 1 has 7 ayahs. Enter a number from 1 to 7.'
+          ? 'Surah Al-Fatihah (1) has 7 ayahs. Enter a number from 1 to 7.'
           : /تک نمبر لکھیں/,
       ),
     ).toBeTruthy();
@@ -80,7 +87,7 @@ describe('DailyAyahScreen: set a pick', () => {
     // No national pick on the 17th: followers see the built-in ayah for the day.
     const builtIn = builtInAyahFor('2027-02-17');
     expect(screen.getByTestId('daily-ayah-fallback-built_in').textContent).toContain(
-      `Surah ${builtIn.surah}, ayah ${builtIn.ayah}`,
+      `Surah ${surahName(builtIn.surah, 'en')} (${builtIn.surah}), ayah ${builtIn.ayah}`,
     );
 
     typeInto('daily-ayah-surah', '1');
@@ -88,7 +95,9 @@ describe('DailyAyahScreen: set a pick', () => {
     fireEvent.click(screen.getByTestId('daily-ayah-save'));
 
     expect(await screen.findByTestId('daily-ayah-notice')).toBeTruthy();
-    expect(screen.getByText('Saved. Followers see Surah 1, ayah 5 on Wed 17 Feb.')).toBeTruthy();
+    expect(
+      screen.getByText('Saved. Followers see Surah Al-Fatihah (1), ayah 5 on Wed 17 Feb.'),
+    ).toBeTruthy();
     expect(backend.callsTo('adminDailyAyahs.put')[0]!.body).toEqual({
       date: '2027-02-17',
       scope: { type: 'venue', venueId: ids.venueAlNoor },
@@ -96,7 +105,9 @@ describe('DailyAyahScreen: set a pick', () => {
       ayah: 5,
     });
     await waitFor(() =>
-      expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe('Surah 1, ayah 5'),
+      expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe(
+        'Surah Al-Fatihah (1), ayah 5',
+      ),
     );
     expect(screen.getByTestId('daily-ayah-upcoming-2027-02-17')).toBeTruthy();
     expect(
@@ -114,7 +125,9 @@ describe('DailyAyahScreen: set a pick', () => {
     typeInto('daily-ayah-ayah', '29');
     fireEvent.click(screen.getByTestId('daily-ayah-save'));
     await waitFor(() =>
-      expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe('Surah 13, ayah 29'),
+      expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe(
+        "Surah Ar-Ra'd (13), ayah 29",
+      ),
     );
     const held = backend.state.dailyAyahs.find((p) => p.id === ids.dailyAyahAlNoorToday)!;
     expect(held).toMatchObject({ surah: 13, ayah: 29 });
@@ -133,7 +146,7 @@ describe('DailyAyahScreen: set a pick', () => {
     ['115', '1', 'Enter a surah number from 1 to 114.'],
     ['', '', 'Enter a surah number from 1 to 114.'],
     ['2', '', 'Enter the ayah number.'],
-    ['114', '7', 'Surah 114 has 6 ayahs. Enter a number from 1 to 6.'],
+    ['114', '7', 'Surah An-Nas (114) has 6 ayahs. Enter a number from 1 to 6.'],
   ])('refuses surah %j ayah %j and sends nothing', async (surah, ayah, message) => {
     const { backend } = pickerFor('venue', { venueId: ids.venueAlNoor });
     await screen.findByTestId('daily-ayah-panel');
@@ -179,7 +192,9 @@ describe('DailyAyahScreen: set a pick', () => {
     expect(screen.getByTestId('daily-ayah-day-2027-02-15').getAttribute('aria-checked')).toBe(
       'true',
     );
-    expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe('Surah 13, ayah 28');
+    expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe(
+      "Surah Ar-Ra'd (13), ayah 28",
+    );
   });
 });
 
@@ -189,7 +204,9 @@ describe('DailyAyahScreen: remove a pick', () => {
     await screen.findByTestId('daily-ayah-panel');
     fireEvent.click(screen.getByTestId('daily-ayah-remove'));
     expect(
-      await screen.findByText('On Mon 15 Feb, followers will see Surah 2, ayah 255 instead.'),
+      await screen.findByText(
+        'On Mon 15 Feb, followers will see Surah Al-Baqarah (2), ayah 255 instead.',
+      ),
     ).toBeTruthy();
     fireEvent.click(screen.getByTestId('daily-ayah-remove-confirm-confirm'));
     expect(await screen.findByText('Pick removed.')).toBeTruthy();
@@ -238,7 +255,9 @@ describe('DailyAyahScreen: circles', () => {
     // Its fixture pick is on the 16th; today has none for the circle.
     expect(screen.getByTestId('daily-ayah-current-none')).toBeTruthy();
     chooseDay('2027-02-16');
-    expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe('Surah 73, ayah 4');
+    expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe(
+      'Surah Al-Muzzammil (73), ayah 4',
+    );
     expect(screen.getByText('People who follow this circle see this ayah that day.')).toBeTruthy();
     chooseDay('2027-02-15');
     typeInto('daily-ayah-surah', '2');
@@ -290,7 +309,9 @@ describe('DailyAyahScreen: who may pick', () => {
   it('shows the Lahore pick to the national admin', async () => {
     pickerFor('admin', { venueId: ids.venueLahore });
     await screen.findByTestId('daily-ayah-panel');
-    expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe('Surah 39, ayah 53');
+    expect(screen.getByTestId('daily-ayah-current-ref').textContent).toBe(
+      'Surah Az-Zumar (39), ayah 53',
+    );
   });
 
   it.each<[RoleKind, string, string]>([

@@ -1,7 +1,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createBackend, ids, meFor } from '../../test/backend';
-import { combos, renderScreen, typeInto } from '../../test/render';
+import { messages } from '@qc/i18n';
+import { combos, LTR_EN, renderScreen, RTL_UR, typeInto } from '../../test/render';
 import { routes } from '../../navigation/routes';
 import { PlacesScreen } from './PlacesScreen';
 
@@ -187,5 +188,59 @@ describe('PlacesScreen venue picture cards', () => {
     });
     renderScreen(<PlacesScreen />, { backend });
     expect(await screen.findByText('No venues yet')).toBeTruthy();
+  });
+});
+
+describe("PlacesScreen names in the reader's language", () => {
+  it('shows the Urdu venue name on an Urdu screen and the English one on an English screen', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const name = backend.state.venues.find((v) => v.id === ids.venueAlNoor)!.name;
+    expect(name.ur).toBeTruthy();
+    const ur = renderScreen(<PlacesScreen />, { backend, combo: RTL_UR });
+    const card = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(card.textContent).toContain(name.ur!);
+    expect(card.textContent).not.toContain(name.en);
+    ur.unmount();
+    renderScreen(<PlacesScreen />, { backend, combo: LTR_EN });
+    const enCard = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(enCard.textContent).toContain(name.en);
+    expect(enCard.textContent).not.toContain(name.ur!);
+  });
+
+  it('shows the Urdu circle and venue names in the circles list on an Urdu screen', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const circle = backend.state.circles.find((c) => c.id === ids.circlePublished)!;
+    const venue = backend.state.venues.find((v) => v.id === circle.venueId)!;
+    renderScreen(<PlacesScreen />, { backend, combo: RTL_UR });
+    fireEvent.click(await screen.findByText(messages.ur['admin.places.circles']));
+    const row = await screen.findByTestId(`circle-${ids.circlePublished}`);
+    expect(row.textContent).toContain(circle.name.ur ?? circle.name.en);
+    expect(row.textContent).toContain(venue.name.ur ?? venue.name.en);
+  });
+
+  it('falls back to the English name on an Urdu screen when no Urdu name was written', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const venue = backend.state.venues.find((v) => v.id === ids.venueAlNoor)!;
+    venue.name = { en: venue.name.en, ur: null };
+    renderScreen(<PlacesScreen />, { backend, combo: RTL_UR });
+    const card = await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    expect(card.textContent).toContain(venue.name.en);
+  });
+
+  it('finds a venue by its English name on an Urdu screen, and by its Urdu name on an English one', async () => {
+    const backend = createBackend({ me: meFor('admin') });
+    const lahore = backend.state.venues.find((v) => v.id === ids.venueLahore)!;
+    expect(lahore.name.ur).toBeTruthy();
+    const ur = renderScreen(<PlacesScreen />, { backend, combo: RTL_UR });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    typeInto('places-venue-search', lahore.name.en);
+    expect(screen.getByTestId(`venue-${ids.venueLahore}`)).toBeTruthy();
+    expect(screen.queryByTestId(`venue-${ids.venueAlNoor}`)).toBeNull();
+    ur.unmount();
+    renderScreen(<PlacesScreen />, { backend, combo: LTR_EN });
+    await screen.findByTestId(`venue-${ids.venueAlNoor}`);
+    typeInto('places-venue-search', lahore.name.ur!);
+    expect(screen.getByTestId(`venue-${ids.venueLahore}`)).toBeTruthy();
+    expect(screen.queryByTestId(`venue-${ids.venueAlNoor}`)).toBeNull();
   });
 });

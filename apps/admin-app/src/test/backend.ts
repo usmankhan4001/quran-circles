@@ -166,12 +166,13 @@ export interface Backend {
   callsTo: (endpointId: string) => RecordedCall[];
   /**
    * Makes the next requests to an endpoint fail with a contract error code. `issues` go with a
-   * `validation_failed` answer, as the real server sends them.
+   * `validation_failed` answer, as the real server sends them. A `rate_limited` answer asks the
+   * person to wait `retryAfterSeconds` (30 unless given; null sends no wait at all).
    */
   failWith: (
     endpointId: string,
     code: ErrorCode,
-    options?: { times?: number; issues?: ValidationIssue[] },
+    options?: { times?: number; issues?: ValidationIssue[]; retryAfterSeconds?: number | null },
   ) => void;
   /** While offline every request fails like a dropped connection. */
   setOffline: (offline: boolean) => void;
@@ -261,7 +262,12 @@ export function createBackend(options: BackendOptions = {}): Backend {
   const calls: RecordedCall[] = [];
   const failures = new Map<
     string,
-    { code: ErrorCode; times: number; issues?: ValidationIssue[] }
+    {
+      code: ErrorCode;
+      times: number;
+      issues?: ValidationIssue[];
+      retryAfterSeconds?: number | null;
+    }
   >();
   let offline = false;
 
@@ -784,7 +790,9 @@ export function createBackend(options: BackendOptions = {}): Backend {
       return errorResponse(
         forced.code,
         forced.code === 'rate_limited'
-          ? { retryAfterSeconds: 30 }
+          ? forced.retryAfterSeconds === null
+            ? undefined
+            : { retryAfterSeconds: forced.retryAfterSeconds ?? 30 }
           : forced.issues
             ? { issues: forced.issues }
             : undefined,
@@ -809,7 +817,12 @@ export function createBackend(options: BackendOptions = {}): Backend {
     calls,
     callsTo: (endpointId) => calls.filter((c) => c.endpoint === endpointId),
     failWith: (endpointId, code, opts) => {
-      failures.set(endpointId, { code, times: opts?.times ?? 1, issues: opts?.issues });
+      failures.set(endpointId, {
+        code,
+        times: opts?.times ?? 1,
+        issues: opts?.issues,
+        retryAfterSeconds: opts?.retryAfterSeconds,
+      });
     },
     setOffline: (value) => {
       offline = value;

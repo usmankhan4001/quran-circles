@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import type { AyahOfTheDay, DailyAyahEntry } from '@qc/contracts';
+import type { AyahOfTheDay, DailyAyahEntry, Locale } from '@qc/contracts';
 import {
   Button,
   Card,
@@ -47,6 +47,7 @@ import {
   type AyahForm,
   type AyahPlace,
 } from './pick';
+import { surahName } from './surahName';
 
 export interface DailyAyahScreenProps {
   /** One of the two: the venue or the circle to pick for. */
@@ -222,14 +223,20 @@ function AyahPicker({ place, now }: { place: AyahPlace; now: Date }) {
   );
 }
 
-/** "Surah 13, ayah 28", with the language's numerals. */
+/** "Surah Ar-Ra'd (13), ayah 28", with the language's numerals and the surah's name. */
 function useReference(): (a: Pick<AyahOfTheDay, 'surah' | 'ayah'>) => string {
   const { t, locale } = useT();
   return (a) =>
     t('admin.dailyAyah.reference', {
-      surah: formatNumber(a.surah, locale),
+      ...surahParams(a.surah, locale),
       ayah: formatNumber(a.ayah, locale),
     });
+}
+
+/** `{name}` and `{surah}` for the messages that name a surah. */
+function surahParams(surah: number, locale: Locale): { name: string; surah: string } {
+  const number = formatNumber(surah, locale);
+  return { name: surahName(surah, locale) ?? number, surah: number };
 }
 
 function DayPanel({
@@ -274,9 +281,7 @@ function DayPanel({
   const ayahError = errors.ayah
     ? form.ayah.trim() === '' || surah === null || count === null
       ? t('admin.dailyAyah.error.ayah')
-      : t.plural('admin.dailyAyah.error.notInSurah', count, {
-          surah: formatNumber(surah, locale),
-        })
+      : t.plural('admin.dailyAyah.error.notInSurah', count, surahParams(surah, locale))
     : server.ayah
       ? t(server.ayah)
       : undefined;
@@ -335,9 +340,7 @@ function DayPanel({
               label={t('admin.dailyAyah.ayah.label')}
               helper={
                 surah !== null && count !== null
-                  ? t.plural('admin.dailyAyah.ayahCount', count, {
-                      surah: formatNumber(surah, locale),
-                    })
+                  ? t.plural('admin.dailyAyah.ayahCount', count, surahParams(surah, locale))
                   : undefined
               }
               value={form.ayah}

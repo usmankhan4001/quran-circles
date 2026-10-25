@@ -79,6 +79,38 @@ describe('SignInScreen: only Pakistani mobile numbers', () => {
     expect(screen.getByTestId('sign-in-phone')).toBeTruthy();
   });
 
+  it.each([
+    ['en', 847, 'Please wait about 15 minutes.'],
+    ['en', 60, 'Please wait 1 minute.'],
+    ['en', 30, 'Please wait 30 seconds.'],
+    ['en', 7200, 'Please wait 2 hours.'],
+    ['ur', 847, messages.ur['admin.signIn.wait.aboutMinutes.other']],
+  ] as const)(
+    'says how long to wait in words, not raw seconds (%s, %j s)',
+    async (locale, seconds, expected) => {
+      const backend = createBackend({ me: meFor('venue') });
+      backend.failWith('auth.requestCode', 'rate_limited', { retryAfterSeconds: seconds });
+      const view = await mountSignIn(backend, locale);
+      typePhone('0300 1234567');
+      const notice = (await screen.findByTestId('sign-in-notice')).textContent ?? '';
+      expect(notice).toContain(messages[locale]['errors.rate_limited']);
+      if (locale === 'en') expect(notice).toContain(expected);
+      // Urdu: the template's words around the count, with the count filled in.
+      else for (const part of expected.split('{count}')) expect(notice).toContain(part);
+      if (seconds >= 60) expect(notice).not.toContain(String(seconds));
+      view.unmount();
+    },
+  );
+
+  it('shows the refusal alone when the server gives no wait', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.failWith('auth.requestCode', 'rate_limited', { retryAfterSeconds: null });
+    await mountSignIn(backend);
+    typePhone('0300 1234567');
+    const notice = await screen.findByTestId('sign-in-notice');
+    expect(notice.textContent).toBe(messages.en['errors.rate_limited']);
+  });
+
   it('keeps any other validation failure as a notice', async () => {
     const backend = createBackend({ me: meFor('venue') });
     backend.failWith('auth.requestCode', 'validation_failed', {

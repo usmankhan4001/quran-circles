@@ -3,7 +3,9 @@ import {
   bilingualOf,
   emptyBilingual,
   isBilingualEmpty,
+  localizedSearchText,
   pickLocalized,
+  shownBilingual,
   toLocalizedInput,
   toLocalizedOptional,
 } from './localized';
@@ -18,6 +20,55 @@ describe('pickLocalized', () => {
   it('gives an empty string for nothing', () => {
     expect(pickLocalized(null, 'en')).toBe('');
     expect(pickLocalized(undefined, 'ur')).toBe('');
+  });
+
+  it('counts blank Urdu as none and shows English', () => {
+    expect(pickLocalized({ en: 'Hello', ur: '  ' }, 'ur')).toBe('Hello');
+    expect(pickLocalized({ en: 'Hello', ur: '' }, 'ur')).toBe('Hello');
+  });
+});
+
+describe('localizedSearchText', () => {
+  it('holds both languages so either name finds the place', () => {
+    const text = localizedSearchText({ en: 'Masjid Noor', ur: 'مسجد نور' });
+    expect(text).toContain('Masjid Noor');
+    expect(text).toContain('مسجد نور');
+  });
+
+  it('is the English alone without Urdu, and empty for nothing', () => {
+    expect(localizedSearchText({ en: 'Masjid Noor', ur: null })).toBe('Masjid Noor');
+    expect(localizedSearchText({ en: 'Masjid Noor', ur: ' ' })).toBe('Masjid Noor');
+    expect(localizedSearchText(null)).toBe('');
+  });
+});
+
+describe('shownBilingual', () => {
+  it("leads with the reader's language and adds the other one", () => {
+    const v = { en: 'Masjid Noor', ur: 'مسجد نور' };
+    expect(shownBilingual(v, 'ur')).toEqual({
+      main: { text: 'مسجد نور', lang: 'ur' },
+      second: { text: 'Masjid Noor', lang: 'en' },
+    });
+    expect(shownBilingual(v, 'en')).toEqual({
+      main: { text: 'Masjid Noor', lang: 'en' },
+      second: { text: 'مسجد نور', lang: 'ur' },
+    });
+  });
+
+  it('falls back to the other language when the reader language is empty', () => {
+    expect(shownBilingual({ en: 'Masjid Noor', ur: '' }, 'ur')).toEqual({
+      main: { text: 'Masjid Noor', lang: 'en' },
+      second: null,
+    });
+    expect(shownBilingual({ en: ' ', ur: 'مسجد نور' }, 'en')).toEqual({
+      main: { text: 'مسجد نور', lang: 'ur' },
+      second: null,
+    });
+  });
+
+  it('does not repeat the same text, and is null when both are empty', () => {
+    expect(shownBilingual({ en: 'Noor', ur: 'Noor' }, 'ur')?.second).toBeNull();
+    expect(shownBilingual(emptyBilingual(), 'en')).toBeNull();
   });
 });
 

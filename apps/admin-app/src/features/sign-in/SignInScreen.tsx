@@ -3,8 +3,21 @@ import { Button, CodeField, SegmentedControl, Text, TextField, Toast, spacing } 
 import { useAppearance, useT } from '../../appearance/AppearanceProvider';
 import { useAuth } from '../../auth/AuthProvider';
 import { Screen, ScreenFooter } from '../../components/Screen';
+import type { MessageKey, Translator } from '../../i18n/translate';
 import { formatPhoneDisplay } from '../../lib/phone';
+import { waitOf } from '../../lib/wait';
 import { useSignIn } from './useSignIn';
+
+/**
+ * The refusal, then how long to wait in words ("Please wait about 15 minutes."), never a raw
+ * count of seconds. No usable wait from the server: the refusal alone.
+ */
+export function noticeText(t: Translator, notice: MessageKey, waitSeconds: number | null): string {
+  const wait = waitOf(waitSeconds);
+  return wait
+    ? `${t(notice)} ${t.plural(`admin.signIn.wait.${wait.unit}`, wait.count)}`
+    : t(notice);
+}
 
 /** Phone-code sign-in. Only numbers an admin has invited get any access after this step. */
 export function SignInScreen() {
@@ -29,11 +42,7 @@ export function SignInScreen() {
           testID="sign-in-notice"
           kind="danger"
           durationMs={0}
-          message={
-            s.waitSeconds
-              ? `${t(s.notice)} ${t('admin.signIn.waitSeconds', { seconds: n(s.waitSeconds) })}`
-              : t(s.notice)
-          }
+          message={noticeText(t, s.notice, s.waitSeconds)}
         />
       ) : null}
       <View style={{ gap: spacing.xs }}>

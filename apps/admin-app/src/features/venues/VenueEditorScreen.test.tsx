@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import * as fx from '@qc/contracts/fixtures';
 import { createBackend, ids, meFor, type RoleKind } from '../../test/backend';
 import { routes } from '../../navigation/routes';
-import { combos, renderScreen, typeInto } from '../../test/render';
+import { combos, LTR_EN, renderScreen, RTL_UR, typeInto } from '../../test/render';
 import { VenueEditorScreen } from './VenueEditorScreen';
 
 const rawalpindiArea = fx.areas.find((a) => a.cityId === ids.cityRawalpindi)!;
@@ -138,6 +138,36 @@ describe('VenueEditorScreen edit', () => {
       facilities: { childFriendly: true },
     });
     expect(backend.state.venues[0]!.facilities.childFriendly).toBe(true);
+  });
+
+  it.each([
+    ['ur', RTL_UR],
+    ['en', LTR_EN],
+  ] as const)(
+    'heads the profile with the name and address in the reader language (%s)',
+    async (locale, combo) => {
+      const backend = createBackend({ me: meFor('venue') });
+      const venue = backend.state.venues.find((v) => v.id === ids.venueAlNoor)!;
+      expect(venue.name.ur && venue.address.ur).toBeTruthy();
+      renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, { backend, combo });
+      await screen.findByTestId('venue-editor-form');
+      const other = locale === 'ur' ? 'en' : 'ur';
+      expect(screen.getByTestId('venue-profile-name').textContent).toBe(venue.name[locale]);
+      expect(screen.getByTestId('venue-profile-address').textContent).toBe(venue.address[locale]);
+      expect(screen.getByTestId('venue-profile-other-name').textContent).toBe(venue.name[other]);
+    },
+  );
+
+  it('heads the profile with the English name on an Urdu screen when there is no Urdu name', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    const venue = backend.state.venues.find((v) => v.id === ids.venueAlNoor)!;
+    venue.name = { en: venue.name.en, ur: null };
+    // The public read answers from the contract's fixtures; the admin list holds this change.
+    backend.failWith('venues.get', 'not_found');
+    renderScreen(<VenueEditorScreen venueId={ids.venueAlNoor} />, { backend, combo: RTL_UR });
+    await screen.findByTestId('venue-editor-form');
+    expect(screen.getByTestId('venue-profile-name').textContent).toBe(venue.name.en);
+    expect(screen.queryByTestId('venue-profile-other-name')).toBeNull();
   });
 
   it('says so when nothing changed', async () => {

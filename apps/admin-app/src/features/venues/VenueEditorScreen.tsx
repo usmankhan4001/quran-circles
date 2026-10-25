@@ -23,7 +23,7 @@ import { BilingualField } from '../../components/BilingualField';
 import { ErrorNotice } from '../../components/ErrorNotice';
 import { QueryBoundary } from '../../components/QueryBoundary';
 import { Screen, ScreenFooter } from '../../components/Screen';
-import { pickLocalized } from '../../lib/localized';
+import { pickLocalized, shownBilingual } from '../../lib/localized';
 import { useNavigation } from '../../navigation/NavigationContext';
 import { routes } from '../../navigation/routes';
 import { useWorkingScope } from '../../scope/WorkingScopeProvider';
@@ -459,16 +459,18 @@ const FACILITY_ICONS: Record<FacilityKey, IconName> = {
 };
 
 /**
- * D17 masjid profile: the name in both languages and the address as typed, and where the pin sits.
- * A drawn map needs map tiles the app does not have, so the pin shows its coordinates.
+ * D17 masjid profile: the name and address as typed, in the person's language first (the other
+ * language's name beside it), and where the pin sits. A drawn map needs map tiles the app does
+ * not have, so the pin shows its coordinates.
  */
 function VenueProfile({ form }: { form: VenueForm }) {
-  const { t, n } = useT();
+  const { t, n, locale } = useT();
   const { colors } = useTheme();
   const lat = Number.parseFloat(form.lat);
   const lng = Number.parseFloat(form.lng);
   const pinned = Number.isFinite(lat) && Number.isFinite(lng);
-  const name = form.name.en.trim() || form.name.ur.trim();
+  const name = shownBilingual(form.name, locale);
+  const address = shownBilingual(form.address, locale)?.main ?? null;
   return (
     <Card padding="md" testID="venue-profile">
       <View style={{ gap: spacing.md }}>
@@ -487,18 +489,34 @@ function VenueProfile({ form }: { form: VenueForm }) {
             <Icon name="mosque" weight="duotone" size={20} color={colors.textOnAccentSubtle} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="label" strong>
-              {name || t('admin.venueEditor.profile.unnamed')}
+            <Text
+              variant="label"
+              strong
+              testID="venue-profile-name"
+              {...(name ? { lang: name.main.lang } : {})}
+            >
+              {name ? name.main.text : t('admin.venueEditor.profile.unnamed')}
             </Text>
-            {form.address.en.trim() ? (
-              <Text variant="caption" color="textSecondary" numberOfLines={1}>
-                {form.address.en.trim()}
+            {address ? (
+              <Text
+                variant="caption"
+                color="textSecondary"
+                numberOfLines={1}
+                lang={address.lang}
+                testID="venue-profile-address"
+              >
+                {address.text}
               </Text>
             ) : null}
           </View>
-          {form.name.ur.trim() && form.name.en.trim() ? (
-            <Text variant="label" lang="ur" color="textAccent">
-              {form.name.ur.trim()}
+          {name?.second ? (
+            <Text
+              variant="label"
+              lang={name.second.lang}
+              color="textAccent"
+              testID="venue-profile-other-name"
+            >
+              {name.second.text}
             </Text>
           ) : null}
         </View>
