@@ -15,9 +15,13 @@ Branch: lane/data/tanzeem-seed
 - Prayer-relative and monthly circles use a documented placeholder time, with the original wording in the session description.
 - No real data in the repository. The data file is passed at run time from outside the repo.
 
+## Done (tool)
+
+- `tools/circles-load` (`@qc/circles-load`): `report` command. Cleans the circles CSV (days, weeks of month, times, +92 phones), skips exact repeats, holds probable typos and wrong-city addresses, resolves map links (Google hosts only, redirects by hand), reads coordinates and plus codes from notes, rejects shared or far-off pins, and prints counts. Never writes to a database. 45 tests on synthetic rows.
+
 ## In progress
 
-- Generic location resolver and importer (`tools/circles-load`), tested on synthetic rows.
+- Mapping the importable rows to the API import bodies (venues, sessions), the dry run through the API, and the batch manifest and rollback.
 
 ## Blocked
 

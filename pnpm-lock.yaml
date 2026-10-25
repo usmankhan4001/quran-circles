@@ -564,6 +564,16 @@ importers:
         specifier: 4.23.15
         version: 4.23.15
 
+  tools/circles-load:
+    dependencies:
+      '@qc/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+    devDependencies:
+      tsx:
+        specifier: 4.23.15
+        version: 4.23.15
+
   tools/migration:
     dependencies:
       '@qc/contracts':
