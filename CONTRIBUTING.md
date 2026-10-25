@@ -26,6 +26,7 @@ The work is split into **lanes**. Each lane owns a set of directories and a set 
 - **Every user-facing string** goes through `@qc/i18n`, English and Urdu added together. Urdu you write is a draft until a native speaker reviews it; keep the review marker.
 - **Every screen** works left to right and right to left, at all four text sizes, in light and dark. Use logical properties (`marginStart`, `paddingEnd`), never `left` or `right`.
 - **Run `pnpm check`** before you push. Run `pnpm format` if the format check fails.
+- **Environment variables** go in `.env.example` or `infra/.env.example` and in `infra/ENV.md` together; `pnpm env:check` verifies they agree.
 - **Update your lane's status file** (`docs/agents/status/<lane>.md`) with what you did, what is in progress, what is blocked and any questions.
 
 ## Never
@@ -45,7 +46,9 @@ The full rules are in [`docs/engineering/branches-and-review.md`](docs/engineeri
 - Pull requests use [`.github/pull_request_template.md`](.github/pull_request_template.md). A reviewer who did not write the change approves it.
 - Sensitive areas need a human approval: sign-in, scope checks, migrations, WhatsApp, account deletion, infrastructure and anything that stores personal data. [`.github/CODEOWNERS`](.github/CODEOWNERS) lists the paths.
 
-During the current build phase, work lands on `main` in small commits. Pull requests and branch protection come into force as more people join.
+**`main` deploys production.** Dokploy pulls `main` from GitHub with auto-deploy on, so a push to `main` goes live. Push your work to your lane branch, and merge to `main` only when it is meant to go live. Do not open pull requests or wait on GitHub Actions unless the owner asks. Branch protection for `main` is a checklist in [`docs/engineering/github-settings.md`](docs/engineering/github-settings.md).
+
+Branch names and line endings: use lowercase `lane/<lane>/<topic>` (or `release/<name>`), and let `.gitattributes` keep files LF, whatever your `core.autocrlf` is. To see which old branches are merged, run `pnpm branches` (list only).
 
 ## Architecture decisions
 

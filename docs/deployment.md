@@ -43,6 +43,10 @@ Dokploy deploys from a git clone of this repository. Environment values (databas
 
 The current staging state, open issues and the record of each redeploy are in [`agents/status/platform.md`](agents/status/platform.md).
 
+## Dokploy auto-deploy from `main`
+
+Production on Dokploy pulls this repository's `main` branch from GitHub with auto-deploy on. **A push to `main` deploys to production**, whether or not CI has finished. Lane work stays on `lane/<lane>/<topic>` branches; merge to `main` only when it should go live, and protect `main` as listed in [`engineering/github-settings.md`](engineering/github-settings.md). Some of the text below predates this and still describes a manual deploy.
+
 ## Production
 
 Production has not been deployed. The owner still has to provide the VPS, the domain names, backup storage and provider accounts; the checklist is in [`infra/README.md`](../infra/README.md#what-the-owner-must-provide). Once they exist, a human deploys with:
