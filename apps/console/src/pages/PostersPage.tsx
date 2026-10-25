@@ -148,10 +148,7 @@ function whenOf(s: AdminSession, i18n: I18n): string {
     return i18n.t('console.posters.source.once', { date: i18n.date(s.startsOn), time });
   if (s.daysOfWeek.length === 7) return i18n.t('console.posters.source.daily', { time });
   return i18n.t('console.posters.source.weekly', {
-    days: [...s.daysOfWeek]
-      .sort()
-      .map((d) => i18n.weekday(d))
-      .join(i18n.t('console.posters.listSeparator')),
+    days: i18n.weekdays([...s.daysOfWeek].sort()),
     time,
   });
 }

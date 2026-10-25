@@ -16,8 +16,8 @@ import {
   type PosterTemplate,
   type ValidationIssue,
 } from '@qc/contracts';
-import { messages, timePeriodKey, type MessageKey } from '@qc/i18n';
-import { isolate } from './ui-tokens';
+import type { MessageKey } from '@qc/i18n';
+import { formatClock } from './datetime';
 
 /**
  * The poster screens (contract 1.0.0-rc.5). The API builds the snapshot from the session, so the
@@ -342,20 +342,8 @@ export { POSTER_DETAILS_MAX, POSTER_TITLE_MAX };
  * "21:30" as the person reads it: "9:30 pm", or in Urdu the part of the day and then the figures,
  * "رات 9:30" (A-09), with Latin digits as elsewhere. `Intl` in `ur-PK` writes a Latin "PM", so
  * the Urdu time is built here; its figures are isolated so they stay left to right inside Urdu
- * text. Never a narrow no-break space (U+202F), which the Urdu font cannot draw.
+ * text. Never a narrow no-break space (U+202F), which the Urdu font cannot draw. The one clock
+ * formatter for the whole console lives in `lib/datetime.ts`.
  */
-export function formatLocalTime(time: string, locale: 'en' | 'ur'): string {
-  const [h = 0, m = 0] = time.split(':').map((x) => Number.parseInt(x, 10));
-  if (locale === 'ur') {
-    const clock = `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')}`;
-    return `${messages.ur[timePeriodKey(h)]} ${isolate(clock)}`;
-  }
-  return new Intl.DateTimeFormat('en-GB', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'UTC',
-  })
-    .format(new Date(Date.UTC(2023, 0, 1, h, m)))
-    .replace(/\u202f/g, ' ');
-}
+export const formatLocalTime = (time: string, locale: 'en' | 'ur'): string =>
+  formatClock(time, locale);

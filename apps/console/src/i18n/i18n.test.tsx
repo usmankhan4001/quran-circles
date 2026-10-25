@@ -65,7 +65,7 @@ describe('translation helpers', () => {
     expect(ur.number(1234)).toMatch(/^[0-9,٬]+$/);
     expect(ur.number(1234)).not.toMatch(/[٠-٩۰-۹]/);
     // 20:00 UTC is 01:00 the next morning in Pakistan.
-    expect(en.dateTime('2027-02-15T20:00:00Z')).toContain('01:00');
+    expect(en.dateTime('2027-02-15T20:00:00Z')).toBe('16 Feb 2027, 1:00 am');
     expect(ur.dateTime('2027-02-15T20:00:00Z')).not.toMatch(/[٠-٩۰-۹]/);
     expect(en.dateTime('not a date')).toBe('not a date');
     expect(en.weekday(0)).toBe('Sun');

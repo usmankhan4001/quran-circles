@@ -66,7 +66,7 @@ export const LANGUAGE_KEYS = {
 
 /** Sessions in the person's scope. The API filters by scope; the filters here only narrow it. */
 export default function SessionsPage() {
-  const { t, localized, weekday, number } = useI18n();
+  const { t, localized, number, time, weekdays, localDateTime } = useI18n();
   const { api, principal } = useSignedIn();
   const dir = useDirectory();
   const [cityId] = useShellCity();
@@ -109,12 +109,13 @@ export default function SessionsPage() {
     .filter((v) => !cityId || v.cityId === cityId)
     .map((v) => ({ value: v.id, label: dir.venueName(v.id) }));
 
+  // Through the shared date helper, so Urdu figures are isolated and never run into the words.
   const when = (s: AdminSession) =>
     s.kind === 'one_off'
-      ? `${s.startsOn} ${s.localStartTime}`
+      ? localDateTime(s.startsOn, s.localStartTime)
       : s.daysOfWeek.length === 7
-        ? `${t('console.sessions.daily')} · ${s.localStartTime}`
-        : `${s.daysOfWeek.map((d) => weekday(d)).join(', ')} · ${s.localStartTime}`;
+        ? `${t('console.sessions.daily')} · ${time(s.localStartTime)}`
+        : `${weekdays(s.daysOfWeek)} · ${time(s.localStartTime)}`;
 
   const portionText = (s: AdminSession): string | null => {
     const o = s.nextOccurrence;
@@ -166,9 +167,7 @@ export default function SessionsPage() {
             {t(PROGRAM_KEYS[s.program])}
           </span>
           <span className="cell-title">{localized(s.title)}</span>
-          <bdi dir="ltr" className="cell-meta">
-            {when(s)}
-          </bdi>
+          <bdi className="cell-meta">{when(s)}</bdi>
         </div>
       ),
     },
