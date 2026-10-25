@@ -24,6 +24,8 @@ ARG PUBLIC_API_URL
 # Empty: the keyless map and no web push.
 ARG GOOGLE_MAPS_WEB_KEY=""
 ARG VAPID_PUBLIC_KEY=""
+# Shown on the public privacy, help and delete-account pages. Unset shows a marked placeholder.
+ARG CONTACT_EMAIL=""
 
 RUN npm install --global --no-fund --no-audit "pnpm@${PNPM_VERSION}"
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
@@ -41,6 +43,7 @@ RUN test -n "${PUBLIC_API_URL}" \
  && EXPO_PUBLIC_API_URL="${PUBLIC_API_URL}" \
     EXPO_PUBLIC_GOOGLE_MAPS_API_KEY="${GOOGLE_MAPS_WEB_KEY}" \
     EXPO_PUBLIC_VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY}" \
+    EXPO_PUBLIC_CONTACT_EMAIL="${CONTACT_EMAIL}" \
     pnpm --filter @qc/user-app export:web \
  && VITE_API_BASE_URL=/api pnpm --filter @qc/console build
 
