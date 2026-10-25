@@ -38,7 +38,7 @@ import { venueMapUrl } from '../features/session/links';
 import { useUnreadCount } from '../features/updates/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
-import { useAuthState, useAuthStatus, usePreferences } from '../providers/hooks';
+import { useAuthState, useAuthStatus, useOffline, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { useStartFrameDeferral } from '../ui/startFrame';
 import { TabFrame } from '../ui/TabFrame';
@@ -115,6 +115,7 @@ export function HomeScreen() {
   const { now, openUrl } = useServices();
   const prefs = usePreferences();
   const auth = useAuthState();
+  const offline = useOffline();
   const config = useAppConfig();
   const next = useNextNearYou();
   const registrations = useMyRegistrations();
@@ -185,6 +186,7 @@ export function HomeScreen() {
       now={now()}
       {...(heroDistance ? { distance: heroDistance } : {})}
       onPress={() => nav.go({ name: 'session', sessionId: lead.sessionId })}
+      offline={offline}
       onJoin={() => nav.go({ name: 'register', sessionId: lead.sessionId, occurrenceId: lead.id })}
       onDirections={() => void openUrl(venueMapUrl(lead.session.venue))}
       testID="home-lead-card"

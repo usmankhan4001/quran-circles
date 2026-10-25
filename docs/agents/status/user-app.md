@@ -352,3 +352,12 @@ Open: "Host not listed yet" and "Join online" still read "Coming soon" (owner's 
 - New en and ur keys: `venue.mapsShort`, `venue.alerts`, `session.todaysPortion`, `session.about` (Urdu are drafts).
 - Checks on this branch: user-app typecheck, eslint on changed screens, and all 75 user-app test files pass; i18n tests pass.
 - Not touched (other threads): Quran, Prayer, My Journey, profile and states.
+
+## Member redesign: visual check and integration (2026-10-26, branch lane/ui/member-redesign)
+
+- Visual check in the web build (mock API), 375 px wide: Welcome, Features, Sign up, Sign in, Home, Nearby, full map, session, venue in Urdu RTL; venue and Home in night; Home, Nearby and venue at the largest text size in English. One bug found and fixed: on the full map the zoom buttons sat under the search bar and chips (`controlsInset` on the map view). Not looked at in the browser: the code step, the join pledge sheet and the map-off/offline states (covered by tests only).
+- Merged `lane/ui/member-journey` (clean, no conflicts). `lane/ui/member-quran` has no commits beyond this branch yet, so nothing to merge.
+- Nearby now draws `NoCirclesState` (empty list, no filters; "Widen the area" opens the area picker; "Ask for a circle" stays out until requests are built), `OfflineState` (network error) and `LoadErrorState` (other errors). Filtered empty lists keep the old empty state.
+- Home: `NextCircleCard` takes `offline`; offline it shows "Saved on your phone" and a disabled "Joining needs internet" button. Keys `home.next.saved`, `home.next.joinOffline` (Urdu drafts).
+- The 3 Registration (R2) tests already pass against the join pledge after the merge; no change needed.
+- Checks: user-app typecheck, eslint on `apps/user-app/src`, 77 test files / 1186 tests, i18n 40 tests all pass.

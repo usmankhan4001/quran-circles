@@ -1,9 +1,17 @@
-import { fireEvent, within } from '@testing-library/react';
+import { act, fireEvent, within } from '@testing-library/react';
 import { fixtures } from '@qc/contracts/fixtures';
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
 import { AREA_SADDAR, CITY_RAWALPINDI, SESSIONS, registrationFor } from '../test/factories';
-import { MATRIX, NOW, createWorld, directionOf, renderScreen, waitFor } from '../test/harness';
+import {
+  FakeNetwork,
+  MATRIX,
+  NOW,
+  createWorld,
+  directionOf,
+  renderScreen,
+  waitFor,
+} from '../test/harness';
 import { ayahOfTheDay } from '../features/home/ayah';
 import { armStartFrameDeferral } from '../ui/startFrame';
 import { HomeScreen } from './HomeScreen';
@@ -67,6 +75,21 @@ describe('HomeScreen', () => {
     expect(join.textContent).toContain(en['registration.pledge']);
     fireEvent.click(join);
     expect(world.nav.last()).toMatchObject({ type: 'go', route: { name: 'register' } });
+  });
+
+  it('shows the saved next circle offline, and says joining needs internet', async () => {
+    const network = new FakeNetwork(true);
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id, network });
+    const view = await renderScreen(<HomeScreen />, { world });
+    const join = await view.findByTestId('home-lead-join');
+    expect(view.queryByTestId('home-lead-saved')).toBeNull();
+    act(() => network.set(false));
+    await waitFor(() => expect(view.getByTestId('home-lead-saved')).toBeTruthy());
+    expect(view.getByTestId('home-lead-saved').textContent).toBe(en['home.next.saved']);
+    expect(view.getByTestId('home-lead-join').textContent).toContain(en['home.next.joinOffline']);
+    expect(join.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(view.getByTestId('home-lead-join'));
+    expect(world.nav.last()).not.toMatchObject({ route: { name: 'register' } });
   });
 
   it('shows the start time, the day with a countdown and directions', async () => {

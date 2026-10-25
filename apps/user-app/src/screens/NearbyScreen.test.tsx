@@ -229,8 +229,8 @@ describe('NearbyScreen', () => {
       mock: { handlers: { 'sessions.list': () => ({ items: [], nextCursor: null }) } },
     });
     const empty = await view.findByTestId('nearby-empty');
-    expect(within(empty).getByText(en['nearby.empty.title'])).toBeTruthy();
-    expect(within(empty).getByText(en['nearby.empty.body'])).toBeTruthy();
+    expect(within(empty).getByText(en['states.noCircles.title'])).toBeTruthy();
+    expect(within(empty).getByText(en['states.noCircles.body'])).toBeTruthy();
   });
 
   it('offers to try again after a failure', async () => {

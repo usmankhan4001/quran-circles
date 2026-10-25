@@ -23,6 +23,8 @@ export interface NextCircleCardProps {
   onRegistration?: () => void;
   /** Opens the portion directly in the Quran reader. */
   onReadPortion?: () => void;
+  /** No connection: the card is the saved copy, and joining waits for the internet. */
+  offline?: boolean;
   /** Now, for the countdown. */
   now: Date;
   testID?: string;
@@ -75,6 +77,7 @@ export function NextCircleCard({
   onJoin,
   onRegistration,
   onReadPortion,
+  offline,
   now,
   testID,
 }: NextCircleCardProps) {
@@ -157,6 +160,11 @@ export function NextCircleCard({
             {section}
           </Text>
         </View>
+        {offline ? (
+          <Text color="textMuted" variant="caption" testID="home-lead-saved">
+            {t('home.next.saved')}
+          </Text>
+        ) : null}
       </Pressable>
       <View style={styles.buttons}>
         <View style={styles.main}>
@@ -178,8 +186,9 @@ export function NextCircleCard({
             />
           ) : onJoin ? (
             <Button
-              label={t('registration.pledge')}
+              label={offline ? t('home.next.joinOffline') : t('registration.pledge')}
               fullWidth
+              disabled={Boolean(offline)}
               onPress={onJoin}
               testID="home-lead-join"
             />

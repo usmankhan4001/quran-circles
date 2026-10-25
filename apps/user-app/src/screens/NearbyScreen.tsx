@@ -19,6 +19,7 @@ import {
 } from '@qc/ui';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { MapSelectionCards } from '../components/MapSelectionCard';
+import { LoadErrorState, NoCirclesState, OfflineState } from '../components/StateView';
 import { errorMessageKey } from '../core/errors';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { splitClock } from '../features/home/clock';
@@ -210,24 +211,26 @@ export function NearbyScreen() {
             <Skeleton shape="block" height={120} announce />
           </View>
         ) : list.status === 'error' ? (
-          <EmptyState
-            icon="error"
-            title={t(list.error?.code === 'network_error' ? 'ui.offlineTitle' : 'ui.errorTitle')}
-            description={t(errorMessageKey(list.error?.code ?? 'unknown'))}
-            action={{ label: t('ui.retry'), onPress: () => void list.refetch() }}
-            testID="nearby-error"
-          />
+          list.error?.code === 'network_error' ? (
+            <OfflineState onRetry={() => void list.refetch()} testID="nearby-error" />
+          ) : (
+            <LoadErrorState
+              onRetry={() => void list.refetch()}
+              body={t(errorMessageKey(list.error?.code ?? 'unknown'))}
+              testID="nearby-error"
+            />
+          )
         ) : list.items.length === 0 ? (
           <View testID="nearby-empty">
-            <EmptyState
-              title={t('nearby.empty.title')}
-              description={
-                hasAnyFilter(filters) ? t('nearby.empty.withFilters') : t('nearby.empty.body')
-              }
-              {...(hasAnyFilter(filters)
-                ? { action: { label: t('nearby.filters.clear'), onPress: clearFilters } }
-                : {})}
-            />
+            {hasAnyFilter(filters) ? (
+              <EmptyState
+                title={t('nearby.empty.title')}
+                description={t('nearby.empty.withFilters')}
+                action={{ label: t('nearby.filters.clear'), onPress: clearFilters }}
+              />
+            ) : (
+              <NoCirclesState onWiden={() => setShowAreas(true)} />
+            )}
             {/* Requesting a circle is a later wave: drawn, but not built (owner, 25 Oct 2026). */}
             {config.featureFlags.circle_requests ? (
               <ComingSoon
