@@ -36,3 +36,13 @@ Source of truth: the 25 Oct 2026 boards. Design system `UEFqRavqK4aJmgkkWJJJLp`,
 - Mushaf page and reading settings sheet: confirm whether they exist, build if not.
 - Coordinator welcome and poster maker redesign.
 - Approval for the `app.config.ts` splash change.
+
+## Decisions waiting for a human
+
+- **Quran translations.** The reading settings board offers Sahih International and Pickthall; the app offers Maududi. Quran text and translation sources are a human decision, so this branch leaves them as they are.
+- **Jameel Noori Nastaleeq.** Muhammad's installed copy (`Jameel Noori Nastaleeq.ttf`, version 2; 2009, vendor Urdu Lover, licence text "free of charge for Urdu Lovers") cannot be subset below about 6.8 MB woff2 (13.4 MB ttf), because the size is the Nastaliq ligature glyphs. Nothing is registered or committed yet. Options: serve the woff2 from our own server (recommended), Noto Nastaliq only on web with Noori in native builds, or commit the woff2. Redistribution in store builds still needs his confirmation.
+- **Mushaf and reading settings** were checked against the spec: card, meta row, banner, justified text, markers, pager and every settings row match; text is now 27px on a 2.35 line and the labels read Layout and Script.
+
+## Not yet done
+
+Poster maker, console screens, Urdu RTL screenshots, and the empty/offline/error and map states.
