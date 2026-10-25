@@ -1,6 +1,5 @@
 import { count, getTableName } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT, PgTable } from 'drizzle-orm/pg-core';
-import { TEMPLATES, TEMPLATE_KEYS, templatePlaceholders } from '@qc/contracts';
 import * as fixtures from '@qc/contracts/fixtures';
 import * as schema from './schema/index';
 
@@ -10,9 +9,10 @@ import * as schema from './schema/index';
  * so the mock server, the API tests and a seeded database agree.
  *
  * What it inserts: provinces (the cities' foreign key needs them), cities, areas, venues,
- * programs, seasons, circles, sessions, occurrences, content pages, the feed updates, the
- * message template catalog, and the sample ayah of the day picks (rc.4: national, venue and
- * circle picks, numbers only, `set_by` NULL).
+ * programs, seasons, circles, sessions, occurrences, content pages, the feed updates and the
+ * sample ayah of the day picks (rc.4: national, venue and circle picks, numbers only, `set_by`
+ * NULL). The message template catalog is not seeded here: migration 0013 writes it, in every
+ * environment.
  * What it never inserts: users, phone numbers, registrations, OTPs, consents, devices,
  * sessions of sign-in, follows, days read, memorisation rows, national reading totals or any
  * other person-like row. Venue contact numbers are the
@@ -287,24 +287,6 @@ export function buildSeedRows(options: SeedRowOptions = {}) {
     publishAt: instant(u.publishedAt),
   }));
 
-  const messageTemplates: (typeof schema.messageTemplates.$inferInsert)[] = TEMPLATE_KEYS.flatMap(
-    (key) => {
-      const def = TEMPLATES[key];
-      return (['en', 'ur'] as const).map((locale) => ({
-        key,
-        channel: def.channels[0]!,
-        locale,
-        body: def.body[locale],
-        variables: templatePlaceholders(def.body[locale]),
-        waTemplateName: def.waTemplateName,
-        costCategory: def.costCategory,
-        // Never 'approved': approval is a human step, and Urdu is a draft until a native
-        // speaker signs it off.
-        status: 'draft' as const,
-      }));
-    },
-  );
-
   const dailyAyahs: (typeof schema.dailyAyahs.$inferInsert)[] = fixtures.dailyAyahs.map((a) => ({
     id: a.id,
     day: date(a.date),
@@ -341,7 +323,6 @@ export function buildSeedRows(options: SeedRowOptions = {}) {
     occurrences,
     contentPages,
     updates,
-    messageTemplates,
     dailyAyahs,
     posterTemplates,
   };
@@ -370,7 +351,6 @@ export async function seedDatabase(
     [schema.occurrences, rows.occurrences],
     [schema.contentPages, rows.contentPages],
     [schema.updates, rows.updates],
-    [schema.messageTemplates, rows.messageTemplates],
     [schema.dailyAyahs, rows.dailyAyahs],
     [schema.posterTemplates, rows.posterTemplates],
   ];

@@ -202,7 +202,7 @@ describe('seed data shape', () => {
 });
 
 describe('message templates', () => {
-  it('covers every template in both locales', async () => {
+  it('covers every template in both locales (written by migration 0013, not by the seed)', async () => {
     const { rows } = await test.pg.query<{ key: string; locale: string }>(
       'SELECT key, locale FROM message_templates',
     );
@@ -211,13 +211,13 @@ describe('message templates', () => {
     for (const key of TEMPLATE_KEYS)
       for (const locale of LOCALES) expect(have).toContain(`${key}/${locale}`);
     expect(rows).toHaveLength(16);
+    expect(first.tables.map((t) => t.table)).not.toContain('message_templates');
   });
 
-  it('keeps every template a draft: nothing is approved, Urdu is never marked reviewed', async () => {
-    expect(await count('message_templates', `status <> 'draft'`)).toBe(0);
-    expect(
-      await count('message_templates', 'approved_by IS NOT NULL OR approved_at IS NOT NULL'),
-    ).toBe(0);
+  it('approves the English wording by nobody, and keeps Urdu a draft until it is reviewed', async () => {
+    expect(await count('message_templates', `locale = 'en' AND status = 'approved'`)).toBe(8);
+    expect(await count('message_templates', `locale = 'ur' AND status = 'draft'`)).toBe(8);
+    expect(await count('message_templates', 'approved_by IS NOT NULL')).toBe(0);
   });
 
   it('stores the contract wording, Meta name, cost category and variables', async () => {
@@ -282,8 +282,8 @@ describe('no person data', () => {
     for (const table of PERSON_TABLES) expect(afterSecond[table], table).toBe(0);
   });
 
-  it('only fills the tables the seed owns', () => {
-    const seeded = new Set(first.tables.map((t) => t.table));
+  it('only fills the tables the seed owns (and the catalog the migrations write)', () => {
+    const seeded = new Set([...first.tables.map((t) => t.table), 'message_templates']);
     for (const [table, n] of Object.entries(afterSecond)) {
       if (!seeded.has(table)) expect(n, table).toBe(0);
     }
