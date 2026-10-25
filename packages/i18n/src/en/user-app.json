@@ -699,6 +699,9 @@
   "nearby.area.city": "City",
   "home.next.directions": "Directions",
   "home.prayer.now": "Now",
-  "home.special.sampleWhen": "Ramadan Dora-e-Quran · Sample",
-  "home.special.sampleTitle": "Special Dora programmes will show here"
+  "home.special.sampleWhen": "Ramadan Dora-e-Quran",
+  "home.special.sampleTitle": "Special Dora programmes will show here",
+  "comingSoon.badge": "Coming soon",
+  "comingSoon.label": "{feature}, coming soon",
+  "comingSoon.photo": "Photos of this place"
 }
