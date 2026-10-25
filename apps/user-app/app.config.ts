@@ -2,8 +2,11 @@ import type { ExpoConfig } from 'expo/config';
 
 /**
  * Public configuration only. Anything read from `EXPO_PUBLIC_*` ends up inside the app and the
- * web page, so it holds addresses and restricted keys, never secrets. The native app id is left
- * unset on purpose: it is chosen when the store accounts exist (see the status file).
+ * web page, so it holds addresses and restricted keys, never secrets.
+ *
+ * Store builds run on EAS (`eas.json`); see `docs/release/go-live.md`. The app id
+ * (`APP_ID`) is permanent once the first build is uploaded to Google Play, and the Maps key
+ * restriction and the Firebase app are registered against it.
  *
  * The public variables the app reads (`src/platform/env.ts`):
  * - `EXPO_PUBLIC_API_URL`: the API's address.
@@ -11,8 +14,18 @@ import type { ExpoConfig } from 'expo/config';
  *   ids. Without it the map shows the list-only view.
  * - `EXPO_PUBLIC_VAPID_PUBLIC_KEY`: the public half of the web push key pair. Without it web
  *   push is off.
+ *
+ * Build-time only (EAS environment variables, not shipped as `EXPO_PUBLIC_*`):
+ * - `GOOGLE_SERVICES_JSON`: path to Firebase's `google-services.json` for the Android app (an EAS
+ *   file variable). Push needs it: the app registers its native FCM token. Without it the build
+ *   still succeeds and push is off.
+ * - `EAS_PROJECT_ID`: the EAS project, printed by `eas init`.
  */
+const APP_ID = 'pk.doraquran.circles';
+
 const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || undefined;
+const googleServicesFile = process.env.GOOGLE_SERVICES_JSON || undefined;
+const easProjectId = process.env.EAS_PROJECT_ID || undefined;
 
 const config: ExpoConfig = {
   name: 'Quran Circles',
@@ -38,8 +51,20 @@ const config: ExpoConfig = {
     themeColor: '#064e3b',
     favicon: './public/icons/icon-192.png',
   },
-  ios: { supportsTablet: true, config: { googleMapsApiKey } },
+  ios: { bundleIdentifier: APP_ID, supportsTablet: true, config: { googleMapsApiKey } },
   android: {
+    package: APP_ID,
+    googleServicesFile,
+    // The phone app never asks for location (platform/location.native.ts) or reads shared
+    // storage; keep libraries and Expo's defaults from adding those permissions, so the Play
+    // data-safety answers stay "no location" and no storage access is declared.
+    blockedPermissions: [
+      'android.permission.ACCESS_FINE_LOCATION',
+      'android.permission.ACCESS_COARSE_LOCATION',
+      'android.permission.ACCESS_BACKGROUND_LOCATION',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
     // react-native-maps on Android needs the key in the native manifest, not only at run time.
     config: { googleMaps: { apiKey: googleMapsApiKey } },
     adaptiveIcon: {
@@ -47,6 +72,7 @@ const config: ExpoConfig = {
       backgroundColor: '#ffffff',
     },
   },
+  ...(easProjectId ? { extra: { eas: { projectId: easProjectId } } } : {}),
 };
 
 export default config;

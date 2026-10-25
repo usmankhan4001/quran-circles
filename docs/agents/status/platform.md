@@ -1,7 +1,30 @@
 # Status: platform
 
-Updated: 2026-10-18 (pg_stat_statements in production, Gate 5 pool measurement)
+Updated: 2026-10-25 (go-live prep: production on Dokploy, real client addresses, Android release config)
 Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (owner rule for this phase).
+
+## Go-live prep (2026-10-25)
+
+Plan and owner checklist: `docs/release/go-live.md`. Branch `lane/platform/go-live`, to land after the join pledge, map and session-screen commits. Not deployed.
+
+### Done
+
+- `infra/docker-compose.dokploy-prod.yml` and `infra/caddy/Caddyfile.dokploy-prod`: production on the Dokploy host, the staging pattern (parked `proxy`, `web` behind Traefik labels, aliases `qc-prod-api`/`qc-prod-worker`), production headers (HSTS with includeSubDomains, no X-Robots-Tag). `proxy-staging.Dockerfile` takes `CADDYFILE`, `GOOGLE_MAPS_WEB_KEY` and `VAPID_PUBLIC_KEY` build arguments; staging's defaults unchanged. `infra/ENV.md` documents `QC_GOOGLE_MAPS_WEB_KEY` and the build use of `VAPID_PUBLIC_KEY`.
+- Client addresses behind Cloudflare and Traefik (the open item under the staging notes): `Caddyfile.dokploy-prod` and `Caddyfile.staging` set `client_ip_headers CF-Connecting-IP X-Forwarded-For` with `trusted_proxies_strict`, and the api route sends `X-Forwarded-For {client_ip}`. Before, every person shared the Traefik hop's sign-in and request budget. Checked with Caddy 2.10.2 and an echo upstream: CF header, Traefik header and a forged chain give 203.0.113.7, 198.51.100.4 and 198.51.100.4. Someone reaching Traefik directly can still choose the address the per-address limits see; per-number and global caps hold.
+- Change request `2026-10-25-osm-map-tiles-csp` applied: `https://tile.openstreetmap.org` in the PWA `img-src` of all three Caddyfiles (header lines kept identical).
+- `apps/user-app/app.config.ts` (store build config, owner approval): app id `pk.doraquran.circles` (pending the owner's confirmation), `googleServicesFile` from the EAS file variable `GOOGLE_SERVICES_JSON`, `extra.eas.projectId` from `EAS_PROJECT_ID`, location and external-storage permissions blocked. New `apps/user-app/eas.json` (preview APK, production AAB with remote version codes, submit to the internal track as a draft).
+
+### Checked
+
+- `caddy validate` and `caddy fmt` clean on all three Caddyfiles. `docker compose ... config` passes for prod + dokploy-prod (no published ports; web build args and labels as intended) and for prod + staging. `pnpm --filter @qc/user-app typecheck` passes; `expo config` shows the package, the Firebase file and the blocked permissions. Prettier clean on the changed files.
+- Dokploy host (read only): staging stack healthy, 6 days old; 8 cores, 16 GB (about 5 GB free), 161 GB disk (52 GB used); no backup destination; the cloud environment's injected Dokploy key fails, the device connector's works.
+
+### Open
+
+- Owner: decisions and accounts in `docs/release/go-live.md`, "Who does what".
+- Reviewer sign-in for Play review (auth lane): the API refuses a fixed code in production.
+- Privacy policy page and account-deletion URL (needs the support address and publisher name).
+- Store listing still describes seat booking.
 
 ## Query statistics and the pool (2026-10-18, Gate 5 database performance)
 

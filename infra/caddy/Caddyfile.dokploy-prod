@@ -1,0 +1,93 @@
+# Production reverse proxy on Dokploy (Traefik in front, as on the staging host). Same routes,
+# headers and Content-Security-Policy as infra/caddy/Caddyfile; the only differences are the
+# ones Dokploy needs:
+# - plain HTTP :80, no host ports and no automatic TLS: Traefik (and Cloudflare, when the names
+#   go through its tunnel) terminates TLS and routes QC_DOMAIN and QC_CONSOLE_DOMAIN here, by the
+#   labels in infra/docker-compose.dokploy-prod.yml;
+# - the api and the worker are reached by the aliases qc-prod-api and qc-prod-worker, because this
+#   container also sits on Dokploy's shared network, where a bare `api` could be another stack's;
+# - the PWA and console builds are baked into the image (infra/docker/proxy-staging.Dockerfile with
+#   CADDYFILE=infra/caddy/Caddyfile.dokploy-prod).
+# Keep the header and CSP lines identical to infra/caddy/Caddyfile.
+{
+	admin 127.0.0.1:2019
+	auto_https off
+	servers {
+		# Traefik (on Dokploy's private network) sits in front; keep its X-Forwarded-* headers.
+		trusted_proxies static private_ranges
+		# The real client: Cloudflare's header when the request came through its tunnel, otherwise
+		# the address Traefik recorded (Traefik drops X-Forwarded-For from untrusted senders and
+		# sets its own). Read only from the private-range hops above.
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+		# Rightmost untrusted entry, so a forged X-Forwarded-For prefix is ignored.
+		trusted_proxies_strict
+	}
+}
+
+(common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+}
+
+(csp-data) {
+	header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+}
+
+(api) {
+	handle_path /api/* {
+		import csp-data
+		request_body {
+			max_size 10MB
+		}
+		reverse_proxy qc-prod-api:3000 {
+			# The api reads the rightmost X-Forwarded-For entry (SEC-20). Without this it would be the
+			# Traefik hop for everyone, and every person would share one sign-in and request budget.
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
+}
+
+(spa) {
+	handle {
+		root * /srv/www/{args[0]}
+		@assets path /assets/* /_expo/static/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@pages not path /assets/* /_expo/static/*
+		header @pages Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+http://{$QC_DOMAIN} {
+	import common
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@app not path /api/* /webhooks/*
+	header @app Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://*.googleusercontent.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com https://*.ggpht.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.alquran.cloud https://*.googleapis.com https://*.google.com https://*.gstatic.com data: blob:; frame-src https://*.google.com; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+	import api
+
+	handle /webhooks/whatsapp {
+		import csp-data
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy qc-prod-worker:8081
+	}
+
+	import spa app
+}
+
+http://{$QC_CONSOLE_DOMAIN} {
+	import common
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@console not path /api/*
+	header @console Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+	import api
+	import spa console
+}

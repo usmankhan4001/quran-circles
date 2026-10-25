@@ -26,6 +26,15 @@ The four database passwords must differ; `db-roles` (`infra/postgres/roles.sql`)
 
 `DATABASE_URL` (per service, with its own role), `PGBOSS_DATABASE_URL` (`pgboss-migrate`), `PORT`, `TRUST_PROXY`, `AUTH_TRUST_PROXY`, `WORKER_HTTP_PORT`, `RENDERER_URL` and `POSTER_STORAGE_DIR` are set by the compose file, not the env file. So are the renderer's own settings (`RENDERER_PORT`, `RENDER_CONCURRENCY`, `RENDER_QUEUE_MAX`, `RENDER_TIMEOUT_MS`, `BROWSER_HEAP_MB`, `BROWSER_RECYCLE_AFTER`, `RENDER_CACHE_BYTES`; values in the compose file).
 
+## Dokploy production (`infra/docker-compose.dokploy-prod.yml`)
+
+Only on the Dokploy production stack. Both are public, restricted keys baked into the PWA at build time, never secrets.
+
+| Name                     | Read by       | Required | Meaning                                                                                                   |
+| ------------------------ | ------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `QC_GOOGLE_MAPS_WEB_KEY` | C (build arg) | no       | Google Maps JavaScript API key for the PWA, restricted to `https://<QC_DOMAIN>/*`. Unset: the keyless map |
+| `VAPID_PUBLIC_KEY`       | C (build arg) | no       | Also passed to the `web` build as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`, so the PWA can subscribe to web push    |
+
 ## API and worker
 
 | Name                      | Read by | Required | Meaning                                                                                                                       |
