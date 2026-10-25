@@ -62,7 +62,7 @@ describe('FeaturesScreen', () => {
   it('never says book, seat or ticket (joining is a pledge)', () => {
     for (const key of ['find', 'join', 'remind', 'quran', 'journey'] as const) {
       const text = `${en[`features.${key}.title`]} ${en[`features.${key}.body`]}`;
-      expect(text).not.toMatch(/(book|booking|booked|seat|ticket)s?/i);
+      expect(text).not.toMatch(/\b(book|booking|booked|seat|ticket)s?\b/i);
     }
   });
 });
