@@ -1,0 +1,40 @@
+# Line endings. Everything in the repository is stored with LF. On Windows, Git must not convert
+# files to CRLF on checkout: Prettier, the contract and migration tests and the shell scripts in
+# Docker all expect LF. This file overrides a contributor's core.autocrlf setting.
+* text=auto eol=lf
+
+# Source and config that must always be LF, even if Git would guess otherwise.
+*.sh text eol=lf
+*.sql text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+Dockerfile text eol=lf
+*.Dockerfile text eol=lf
+*.crontab text eol=lf
+
+# Windows-only scripts keep CRLF. None exist today.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never converted, never diffed as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.zip binary
+*.gz binary
+*.bundle binary
+*.patch -text
+pnpm-lock.yaml -diff
+packages/contracts/openapi.json linguist-generated
