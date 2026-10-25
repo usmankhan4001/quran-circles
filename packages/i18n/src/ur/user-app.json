@@ -748,5 +748,10 @@
   "signIn.notNow": "ابھی نہیں",
   "signIn.code.title": "کوڈ لکھیں",
   "signIn.code.intro": "ہم نے {phone} پر واٹس ایپ پر 6 ہندسوں کا کوڈ بھیجا ہے۔",
-  "signIn.code.introSmsTo": "ہم نے {phone} پر ایس ایم ایس سے 6 ہندسوں کا کوڈ بھیجا ہے۔"
+  "signIn.code.introSmsTo": "ہم نے {phone} پر ایس ایم ایس سے 6 ہندسوں کا کوڈ بھیجا ہے۔",
+  "home.greeting": "السلام علیکم، {name}",
+  "home.greetingGuest": "السلام علیکم",
+  "home.profile.open": "پروفائل کھولیں",
+  "home.profile.signIn": "سائن اِن کریں یا اکاؤنٹ بنائیں",
+  "home.nearWeek": "اس ہفتے آپ کے قریب"
 }

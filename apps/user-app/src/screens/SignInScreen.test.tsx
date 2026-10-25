@@ -1,4 +1,4 @@
-import { fireEvent, within } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { makeApiError } from '@qc/contracts';
 import { messages } from '@qc/i18n';

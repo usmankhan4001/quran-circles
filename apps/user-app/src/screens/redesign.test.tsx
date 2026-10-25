@@ -47,30 +47,19 @@ function circleRequestsIn(...cityIds: string[]) {
 }
 
 describe('Home (H4)', () => {
-  it('holds the next circle in the green header, then search, pictures, map and ayah (D17)', async () => {
+  it('holds the next circle, then the other circles and the ayah, on the white page', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
-    const header = await view.findByTestId('screen-header');
-    expect(within(header).getByTestId('home-lead-card')).toBeTruthy();
-    expect(view.getByTestId('home-search')).toBeTruthy();
-    expect(await view.findByTestId('home-map')).toBeTruthy();
+    expect(await view.findByTestId('home-lead-card')).toBeTruthy();
+    expect(view.getByTestId('screen-header')).toBeTruthy();
     expect(view.getByTestId('home-ayah')).toBeTruthy();
-    // The drawings end Home with the reading cards: the old "Also in the app" row is gone.
+    // No coloured band, no search field, no map card, no "Also in the app" row.
+    expect(view.queryByTestId('home-search')).toBeNull();
+    expect(view.queryByTestId('home-map')).toBeNull();
     expect(view.queryByTestId('home-also')).toBeNull();
   });
 
-  it('opens Nearby from the search field, the filter button and the map card', async () => {
-    const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
-    const view = await renderScreen(<HomeScreen />, { world });
-    for (const id of ['home-search', 'home-filters']) {
-      fireEvent.click(view.getByTestId(id));
-      expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
-    }
-    fireEvent.click(await view.findByTestId('home-map'));
-    expect(world.nav.last()).toEqual({ type: 'tab', route: { name: 'nearby' } });
-  });
-
-  it('shows circles near you as picture cards that open the session', async () => {
+  it('shows circles near you as rows that open the session', async () => {
     const world = await createWorld({ cityId: CITY_RAWALPINDI.id });
     const view = await renderScreen(<HomeScreen />, { world });
     await view.findByTestId('home-lead-card');

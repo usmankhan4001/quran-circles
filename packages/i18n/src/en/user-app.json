@@ -746,5 +746,10 @@
   "signIn.notNow": "Not now",
   "signIn.code.title": "Enter the code",
   "signIn.code.intro": "We sent a 6-digit code on WhatsApp to {phone}",
-  "signIn.code.introSmsTo": "We sent a 6-digit code by SMS to {phone}"
+  "signIn.code.introSmsTo": "We sent a 6-digit code by SMS to {phone}",
+  "home.greeting": "Assalamu alaikum, {name}",
+  "home.greetingGuest": "Assalamu alaikum",
+  "home.profile.open": "Open profile",
+  "home.profile.signIn": "Sign in or create an account",
+  "home.nearWeek": "Near you this week"
 }
