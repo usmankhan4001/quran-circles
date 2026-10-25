@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import type { AuditEntry } from '@qc/contracts';
 import { useSignedIn } from '../api/auth';
 import { useDirectory } from '../api/directory';
@@ -12,6 +12,7 @@ import {
   Loading,
   NoMatch,
   PageHeader,
+  Phone,
   SelectField,
   TableCard,
   TextField,
@@ -19,6 +20,7 @@ import {
 } from '../components/ui';
 import { useShellCity, useShellSearch } from '../components/ShellFilters';
 import { useI18n } from '../i18n';
+import { auditActor } from '../lib/audit';
 import { auditStats } from '../lib/kpis';
 import { filterBySearch } from '../lib/search';
 
@@ -94,6 +96,21 @@ export default function AuditPage() {
         ? localized(dir.cities.find((c) => c.id === e.cityId)?.name)
         : t('console.scope.national');
 
+  // A name, else a masked number, else "System" only for work no person did (lib/audit.ts).
+  const actorOf = (e: AuditEntry): ReactNode => {
+    const actor = auditActor(e);
+    switch (actor.kind) {
+      case 'name':
+        return <bdi>{actor.name}</bdi>;
+      case 'phone':
+        return <Phone value={actor.phone} masked />;
+      case 'system':
+        return t('console.audit.system');
+      case 'unnamed':
+        return t('console.invites.unnamed');
+    }
+  };
+
   // The artboard draws the log as rows: who did it in bold, then the action, record and place in
   // code type, and the time at the end edge.
   const columns: Column<AuditEntry>[] = [
@@ -103,7 +120,7 @@ export default function AuditPage() {
       rowHeader: true,
       cell: (e) => (
         <div className="audit-entry">
-          <span className="audit-who">{e.actorName ?? t('console.audit.system')}</span>
+          <span className="audit-who">{actorOf(e)}</span>
           <span className="audit-code" dir="ltr">
             <Code>{e.action}</Code>
             {' · '}
