@@ -12,6 +12,8 @@ import type { ExpoConfig } from 'expo/config';
  * - `EXPO_PUBLIC_VAPID_PUBLIC_KEY`: the public half of the web push key pair. Without it web
  *   push is off.
  */
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || undefined;
+
 const config: ExpoConfig = {
   name: 'Quran Circles',
   slug: 'quran-circles',
@@ -36,8 +38,10 @@ const config: ExpoConfig = {
     themeColor: '#064e3b',
     favicon: './public/icons/icon-192.png',
   },
-  ios: { supportsTablet: true },
+  ios: { supportsTablet: true, config: { googleMapsApiKey } },
   android: {
+    // react-native-maps on Android needs the key in the native manifest, not only at run time.
+    config: { googleMaps: { apiKey: googleMapsApiKey } },
     adaptiveIcon: {
       foregroundImage: './public/icons/adaptive-foreground.png',
       backgroundColor: '#ffffff',
