@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import {
   colors as palette,
+  consoleRedesign,
   consoleTagColors,
   elevation,
   fontFallbacks,
@@ -42,21 +43,35 @@ const rem = (px: number) => `${px / 16}rem`;
  */
 export function themeVariables(mode: ResolvedTheme): Record<string, string> {
   const vars: Record<string, string> = {};
-  const colors: SemanticColors = semanticColors[mode];
+  const colors: SemanticColors = { ...semanticColors[mode], ...consoleRedesign[mode] };
   for (const [name, value] of Object.entries(colors)) vars[`--c-${kebab(name)}`] = value;
   const night = mode === 'dark';
   // D17: the sidebar is white with a deep emerald brand block on top; these name that block.
-  vars['--c-sidebar-from'] = night ? palette.green[900] : palette.brand.deep;
-  vars['--c-sidebar-to'] = night ? palette.green[950] : palette.brand.emerald;
-  vars['--c-sidebar-text'] = palette.white;
+  vars['--c-sidebar-from'] = colors.accentPressed;
+  vars['--c-sidebar-to'] = colors.accent;
+  vars['--c-sidebar-text'] = colors.textOnAccent;
   vars['--c-sidebar-soft'] = palette.green[200];
-  vars['--c-on-sidebar-logo'] = palette.brand.deep;
+  vars['--c-on-sidebar-logo'] = colors.accentPressed;
   // The work area: slate cloud by day so white cards stand off it, the night page after Isha.
-  vars['--c-page'] = night ? colors.background : colors.surfaceMuted;
+  vars['--c-page'] = colors.background;
+  // The quiet grey fill: the sidebar, table heads, tracks and chips at rest.
+  vars['--c-fill'] = colors.surfaceMuted;
   for (const [name, value] of Object.entries(consoleTagColors[mode]))
     vars[`--c-tag-${kebab(name)}`] = value;
   for (const [name, value] of Object.entries(spacing)) vars[`--space-${name}`] = rem(value);
   for (const [name, value] of Object.entries(radii)) vars[`--radius-${name}`] = `${value}px`;
+  // The redesign rounds controls to 12, cards to 16 and sheets and dialogs to 20; only chips,
+  // tags and counters stay pills.
+  Object.assign(vars, {
+    '--radius-field': '12px',
+    '--radius-md': '12px',
+    '--radius-lg': '16px',
+    '--radius-section': '16px',
+    '--radius-card': '16px',
+    '--radius-xl': '16px',
+    '--radius-dialog': '20px',
+    '--radius-sheet': '20px',
+  });
   vars['--touch-min'] = rem(minTouchTarget);
   // Plus Jakarta Sans leads Latin text, as on the showcase (owner override of D17); Urdu keeps
   // the kit's Mehr Nastaliq.

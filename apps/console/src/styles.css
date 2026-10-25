@@ -147,23 +147,18 @@ a {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: var(--c-surface);
+  background: var(--c-fill);
   color: var(--c-text);
   border-inline-end: 1px solid var(--c-border);
 }
 
-/* The deep emerald brand block on top of the white rail. */
+/* The brand sits on the grey rail with no band: logo tile and name in ink. */
 .brand {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  padding: 1.125rem 1rem;
-  background: linear-gradient(135deg, var(--c-sidebar-from), var(--c-sidebar-to));
-  color: var(--c-sidebar-text);
-}
-.brand :focus-visible,
-.auth-hero :focus-visible {
-  outline-color: var(--c-sidebar-text);
+  padding: 1.25rem 1rem 1rem;
+  color: var(--c-text);
 }
 .brand-mark {
   flex: none;
@@ -172,9 +167,8 @@ a {
   inline-size: 2.125rem;
   block-size: 2.125rem;
   border-radius: 0.625rem;
-  background: color-mix(in srgb, var(--c-sidebar-text) 14%, transparent);
-  border: 1px solid color-mix(in srgb, var(--c-sidebar-text) 22%, transparent);
-  color: var(--c-sidebar-soft);
+  background: var(--c-accent);
+  color: var(--c-text-on-accent);
 }
 .brand-mark-large {
   inline-size: 3.5rem;
@@ -198,7 +192,7 @@ a {
   margin-block-start: 0.0625rem;
   font-size: 0.65625rem;
   font-weight: 600;
-  color: var(--c-sidebar-soft);
+  color: var(--c-text-muted);
 }
 
 /* The season pill under the brand block: amber, from the server's season mode. */
@@ -707,7 +701,7 @@ html[data-theme='dark'] .nav-link[aria-current='page'] {
   justify-items: center;
   gap: var(--space-lg);
   padding: var(--space-lg);
-  background: var(--c-page);
+  background: var(--c-fill);
 }
 .auth-tools .field-box {
   --field-h: 2rem;
@@ -731,24 +725,60 @@ html[data-theme='dark'] .nav-link[aria-current='page'] {
   padding: 0;
   overflow: hidden;
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-high);
+  border: 1px solid var(--c-border);
 }
-/* The emerald brand block fading through the mid green, as on the console's own rail. */
+/* The brand mark, title and intro sit on the plain white card. */
 .auth-hero {
   display: grid;
   justify-items: start;
   gap: var(--space-md);
   padding: var(--space-xl);
-  background: linear-gradient(135deg, var(--c-sidebar-from), var(--c-sidebar-to));
-  color: var(--c-sidebar-text);
+  padding-block-end: 0;
+  color: var(--c-text);
 }
 .auth-hero .page-intro {
-  color: var(--c-sidebar-soft);
+  color: var(--c-text-muted);
 }
 .auth-body {
   display: grid;
   gap: var(--space-lg);
   padding: var(--space-xl);
+}
+.code-field {
+  display: grid;
+  gap: var(--space-sm);
+}
+.code-boxes {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+/* The real input covers the boxes and is invisible; focus shows on the current box. */
+.code-input {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  opacity: 0;
+  z-index: 1;
+  cursor: text;
+}
+.code-digit {
+  display: grid;
+  place-items: center;
+  block-size: 3.5rem;
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+.code-boxes:focus-within .code-digit[data-current='true'] {
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 1px var(--c-accent);
+}
+.code-timer {
+  text-align: center;
 }
 .auth-body .form-actions .btn-primary {
   flex: 1 1 100%;
@@ -765,7 +795,7 @@ html[data-theme='dark'] .nav-link[aria-current='page'] {
   gap: var(--space-sm);
   min-block-size: var(--touch-min);
   padding-inline: var(--space-xl);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
   font: inherit;
   font-size: var(--type-label-size);
