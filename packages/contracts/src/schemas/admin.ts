@@ -48,8 +48,8 @@ const roleTargetShapes = {
  * Invite a person who may not have an account yet. Coordinators sign in with a phone code.
  *
  * Handover: pass `replacesAssignmentId` (city or venue coordinator) to hand a place over to
- * someone with no account yet. The invite stays pending; when the person accepts it, the new
- * assignment is created and the replaced one is revoked in the same transaction. The caller
+ * someone with no account yet. The replaced assignment is revoked at once, when the invite is
+ * created; the invite stays pending and the new assignment is created on acceptance. The caller
  * needs the right to assign the role at that place and to revoke the replaced assignment.
  *
  * Resend: there is no separate "resend" call. Sending a new invite for the same number, role
@@ -88,7 +88,7 @@ export const Invite = lazy(() =>
     createdAt: InstantUtc,
     expiresAt: InstantUtc,
     /**
-     * Handover: the assignment this invite replaces when it is accepted, or null for a plain invite.
+     * Handover: the assignment this invite replaced (revoked when the invite was created), or null for a plain invite.
      * Servers from 1.0.0-rc.3 always send it. To resend a handover invite, copy it into the new
      * `InviteBody`; a resend of a still-pending handover invite keeps it even when it is left out.
      * Optional in the type only so that payloads and test data written for rc.2 still parse.
