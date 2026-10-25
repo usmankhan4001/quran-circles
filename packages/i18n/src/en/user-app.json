@@ -769,5 +769,12 @@
   "nearby.location.chooseArea": "Choose an area",
   "nearby.map.offlineTitle": "The map is not available",
   "nearby.map.selectedJoin": "Join",
-  "nearby.map.details": "Details"
+  "nearby.map.details": "Details",
+  "nearby.map.openFull": "Open the full map",
+  "nearby.map.offline": "The map needs internet. Showing your circles as a list.",
+  "map.close": "Close the map",
+  "map.locate": "Show my location",
+  "map.search": "Search area or masjid",
+  "map.full.label": "Full map of circles near you",
+  "venue.map.label": "Map showing {venue}. Opens the full map."
 }

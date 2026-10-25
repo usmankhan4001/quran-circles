@@ -771,5 +771,12 @@
   "nearby.location.chooseArea": "علاقہ چنیں",
   "nearby.map.offlineTitle": "نقشہ دستیاب نہیں",
   "nearby.map.selectedJoin": "شامل ہوں",
-  "nearby.map.details": "تفصیل"
+  "nearby.map.details": "تفصیل",
+  "nearby.map.openFull": "پورا نقشہ کھولیں",
+  "nearby.map.offline": "نقشے کے لیے انٹرنیٹ چاہیے۔ آپ کے حلقے فہرست کی صورت میں دکھائے جا رہے ہیں۔",
+  "map.close": "نقشہ بند کریں",
+  "map.locate": "میری جگہ دکھائیں",
+  "map.search": "علاقہ یا مسجد تلاش کریں",
+  "map.full.label": "آپ کے قریب حلقوں کا پورا نقشہ",
+  "venue.map.label": "{venue} کا نقشہ۔ پورا نقشہ کھلتا ہے۔"
 }

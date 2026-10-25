@@ -22,6 +22,7 @@ import { useRequireAuth } from '../features/auth/useRequireAuth';
 import { useMyRegistrations } from '../features/journey/hooks';
 import { registerState } from '../features/session/registerState';
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
+import { MapSelectionCards } from '../components/MapSelectionCard';
 import { errorMessageKey } from '../core/errors';
 import { useAppConfig } from '../features/config/useAppConfig';
 import { splitClock } from '../features/home/clock';
@@ -39,7 +40,7 @@ import { useSessionList } from '../features/nearby/useSessions';
 import { useAreas, useCities } from '../features/places/usePlaces';
 import { useI18n } from '../i18n/I18nProvider';
 import { useNav } from '../nav/NavProvider';
-import { usePreferences } from '../providers/hooks';
+import { useOffline, usePreferences } from '../providers/hooks';
 import { useServices } from '../providers/services';
 import { ComingSoon } from '../ui/ComingSoon';
 import { TabFrame } from '../ui/TabFrame';
@@ -82,6 +83,7 @@ export function NearbyScreen() {
   const cities = useCities();
   const areas = useAreas(prefs.cityId);
   const origin = useOrigin();
+  const offline = useOffline();
   const c = useTheme().colors;
 
   const [local, setLocal] = useState<NearbyFilters>(emptyFilters);
@@ -190,81 +192,18 @@ export function NearbyScreen() {
     </View>
   );
 
-  const selection = selectedVenue ? (
-    <View style={styles.list} testID="map-selection">
-      {selectedSessions.map((session) => {
-        const title = l(session.title);
-        const distance = distanceText(session.venue);
-        const place = l(session.venue.name).text;
-        const portion = session.nextOccurrence
-          ? describePortion(session.nextOccurrence, t, locale)
-          : null;
-        const when = describeWhenParts(session, t, locale, true);
-        const joinState = registerState(session, mine.data);
-        const joined = joinState.kind === 'registered';
-        return (
-          <Card key={session.id} testID={`map-selected-${session.id}`}>
-            <View style={styles.selected}>
-              <View style={styles.selectedTop}>
-                <Text variant="eyebrow" color="textAccent">
-                  {[when.day, when.time].join(sep)}
-                </Text>
-                <Text variant="title3" lang={title.lang}>
-                  {place}
-                </Text>
-                <Text variant="caption" color="textMuted">
-                  {[title.text, t(`sections.${session.section}`), distance]
-                    .filter(Boolean)
-                    .join(sep)}
-                </Text>
-              </View>
-              {portion ? <QuranPortion label={portion} /> : null}
-              <View style={styles.selectedRow}>
-                {joinState.kind === 'open' || joined ? (
-                  <View style={styles.grow}>
-                    <Button
-                      fullWidth
-                      variant={joined ? 'secondary' : 'primary'}
-                      label={joined ? t('session.joined') : t('nearby.map.selectedJoin')}
-                      accessibilityLabel={`${joined ? t('session.joined') : t('session.join')}${sep}${title.text}`}
-                      onPress={() => {
-                        if (joined) {
-                          nav.tab({ name: 'journey' });
-                          return;
-                        }
-                        const target = { name: 'register', sessionId: session.id } as const;
-                        if (requireAuth(target)) nav.go(target);
-                      }}
-                      testID={`map-join-${session.id}`}
-                    />
-                  </View>
-                ) : null}
-                <View style={styles.grow}>
-                  <Button
-                    fullWidth
-                    variant="outline"
-                    label={t('nearby.map.details')}
-                    onPress={() => nav.go({ name: 'session', sessionId: session.id })}
-                    testID={`map-open-${session.id}`}
-                  />
-                </View>
-              </View>
-            </View>
-          </Card>
-        );
-      })}
-      <Button
-        variant="tertiary"
-        fullWidth
-        label={t('nearby.map.viewVenue')}
-        onPress={() => nav.go({ name: 'venue', venueId: selectedVenue })}
+  const selection =
+    selectedVenue && selectedSessions.length > 0 ? (
+      <MapSelectionCards
+        sessions={selectedSessions}
+        distanceText={distanceText}
+        venueId={selectedVenue}
       />
-    </View>
-  ) : (
-    <Text variant="caption" color="textMuted">
-      {t('nearby.map.hint')}
-    </Text>
-  );
+    ) : (
+      <Text variant="caption" color="textMuted">
+        {t('nearby.map.hint')}
+      </Text>
+    );
 
   return (
     <TabFrame header={header} testID="nearby-screen">
@@ -305,7 +244,7 @@ export function NearbyScreen() {
               />
             ) : null}
           </View>
-        ) : mode === 'map' ? (
+        ) : mode === 'map' && !offline ? (
           <View style={styles.list}>
             {!origin ? (
               <Card variant="flat" testID="nearby-location-off">
@@ -336,10 +275,21 @@ export function NearbyScreen() {
               accessibilityLabel={t('nearby.map.label')}
               unavailableLabel={t('nearby.map.unavailable')}
             />
+            <Button
+              variant="outline"
+              icon="map-trifold"
+              label={t('nearby.map.openFull')}
+              fullWidth
+              onPress={() => nav.go({ name: 'map' })}
+              testID="nearby-open-full-map"
+            />
             {selection}
           </View>
         ) : (
           <View testID="nearby-list">
+            {mode === 'map' && offline ? (
+              <Banner kind="offline" title={t('nearby.map.offline')} testID="map-offline" />
+            ) : null}
             {list.items.map((session, i) => {
               const distance = distanceText(session.venue);
               const when = describeWhenParts(session, t, locale, true);

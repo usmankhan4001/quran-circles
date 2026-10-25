@@ -122,15 +122,12 @@ describe('NearbyScreen', () => {
       });
     });
 
-    it('sends a signed-out person to sign in and back to the join flow', async () => {
+    it('takes a signed-out person straight to the pledge sheet, which signs them in itself', async () => {
       const { view } = await openCard();
       fireEvent.click(view.getByTestId(`map-join-${SESSIONS.taraweeh.id}`));
       expect(view.world.nav.last()).toEqual({
         type: 'go',
-        route: {
-          name: 'signIn',
-          returnTo: { name: 'register', sessionId: SESSIONS.taraweeh.id },
-        },
+        route: { name: 'register', sessionId: SESSIONS.taraweeh.id },
       });
     });
 
@@ -387,5 +384,24 @@ describe('NearbyScreen', () => {
           : SESSIONS.taraweeh.venue.name.en;
       expect(within(view.getByTestId('nearby-list')).getAllByText(venue).length).toBeGreaterThan(0);
     });
+  });
+
+  it('falls back to the list with a plain note when the map needs internet', async () => {
+    const network = new FakeNetwork(true);
+    const world = await createWorld({ cityId: CITY_RAWALPINDI.id, network });
+    const view = await renderScreen(<NearbyScreen />, { world });
+    await view.findByTestId('nearby-list');
+    await act(async () => network.set(false));
+    fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
+    expect(await view.findByTestId('map-offline')).toBeTruthy();
+    expect(view.getByTestId('nearby-list')).toBeTruthy();
+  });
+
+  it('opens the full-screen map from the map view', async () => {
+    const view = await renderScreen(<NearbyScreen />, { cityId: CITY_RAWALPINDI.id });
+    await view.findByTestId('nearby-list');
+    fireEvent.click(within(view.getByTestId('nearby-view')).getByText(en['nearby.view.map']));
+    fireEvent.click(await view.findByTestId('nearby-open-full-map'));
+    expect(view.world.nav.last()).toEqual({ type: 'go', route: { name: 'map' } });
   });
 });

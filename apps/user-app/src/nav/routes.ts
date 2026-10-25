@@ -13,6 +13,7 @@ export type Route =
   | { name: 'memorisation' }
   | { name: 'updates' }
   | { name: 'welcome' }
+  | { name: 'map'; venueId?: string }
   | { name: 'features' }
   | { name: 'signUp'; returnTo?: Route }
   | { name: 'signIn'; returnTo?: Route }
@@ -49,6 +50,8 @@ export function routeToHref(route: Route): string {
       return '/updates';
     case 'welcome':
       return '/welcome';
+    case 'map':
+      return route.venueId ? `/map?venueId=${encodeURIComponent(route.venueId)}` : '/map';
     case 'features':
       return '/features';
     case 'signUp':
@@ -119,6 +122,10 @@ export function hrefToRoute(href: string): Route | null {
       return occurrenceId
         ? { name: 'register', sessionId: second, occurrenceId }
         : { name: 'register', sessionId: second };
+    }
+    case 'map': {
+      const venueId = url.searchParams.get('venueId');
+      return venueId ? { name: 'map', venueId } : { name: 'map' };
     }
     case 'page':
       return second ? { name: 'page', slug: second } : null;
