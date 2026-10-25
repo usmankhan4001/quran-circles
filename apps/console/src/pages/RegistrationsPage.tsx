@@ -22,6 +22,7 @@ import {
   Loading,
   NoMatch,
   PageHeader,
+  StatRow,
   Phone,
   SelectField,
   TableCard,
@@ -101,8 +102,8 @@ export default function RegistrationsPage() {
       })
     : true; // The API still checks; without the session we cannot know the scope here.
 
-  // The artboard's five columns: who, their number, section with party size, the WhatsApp
-  // choice and the status.
+  // Who, their number, the section, the WhatsApp choice and the status. Joining is a pledge, so
+  // the party size is not shown.
   const columns: Column<StaffRegistration>[] = [
     {
       id: 'name',
@@ -117,15 +118,8 @@ export default function RegistrationsPage() {
     },
     {
       id: 'section',
-      header: t('console.registrations.col.sectionParty'),
-      cell: (r) => (
-        <span className="cell-soft">
-          {t('console.registrations.sectionParty', {
-            section: t(SECTION_KEYS[r.section]),
-            count: number(r.partySize),
-          })}
-        </span>
-      ),
+      header: t('console.registrations.col.section'),
+      cell: (r) => <span className="cell-soft">{t(SECTION_KEYS[r.section])}</span>,
     },
     {
       id: 'whatsapp',
@@ -155,7 +149,6 @@ export default function RegistrationsPage() {
             : t('console.exports.registrations.title')
         }
         intro={`${t('console.exports.privacy')} ${t('console.exports.audited')}`}
-        hidden
       />
       <p className="back-link">
         <Link to="/sessions">{t('console.exports.registrations.back')}</Link>
@@ -164,6 +157,25 @@ export default function RegistrationsPage() {
         sessionId={sessionId}
         place={sessionData ? { cityId: sessionData.cityId, venueId: sessionData.venueId } : null}
       />
+      {list.status === 'ready' ? (
+        <StatRow
+          label={t('console.kpi.label')}
+          partial={list.status === 'ready' && list.hasMore}
+          stats={[
+            {
+              id: 'registrations',
+              label: t('console.kpi.registrations'),
+              value: totals?.registrations ?? 0,
+            },
+            {
+              id: 'optedIn',
+              label: t('console.kpi.optedIn'),
+              value:
+                list.status === 'ready' ? list.items.filter((r) => r.allowsWhatsapp).length : 0,
+            },
+          ]}
+        />
+      ) : null}
       <TableCard
         title={t('console.registrations.cardTitle')}
         subtitle={
@@ -172,7 +184,6 @@ export default function RegistrationsPage() {
                 sessionData ? localized(sessionData.venue.name) : null,
                 t('console.registrations.sub', {
                   registrations: number(totals.registrations),
-                  people: number(totals.people),
                 }),
               ]
                 .filter(Boolean)

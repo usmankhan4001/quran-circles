@@ -28,7 +28,7 @@ const listCalls = (calls: Call[], path: string) =>
   calls.filter((c) => c.method === 'GET' && c.path === path);
 
 describe.each<Locale>(['en', 'ur'])('sessions page as drawn (%s)', (locale) => {
-  it('shows the table in one card with search and add, and no figure tiles', async () => {
+  it('shows number cards and the table in one card with search and add', async () => {
     renderConsole({
       role: 'national',
       locale,
@@ -36,8 +36,8 @@ describe.each<Locale>(['en', 'ur'])('sessions page as drawn (%s)', (locale) => {
       handlers: { 'adminSessions.list': () => page(adminSessions) },
     });
     await screen.findByRole('table', { name: text('console.sessions.title', locale) });
-    // No figure tiles: the console shows only what the table itself holds.
-    expect(screen.queryByRole('region', { name: text('console.kpi.label', locale) })).toBeNull();
+    // Number cards count the rows loaded; no reliability or seat figure is drawn.
+    expect(screen.getByRole('region', { name: text('console.kpi.label', locale) })).toBeTruthy();
     // No seats anywhere, even when an old seat limit says a session is full.
     expect(document.body.textContent ?? '').not.toMatch(/seat/i);
     expect(
@@ -157,7 +157,6 @@ describe('add actions', () => {
     renderConsole({ role: 'venue', path: '/sessions' });
     await screen.findByRole('table', { name: text('console.sessions.title') });
     expect(screen.queryByRole('link', { name: text('console.sessions.add') })).toBeNull();
-    expect(screen.queryByRole('region', { name: text('console.kpi.label') })).toBeNull();
   });
 
   it('ignores a kind in the address that the person may not import', async () => {
@@ -170,10 +169,10 @@ describe('add actions', () => {
 });
 
 describe('venues page', () => {
-  it('lists venues without figure tiles and searches them', async () => {
+  it('lists venues with number cards and searches them', async () => {
     const { user } = renderConsole({ role: 'national', path: '/venues' });
     const table = await screen.findByRole('table', { name: text('console.venues.title') });
-    expect(screen.queryByRole('region', { name: text('console.kpi.label') })).toBeNull();
+    expect(screen.getByRole('region', { name: text('console.kpi.label') })).toBeTruthy();
     expect(within(table).getAllByRole('row')).toHaveLength(venues.length + 1);
     await user.type(
       screen.getByRole('searchbox', { name: text('console.venues.search') }),

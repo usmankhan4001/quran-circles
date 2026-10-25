@@ -1,13 +1,15 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { PHONE_NOT_PAKISTAN_MOBILE, PakistaniMobilePhone, issueMessageKey } from '@qc/contracts';
 import { useAuth } from '../api/auth';
+import { BrandLogo } from '../components/BrandLogo';
 import { DisplayControls } from '../components/Shell';
 import { Icon } from '../components/icons';
 import { Banner, Button, PageHeader, TextField } from '../components/ui';
 import { useI18n } from '../i18n';
+import { ltrRun } from '../lib/ui-tokens';
 import { errorMessageKeyOf, issuesOf } from '../lib/errors';
-import { PHONE_ISSUE_KEYS, normalizePhone, toAsciiDigits } from '../lib/phone';
+import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, toAsciiDigits } from '../lib/phone';
 
 /** "Sign-in works only with a Pakistani mobile number, such as 0300 1234567." */
 const NOT_PAKISTAN_MOBILE = issueMessageKey(PHONE_NOT_PAKISTAN_MOBILE);
@@ -17,15 +19,76 @@ function refusedAsNotPakistanMobile(error: unknown): boolean {
   return issuesOf(error).some((i) => i.path === 'phone' && i.code === PHONE_NOT_PAKISTAN_MOBILE);
 }
 
+/**
+ * The code as six boxes. One real input sits invisibly over them, so paste, one-time-code fill and
+ * screen readers work as for any field; the boxes only draw what it holds.
+ */
+function CodeBoxes({
+  id,
+  label,
+  value,
+  onChange,
+  error,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error: string | null;
+}) {
+  const errorId = useId();
+  const digits = toAsciiDigits(value).replace(/\D/g, '').slice(0, 6);
+  return (
+    <div className="code-field">
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <div className="code-boxes" dir="ltr">
+        <input
+          id={id}
+          className="code-input"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={12}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          required
+        />
+        {Array.from({ length: 6 }, (_, i) => (
+          <span
+            key={i}
+            className="code-digit"
+            aria-hidden="true"
+            data-current={i === Math.min(digits.length, 5) ? 'true' : undefined}
+          >
+            {digits[i] ?? ''}
+          </span>
+        ))}
+      </div>
+      {error ? (
+        <p id={errorId} className="field-error">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+const clock = (seconds: number) =>
+  `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+
 interface Challenge {
   id: string;
+  phone: string;
   /** Seconds until a new code may be requested, counted down on screen. */
   resendIn: number;
 }
 
 /** Coordinators sign in with a code sent to their WhatsApp number. */
 export default function SignInPage() {
-  const { t, number } = useI18n();
+  const { t } = useI18n();
   const auth = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
@@ -71,7 +134,7 @@ export default function SignInPage() {
     setBusy(true);
     try {
       const res = await auth.requestCode(result.e164);
-      setChallenge({ id: res.challengeId, resendIn: res.resendAfterSeconds });
+      setChallenge({ id: res.challengeId, phone: result.e164, resendIn: res.resendAfterSeconds });
       setCode('');
     } catch (error) {
       if (refusedAsNotPakistanMobile(error)) {
@@ -115,10 +178,15 @@ export default function SignInPage() {
       </div>
       <div className="card auth-card">
         <div className="auth-hero">
-          <span className="brand-mark brand-mark-large">
-            <Icon name="mosque" />
-          </span>
-          <PageHeader title={t('console.signIn.title')} intro={t('console.signIn.intro')} />
+          <BrandLogo size={80} />
+          <PageHeader
+            title={t(challenge ? 'console.signIn.code.title' : 'console.signIn.title')}
+            intro={
+              challenge
+                ? t('console.signIn.code.sent', { phone: ltrRun(formatPhone(challenge.phone)) })
+                : t('console.signIn.intro')
+            }
+          />
         </div>
         <div className="auth-body">
           {noAccess ? (
@@ -151,21 +219,21 @@ export default function SignInPage() {
             </form>
           ) : (
             <form className="form" onSubmit={(e) => void verify(e)} noValidate>
-              <TextField
+              <CodeBoxes
                 id="signin-code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                dir="ltr"
-                maxLength={12}
                 label={t('console.signIn.code.label')}
-                hint={t('console.signIn.code.hint')}
-                error={codeError}
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                required
+                onChange={setCode}
+                error={codeError}
               />
+              {waiting ? (
+                <p className="field-hint code-timer">
+                  {t('console.signIn.resendTimer', { time: ltrRun(clock(challenge.resendIn)) })}
+                </p>
+              ) : null}
               <div className="form-actions">
                 <Button type="submit" variant="primary" busy={busy}>
+                  <Icon name="check" size="sm" />
                   {t('console.signIn.verify')}
                 </Button>
                 <Button
@@ -186,11 +254,6 @@ export default function SignInPage() {
                   {t('console.signIn.changeNumber')}
                 </Button>
               </div>
-              {waiting ? (
-                <p className="field-hint">
-                  {t('console.signIn.resendIn', { seconds: number(challenge.resendIn) })}
-                </p>
-              ) : null}
             </form>
           )}
         </div>

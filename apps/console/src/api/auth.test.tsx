@@ -32,7 +32,7 @@ describe('keeping the sign-in alive', () => {
       forceError: (c) => (c.path === '/v1/auth/refresh' ? 'refresh_token_invalid' : undefined),
     });
     expect(
-      await screen.findByLabelText(new RegExp(text('console.signIn.phone.label'))),
+      await screen.findByRole('heading', { level: 1, name: text('console.welcome.title') }),
     ).toBeTruthy();
     await waitFor(() => expect(tokenStore.get('qc.console.refresh')).toBeNull());
   });
@@ -44,7 +44,7 @@ describe('keeping the sign-in alive', () => {
       forceError: (c) => (c.path === '/v1/auth/refresh' ? 'service_unavailable' : undefined),
     });
     expect(
-      await screen.findByLabelText(new RegExp(text('console.signIn.phone.label'))),
+      await screen.findByRole('heading', { level: 1, name: text('console.welcome.title') }),
     ).toBeTruthy();
     expect(tokenStore.get('qc.console.refresh')).toBe('mock-refresh-token-0000');
   });
@@ -60,7 +60,7 @@ describe('keeping the sign-in alive', () => {
     fail = true;
     await user.click(screen.getByRole('link', { name: text('console.nav.sessions') }));
     expect(
-      await screen.findByLabelText(new RegExp(text('console.signIn.phone.label'))),
+      await screen.findByRole('heading', { level: 1, name: text('console.welcome.title') }),
     ).toBeTruthy();
   });
 });

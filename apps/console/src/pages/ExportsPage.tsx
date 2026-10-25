@@ -137,7 +137,7 @@ export default function ExportsPage() {
       {dir.status === 'loading' ? <Loading /> : null}
       {dir.status === 'error' ? <ErrorState error={null} onRetry={dir.reload} /> : null}
       {dir.status === 'ready' ? (
-        <form className="form form-grid card" onSubmit={(e) => void run(e)} noValidate>
+        <form className="form form-grid card exports-form" onSubmit={(e) => void run(e)} noValidate>
           <SelectField
             id="export-city"
             label={t('console.exports.filter.city')}

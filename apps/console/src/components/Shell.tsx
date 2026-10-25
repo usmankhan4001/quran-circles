@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router';
-import type { Role, SeasonMode } from '@qc/contracts';
+import type { Role } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
 import { useFeatures } from '../api/features';
@@ -8,6 +8,7 @@ import { canSomewhere, visibleNav, type NavId } from '../lib/permissions';
 import { useTheme, type ThemeChoice } from '../theme';
 import type { TextSizeStep } from '../lib/ui-tokens';
 import { useDirectory } from '../api/directory';
+import { BrandLogo } from './BrandLogo';
 import { Icon, type IconName } from './icons';
 import { ShellFiltersProvider, useShellCity, useShellFilters } from './ShellFilters';
 import { Button, SearchField, SelectField } from './ui';
@@ -99,8 +100,6 @@ interface MenuEntry {
   path: string;
   label: string;
   icon: IconName;
-  /** The small pill at the end of the row: a count where the console has one, else a dash. */
-  badge?: string;
   /** A hint for entries that open the sessions list first. */
   hint?: string;
   active(pathname: string): boolean;
@@ -114,11 +113,6 @@ const SCOPE_KEYS = {
   city_coordinator: 'console.shell.scope.city',
   venue_coordinator: 'console.shell.scope.venue',
 } as const satisfies Record<Role, MessageKey>;
-
-const SEASON_KEYS = {
-  dora: 'console.settings.season.dora',
-  circles: 'console.settings.season.circles',
-} as const satisfies Record<SeasonMode, MessageKey>;
 
 /** Up to two initials for the avatar, whatever the script. */
 export function initialsOf(name: string): string {
@@ -173,6 +167,36 @@ function CityPills() {
   );
 }
 
+/** EN and اردو side by side in the top bar; the full display settings stay in the rail's panel. */
+function LanguageSwitch() {
+  const { t, locale, setLocale } = useI18n();
+  return (
+    <div
+      className="segmented lang-switch"
+      role="group"
+      aria-label={t('console.shell.languageSwitch')}
+    >
+      {(
+        [
+          ['en', 'EN'],
+          ['ur', 'اردو'],
+        ] as const
+      ).map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          className="segment"
+          aria-pressed={locale === id}
+          lang={id}
+          onClick={() => setLocale(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /** The top bar's search pill, shown while the page on screen has a search. */
 function TopSearch() {
   const filters = useShellFilters();
@@ -204,11 +228,10 @@ export function Shell() {
 }
 
 function ShellFrame() {
-  const { t, tx, number } = useI18n();
+  const { t, tx } = useI18n();
   const { me, principal, signOut } = useSignedIn();
   const features = useFeatures();
   const { pathname } = useLocation();
-  const dir = useDirectory();
   const visible = visibleNav(principal, features.flags);
   const entries: MenuEntry[] = MENU_ORDER.flatMap((id): MenuEntry[] => {
     if (id === 'registrations' || id === 'posters') {
@@ -220,7 +243,6 @@ function ShellFrame() {
           path: '/sessions',
           label: t(id === 'registrations' ? 'console.nav.registrations' : 'console.nav.posters'),
           icon: id === 'registrations' ? 'users-three' : 'qr-code',
-          badge: id === 'registrations' ? '—' : t('console.nav.posters.badge'),
           hint: t('console.nav.pickSession'),
           active: (path) => sessionPage(path, id),
         },
@@ -228,19 +250,12 @@ function ShellFrame() {
     }
     const item = visible.find((i) => i.id === id);
     if (!item) return [];
-    const badge =
-      id === 'venues'
-        ? number(dir.venues.length)
-        : id === 'sessions' || id === 'coordinators'
-          ? '—'
-          : undefined;
     return [
       {
         id,
         path: item.path,
         label: t(item.labelKey),
         icon: NAV_ICONS[item.id],
-        badge,
         active: (path) =>
           id === 'sessions'
             ? path.startsWith('/sessions') &&
@@ -266,29 +281,12 @@ function ShellFrame() {
       <header className="sidebar">
         <div className="sidebar-top">
           <div className="brand">
-            <span className="brand-mark">
-              <Icon name="mosque" size={19} weight="duotone" />
-            </span>
+            <BrandLogo size={34} />
             <span className="brand-text">
               <span className="brand-name">{t('app.name')}</span>
               <span className="brand-sub">{t('console.shell.brandSub')}</span>
             </span>
           </div>
-          {features.seasonMode ? (
-            <p className="season-pill">
-              <span className="season-name">
-                <Icon name="moon-stars" size={13} weight="fill" />
-                <span>
-                  {t('console.shell.season', { season: t(SEASON_KEYS[features.seasonMode]) })}
-                </span>
-              </span>
-              {features.hijriOffsetDays !== null ? (
-                <span className="season-hijri">
-                  {t('console.shell.hijri', { days: number(features.hijriOffsetDays) })}
-                </span>
-              ) : null}
-            </p>
-          ) : null}
           <nav className="shell-nav" aria-label={t('console.shell.navLabel')}>
             <ul>
               {entries.map((entry) => {
@@ -303,11 +301,6 @@ function ShellFrame() {
                     >
                       <Icon name={entry.icon} size={16} weight={isActive ? 'fill' : 'duotone'} />
                       <span className="nav-label">{entry.label}</span>
-                      {entry.badge ? (
-                        <span className="nav-badge" aria-hidden="true">
-                          {entry.badge}
-                        </span>
-                      ) : null}
                     </Link>
                   </li>
                 );
@@ -316,13 +309,13 @@ function ShellFrame() {
           </nav>
         </div>
         <div className="shell-user">
-          <div className="shell-scope">
-            <span className="scope-dot" aria-hidden="true" />
-            <span className="scope-text">
-              <span className="scope-name">{widest ? t(SCOPE_KEYS[widest]) : roleText}</span>
-              <span className="scope-sub">{t('console.shell.scope.locales')}</span>
+          <section className="operator" aria-label={t('console.shell.signedInLabel')}>
+            <span className="shell-user-name">{name}</span>
+            <span className="operator-role">
+              {roleText}
+              {widest ? ` · ${t(SCOPE_KEYS[widest])}` : ''}
             </span>
-          </div>
+          </section>
           <details className="shell-tools">
             <summary
               aria-label={t('console.shell.toolsLabel')}
@@ -347,15 +340,7 @@ function ShellFrame() {
             <CityPills />
             <TopSearch />
           </section>
-          <section className="operator" aria-label={t('console.shell.signedInLabel')}>
-            <span className="avatar" aria-hidden="true">
-              {initialsOf(name)}
-            </span>
-            <span className="operator-text">
-              <span className="shell-user-name">{name}</span>
-              <span className="operator-role">{roleText}</span>
-            </span>
-          </section>
+          <LanguageSwitch />
         </div>
         <main id="main" className="shell-main" tabIndex={-1}>
           <Outlet />
