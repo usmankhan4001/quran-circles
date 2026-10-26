@@ -1,4 +1,4 @@
-# Lane ui, design fidelity (branch `lane/ui/design-fidelity`)
+﻿# Lane ui, design fidelity (branch `lane/ui/design-fidelity`)
 
 Source of truth: the 25 Oct 2026 boards. Design system `UEFqRavqK4aJmgkkWJJJLp`, member app `PuCDBi5Z9h7zagkmfmRPov`, coordinator app `Ga647gtt1xCiqqR758LevV`, console `JQBKsY1Ke42KQLNZ5Cvaae`, states `DDni9Bv9UzNL8ewm7Vt7Nm`. All five opened. The design system itself specifies Plus Jakarta Sans, so the kit already on `main` (flat white, green `#0A6938`, hairline cards) matches it; the older 22 artifacts (green hero fade, Figtree) are not the target.
 
@@ -27,7 +27,7 @@ Source of truth: the 25 Oct 2026 boards. Design system `UEFqRavqK4aJmgkkWJJJLp`,
 - `packages/ui` TabBar rebuilt as a floating pill (see above); `redesign-kit.test.tsx` updated for it.
 - `apps/user-app` tabs fade on switch unless reduced motion is on.
 - Splash and web colours (above).
-- Member app **Welcome**: it showed in night mode because the default colour mode followed the phone; light is now the default and night only when chosen (design system rule). The logo is now Muhammad's logo (160px, rounded) instead of a green square with a star, and the language switch reads English / اردو.
+- Member app **Welcome**: it showed in night mode because the default colour mode followed the phone; light is now the default and night only when chosen (design system rule). The logo is now Muhammad's logo (160px, rounded) instead of a green square with a star, and the language switch reads English / Ø§Ø±Ø¯Ùˆ.
 - Coordinator welcome ("by invitation"), its features screen, the Mushaf page and the reading settings sheet already exist in code; not yet compared line by line with the boards.
 
 ## Open, for the orchestrator
@@ -46,3 +46,23 @@ Source of truth: the 25 Oct 2026 boards. Design system `UEFqRavqK4aJmgkkWJJJLp`,
 ## Not yet done
 
 Poster maker, console screens, Urdu RTL screenshots, and the empty/offline/error and map states.
+
+## Final state of this branch
+
+### Done
+- Floating pill tab bar (owner decision, deviates from the boards): sliding capsule, label fade, tab fade, reduced motion, right-to-left placement fixed.
+- Light is the default appearance in the member app, coordinator app and console. "Same as phone" follows the phone only when picked; High contrast stays after the three options.
+- Member Welcome: Muhammad's logo, native language labels. Profile language reads اردو.
+- White splash with the big logo, web manifest colours (`apps/user-app/app.config.ts`, needs human approval as store build configuration).
+- Mushaf text 27px on a 2.35 line; settings labels Layout and Script.
+- Jameel Noori Nastaleeq is the primary Urdu font: full TTF in the native builds, 6.8 MB subset WOFF2 on the web (hashed `/assets/` file, one-year immutable cache already in `infra/caddy`, `font-display: swap`, preload only on Urdu pages), Mehr Nastaliq Web is the face that shows first and while it downloads. Credits entry and licence notes in `packages/ui/assets/fonts/LICENSES.md`. Muhammad supplied it, confirmed its use and accepts the licence ("free of charge for Urdu Lovers"). Redistribution in store builds is his decision.
+- Tests were run in this branch up to the font commit (ui 1118, i18n 40, user-app 1186, admin-app 894, console 516 all passing). After the final merge only typecheck was run, by request.
+
+### Follow-up (not done)
+- Compare and fix: Session, Join pledge, coordinator Today, console Sessions and Sign in, the rest of the Urdu (right-to-left) screens, the empty/offline/error and map states, the poster maker redesign.
+- Poster renderer still embeds Mehr Nastaliq Web only: adding Jameel would put a 6.8 MB data URL into every rendered page and needs its own checksum and browser-test changes. Decide whether posters should use Jameel.
+- Home with no city chosen: restyle the "Choose city" prompt as a quiet hairline card (decided, not done).
+- Email logo: the template on `lane/messaging/email-templates` points at `/brand/email-logo.png`, which production does not serve yet (it returns an HTML page). Deploy that branch's file, or set `QC_EMAIL_LOGO_URL` and re-publish the Resend template.
+- Email templates use no font file, so nothing to change there.
+- Sign-in, sign-up and code screens belong to the email-code lane; no `lane/auth/email-otp` branch was on the remote when checked.
+- Maududi vs Pickthall translations and the board's Sahih International choice: human decision.
