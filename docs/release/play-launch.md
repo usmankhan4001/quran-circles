@@ -94,7 +94,7 @@ The project notes say the account is an organisation account. Check Play Console
 
 Production: Production, Create new release, choose the tested bundle (Add from library), notes, Save, Send for review. First reviews usually take a few days.
 
-## 4. Store graphics (made into `D:\Apps\CSG Venture\USMAN\play-assets`)
+## 4. Store graphics (in `D:\Apps\CSG Venture\USMAN\quran-circles\.worktrees\play-assets`, outside git)
 
 | Asset             | Play requirement                               | File                                                       |
 | ----------------- | ---------------------------------------------- | ---------------------------------------------------------- |
