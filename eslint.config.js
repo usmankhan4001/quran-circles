@@ -38,6 +38,13 @@ export default tseslint.config(
     },
   },
   {
+    // Node scripts run by hand or from package.json (scripts/*.mjs).
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly' },
+    },
+  },
+  {
     files: ['packages/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
