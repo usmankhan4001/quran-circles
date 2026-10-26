@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cleanRows, type RawRow } from './clean';
 import type { LatLng } from './coords';
@@ -14,7 +14,7 @@ const USAGE = `circles-load <command> ...
 
   report  --in <file.csv> --out <report.json> [--offline] [--geocode]
   places  --in <file.csv> --out <places.sql>
-  load    --plan <report.json> --api <url> --email <e> --phone <E.164> --code <6 digits>
+  load    --plan <report.json> --api <url> --email <e> --phone <E.164> [--code <6 digits> | --code-file <file>]
           [--apply] [--starts-on YYYY-MM-DD] [--manifest <file.json>]
   export  --plan <report.json> --out-dir <folder> [--starts-on YYYY-MM-DD]
   unload  --manifest <file.json> --api <url> --email <e> --phone <E.164> --code <6 digits>
@@ -106,6 +106,19 @@ async function signedIn(): Promise<Api> {
 }
 
 async function askCode(): Promise<string> {
+  // --code-file: wait up to four minutes for someone to write the six digits into that file
+  // (for a run started in the background, where nobody can type at the terminal).
+  const file = arg('code-file');
+  if (file) {
+    console.log('code requested; waiting for it in the code file');
+    const { setTimeout: sleep } = await import('node:timers/promises');
+    for (let i = 0; i < 240; i++) {
+      const text = existsSync(file) ? readFileSync(file, 'utf8').trim() : '';
+      if (/^[0-9]{6}$/.test(text)) return text;
+      await sleep(1000);
+    }
+    throw new Error('no code arrived in the code file within four minutes');
+  }
   const { createInterface } = await import('node:readline/promises');
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
