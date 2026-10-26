@@ -5,7 +5,7 @@ import type { LatLng } from './coords';
 import { parseCsv } from './csv';
 import { exportCsv } from './csv-export';
 import { geocodeVenue, type GeocodeOutcome } from './geocode';
-import { Api, load, unload, type PlanFile } from './import';
+import { Api, ApiError, load, unload, type PlanFile } from './import';
 import { placeRows, placesSql } from './places';
 import { buildPlan, linksOf } from './plan';
 import { resolveAll } from './resolve';
@@ -193,6 +193,15 @@ try {
     process.exitCode = command ? 2 : 0;
   }
 } catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
+  if (error instanceof ApiError) {
+    // The error code and the fields it names, never the values sent.
+    const body = error.body as {
+      error?: { code?: string; issues?: { path?: string; code?: string }[] };
+    } | null;
+    const issues = (body?.error?.issues ?? [])
+      .map((i) => `${i.path ?? '?'}:${i.code ?? '?'}`)
+      .join(', ');
+    console.error(`API ${error.status} ${body?.error?.code ?? ''}${issues ? ` [${issues}]` : ''}`);
+  } else console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 }

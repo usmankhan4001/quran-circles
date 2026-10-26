@@ -1,6 +1,6 @@
 # Status: data (circles data load)
 
-Updated: 2026-10-26 (local seed done)
+Updated: 2026-10-26 (production seeded by the owner through the console CSV import)
 Branch: lane/data/tanzeem-seed
 
 ## Done
@@ -24,6 +24,8 @@ Branch: lane/data/tanzeem-seed
 - `places` (idempotent SQL for provinces, 42 cities, one area per city), `load` (email sign-in, venues then sessions through `adminImport.*`, dry run first, manifest of created ids) and `unload` (archives the manifest). Run on the owner's PC against a local Postgres: 42 cities, 167 venues (75 flagged approximate), 172 sessions (33 monthly drafts), 2236 occurrences; public `places.cities` lists 42.
 
 - `export` writes the console import files (venues.csv, sessions.csv) from the plan. First-admin-from-env built on `lane/auth/admin-bootstrap` (see `status/auth-scopes.md`).
+
+- Production seeded 2026-10-26 by the owner (console CSV import of venues.csv and sessions.csv, after the postgres-terminal steps: backup, places SQL, admin invite). Live check through the public API: 42 cities, 167 venues (75 approximate) in 39 cities, 139 published sessions (33 monthly drafts hidden), matching the approved plan. No manifest exists for this import (console route): undo by archiving in the console or restoring the pre-seed dump.
 
 ## In progress
 
