@@ -9,3 +9,30 @@ coverage
 *.log
 .DS_Store
 /ui/
+
+# Local environment files. Only the *.example templates are committed.
+.env.local
+.env.*.local
+
+# Git worktrees for parallel lanes (docs/agents/worktrees.md)
+.worktrees/
+
+# Exported git bundles and patches handed between sessions; the work belongs on a branch
+*.bundle
+*.patch
+
+# Generated output
+email-previews/
+**/previews/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.vite/
+.turbo/
+
+# Operating system and editor files
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json

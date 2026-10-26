@@ -9,6 +9,14 @@
 # platform (WP0, WP10): all of it.
 /infra/                                       @usmankhan4001
 /.github/                                     @usmankhan4001
+/.gitattributes                               @usmankhan4001
+/.gitignore                                   @usmankhan4001
+/.editorconfig                                @usmankhan4001
+/.prettierignore                              @usmankhan4001
+/.npmrc                                       @usmankhan4001
+/.nvmrc                                       @usmankhan4001
+/scripts/                                     @usmankhan4001
+/SECURITY.md                                  @usmankhan4001
 /package.json                                 @usmankhan4001
 /pnpm-workspace.yaml                          @usmankhan4001
 /tsconfig.base.json                           @usmankhan4001

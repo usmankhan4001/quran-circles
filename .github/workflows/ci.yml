@@ -1,8 +1,14 @@
 name: ci
 
+# CI never deploys. Production on Dokploy pulls `main` from GitHub with auto-deploy on, so a push to
+# `main` goes live whether or not this workflow has finished. Treat a red check on `main` as a
+# reason to roll back or fix forward. Branch protection (docs/engineering/github-settings.md)
+# so changes reach `main` only after `check` passes. Runs are manual (workflow_dispatch), so a push
+# never starts a run; run `pnpm check` locally before pushing.
+
 on:
-  push:
-  pull_request:
+  # Manual only: Actions > ci > Run workflow. Checks run locally with `pnpm check` instead.
+  workflow_dispatch:
 
 # Least privilege (SEC-14): the token can read the repository and nothing else. A job that needs
 # more asks for it in its own `permissions:` block.
@@ -16,6 +22,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       # Third-party actions are pinned to full commit SHAs (SEC-14); the comment names the tag the
       # SHA was taken from. To update: `git ls-remote --tags https://github.com/<owner>/<repo>` and
@@ -29,6 +36,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Cheap checks first, so a formatting slip fails in seconds instead of after the test run.
+      - run: pnpm format:check
+      - run: pnpm env:check
       - run: pnpm typecheck
       - run: pnpm lint
       # The poster renderer's tests render with real headless Chromium. Install the headless
@@ -36,4 +46,38 @@ jobs:
       - name: Install Chromium headless shell for the poster renderer tests
         run: pnpm --filter @qc/poster-renderer exec playwright-core install --with-deps --only-shell chromium
       - run: pnpm test
-      - run: pnpm format:check
+
+  # End-to-end flows against a real API, worker and Postgres. Advisory: it does not block merging
+  # (`continue-on-error`), and it is not part of the required `check` status. Make it required in
+  # the branch protection rule once it has been green for a while.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: qc
+          POSTGRES_PASSWORD: qc
+          POSTGRES_DB: qc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U qc" --health-interval 5s --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgres://qc:qc@localhost:5432/qc
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0 (v4)
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0 (v4)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0 (v4)
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for the browser flows
+        run: pnpm --filter @qc/e2e exec playwright install --with-deps chromium
+      - run: pnpm e2e
