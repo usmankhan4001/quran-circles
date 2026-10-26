@@ -102,7 +102,7 @@ Production: Production, Create new release, choose the tested bundle (Add from l
 | Feature graphic   | 1024x500, PNG or JPG, no transparency          | `feature-graphic-1024x500-en.png`, `...-ur.png`            |
 | Phone screenshots | 2 to 8; 16:9 or 9:16; each side 320 to 3840 px | `screenshots/en/*.png`, `screenshots/ur/*.png` (1080x1920) |
 
-Screenshots are the web build of the app against demo data, light mode, English and Urdu (right to left).
+Screenshots are the web build of the app against demo data (`pnpm --filter @qc/user-app mock`), light mode, English and Urdu (right to left), framed by `tools/store-assets/mockups/build.mjs` with the headlines in its `config.json`. Captured by `tools/store-assets/capture/capture-play.cjs` (serve the export with `capture/serve-spa.cjs`). Not included: the Prayer times tab, whose segmented control is drawn under the next-prayer card in the web build (a layout bug for the user-app lane), and My Journey, which needs a signed-in account. Upload them in Play Console under Main store listing, Phone screenshots, and the Urdu set under the Urdu translation.
 
 ## 5. Final pre-launch checklist
 

@@ -1,5 +1,5 @@
 {
-  "_note": "Headlines are drafts. Urdu needs native proofreading before upload. Screens come from the running user app (web build, mock API, demo data); see README.",
+  "_note": "Headlines are drafts. Urdu needs native proofreading before upload. Screens come from the running user app (web build, mock API, demo data); see README. Updated 2026-10-26 for the join pledge and email sign-in.",
   "brand": {
     "background_top": "#1E563B",
     "background_bottom": "#0F3524",
@@ -22,77 +22,55 @@
       "file": "02-nearby.png",
       "en": {
         "title": "Find circles at masjids near you",
-        "sub": "Filter by city, area, section and day"
+        "sub": "Filter by section, day and area"
       },
       "ur": {
         "title": "اپنے قریب کی مساجد میں حلقے تلاش کریں",
-        "sub": "شہر، علاقے، حصے اور دن کے لحاظ سے"
+        "sub": "حصے، دن اور علاقے کے لحاظ سے"
       }
     },
     {
       "file": "03-session.png",
       "en": {
-        "title": "Know the schedule before you go",
-        "sub": "Every session with the para it covers"
+        "title": "Know the portion before you go",
+        "sub": "Join in one tap and get a reminder"
       },
       "ur": {
-        "title": "جانے سے پہلے شیڈول جان لیں",
-        "sub": "ہر نشست اور اس میں پڑھا جانے والا پارہ"
+        "title": "جانے سے پہلے حصہ جان لیں",
+        "sub": "ایک ٹیپ میں شامل ہوں اور یاددہانی پائیں"
       }
     },
     {
-      "file": "04-reserve-seat.png",
+      "file": "04-sign-in.png",
       "en": {
-        "title": "Reserve your seat in seconds",
-        "sub": "Sign in with a code on WhatsApp or SMS"
+        "title": "Sign in with a code by email",
+        "sub": "No password. Browsing needs no account"
       },
       "ur": {
-        "title": "چند لمحوں میں اپنی نشست محفوظ کریں",
-        "sub": "واٹس ایپ یا ایس ایم ایس کوڈ سے سائن اِن"
+        "title": "ای میل کوڈ سے سائن اِن کریں",
+        "sub": "پاس ورڈ نہیں۔ دیکھنے کے لیے اکاؤنٹ ضروری نہیں"
       }
     },
     {
       "file": "05-quran.png",
       "en": {
         "title": "Read along with your circle",
-        "sub": "Tonight's portion, your place and your Hifz"
+        "sub": "Translation, your place and your Hifz"
       },
       "ur": {
         "title": "اپنے حلقے کے ساتھ تلاوت کریں",
-        "sub": "آج کا حصہ، آپ کی جگہ اور آپ کا حفظ"
-      }
-    },
-    {
-      "file": "06-prayer-schedule.png",
-      "en": {
-        "title": "Prayer times where you are",
-        "sub": "Today's five prayers and the next one"
-      },
-      "ur": {
-        "title": "آپ کے شہر کے اوقاتِ نماز",
-        "sub": "آج کی پانچوں نمازیں اور اگلی نماز"
-      }
-    },
-    {
-      "file": "07-journey.png",
-      "en": {
-        "title": "Your seats and masjids in one place",
-        "sub": "Registrations, passes and the masjids you follow"
-      },
-      "ur": {
-        "title": "آپ کی نشستیں اور مساجد ایک جگہ",
-        "sub": "رجسٹریشن، پاس اور آپ کی پسندیدہ مساجد"
+        "sub": "ترجمہ، آپ کی جگہ اور آپ کا حفظ"
       }
     }
   ],
   "feature_graphic": {
     "en": {
       "title": "Find a Quran circle near you",
-      "sub": "Register, read along and keep your journey"
+      "sub": "Join, read along and keep your journey"
     },
     "ur": {
       "title": "اپنے قریب قرآنی حلقہ تلاش کریں",
-      "sub": "رجسٹر کریں، ساتھ پڑھیں، سفر جاری رکھیں"
+      "sub": "شامل ہوں، ساتھ پڑھیں، سفر جاری رکھیں"
     }
   }
 }
