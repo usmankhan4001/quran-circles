@@ -1,3 +1,5 @@
+import { E164_PATTERN, EMAIL_PATTERN } from '@qc/contracts';
+
 export const APP_ENVS = ['production', 'staging', 'development', 'test'] as const;
 export type AppEnv = (typeof APP_ENVS)[number];
 
@@ -54,6 +56,22 @@ export interface AuthConfig {
   };
   /** Trust the last `X-Forwarded-For` entry (set by our reverse proxy) as the caller's address. */
   trustProxy: boolean;
+  /**
+   * The first national admin, from the environment (owner decision 2026-10-26): a fixed sign-in
+   * identity whose invite the API creates at start-up when no admin exists, and whose sign-in
+   * codes may be delivered to another mailbox (`codeTo`). Null when not configured. Nothing else
+   * about that identity is special: the same rate limits and the same code rules apply.
+   */
+  firstAdmin: FirstAdmin | null;
+}
+
+export interface FirstAdmin {
+  /** The address the admin signs in with. */
+  email: string;
+  /** The WhatsApp number on the invite and, at the first sign-in, on the account. */
+  phone: string;
+  /** Where that identity's sign-in codes are emailed instead. Null: to `email` itself. */
+  codeTo: string | null;
 }
 
 export type AuthConfigInput = Partial<
@@ -107,9 +125,18 @@ export function createAuthConfig(input: AuthConfigInput): AuthConfig {
       ...input.codeCaps,
     },
     trustProxy: input.trustProxy ?? false,
+    firstAdmin: input.firstAdmin ?? null,
   };
 
   if (!APP_ENVS.includes(config.appEnv)) throw new AuthConfigError('Unknown appEnv');
+  if (config.firstAdmin) {
+    const { email, phone, codeTo } = config.firstAdmin;
+    if (!EMAIL_PATTERN.test(email)) throw new AuthConfigError('firstAdmin.email is not valid');
+    if (!E164_PATTERN.test(phone)) throw new AuthConfigError('firstAdmin.phone is not E.164');
+    if (codeTo !== null && !EMAIL_PATTERN.test(codeTo)) {
+      throw new AuthConfigError('firstAdmin.codeTo is not valid');
+    }
+  }
   if (typeof config.secret !== 'string' || config.secret.length < MIN_SECRET_LENGTH) {
     throw new AuthConfigError(`The auth secret must be at least ${MIN_SECRET_LENGTH} characters`);
   }
@@ -149,7 +176,10 @@ type Env = Record<string, string | undefined>;
  * Reads the configuration from environment variables.
  * `AUTH_SECRET` (required), `APP_ENV` (production | staging | development | test; production when
  * unset), `AUTH_FIXED_CODE` (test mode, refused in production), `AUTH_TRUST_PROXY` (`true`),
- * `AUTH_PHONE_SIGN_IN` (`true` brings back WhatsApp sign-in next to email; off by default).
+ * `AUTH_PHONE_SIGN_IN` (`true` brings back WhatsApp sign-in next to email; off by default),
+ * `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PHONE` (together: the first national admin the API
+ * invites at start-up when none exists) with `BOOTSTRAP_ADMIN_CODE_TO` (optional: the mailbox that
+ * identity's sign-in codes go to instead).
  */
 export function loadAuthConfigFromEnv(env: Env = process.env): AuthConfig {
   const appEnv = (env.APP_ENV ?? 'production') as AppEnv;
@@ -163,5 +193,26 @@ export function loadAuthConfigFromEnv(env: Env = process.env): AuthConfig {
       ...(env.AUTH_FIXED_CODE ? { fixedCode: env.AUTH_FIXED_CODE } : {}),
       phoneSignIn: env.AUTH_PHONE_SIGN_IN === 'true',
     },
+    firstAdmin: firstAdminFromEnv(env),
   });
+}
+
+const cleanAddress = (value: string | undefined): string | null => {
+  const v = value?.trim().toLowerCase();
+  return v ? v : null;
+};
+
+/** Both the email and the phone, or neither; a code redirect only with them. */
+export function firstAdminFromEnv(env: Env): FirstAdmin | null {
+  const email = cleanAddress(env.BOOTSTRAP_ADMIN_EMAIL);
+  const phone = env.BOOTSTRAP_ADMIN_PHONE?.trim() || null;
+  const codeTo = cleanAddress(env.BOOTSTRAP_ADMIN_CODE_TO);
+  if (!email && !phone) {
+    if (codeTo) throw new AuthConfigError('BOOTSTRAP_ADMIN_CODE_TO needs BOOTSTRAP_ADMIN_EMAIL');
+    return null;
+  }
+  if (!email || !phone) {
+    throw new AuthConfigError('BOOTSTRAP_ADMIN_EMAIL and BOOTSTRAP_ADMIN_PHONE go together');
+  }
+  return { email, phone, codeTo };
 }

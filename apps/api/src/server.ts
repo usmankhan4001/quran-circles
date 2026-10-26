@@ -2,7 +2,14 @@ import { serve } from '@hono/node-server';
 import { createMessaging } from '@qc/messaging';
 import { PgBoss } from 'pg-boss';
 import { createApp } from './app';
-import { authRoutes, consoleLogger, loadAuthConfigFromEnv, type AuthDeps } from './auth';
+import {
+  authRoutes,
+  consoleLogger,
+  ensureFirstAdmin,
+  loadAuthConfigFromEnv,
+  redirectingCodeSender,
+  type AuthDeps,
+} from './auth';
 import { createPgDb } from './db';
 import { authLane } from './middleware/auth-lane';
 import type { Logger } from './middleware/logger';
@@ -41,13 +48,18 @@ export async function startServer(
 ): Promise<RunningServer> {
   const { db, close } = createPgDb(databaseUrl);
   const messaging = createMessaging(env);
+  const authConfig = loadAuthConfigFromEnv(env);
   const authDeps: AuthDeps = {
     db,
-    config: loadAuthConfigFromEnv(env),
-    codeSender: messaging.codeSender,
+    config: authConfig,
+    // The first admin's codes may go to another mailbox (BOOTSTRAP_ADMIN_CODE_TO).
+    codeSender: redirectingCodeSender(messaging.codeSender, authConfig.firstAdmin),
     logger: consoleLogger,
     ...(limits.signInRateLimiter ? { rateLimiter: limits.signInRateLimiter } : {}),
   };
+  // A fresh database has no staff: invite the configured first admin, once.
+  const firstAdmin = await ensureFirstAdmin(db, authConfig.firstAdmin, consoleLogger);
+  if (firstAdmin !== 'not_configured') logger.info('first admin', { state: firstAdmin });
   const { principalMiddleware, authFailure } = authLane(authDeps);
   const posterSender = await startPosterSender(
     new PgBoss(posterSenderOptions(databaseUrl)),
