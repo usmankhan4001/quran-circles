@@ -1,6 +1,6 @@
 // Store screenshot and feature-graphic generator.
 //
-//   node build.mjs --input <screens dir> --out <out dir> [--locales en,ur] [--sizes all] [--playwright <path>]
+//   node build.mjs --input <screens dir> --out <out dir> [--locales en,ur] [--sizes all] [--playwright <path>] [--icon <512 png>]
 //
 // <screens dir> holds the app screenshots named as in config.json (01-home.png, ...). If it has
 // one sub-folder per locale (en/, ur/), each locale uses its own screens; otherwise every locale
@@ -26,7 +26,8 @@ const input = resolve(args.input ?? join(here, '..', '..', 'screenshots-input', 
 const out = resolve(args.out ?? join(here, '..', '..', 'screenshots'));
 const locales = (args.locales ?? 'en,ur').split(',');
 const config = JSON.parse(readFileSync(join(here, 'config.json'), 'utf8'));
-const icon = join(here, '..', '..', 'icons', 'store', 'play-store-icon-512.png');
+// The 512 store icon: `--icon <file>`, else the generated one next to this tool.
+const icon = resolve(args.icon ?? join(here, '..', 'icons', 'store', 'play-store-icon-512.png'));
 
 // Current store sizes (portrait). Apple: 6.9" is the required iPhone size, 6.5" is accepted as
 // the fallback; 13" iPad is required while the app declares tablet support. Play: 9:16 phone.

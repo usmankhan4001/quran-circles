@@ -1,6 +1,6 @@
 # Google Play Console: URLs, data safety answers and listing text
 
-Status: draft, 2026-10-26. Written for Muhammad to copy into Play Console. The Urdu is a draft and the legal wording has not been seen by a lawyer. Everything below was checked against the code on `main` at `7b3101b`; where the code and an older document disagree, the code wins and the difference is listed under "Things to decide".
+Status: draft, 2026-10-26 (updated for email sign-in on branch `lane/release/play-readiness`). Written for Muhammad to copy into Play Console. The Urdu is a draft and the legal wording has not been seen by a lawyer. Everything below was checked against the code on `main` at `abc05a0` (production runs that commit); where the code and an older document disagree, the code wins and the difference is listed under "Things to decide".
 
 The package name is `pk.doraquran.circles`. The public pages are routes of the web app at `https://qurancircles.doraquran.pk`, built from `apps/user-app/src/screens/public/`; the words are in `packages/i18n` (`store.*`, `privacy.*`, `deleteAccount.*`, `support.*`, `terms.*`, `legal.*`).
 
@@ -19,7 +19,7 @@ The pages need no sign-in and ask the server for nothing about the person. They 
 
 ## Data safety form
 
-Play asks, for each type of data, whether the app collects it, whether it is shared, why, and whether it is optional. "Shared" in Play's sense means sent to a third party for that party's own use; handing data to a service provider that works on our behalf (WhatsApp delivery, push delivery, hosting) is not sharing. The pages say the same in the privacy policy.
+Play asks, for each type of data, whether the app collects it, whether it is shared, why, and whether it is optional. "Shared" in Play's sense means sent to a third party for that party's own use; handing data to a service provider that works on our behalf (email delivery through Resend, WhatsApp delivery, push delivery, hosting) is not sharing. The pages say the same in the privacy policy.
 
 ### Top-level questions
 
@@ -28,14 +28,15 @@ Play asks, for each type of data, whether the app collects it, whether it is sha
 | Does the app collect or share any required data types? | Yes                                                                      |
 | Is all of the data encrypted in transit?               | Yes (HTTPS everywhere, HSTS)                                             |
 | Do you provide a way for users to request deletion?    | Yes: in the app (Profile, "Delete my account") and on the web page above |
-| Account creation methods                               | Phone number with a one-time code (and no password)                      |
+| Account creation methods                               | Email address with a one-time code (and no password)                     |
 
 ### Data types
 
 | Play category and type                         | Collected | Shared | Optional?                                            | Purpose                               | What it is in the app                                                                                                                  |
 | ---------------------------------------------- | --------- | ------ | ---------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Personal info: **Name**                        | Yes       | No     | Required to join a circle; browsing needs no account | App functionality, Account management | `users.display_name`, typed when joining                                                                                               |
-| Personal info: **Phone number**                | Yes       | No     | Required to sign in or join                          | App functionality, Account management | Sign-in number, code delivery, reminders and confirmations                                                                             |
+| Personal info: **Email address**               | Yes       | No     | Required to sign in or join                          | App functionality, Account management | Sign-in address; the one-time code is emailed to it                                                                                    |
+| Personal info: **Phone number**                | Yes       | No     | Required when creating an account                    | App functionality, Communications     | WhatsApp number given at sign-up, for confirmations, reminders and coordinator contact. Not verified by a code                         |
 | Personal info: **Other info**                  | Yes       | No     | Optional                                             | App functionality, Personalisation    | Age group, profession, education, prior Quran reading, language, daily goal; the area and section chosen when joining (see decision 3) |
 | App activity: **App interactions**             | Yes       | No     | Optional (only for signed-in people)                 | App functionality                     | Circles joined and cancelled, circles and masjids followed, reading days, memorised surahs, reading position                           |
 | App activity: **Other user-generated content** | Yes       | No     | Optional                                             | App functionality                     | Bookmark notes                                                                                                                         |
@@ -81,7 +82,7 @@ KNOW WHAT YOU WILL STUDY
 Each circle shows the portion for the next session, so you can read ahead.
 
 JOIN IN A FEW TAPS
-Sign in with a code sent on WhatsApp and pledge to come. We confirm, remind you before each session, and tell you if the time changes or a session is cancelled.
+Sign in with a code sent to your email and pledge to come. We confirm, remind you before each session, and tell you if the time changes or a session is cancelled.
 
 READ ALONG
 Open the Quran with translation, keep your place, and track the surahs you are memorising.
@@ -110,7 +111,7 @@ Quran Circles is a service of Tanzeem-e-Islami.
 ہر حلقہ اگلی نشست کا حصہ دکھاتا ہے، تاکہ آپ پہلے سے پڑھ سکیں۔
 
 چند ٹیپ میں شامل ہوں
-واٹس ایپ پر آنے والے کوڈ سے سائن اِن کریں اور آنے کا وعدہ کریں۔ ہم تصدیق کرتے ہیں، ہر نشست سے پہلے یاد دلاتے ہیں اور وقت بدلنے یا نشست منسوخ ہونے پر بتاتے ہیں۔
+ای میل پر آنے والے کوڈ سے سائن اِن کریں اور آنے کا وعدہ کریں۔ ہم تصدیق کرتے ہیں، ہر نشست سے پہلے یاد دلاتے ہیں اور وقت بدلنے یا نشست منسوخ ہونے پر بتاتے ہیں۔
 
 ساتھ پڑھیں
 ترجمے کے ساتھ قرآن کھولیں، جہاں رکے وہیں سے جاری رکھیں اور اپنے حفظ کا حساب رکھیں۔
@@ -134,8 +135,13 @@ Quran Circles is a service of Tanzeem-e-Islami.
 2. **Publisher name (decided).** "Tanzeem-e-Islami", as the pages say. Still open: whether the policy should also name a legal entity and postal address.
 3. **Is the chosen area "location" for Play?** The area is a neighbourhood picked from a list, not read from the device. The answer above treats it as profile information ("Other info"). A stricter reading would also declare "Approximate location" collected, not shared, for app functionality. Declaring it costs nothing at review; leaving it out risks a mismatch if a reviewer reads it that way. Recommendation: leave it out, and say so if asked.
 4. **Minimum age (decided: 13).** The policy says the app is not for children under 13. Profile offers an "under 18" age band, so teenagers can use it. Use 13 and over for the target audience and the content rating answers.
-5. **Reviewer access (proposal, no code change).** Sign-in needs a code on WhatsApp, and production has no fixed test code (`AUTH_FIXED_CODE` is for staging only), so a Play reviewer cannot sign in alone. In Play Console, "App access", choose "some functionality is restricted" and paste: "Browsing circles and venues, the map, the Quran reader and prayer times work without an account. To test sign-in and joining, email support@qurancircles.doraquran.pk before review with your reviewer id; we will keep a test number online and read the sign-in code to you. Use the test number given in the reply." Prepare it: (a) one SIM or WhatsApp account that Tanzeem-e-Islami controls, registered once as a normal account named "Play review"; (b) someone watching support@qurancircles.doraquran.pk during review who sends the reviewer the number and each code; (c) delete that account after approval. Because a reviewer who cannot get a code may reject the app, the stronger option is a reviewer allow-list in the auth module (one number with a fixed code, off unless an env var names it). That is a sensitive auth change owned by the auth-scopes lane and is not made here; ask for it if the proposal above is rejected. Never set `AUTH_FIXED_CODE` in production.
-6. **Deletion by email is a promise.** The delete page says that if someone cannot sign in, they can email, we send a WhatsApp code to the number to check it is them, and we aim to finish within 30 days. That needs a person to do it. There is no admin screen for deleting a user in the console that I found; the API's `me.delete` only deletes the signed-in person. Confirm the 30 days and who does it, or ask for an admin tool.
+5. **Reviewer access (plan).** Sign-in needs a 6-digit code emailed to the reviewer's address, and production refuses a fixed code (`AUTH_FIXED_CODE` is staging only), so a Play reviewer cannot sign in alone. Browsing, the map, the Quran reader and prayer times work without an account, so the app is reviewable without sign-in. Plan:
+   - **First release (internal and closed tracks): no review of access, nothing to prepare.**
+   - **Production review, minimum:** a reviewer mailbox the owner controls, `playreview@qurancircles.doraquran.pk`, created in Cloudflare Email Routing (forwarding to the owner's inbox; the same routing the `support@` and `privacy@` addresses need), and one normal account registered once with that address and the name "Play review". Whoever watches that inbox during review sends the reviewer the code on request. Weakness: a reviewer who cannot get a code in time may reject.
+   - **Production review, stronger (recommended before applying for production access):** a reviewer allow-list in the auth module (one configured email with a fixed code, off unless two environment variables name it, rate-limited and logged). That is a sensitive auth change owned by the auth-scopes lane and is not made here; ask for it as its own pull request. Never set `AUTH_FIXED_CODE` in production.
+   - **Text to paste in Play Console, App access, "All or some functionality is restricted" (use this one until the allow-list exists):** "Most of the app works without an account: browsing circles and masjids, the map, the Quran reader and prayer times. Joining a circle needs sign-in with a 6-digit code emailed to the person. To test it, sign in with playreview@qurancircles.doraquran.pk. Email support@qurancircles.doraquran.pk when you are ready and we will send the code within a few hours. Instructions: open the app, tap Sign in, enter that address, tap Send code, then enter the code we send you."
+   - **Text once the allow-list exists:** same, ending "Use the email playreview@qurancircles.doraquran.pk and the code <code>" with the code given in the field, not in this repository.
+6. **Deletion by email is a promise.** The delete page says that if someone cannot sign in, they can email, we send a code to the account's email address to check it is them, and we aim to finish within 30 days. That needs a person to do it. There is no admin screen for deleting a user in the console that I found; the API's `me.delete` only deletes the signed-in person. Confirm the 30 days and who does it, or ask for an admin tool.
 7. **What the policy claims about messages.** SEC-06 in `docs/security/review.md` says names stay in `message_outbox.payload` after sending and, for invitations, after the sender is deleted. The delete page says only that messages sent to the person lose their number and text, which the deletion code does. It does not claim the invitation names are removed. Fixing SEC-06 would let the page say more.
 8. **Hosting and other countries.** The policy does not say where the servers are. If the Dokploy host is outside Pakistan, say so, and name the SMS provider once one is chosen (`SMS_GATEWAY_URL` is not set yet).
 9. **Rights beyond deletion.** The policy offers "ask us what we hold about you" and correction by email. There is no data-export tool. Keep the wording if someone will answer such emails by hand.
