@@ -2,18 +2,18 @@
 
 Status: draft, 2026-10-26. Written for Muhammad to copy into Play Console. The Urdu is a draft and the legal wording has not been seen by a lawyer. Everything below was checked against the code on `main` at `7b3101b`; where the code and an older document disagree, the code wins and the difference is listed under "Things to decide".
 
-The package name is `pk.doraquran.circles`. The public pages are routes of the web app at `https://qurancircle.doraquran.pk`, built from `apps/user-app/src/screens/public/`; the words are in `packages/i18n` (`store.*`, `privacy.*`, `deleteAccount.*`, `support.*`, `terms.*`, `legal.*`).
+The package name is `pk.doraquran.circles`. The public pages are routes of the web app at `https://qurancircles.doraquran.pk`, built from `apps/user-app/src/screens/public/`; the words are in `packages/i18n` (`store.*`, `privacy.*`, `deleteAccount.*`, `support.*`, `terms.*`, `legal.*`).
 
 ## URLs to enter
 
 | Play Console field                          | URL                                                |
 | ------------------------------------------- | -------------------------------------------------- |
-| Privacy policy                              | `https://qurancircle.doraquran.pk/privacy`         |
-| Account deletion URL (Data safety)          | `https://qurancircle.doraquran.pk/delete-account`  |
-| Website (store listing contact details)     | `https://qurancircle.doraquran.pk/store`         |
-| Support page (also linked from the listing) | `https://qurancircle.doraquran.pk/support`         |
-| Terms (optional, link from the description) | `https://qurancircle.doraquran.pk/terms`           |
-| Contact email                               | `markaz@tanzeem.org` (decided)                    |
+| Privacy policy                              | `https://qurancircles.doraquran.pk/privacy`        |
+| Account deletion URL (Data safety)          | `https://qurancircles.doraquran.pk/delete-account` |
+| Website (store listing contact details)     | `https://qurancircles.doraquran.pk/store`          |
+| Support page (also linked from the listing) | `https://qurancircles.doraquran.pk/support`        |
+| Terms (optional, link from the description) | `https://qurancircles.doraquran.pk/terms`          |
+| Contact email                               | `support@qurancircles.doraquran.pk` (decided)      |
 
 The pages need no sign-in and ask the server for nothing about the person. They only exist on the live site after this branch is merged to `main` and Dokploy deploys it.
 
@@ -94,8 +94,8 @@ The circles you joined and the masjids you follow, in one place.
 
 Quran Circles is free, has no ads, and never sells your information. It works in English and Urdu and is built to stay quick on low-end phones and slow connections.
 
-Privacy policy: https://qurancircle.doraquran.pk/privacy
-Delete your account: https://qurancircle.doraquran.pk/delete-account
+Privacy policy: https://qurancircles.doraquran.pk/privacy
+Delete your account: https://qurancircles.doraquran.pk/delete-account
 
 Quran Circles is a service of Tanzeem-e-Islami.
 
@@ -123,18 +123,18 @@ Quran Circles is a service of Tanzeem-e-Islami.
 
 قرآن سرکلز مفت ہے، اس میں اشتہار نہیں ہیں اور آپ کی معلومات کبھی فروخت نہیں کی جاتیں۔ یہ انگریزی اور اردو میں ہے اور کم قیمت فونز اور سست انٹرنیٹ پر بھی تیز چلنے کے لیے بنائی گئی ہے۔
 
-رازداری کی پالیسی: https://qurancircle.doraquran.pk/privacy
-اکاؤنٹ حذف کریں: https://qurancircle.doraquran.pk/delete-account
+رازداری کی پالیسی: https://qurancircles.doraquran.pk/privacy
+اکاؤنٹ حذف کریں: https://qurancircles.doraquran.pk/delete-account
 
 قرآن سرکلز تنظیمِ اسلامی کی ایک خدمت ہے۔
 
 ## Things to decide
 
-1. **Contact email (decided).** `markaz@tanzeem.org`, built into the pages as the default, so they never show a placeholder. `QC_CONTACT_EMAIL` in the Dokploy environment (passed to the web build as `EXPO_PUBLIC_CONTACT_EMAIL`) overrides it if a shared address is chosen later. Enter the same address in the listing's contact details.
+1. **Contact email (decided).** `support@qurancircles.doraquran.pk`, built into the pages as the default, so they never show a placeholder. `QC_CONTACT_EMAIL` in the Dokploy environment (passed to the web build as `EXPO_PUBLIC_CONTACT_EMAIL`) overrides it if a shared address is chosen later. Enter the same address in the listing's contact details.
 2. **Publisher name (decided).** "Tanzeem-e-Islami", as the pages say. Still open: whether the policy should also name a legal entity and postal address.
 3. **Is the chosen area "location" for Play?** The area is a neighbourhood picked from a list, not read from the device. The answer above treats it as profile information ("Other info"). A stricter reading would also declare "Approximate location" collected, not shared, for app functionality. Declaring it costs nothing at review; leaving it out risks a mismatch if a reviewer reads it that way. Recommendation: leave it out, and say so if asked.
 4. **Minimum age (decided: 13).** The policy says the app is not for children under 13. Profile offers an "under 18" age band, so teenagers can use it. Use 13 and over for the target audience and the content rating answers.
-5. **Reviewer access (proposal, no code change).** Sign-in needs a code on WhatsApp, and production has no fixed test code (`AUTH_FIXED_CODE` is for staging only), so a Play reviewer cannot sign in alone. In Play Console, "App access", choose "some functionality is restricted" and paste: "Browsing circles and venues, the map, the Quran reader and prayer times work without an account. To test sign-in and joining, email markaz@tanzeem.org before review with your reviewer id; we will keep a test number online and read the sign-in code to you. Use the test number given in the reply." Prepare it: (a) one SIM or WhatsApp account that Tanzeem-e-Islami controls, registered once as a normal account named "Play review"; (b) someone watching markaz@tanzeem.org during review who sends the reviewer the number and each code; (c) delete that account after approval. Because a reviewer who cannot get a code may reject the app, the stronger option is a reviewer allow-list in the auth module (one number with a fixed code, off unless an env var names it). That is a sensitive auth change owned by the auth-scopes lane and is not made here; ask for it if the proposal above is rejected. Never set `AUTH_FIXED_CODE` in production.
+5. **Reviewer access (proposal, no code change).** Sign-in needs a code on WhatsApp, and production has no fixed test code (`AUTH_FIXED_CODE` is for staging only), so a Play reviewer cannot sign in alone. In Play Console, "App access", choose "some functionality is restricted" and paste: "Browsing circles and venues, the map, the Quran reader and prayer times work without an account. To test sign-in and joining, email support@qurancircles.doraquran.pk before review with your reviewer id; we will keep a test number online and read the sign-in code to you. Use the test number given in the reply." Prepare it: (a) one SIM or WhatsApp account that Tanzeem-e-Islami controls, registered once as a normal account named "Play review"; (b) someone watching support@qurancircles.doraquran.pk during review who sends the reviewer the number and each code; (c) delete that account after approval. Because a reviewer who cannot get a code may reject the app, the stronger option is a reviewer allow-list in the auth module (one number with a fixed code, off unless an env var names it). That is a sensitive auth change owned by the auth-scopes lane and is not made here; ask for it if the proposal above is rejected. Never set `AUTH_FIXED_CODE` in production.
 6. **Deletion by email is a promise.** The delete page says that if someone cannot sign in, they can email, we send a WhatsApp code to the number to check it is them, and we aim to finish within 30 days. That needs a person to do it. There is no admin screen for deleting a user in the console that I found; the API's `me.delete` only deletes the signed-in person. Confirm the 30 days and who does it, or ask for an admin tool.
 7. **What the policy claims about messages.** SEC-06 in `docs/security/review.md` says names stay in `message_outbox.payload` after sending and, for invitations, after the sender is deleted. The delete page says only that messages sent to the person lose their number and text, which the deletion code does. It does not claim the invitation names are removed. Fixing SEC-06 would let the page say more.
 8. **Hosting and other countries.** The policy does not say where the servers are. If the Dokploy host is outside Pakistan, say so, and name the SMS provider once one is chosen (`SMS_GATEWAY_URL` is not set yet).

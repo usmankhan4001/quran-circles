@@ -15,7 +15,7 @@ export interface AppEnv {
 }
 
 /** The owner's choice (2026-10-26); used when no `EXPO_PUBLIC_CONTACT_EMAIL` is set. */
-export const DEFAULT_CONTACT_EMAIL = 'markaz@tanzeem.org';
+export const DEFAULT_CONTACT_EMAIL = 'support@qurancircles.doraquran.pk';
 
 /** The Play listing of the app id in `app.config.ts`; it works once the app is published. */
 export const DEFAULT_PLAY_STORE_URL =

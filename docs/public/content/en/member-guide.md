@@ -12,7 +12,7 @@ Quran Circles helps you find the nearest Quran session, join it in a tap and nev
 ## Get the app
 
 - **Android:** install Quran Circles from Google Play (an internal test is running first).
-- **Any phone or computer:** open `https://qurancircle.doraquran.pk` in your browser. On a phone choose "Add to Home Screen" and it opens like an app. On iPhone this is also how you get notifications.
+- **Any phone or computer:** open `https://qurancircles.doraquran.pk` in your browser. On a phone choose "Add to Home Screen" and it opens like an app. On iPhone this is also how you get notifications.
 
 ## The five places in the app
 

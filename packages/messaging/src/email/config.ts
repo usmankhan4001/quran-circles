@@ -1,7 +1,7 @@
 /**
  * Email identity and links. One place to change when the domain moves.
  *
- * Mail domain: `qurancircles.doraquran.pk` (with the s). The app host is `qurancircle.doraquran.pk`
+ * Mail domain: `qurancircles.doraquran.pk` (with the s). The app host is `qurancircles.doraquran.pk`
  * (no s), the production address in `docs/release/go-live.md`. They are different names on purpose.
  */
 export const EMAIL_DOMAIN = 'qurancircles.doraquran.pk';
@@ -17,7 +17,7 @@ export const EMAIL_ADDRESSES = {
 export const EMAIL_FROM = `Quran Circles <${EMAIL_ADDRESSES.notifications}>`;
 
 /** Public https origin of the web app. Links in emails are built from it. */
-export const EMAIL_APP_ORIGIN = 'https://qurancircle.doraquran.pk';
+export const EMAIL_APP_ORIGIN = 'https://qurancircles.doraquran.pk';
 
 /**
  * The logo in every email: an absolute https URL, no query string. The file is
