@@ -57,6 +57,7 @@ export const privacyPage: PublicPageSpec = {
         {
           kind: 'list',
           keys: [
+            'privacy.collect.email',
             'privacy.collect.phone',
             'privacy.collect.name',
             'privacy.collect.area',
@@ -110,7 +111,7 @@ export const privacyPage: PublicPageSpec = {
           kind: 'list',
           keys: [
             'privacy.sees.meta',
-            'privacy.sees.sms',
+            'privacy.sees.email',
             'privacy.sees.google',
             'privacy.sees.browser',
             'privacy.sees.quran',
