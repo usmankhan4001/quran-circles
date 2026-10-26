@@ -13,7 +13,8 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('../../../packages/ui/assets/fonts/web/JameelNooriNastaleeq-Subset.woff2') format('woff2');
+  src: url('../../../packages/ui/assets/fonts/web/JameelNooriNastaleeq-Subset.woff2')
+    format('woff2');
 }
 
 @font-face {

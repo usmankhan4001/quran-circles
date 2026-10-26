@@ -50,6 +50,7 @@ Poster maker, console screens, Urdu RTL screenshots, and the empty/offline/error
 ## Final state of this branch
 
 ### Done
+
 - Floating pill tab bar (owner decision, deviates from the boards): sliding capsule, label fade, tab fade, reduced motion, right-to-left placement fixed.
 - Light is the default appearance in the member app, coordinator app and console. "Same as phone" follows the phone only when picked; High contrast stays after the three options.
 - Member Welcome: Muhammad's logo, native language labels. Profile language reads اردو.
@@ -59,6 +60,7 @@ Poster maker, console screens, Urdu RTL screenshots, and the empty/offline/error
 - Tests were run in this branch up to the font commit (ui 1118, i18n 40, user-app 1186, admin-app 894, console 516 all passing). After the final merge only typecheck was run, by request.
 
 ### Follow-up (not done)
+
 - Compare and fix: Session, Join pledge, coordinator Today, console Sessions and Sign in, the rest of the Urdu (right-to-left) screens, the empty/offline/error and map states, the poster maker redesign.
 - Poster renderer still embeds Mehr Nastaliq Web only: adding Jameel would put a 6.8 MB data URL into every rendered page and needs its own checksum and browser-test changes. Decide whether posters should use Jameel.
 - Home with no city chosen: restyle the "Choose city" prompt as a quiet hairline card (decided, not done).

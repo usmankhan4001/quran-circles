@@ -55,9 +55,7 @@ const Envelope = z.object({ status: z.string(), data: z.unknown() });
 const Stored = z.object({
   fetchedAt: z.string(),
   juz: z.number().int().nullable(),
-  ayahs: z.array(
-    z.object({ surah: z.number().int(), ayah: z.number().int(), arabic: z.string() }),
-  ),
+  ayahs: z.array(z.object({ surah: z.number().int(), ayah: z.number().int(), arabic: z.string() })),
 });
 
 const KEY_PREFIX = 'qc.quran.page.v1:';
@@ -107,7 +105,13 @@ export function createMushafPageSource(options: MushafPageSourceOptions): Mushaf
       if (keep) {
         const saved = await readJson(options.storage, key, Stored);
         if (saved && saved.ayahs.length > 0) {
-          return { page, ayahs: saved.ayahs, juz: saved.juz, fromCache: true, fetchedAt: saved.fetchedAt };
+          return {
+            page,
+            ayahs: saved.ayahs,
+            juz: saved.juz,
+            fromCache: true,
+            fetchedAt: saved.fetchedAt,
+          };
         }
       }
       const data = await getJson(

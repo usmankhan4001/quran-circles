@@ -76,9 +76,13 @@ describe('public pages', () => {
     it('falls back to the owner’s address when none is configured', async () => {
       vi.stubEnv('EXPO_PUBLIC_CONTACT_EMAIL', '');
       const view = await renderScreen(<SupportScreen />);
-      expect(view.getByTestId('contact-text').textContent).toContain('support@qurancircles.doraquran.pk');
+      expect(view.getByTestId('contact-text').textContent).toContain(
+        'support@qurancircles.doraquran.pk',
+      );
       fireEvent.click(view.getByTestId('contact-mail'));
-      await waitFor(() => expect(view.world.opened).toEqual(['mailto:support@qurancircles.doraquran.pk']));
+      await waitFor(() =>
+        expect(view.world.opened).toEqual(['mailto:support@qurancircles.doraquran.pk']),
+      );
     });
 
     it('shows a configured address instead', async () => {

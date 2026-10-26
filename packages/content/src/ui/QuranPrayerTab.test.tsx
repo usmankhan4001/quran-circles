@@ -21,9 +21,7 @@ describe.each(matrix)('QuranPrayerTab in $name', (combo) => {
       screen.getByRole('heading', { name: msg(combo.locale, 'tabs.quranPrayer') }),
     ).toBeTruthy();
     expect(screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.quran') })).toBeTruthy();
-    expect(
-      screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.prayer') }),
-    ).toBeTruthy();
+    expect(screen.getByRole('radio', { name: msg(combo.locale, 'quran.tab.prayer') })).toBeTruthy();
   });
 });
 
@@ -86,9 +84,7 @@ describe('QuranPrayerTab', () => {
     const t = createTestServices();
     await t.services.bookmarks.toggleAyah({ surah: 36, ayah: 7 });
     renderContent(<QuranPrayerTab />, t.services);
-    fireEvent.click(
-      await screen.findByRole('tab', { name: msg('en', 'quran.tab.saved') }),
-    );
+    fireEvent.click(await screen.findByRole('tab', { name: msg('en', 'quran.tab.saved') }));
     fireEvent.click(await screen.findByRole('button', { name: 'Ya-Sin, ayah 7' }));
     expect(await screen.findByTestId('verse-36-7')).toBeTruthy();
   });
