@@ -1,0 +1,19 @@
+{
+  "name": "@qc/circles-load",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "load": "tsx src/bin.ts"
+  },
+  "dependencies": {
+    "@qc/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
