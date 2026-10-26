@@ -20,3 +20,14 @@ Owned by the **messaging** lane ([brief](../../docs/agents/briefs/messaging.md))
 ```sh
 pnpm --filter @qc/messaging test
 ```
+
+## Email templates
+
+`src/email/` renders the branded emails (sign-in code, welcome, join confirmation, session reminder, account deleted) in English and Urdu, light mode only:
+
+```ts
+import { render, EMAIL_FROM } from '@qc/messaging/email';
+const { subject, html, text } = render('sign_in_code', 'ur', { code: '123456', minutes: 5 });
+```
+
+Addresses and links are constants in `src/email/config.ts`. To look at every template: `pnpm --filter @qc/messaging email:previews`.
