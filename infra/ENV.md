@@ -46,6 +46,9 @@ Only on the Dokploy production stack. Both are public, restricted keys baked int
 | `CORS_ORIGINS`            | A       | no       | Extra browser origins, comma-separated                                                                                        |
 | `API_PROCESSES`           | C, A    | no       | API server processes in the api container (1-8; compose default 2, code default 1). Keep it equal to `QC_API_CPUS`            |
 | `AUTH_FIXED_CODE`         | A       | no       | Staging only: fixed six-digit sign-in code; refused in production                                                             |
+| `BOOTSTRAP_ADMIN_EMAIL`   | A       | no       | With `BOOTSTRAP_ADMIN_PHONE`: the first national admin. The API invites it at start-up when no admin exists; idempotent       |
+| `BOOTSTRAP_ADMIN_PHONE`   | A       | no       | E.164 WhatsApp number on that invite (required with the email)                                                                |
+| `BOOTSTRAP_ADMIN_CODE_TO` | A       | no       | Mailbox that identity's sign-in codes are delivered to instead of the sign-in address. Delivery only; limits unchanged        |
 | `WORKER_POLL_MS`          | W       | no       | Longest time without a full outbox pass; a safety net (250-60000, default 30000)                                              |
 | `WORKER_WAKE_MS`          | W       | no       | Wake probe interval; starts a pass as soon as work is pending (0 or 100-60000, default 1000; 0 = pass every `WORKER_POLL_MS`) |
 | `WORKER_SEND_CONCURRENCY` | W       | no       | WhatsApp and SMS batches sent at once per node (1-32, default 4)                                                              |

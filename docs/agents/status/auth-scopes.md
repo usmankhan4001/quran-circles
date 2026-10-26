@@ -126,3 +126,7 @@ interface CodeSender {
 - New (2026-10-18), `auth-limits-doc`: document on `auth.requestCode`, `auth.verifyCode` and `auth.refresh` that the auth lane's limits replace the `auth_code` bucket (per number and per address, a per-number daily cap of 10 codes, global hourly and daily ceilings, refresh per address), all answering `rate_limited` with `retryAfterSeconds`.
 
 - Applied 2026-10-17: `auth-session-grace`, `users-display-name`, `otp-locale`, `auth-failure-reason`.
+
+## 2026-10-26 (data lane, at the owner's request, for the auth-scopes lane's review)
+
+- First admin from the environment: `BOOTSTRAP_ADMIN_EMAIL` + `BOOTSTRAP_ADMIN_PHONE` (the API invites that national admin at start-up when no active admin and no live invite exists; idempotent, never blocks start-up) and `BOOTSTRAP_ADMIN_CODE_TO` (that one identity's sign-in codes are delivered to this mailbox; delivery only, every limit keyed on the sign-in address as before). `src/auth/first-admin.ts` (`ensureFirstAdmin`, `redirectingCodeSender`), config in `src/auth/config.ts` (`firstAdmin`, `firstAdminFromEnv`), wired in `src/server.ts`. Tests: `src/auth/first-admin.test.ts` (8; env parsing, bad values refused, redirect for that identity only, invite once then nothing, sign-in takes the role, cooldown unchanged). Docs: `infra/ENV.md`, `.env.example`. Branch `lane/auth/admin-bootstrap`.

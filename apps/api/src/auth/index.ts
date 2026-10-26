@@ -18,6 +18,8 @@ export { consoleLogger, silentLogger } from './types';
 export { createAuthConfig, loadAuthConfigFromEnv, AuthConfigError } from './config';
 export type { AuthConfig, AppEnv } from './config';
 export { DiscardCodeSender, FakeCodeSender } from './code-sender';
+export { ensureFirstAdmin, redirectingCodeSender } from './first-admin';
+export type { FirstAdminOutcome } from './first-admin';
 export type { CodeSender, CodeMessage } from './code-sender';
 export { InMemoryRateLimiter } from './rate-limiter';
 export type { RateLimiter, RateLimitResult } from './rate-limiter';
