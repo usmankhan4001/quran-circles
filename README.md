@@ -6,7 +6,7 @@
 
 **Find the nearest Quran circle, register in a tap and never miss it. English and Urdu.**
 
-[Web app](https://qurancircle.doraquran.pk) · [Documentation](docs/README.md) · [Member guide](docs/public/content/en/member-guide.md) · [API reference](docs/public/content/en/api-reference.md) · [Getting started](docs/getting-started.md)
+[Documentation](docs/README.md) · [Member guide](docs/public/content/en/member-guide.md) · [API reference](docs/public/content/en/api-reference.md) · [Getting started](docs/getting-started.md)
 
 ![Licence: proprietary, all rights reserved](https://img.shields.io/badge/licence-proprietary-lightgrey)
 ![Node 22](https://img.shields.io/badge/node-22-339933)
@@ -32,19 +32,20 @@ Quran Circles is the platform for Tanzeem-e-Islami's Quran sessions in Pakistan.
 
 ## Screenshots
 
-The user app on a phone, from the current build. The sessions, venues and names are synthetic demo data.
+The user app on a phone, from the current build. Sessions, venues and names are synthetic demo data. Home, Nearby, Session, and Quran and prayer, in English and in Urdu (right to left).
 
-**English**
-
-| Home                                                                                                                                     | Nearby                                                                                                                                               | Session                                                                                                                                 | Quran and prayer                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| ![Home screen in English: a greeting, the next session card with a Confirm I will join button, and sessions near you this week][en-home] | ![Nearby screen in English: a search box, a Map and List switch, filter chips for Women, Men, Family and Tonight, and a list of sessions][en-nearby] | ![Session screen in English: the start time, a Join button, a reminders note, today's portion and details about the circle][en-session] | ![Quran and Prayer screen in English: a Start reading card for Al-Fatihah, a memorisation card and a list of surahs][en-quran] |
-
-**Urdu (right to left)**
-
-| Home                                                                                                                                                        | Nearby                                                                                                                                | Session                                                                                                                            | Quran and prayer                                                                                                                                    |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ![Home screen in Urdu, laid out right to left: a greeting, the next session card with a join confirmation button, and sessions near you this week][ur-home] | ![Nearby screen in Urdu, laid out right to left: a search box, a List and Map switch, filter chips and a list of sessions][ur-nearby] | ![Session screen in Urdu, laid out right to left: the start time, a Join button, a reminders note and today's portion][ur-session] | ![Quran and Prayer screen in Urdu, laid out right to left: a Start reading card for Al-Fatihah, a memorisation card and a list of surahs][ur-quran] |
+<p align="center">
+  <img src="docs/assets/screenshots/en-home.png" alt="Home screen in English: a greeting, the next session card with a Confirm I will join button, and sessions near you this week" width="23%">
+  <img src="docs/assets/screenshots/en-nearby.png" alt="Nearby screen in English: a search box, a Map and List switch, filter chips and a list of sessions" width="23%">
+  <img src="docs/assets/screenshots/en-session.png" alt="Session screen in English: the start time, a Join button, a reminders note, today's portion and details about the circle" width="23%">
+  <img src="docs/assets/screenshots/en-quran.png" alt="Quran and Prayer screen in English: a Start reading card for Al-Fatihah, a memorisation card and a list of surahs" width="23%">
+</p>
+<p align="center">
+  <img src="docs/assets/screenshots/ur-home.png" alt="Home screen in Urdu, laid out right to left: a greeting, the next session card with a join confirmation button, and sessions near you this week" width="23%">
+  <img src="docs/assets/screenshots/ur-nearby.png" alt="Nearby screen in Urdu, laid out right to left: a search box, a List and Map switch, filter chips and a list of sessions" width="23%">
+  <img src="docs/assets/screenshots/ur-session.png" alt="Session screen in Urdu, laid out right to left: the start time, a Join button, a reminders note and today's portion" width="23%">
+  <img src="docs/assets/screenshots/ur-quran.png" alt="Quran and Prayer screen in Urdu, laid out right to left: a Start reading card for Al-Fatihah, a memorisation card and a list of surahs" width="23%">
+</p>
 
 ## What it does
 
@@ -154,7 +155,7 @@ Then start the API and worker as described in [Getting started](docs/getting-sta
 
 ## Deployment
 
-> **Treat a push to `main` as a deploy to production.** [`docs/deployment.md`](docs/deployment.md) and the CI file record that production runs on [Dokploy](https://dokploy.com), which pulls this repository's `main` branch from GitHub with auto-deploy on. That setting lives in Dokploy, not in this repository, and the owner has stated it; it has not been checked from the repo. Work on a `lane/<lane>/<topic>` branch and merge to `main` only when the change is meant to go live. Run `pnpm check` before you push: CI (`.github/workflows/ci.yml`) is manual only (Actions > ci > Run workflow), never deploys and does not hold a deploy back.
+> **Treat a push to `main` as a release.** Production runs on [Dokploy](https://dokploy.com), which pulls `main` from this repository, and [`docs/deployment.md`](docs/deployment.md) says auto-deploy is on. Work on a `lane/<lane>/<topic>` branch and merge to `main` only when the change is meant to go live. Run `pnpm check` before you push: CI (`.github/workflows/ci.yml`) is manual only (Actions > ci > Run workflow), never deploys and does not hold a deploy back.
 
 The stack is the Compose file in `infra/` ([deployment overview](docs/deployment.md), runbook in [`infra/README.md`](infra/README.md)). Environment values are set in Dokploy and never committed:
 
@@ -164,22 +165,9 @@ The stack is the Compose file in `infra/` ([deployment overview](docs/deployment
 
 ## Status
 
-As of 2026-10-26.
+Waves 0 to 5 are built: contracts, every app and service, end-to-end tests, posters, the ayah of the day, the session companion and hardening. The apps follow the owner's redesign (D17 in [`docs/design/redesign-decisions.md`](docs/design/redesign-decisions.md)), sign-in codes go by email, and staging runs synthetic data with fake messaging. V1 (`usmankhan4001/nearby-dora-quran`) stays live until the pilot passes.
 
-- **Built.** Waves 0 to 4 (contracts, every app and service, end-to-end tests, posters, ayah of the day, session companion) are built. Wave 5, hardening, was done except the full restore drill, which needs a production server ([`docs/handoff.md`](docs/handoff.md), 2026-10-18). The apps follow the owner's redesign (D17 in [`docs/design/redesign-decisions.md`](docs/design/redesign-decisions.md)). Sign-in codes go by email.
-- **Web app.** `https://qurancircle.doraquran.pk` (no s) is the production address, and its health endpoint answered `{"ok":true,"service":"api"}` when checked on 2026-10-26. The sign-in email sender domain, `qurancircles.doraquran.pk` (with an s), is a different name on purpose ([messaging status](docs/agents/status/messaging.md)); the app does not answer there. The admin console has its own address, which is not published here.
-- **Staging.** `staging.doraquran.pk` (user app) and `staging-console.doraquran.pk` (console) run synthetic data and fake messaging.
-- **Android.** No Google Play listing is recorded. The first Android build exists and the Play Console steps are still open ([platform status](docs/agents/status/platform.md), [Play Console steps](docs/release/play-console.md)).
-- **V1.** The current Nearby Dora Quran web app lives in its own repository, `usmankhan4001/nearby-dora-quran`, and keeps running until the pilot passes ([go-live plan](docs/release/go-live.md)).
-- **Wave 6 (pilot and release)** has no gate sign-off recorded in [`orchestrator.md`](docs/agents/status/orchestrator.md); the work toward it is in the go-live plan. Wave 7 (circle requests and demand map) was not started when [`docs/handoff.md`](docs/handoff.md) was written.
-
-**Stale pages.** Several pages were written before production was in use and are out of date on the points below. Where a page and this README differ, trust this README and the code, and expect those pages to be corrected.
-
-- [`docs/handoff.md`](docs/handoff.md), [`docs/deployment.md`](docs/deployment.md) and the [platform status](docs/agents/status/platform.md) still say production is not deployed or not created.
-- The [go-live plan](docs/release/go-live.md) names the app host with an s (`qurancircles.doraquran.pk`), which does not serve the app. Use `qurancircle.doraquran.pk`.
-- The public API page [`api-auth.md`](docs/public/content/en/api-auth.md) and the generated API reference still describe a sign-in code sent on WhatsApp. The code sends the code by email, and WhatsApp sign-in is off unless `AUTH_PHONE_SIGN_IN=true` is set ([`apps/api/src/auth/config.ts`](apps/api/src/auth/config.ts)).
-
-The lane-by-lane picture is in [`docs/agents/status/`](docs/agents/status/).
+Release progress is tracked in the [go-live plan](docs/release/go-live.md), the [Play Console steps](docs/release/play-console.md) and the lane files in [`docs/agents/status/`](docs/agents/status/). [`docs/handoff.md`](docs/handoff.md) is the 2026-10-18 snapshot.
 
 ## Documentation
 
@@ -203,17 +191,8 @@ Report a vulnerability privately through the repository's **Security** tab, not 
 
 ## Credits
 
-The apps bundle Plus Jakarta Sans (SIL OFL 1.1), Jameel Noori Nastaleeq (the owner's copy; its redistribution licence is not confirmed), Mehr Nastaliq Web (CC BY-SA 4.0) and KFGQPC Uthmanic Script HAFS (KFGQPC free-use licence, unmodified), and draw Phosphor icons (MIT). Posters use Figtree (SIL OFL 1.1). The Arabic Quran text comes from the Tanzil Project (CC BY 3.0) and the Urdu and English translations are by Sayyid Abul A'la Maududi, via Tanzil, for non-commercial use. Details are in [Credits and licences](docs/credits-and-licences.md), which at the time of writing still says Jameel is not bundled; the font files are in the repository (`packages/ui/assets/fonts/`), so the owner has to confirm the licence for them.
+The apps bundle Plus Jakarta Sans (SIL OFL 1.1), Mehr Nastaliq Web (CC BY-SA 4.0) and KFGQPC Uthmanic Script HAFS (KFGQPC free-use licence, unmodified), and draw Phosphor icons (MIT). Posters use Figtree (SIL OFL 1.1). The Arabic Quran text comes from the Tanzil Project (CC BY 3.0) and the Urdu and English translations are by Sayyid Abul A'la Maududi, via Tanzil, for non-commercial use. Details are in [Credits and licences](docs/credits-and-licences.md).
 
 ## Licence
 
-Proprietary. The Quran Circles code belongs to Tanzeem-e-Islami, all rights reserved; it is not open source and may not be copied, used or distributed without written permission. See [`LICENSE`](LICENSE). The bundled fonts and texts keep their own licences. Questions: markaz@tanzeem.org.
-
-[en-home]: docs/assets/screenshots/en-home.png 'English home screen'
-[en-nearby]: docs/assets/screenshots/en-nearby.png 'English nearby screen'
-[en-session]: docs/assets/screenshots/en-session.png 'English session screen'
-[en-quran]: docs/assets/screenshots/en-quran.png 'English Quran and prayer screen'
-[ur-home]: docs/assets/screenshots/ur-home.png 'Urdu home screen'
-[ur-nearby]: docs/assets/screenshots/ur-nearby.png 'Urdu nearby screen'
-[ur-session]: docs/assets/screenshots/ur-session.png 'Urdu session screen'
-[ur-quran]: docs/assets/screenshots/ur-quran.png 'Urdu Quran and prayer screen'
+Proprietary. The Quran Circles code belongs to Tanzeem-e-Islami, all rights reserved; it is not open source and may not be copied, used or distributed without written permission. See [`LICENSE`](LICENSE). The bundled fonts and texts keep their own licences. Questions: support@qurancircles.doraquran.pk.

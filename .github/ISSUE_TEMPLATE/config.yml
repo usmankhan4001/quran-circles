@@ -2,7 +2,7 @@ blank_issues_enabled: false
 contact_links:
   - name: Report a security problem privately
     url: https://github.com/usmankhan4001/quran-circles/security/advisories/new
-    about: Do not open a public issue for a vulnerability. If the link shows an error, email markaz@tanzeem.org instead.
+    about: Do not open a public issue for a vulnerability. If the link shows an error, email support@qurancircles.doraquran.pk instead.
   - name: Read the contributing guide first
     url: https://github.com/usmankhan4001/quran-circles/blob/main/CONTRIBUTING.md
     about: How branches, checks and reviews work in this repository.
