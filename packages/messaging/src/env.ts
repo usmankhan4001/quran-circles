@@ -32,7 +32,8 @@ import { silentLogger, type Logger } from './logger';
  * code sender). Secrets come from the environment at runtime; nothing is read from files here.
  *
  * MESSAGING_MODE=fake (default) uses the fake providers and the test-mode code sender.
- * MESSAGING_MODE=live uses the real providers and refuses to start without the WhatsApp settings.
+ * MESSAGING_MODE=live uses the real providers and refuses to start without RESEND_API_KEY or the WhatsApp settings
+ * (email-only is allowed; WhatsApp sends then fail as `whatsapp_not_configured`).
  * APP_ENV=production refuses fake mode.
  */
 const optional = z.string().trim().min(1).optional();
@@ -171,18 +172,30 @@ export function createMessaging(
   }
 
   const fetchImpl = options.fetch ?? defaultFetch;
-  if (!env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN) {
+  const hasWhatsApp = Boolean(env.WHATSAPP_PHONE_NUMBER_ID && env.WHATSAPP_ACCESS_TOKEN);
+  if (!hasWhatsApp && !env.RESEND_API_KEY) {
     throw new MessagingConfigError(
-      'Live messaging needs WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN',
+      'Live messaging needs RESEND_API_KEY, or WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN',
     );
   }
-  const whatsapp = new WhatsAppCloudClient({
-    phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
-    accessToken: env.WHATSAPP_ACCESS_TOKEN,
-    fetch: fetchImpl,
-    ...(env.WHATSAPP_GRAPH_BASE_URL ? { graphBaseUrl: env.WHATSAPP_GRAPH_BASE_URL } : {}),
-    ...(env.WHATSAPP_API_VERSION ? { apiVersion: env.WHATSAPP_API_VERSION } : {}),
-  });
+  // Email-only launch: WhatsApp credentials may be added later; until then every WhatsApp send fails
+  // as a configuration problem (reminders are not delivered) while sign-in codes go out by email.
+  const whatsapp: WhatsAppProvider = hasWhatsApp
+    ? new WhatsAppCloudClient({
+        phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID as string,
+        accessToken: env.WHATSAPP_ACCESS_TOKEN as string,
+        fetch: fetchImpl,
+        ...(env.WHATSAPP_GRAPH_BASE_URL ? { graphBaseUrl: env.WHATSAPP_GRAPH_BASE_URL } : {}),
+        ...(env.WHATSAPP_API_VERSION ? { apiVersion: env.WHATSAPP_API_VERSION } : {}),
+      })
+    : {
+        sendTemplate: () =>
+          Promise.resolve({
+            status: 'permanent_failure',
+            code: 'whatsapp_not_configured',
+            cause: 'configuration',
+          } as const),
+      };
 
   let sms: SmsProvider | undefined;
   if (env.SMS_GATEWAY_URL && env.SMS_GATEWAY_KEY) {

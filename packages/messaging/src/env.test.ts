@@ -40,11 +40,26 @@ describe('createMessaging', () => {
     expect(() => createMessaging({ CODE_DELIVERY_MODE: 'live' })).toThrow(MessagingConfigError);
   });
 
-  it('live mode needs the WhatsApp credentials', () => {
-    expect(() => createMessaging({ MESSAGING_MODE: 'live' })).toThrow(/WHATSAPP_PHONE_NUMBER_ID/);
+  it('live mode needs RESEND_API_KEY or the WhatsApp credentials', () => {
+    expect(() => createMessaging({ MESSAGING_MODE: 'live' })).toThrow(/RESEND_API_KEY/);
     expect(() =>
       createMessaging({ MESSAGING_MODE: 'live', WHATSAPP_PHONE_NUMBER_ID: '1' }),
     ).toThrow(MessagingConfigError);
+  });
+
+  it('live mode runs email-only: WhatsApp sends fail as not configured', async () => {
+    const m = createMessaging(
+      { MESSAGING_MODE: 'live', APP_ENV: 'production', RESEND_API_KEY: 're_x' },
+      { fetch: ok() },
+    );
+    expect(m.mode).toBe('live');
+    const r = await m.whatsapp.sendTemplate({
+      to: '+923001234567',
+      templateName: 't',
+      language: 'en',
+      bodyParams: [],
+    });
+    expect(r).toMatchObject({ status: 'permanent_failure', code: 'whatsapp_not_configured' });
   });
 
   it('builds live providers and sends through the injected fetch', async () => {

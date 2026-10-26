@@ -139,10 +139,18 @@ describe('worker configuration', () => {
   });
 
   it('in production, insists on the webhook secrets', () => {
-    expect(() => parseWorkerEnv({ ...base, APP_ENV: 'production' })).toThrow(/WHATSAPP_APP_SECRET/);
+    const wa = { WHATSAPP_PHONE_NUMBER_ID: '1' };
+    expect(() => parseWorkerEnv({ ...base, ...wa, APP_ENV: 'production' })).toThrow(
+      /WHATSAPP_APP_SECRET/,
+    );
+    // Email-only launch: no WhatsApp number, no webhook secrets needed.
+    expect(parseWorkerEnv({ ...base, APP_ENV: 'production' })).toMatchObject({
+      APP_ENV: 'production',
+    });
     expect(
       parseWorkerEnv({
         ...base,
+        ...wa,
         APP_ENV: 'production',
         WHATSAPP_APP_SECRET: 's',
         WHATSAPP_VERIFY_TOKEN: 'v',
