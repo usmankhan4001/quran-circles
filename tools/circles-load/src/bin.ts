@@ -53,14 +53,17 @@ async function report(): Promise<void> {
       return;
     }
     const pins = new Map<string, LatLng>();
+    const approx = new Map<string, LatLng>();
     for (const v of plan.venues.filter(
       (x) => !x.importable && x.sessionRows.length > 0 && x.location.status !== 'resolved',
     )) {
       const outcome = await geocodeVenue(v.address, v.city, { key });
       if (outcome.ok) pins.set(v.venueKey, outcome.point);
+      else if (outcome.reason === 'low_confidence' && outcome.candidate)
+        approx.set(v.venueKey, outcome.candidate);
       else review.push({ venueKey: v.venueKey, city: v.city, outcome });
     }
-    plan = buildPlan(rows, resolutions, pins);
+    plan = buildPlan(rows, resolutions, pins, approx);
   }
   writeFileSync(
     output,

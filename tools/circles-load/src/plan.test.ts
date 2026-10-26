@@ -64,6 +64,29 @@ describe('buildPlan', () => {
     const plan = buildPlan(rows, new Map(), new Map([[key, { lat: 31.5, lng: 74.3 }]]));
     expect(plan.counts).toMatchObject({ venuesImportable: 1, pinsFromGeocoding: 1 });
   });
+  it('imports an approximate geocoder pin only when nothing better exists, and flags it', () => {
+    const rows = cleanRows([
+      row({ id: '1', address: 'A', map_link: 'https://maps.app.goo.gl/a' }),
+      row({ id: '2', address: 'B' }),
+    ]);
+    const [a, b] = rows.map((r) => r.venueKey);
+    const approx = new Map([
+      [a!, { lat: 1, lng: 1 }],
+      [b!, { lat: 31.51, lng: 74.31 }],
+    ]);
+    const plan = buildPlan(
+      rows,
+      new Map([['https://maps.app.goo.gl/a', at(31.5, 74.3)]]),
+      new Map(),
+      approx,
+    );
+    expect(plan.venues.map((v) => [v.importable, v.approximate])).toEqual([
+      [true, false],
+      [true, true],
+    ]);
+    expect(plan.venues[0]!.location.point).toEqual({ lat: 31.5, lng: 74.3 });
+    expect(plan.counts.pinsApproximate).toBe(1);
+  });
   it('does not import a held row or a row skipped as a duplicate', () => {
     const rows = cleanRows([
       row({ id: '71', map_link: 'https://maps.app.goo.gl/a' }),
