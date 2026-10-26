@@ -127,7 +127,7 @@ The e2e suite needs a Postgres. Set `E2E_DATABASE_URL` to the dev database from 
 - Screens must work left to right and right to left, at all four text sizes, in light and dark.
 - Never put secrets, real phone numbers or personal data in code, tests, fixtures, logs or docs.
 - Each directory has one owning lane. Read [Contributing](../CONTRIBUTING.md) before editing outside your own.
-- Do not push to `main`. Dokploy is recorded as pulling it, so treat every push as a release; whether auto-deploy is on is unconfirmed (`AGENTS.md`, "Release line"). The rules are in [Contributing](../CONTRIBUTING.md#branches-and-releases).
+- Do not push to `main`. Dokploy pulls it with auto-deploy on, so every push is a release. The rules are in [Contributing](../CONTRIBUTING.md#branches-and-releases).
 
 ## Troubleshooting
 

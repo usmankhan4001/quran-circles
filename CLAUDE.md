@@ -22,7 +22,7 @@ Run from the repository root:
 
 - No secrets, tokens, passwords, keys or real personal data in code, tests, fixtures, logs or docs. Use fakes and synthetic data.
 - No `@supabase/*`, `@neondatabase/*` or OneSignal. V2 talks to plain Postgres through the API only.
-- No production credentials. Deployments run through CI.
+- No production credentials. Production deploys from `main` through Dokploy (auto-deploy is on), so a lane agent never pushes to `main` or deploys.
 - No skipped, disabled or deleted tests to make a check pass.
 - Do not log phone numbers, names or message bodies.
 
@@ -31,7 +31,7 @@ Run from the repository root:
 - TypeScript strict. No `any`; validate all external input with the Zod schemas in `@qc/contracts`.
 - Every user-facing string goes through `@qc/i18n`, with English and Urdu keys added together. Urdu values you write are drafts and carry the review marker.
 - Designs must work left-to-right and right-to-left, at all four text sizes, in light and dark.
-- Small pull requests. One work package or part of one. Branch name `lane/<lane>/<topic>`.
+- Small changes: one work package or part of one per branch and pull request, opened when the owner or orchestrator asks. Branch name `lane/<lane>/<topic>`.
 - Write tests with the code, including failure paths. Scope and authorisation code needs a test for every role.
 
 ## Finishing a session

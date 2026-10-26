@@ -48,13 +48,9 @@ Run from the repository root. Full setup: [`docs/getting-started.md`](docs/getti
 
 The default branch is `main`. Cut your branch from the line the orchestrator names (`main` unless told otherwise; long-lived branches are listed in `docs/engineering/branch-inventory.md`). Only the orchestrator or the owner merges to `main`. Treat every push to `main` as a release.
 
-What the repository records about deploys, and where it disagrees with itself:
+Dokploy pulls `main` with auto-deploy on (confirmed by the owner on 2026-10-26), so every push to `main` deploys. Production is served at `qurancircles.doraquran.pk`. Lane agents never push to `main`, deploy, or use Dokploy, Proxmox or cloud tools; only the owner or orchestrator does. CI (`.github/workflows/ci.yml`) is manual and never deploys, so run `pnpm check` yourself before you ask for a merge.
 
-- Staging runs on Dokploy and is deployed by hand after a push to `main` (`docs/handoff.md`).
-- Production does not exist yet (`docs/handoff.md`, `docs/deployment.md`).
-- `CONTRIBUTING.md` and `docs/deployment.md` say Dokploy pulls `main` with auto-deploy on. `docs/handoff.md` describes a manual staging deploy. Which setting is live is unconfirmed; the owner can check it in Dokploy. `docs/deployment.md` is the record.
-
-Pull requests: `CLAUDE.md` says to run `pnpm check` "before you open a pull request" and to keep pull requests small. Read that as "a small, separate change on your lane branch". Open a GitHub pull request only when the owner or orchestrator asks ([`CONTRIBUTING.md`](CONTRIBUTING.md)). `CLAUDE.md` also says "Deployments run through CI", but CI is manual and never deploys (`CONTRIBUTING.md`); `docs/engineering/branches-and-review.md` says CI must be green, though CI starts only when someone runs it. These wordings are for the repo lane or the orchestrator to align.
+Open a GitHub pull request only when the owner or orchestrator asks ([`CONTRIBUTING.md`](CONTRIBUTING.md)). Keep each change small, on its own lane branch.
 
 ## Windows and worktree hazards
 

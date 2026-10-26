@@ -49,7 +49,7 @@ The work is split into **lanes**. Each lane owns a set of directories and a set 
 
 The full rules are in [`docs/engineering/branches-and-review.md`](docs/engineering/branches-and-review.md).
 
-**Treat every push to `main` as a release.** [`docs/deployment.md`](docs/deployment.md) records that Dokploy pulls `main` from GitHub with auto-deploy on, whether or not CI has finished. [`docs/handoff.md`](docs/handoff.md) instead describes deploying staging by hand in Dokploy after a push, and [`docs/release/go-live.md`](docs/release/go-live.md) plans production with auto-deploy off. Which setting is live is unconfirmed (see "Release line" in [`AGENTS.md`](AGENTS.md#release-line)), and no production server exists yet.
+**Treat every push to `main` as a release.** Dokploy pulls `main` from GitHub with auto-deploy on (confirmed by the owner on 2026-10-26), so a push deploys to production whether or not CI has finished ([`docs/deployment.md`](docs/deployment.md)). Production is served at `qurancircles.doraquran.pk`.
 
 - **Never commit or push directly to `main`.** Only the owner merges to `main`, and only when the work is meant to go live.
 - **Lane branches** are named `lane/<lane>/<topic>`, lowercase, one topic per branch, for example `lane/api-core/venues`. Release branches are `release/<name>`.

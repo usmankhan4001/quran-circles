@@ -45,7 +45,7 @@ Pushes go from the owner's PC. In this order: the join pledge, the map (6087625)
 | Compose path | `./infra/docker-compose.prod.yml`                                                                                                                       |
 | Command      | `compose -p qc-prod --env-file infra/.env -f ./infra/docker-compose.prod.yml -f ./infra/docker-compose.dokploy-prod.yml up -d --build --remove-orphans` |
 | Domains      | None in Dokploy: the Traefik labels in the override route both names                                                                                    |
-| Auto-deploy  | Off. Deploy by hand after a change has run on staging                                                                                                   |
+| Auto-deploy  | On (confirmed by the owner, 2026-10-26): every push to `main` deploys. Let a change run on staging first                                                |
 
 Environment (Dokploy, service `quran-circles`, Environment tab). Generate each secret on your own machine and paste it straight in:
 

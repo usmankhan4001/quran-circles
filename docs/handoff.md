@@ -22,7 +22,7 @@ The whole V2 platform is built and tested: database, API, worker, poster rendere
 
 Staging is left running as it is. It uses synthetic data, `MESSAGING_MODE=fake` (no real WhatsApp, SMS or push) and a fixed sign-in code, `AUTH_FIXED_CODE`, kept only in the Dokploy environment. Sign in with a made-up number, or with one of the seeded test admin numbers for the console; each number can request 5 codes an hour. All secrets live in Dokploy, never in this repository.
 
-To deploy a new version to staging: push to `main`, then start a deploy of the `quran-circles` app in Dokploy. The record of each staging deploy is in [`docs/agents/status/platform.md`](agents/status/platform.md).
+To deploy a new version to staging: push to `main`; Dokploy deploys it (auto-deploy is on). The record of each staging deploy is in [`docs/agents/status/platform.md`](agents/status/platform.md).
 
 ## State of each wave
 
@@ -48,7 +48,6 @@ The lane-by-lane detail is in [`docs/agents/status/`](agents/status/README.md); 
 | Urdu proofreading                       | A native Urdu reader | Every Urdu string is a draft: app text in `packages/i18n` (a 1,614-line review sheet was shared in the project folder `urdu-proofreading/`), the store listing and the screenshot headlines |
 | Publisher name                          | Muhammad             | Confirm "Tanzeem-e-Islami" as the store publisher (taken from the logo)                                                                                                                     |
 | Larger or vector logo                   | Muhammad             | The master is 668 px, so the 1024 icon is upscaled. Drop a vector or 2048 px file into `tools/store-assets/source/` and re-run                                                              |
-| Rotate the Dokploy API key              | Muhammad             | A Dokploy API key was pasted into a chat. Revoke it in Dokploy and create a new one                                                                                                         |
 | WhatsApp Business owner and Meta review | Muhammad             | Name the legal owner, start Meta business verification and template approval                                                                                                                |
 | Pilot city, first coordinators          | Muhammad             | Needed for Wave 6                                                                                                                                                                           |
 

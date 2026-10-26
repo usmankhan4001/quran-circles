@@ -17,10 +17,10 @@ The full notices, file checksums and conversion notes are in [`packages/ui/asset
 | Urdu text    | Mehr Nastaliq Web 2.00      | CC BY-SA 4.0                            | © Mehr Type with CSaLT, ITU Punjab, Lahore. The WOFF2 copy is shared under CC BY-SA 4.0.          |
 | Quran text   | KFGQPC Uthmanic Script HAFS | KFGQPC free-use licence (embedded EULA) | © King Fahd Glorious Qur'an Printing Complex. Free to use and distribute, never sold or modified. |
 
-Two rules follow from these licences and are enforced by tests in `@qc/ui`:
+These rules follow from the licences; the first is enforced by tests in `@qc/ui`:
 
 - **Never modify the KFGQPC font file.** No subsetting, no WOFF conversion, no renaming. A test fails if its checksum changes or if a converted copy appears.
-- **Jameel Noori Nastaleeq is not bundled.** No redistribution licence could be found for it.
+- **Jameel Noori Nastaleeq is bundled.** The owner confirmed on 2026-10-26 that it may be redistributed with the apps. It is the primary Urdu font; Mehr Nastaliq Web is the fallback.
 
 ## Quran text and translations
 

@@ -100,4 +100,4 @@ See [`worktrees.md`](worktrees.md). In short: create a sibling worktree on a lan
 - **Status files:** each agent updates `status/<lane>.md` at the end of every session ([`status/README.md`](status/README.md)).
 - **Contract change requests:** [`docs/engineering/contracts-process.md`](../engineering/contracts-process.md).
 - **Outside dependencies:** if you are blocked by something outside the repository, use the stand-in your brief lists and say so in your status file.
-- **Review:** the owner decides whether a change goes through a pull request ([`CONTRIBUTING.md`](../../CONTRIBUTING.md)); agents open one only when asked. Where `CLAUDE.md` says "pull request", read "small change on your lane branch" ([`AGENTS.md`](../../AGENTS.md), "Release line"). When a pull request is opened, use `.github/pull_request_template.md`; a reviewer agent reviews it with `briefs/reviewer.md`.
+- **Review:** the owner decides whether a change goes through a pull request ([`CONTRIBUTING.md`](../../CONTRIBUTING.md)); agents open one only when asked. When a pull request is opened, use `.github/pull_request_template.md`; a reviewer agent reviews it with `briefs/reviewer.md`.
