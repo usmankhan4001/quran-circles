@@ -9,7 +9,7 @@
  * On the web every face is declared with `@font-face` and `font-display: swap`, and the browser
  * downloads a face only when text on screen uses it. A page waits only for the face its
  * language's text is set in (`firstPaintFace`): Plus Jakarta Sans 400 in English, Mehr Nastaliq Web in
- * Urdu. The other Latin weights follow as the screen uses them, and the Quran font only when
+ * Urdu, which Jameel Noori Nastaleeq replaces when its larger file has arrived. The other Latin weights follow as the screen uses them, and the Quran font only when
  * Quran text is shown.
  *
  * - Plus Jakarta Sans and Mehr Nastaliq Web: WOFF2 copies in `assets/fonts/web`, written by
@@ -24,10 +24,11 @@ import jakarta500 from '../assets/fonts/web/PlusJakartaSans-500.woff2';
 import jakarta600 from '../assets/fonts/web/PlusJakartaSans-600.woff2';
 import jakarta700 from '../assets/fonts/web/PlusJakartaSans-700.woff2';
 import jakarta800 from '../assets/fonts/web/PlusJakartaSans-800.woff2';
+import jameelNoori from '../assets/fonts/web/JameelNooriNastaleeq-Subset.woff2';
 import mehrNastaliq from '../assets/fonts/web/MehrNastaliqWeb-Regular.woff2';
 import type { Locale } from './direction';
 import { fontLoadTimeoutMs, loadFontsWithFallback, type FontLoadResult } from './font-loading';
-import { fonts, type SansWeight } from './tokens';
+import { fonts, urduFallbackFont, type SansWeight } from './tokens';
 
 export type { FontLoadResult } from './font-loading';
 // The family names, so a page's earliest script can name faces without loading the whole kit.
@@ -57,7 +58,8 @@ export const webFontFaces: readonly WebFontFace[] = [
     src: String(sansFiles[weight]),
     format: 'woff2' as const,
   })),
-  { family: fonts.urdu, weight: 400, src: String(mehrNastaliq), format: 'woff2' },
+  { family: fonts.urdu, weight: 400, src: String(jameelNoori), format: 'woff2' },
+  { family: urduFallbackFont, weight: 400, src: String(mehrNastaliq), format: 'woff2' },
   { family: fonts.quran, weight: 400, src: String(kfgqpcHafs), format: 'opentype' },
 ];
 
@@ -69,7 +71,14 @@ function face(family: string, weight: number): WebFontFace {
 
 /** The face a language's first screen is set in: the only one worth holding the first frame for. */
 export function firstPaintFace(locale: Locale): WebFontFace {
-  return locale === 'ur' ? face(fonts.urdu, 400) : face(fonts.sans, 400);
+  // Urdu holds the first frame only for the small fallback face; Jameel Noori (about 6.8 MB)
+  // swaps in when it arrives.
+  return locale === 'ur' ? face(urduFallbackFont, 400) : face(fonts.sans, 400);
+}
+
+/** The Urdu display face, a large file: asked for ahead only on Urdu screens. */
+export function urduDisplayFace(): WebFontFace {
+  return face(fonts.urdu, 400);
 }
 
 const cssString = (value: string) => `"${value.replace(/["\\]/g, '\\$&')}"`;

@@ -6,6 +6,16 @@
  * KFGQPC Uthmanic Script HAFS: its licence forbids modifying the file, so it is served as the
  * original OTF, never subset or converted to WOFF2.
  */
+/* Jameel Noori Nastaleeq, the Urdu face: a subset WOFF2 of the owner's copy (about 6.8 MB), swapped
+   in when it arrives; Mehr Nastaliq Web shows until then. Details: assets/fonts/LICENSES.md. */
+@font-face {
+  font-family: 'Jameel Noori Nastaleeq';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../../../packages/ui/assets/fonts/web/JameelNooriNastaleeq-Subset.woff2') format('woff2');
+}
+
 @font-face {
   font-family: 'Mehr Nastaliq Web';
   font-style: normal;

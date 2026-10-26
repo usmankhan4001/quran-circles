@@ -33,7 +33,7 @@ describe('console fonts', () => {
   });
 
   it('declares the bundled Urdu and Quran fonts under the token names', () => {
-    expect(faces.map((f) => f.family)).toEqual([fonts.urdu, fonts.quran]);
+    expect(faces.map((f) => f.family)).toEqual([fonts.urdu, 'Mehr Nastaliq Web', fonts.quran]);
   });
 
   it('serves the kit files themselves, which exist on disk', () => {

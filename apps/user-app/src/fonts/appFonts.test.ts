@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fonts, sansWeights } from '@qc/ui';
+import { fonts, sansWeights, urduFallbackFont } from '@qc/ui';
 import { appFontFamilies, loadAppFonts } from './appFonts';
 
 describe('app fonts', () => {
@@ -8,7 +8,12 @@ describe('app fonts', () => {
   });
 
   it('loads all three families under the token names', () => {
-    expect(appFontFamilies.map((f) => f.fontFamily)).toEqual([fonts.sans, fonts.urdu, fonts.quran]);
+    expect(appFontFamilies.map((f) => f.fontFamily)).toEqual([
+      fonts.sans,
+      fonts.urdu,
+      urduFallbackFont,
+      fonts.quran,
+    ]);
   });
 
   it('loads Figtree in every weight the type roles use, each face with swap on the web', () => {
@@ -22,10 +27,11 @@ describe('app fonts', () => {
     }
   });
 
-  it('loads the Mehr and KFGQPC files from the kit', () => {
+  it('loads the Jameel, Mehr and KFGQPC files from the kit', () => {
     const path = (name: string) =>
       String(appFontFamilies.find((f) => f.fontFamily === name)?.fontDefinitions[0]?.path);
-    expect(path(fonts.urdu)).toContain('MehrNastaliqWeb-Regular.ttf');
+    expect(path(fonts.urdu)).toContain('JameelNooriNastaleeq-Regular.ttf');
+    expect(path(urduFallbackFont)).toContain('MehrNastaliqWeb-Regular.ttf');
     expect(path(fonts.quran)).toContain('KFGQPCUthmanicScriptHAFS-Regular.otf');
   });
 

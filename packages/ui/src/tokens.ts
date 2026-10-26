@@ -143,15 +143,19 @@ export const colors = {
  * and a Quranic face for Quran text only. The values are the family names the apps register
  * the bundled files under (`@qc/ui/font-sources`), so they match the fonts' own names.
  *
- * Urdu is Mehr Nastaliq Web (CC BY-SA 4.0). Jameel Noori Nastaleeq is not bundled: it has no
- * redistribution licence. Licences and checksums: `assets/fonts/LICENSES.md`.
+ * Urdu is Jameel Noori Nastaleeq (the owner supplied it and accepts its licence, "free of charge for
+ * Urdu Lovers"), with Mehr Nastaliq Web (CC BY-SA 4.0) as the face that shows while the large file
+ * downloads on the web. Licences and checksums: `assets/fonts/LICENSES.md`.
  */
 export const fonts = {
   sans: 'Plus Jakarta Sans',
-  urdu: 'Mehr Nastaliq Web',
+  urdu: 'Jameel Noori Nastaleeq',
   quran: 'KFGQPC Uthmanic Script HAFS',
 } as const;
 export type FontToken = keyof typeof fonts;
+
+/** The Urdu face that shows first and while Jameel Noori Nastaleeq (a large file) downloads. */
+export const urduFallbackFont = 'Mehr Nastaliq Web';
 
 /**
  * Fallbacks in order, used where a font stack is possible (the web, the console, the catalog).
@@ -159,7 +163,7 @@ export type FontToken = keyof typeof fonts;
  */
 export const fontFallbacks = {
   sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
-  urdu: ['Mehr Nastaliq Web', 'Noto Nastaliq Urdu', 'serif'],
+  urdu: ['Jameel Noori Nastaleeq', 'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', 'serif'],
   quran: ['KFGQPC Uthmanic Script HAFS', 'serif'],
 } as const satisfies Record<FontToken, readonly string[]>;
 

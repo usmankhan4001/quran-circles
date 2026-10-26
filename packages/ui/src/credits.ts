@@ -14,7 +14,7 @@ export interface CreditLink {
 }
 
 export interface CreditEntry {
-  id: 'jakarta' | 'mehr' | 'kfgqpc' | 'tanzil' | 'translationUr' | 'translationEn';
+  id: 'jakarta' | 'jameel' | 'mehr' | 'kfgqpc' | 'tanzil' | 'translationUr' | 'translationEn';
   name: CreditKey;
   body: CreditKey;
   link?: CreditLink;
@@ -43,6 +43,11 @@ export const creditGroups: readonly CreditGroup[] = [
         name: 'credits.jakarta.name',
         body: 'credits.jakarta.body',
         link: { label: 'credits.jakarta.link', url: creditLinks.ofl },
+      },
+      {
+        id: 'jameel',
+        name: 'credits.jameel.name',
+        body: 'credits.jameel.body',
       },
       {
         id: 'mehr',

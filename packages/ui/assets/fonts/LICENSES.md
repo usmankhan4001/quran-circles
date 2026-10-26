@@ -5,11 +5,12 @@ pages). Each one keeps its own licence. None of them is covered by the Quran Cir
 The apps show the same credits on screen (user app: Profile, About and credits; console: the
 sidebar footer). The redesign's type decision is D4 in `docs/design/redesign-decisions.md`.
 
-| Role  | Family (as used in `fonts` tokens) | File                                                                            | Licence                        |
-| ----- | ---------------------------------- | ------------------------------------------------------------------------------- | ------------------------------ |
-| Latin | Plus Jakarta Sans                  | npm `@expo-google-fonts/plus-jakarta-sans@0.4.2` (apps), WOFF2 copies in `web/` | SIL Open Font License 1.1      |
-| Urdu  | Mehr Nastaliq Web                  | `MehrNastaliqWeb-Regular.ttf` (this folder)                                     | CC BY-SA 4.0                   |
-| Quran | KFGQPC Uthmanic Script HAFS        | `KFGQPCUthmanicScriptHAFS-Regular.otf` (this folder)                            | KFGQPC free-use licence (EULA) |
+| Role            | Family (as used in `fonts` tokens) | File                                                                            | Licence                        |
+| --------------- | ---------------------------------- | ------------------------------------------------------------------------------- | ------------------------------ |
+| Latin           | Plus Jakarta Sans                  | npm `@expo-google-fonts/plus-jakarta-sans@0.4.2` (apps), WOFF2 copies in `web/` | SIL Open Font License 1.1      |
+| Urdu            | Jameel Noori Nastaleeq             | `JameelNooriNastaleeq-Regular.ttf` (this folder), subset WOFF2 in `web/`        | Free of charge for Urdu Lovers |
+| Urdu (fallback) | Mehr Nastaliq Web                  | `MehrNastaliqWeb-Regular.ttf` (this folder)                                     | CC BY-SA 4.0                   |
+| Quran           | KFGQPC Uthmanic Script HAFS        | `KFGQPCUthmanicScriptHAFS-Regular.otf` (this folder)                            | KFGQPC free-use licence (EULA) |
 
 ## Plus Jakarta Sans
 
@@ -95,3 +96,10 @@ smaller over the network. iOS and Android keep the TTF and OTF files above.
 | `web/PlusJakartaSans-700.woff2`     | 30,924 | `44c2af85d93393c5a2d20f653ca503dfcf770b874901506ec91fdd9895b7f39d` |
 | `web/PlusJakartaSans-800.woff2`     | 30,144 | `e518a764e20deb7a27a086413fbea6f7c121197cf3e55d88560ca8165376fb6b` |
 | `web/MehrNastaliqWeb-Regular.woff2` | 55,996 | `94bc07b5c7408accf76def79d6d4736bbd4b8d0c5034c6239e25c8b7f15aef62` |
+
+## Jameel Noori Nastaleeq
+
+- Source: the owner's installed copy, `C:WindowsFontsJameel Noori Nastaleeq.ttf`. Name table: family "Jameel Noori Nastaleeq", style Regular, "Version 2; 2009", vendor "Urdu Lover". Licence text inside the file: "This Font Is Free Of Charge For Urdu Lovers".
+- The owner (Muhammad) supplied the font, confirmed its use in Quran Circles and accepts the licence. This is a freeware font, not an open licence; whether it may be redistributed inside the Play Store and App Store builds is the owner's call and is recorded here as his decision.
+- `JameelNooriNastaleeq-Regular.ttf` (13,857,080 bytes, sha256 `30caf30da47c3132af67caa823df8aa446dd4c0195e74cbc1be4ae9c493f52b0`): the full file, bundled in the iOS and Android builds through `font-sources.ts`.
+- `web/JameelNooriNastaleeq-Subset.woff2` (6,824,704 bytes, sha256 `25e276be322f09717b8aa2ddc77868330b68ba83d5d6bab7907e21c860793f28`): a subset for the web (ASCII, Latin-1 punctuation, Arabic block U+0600 to U+06FF, general punctuation), with the layout tables kept so the Nastaliq joins work. It is still 6.8 MB because the size is the ligature glyphs the Urdu letters use. Made with `subset-font@2` run once from a temp folder (not a dependency): `subsetFont(ttf, text, { targetFormat: 'woff2' })`, where `text` is every code point in those ranges. The web serves it as a hashed file under `/assets/` with a one-year immutable cache (`infra/caddy`), `font-display: swap`, and Mehr Nastaliq Web shows until it arrives. Only Urdu pages ask for it ahead (preload).
