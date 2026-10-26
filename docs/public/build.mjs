@@ -35,7 +35,7 @@ const OUT = resolve(opt('out', join(here, 'dist')));
 const BASE = opt('base', '').replace(/\/$/, '');
 const LANGS = ['en', 'ur'];
 const SITE = 'Quran Circles';
-const PROD_API = 'https://qurancircle.doraquran.pk/api';
+const PROD_API = 'https://qurancircles.doraquran.pk/api';
 
 const errors = [];
 const fail = (msg) => errors.push(msg);

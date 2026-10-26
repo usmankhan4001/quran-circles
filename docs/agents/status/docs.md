@@ -20,7 +20,7 @@ Owns: `docs/public/` (source and generator), this status file. A change request 
 
 - The staff API (`/v1/admin`, 45 operations) is **not** published. Public pages describe it only in words.
 - Sign-in ceilings, the invite cap, the poster allowance and backup details are left out. Published as plain defaults: the 300 a minute and 20 a minute (joining) buckets, the 5-minute code life, 15-minute access token and 30-day refresh token.
-- Internal hostnames, the Dokploy host, secrets and environment variable values are not in the pages. The public site address `qurancircle.doraquran.pk` is.
+- Internal hostnames, the Dokploy host, secrets and environment variable values are not in the pages. The public site address `qurancircles.doraquran.pk` is.
 - Joining is described as a pledge; no page mentions seats, a waiting list or a full state, except the one honest note that an optional limit still exists in the API.
 - Docs live under their own folder and route (`/docs`, `docs/public/`), not in the landing page's files.
 

@@ -9,7 +9,7 @@ const session = {
   sessionTitle: 'Saturday Tafseer Circle',
   venueName: 'Masjid Al-Noor',
   when: 'Saturday, 7:30 pm',
-  link: 'https://qurancircle.doraquran.pk/session/abc',
+  link: 'https://qurancircles.doraquran.pk/session/abc',
 };
 const data: { [K in EmailTemplateName]: EmailTemplateData[K] } = {
   sign_in_code: { code: '123456', minutes: 5 },
@@ -60,7 +60,7 @@ describe.each(all)('$name ($locale)', ({ name, locale }) => {
       expect(href).toMatch(/^https:\/\/fonts\.googleapis\.com\//);
     }
     expect(email.html).toMatch(
-      /<img src="https:\/\/qurancircle\.doraquran\.pk\/brand\/email-logo\.png"[^>]+alt="Quran Circles"/,
+      /<img src="https:\/\/qurancircles.doraquran\.pk\/brand\/email-logo\.png"[^>]+alt="Quran Circles"/,
     );
     expect(email.html).not.toContain('data:image');
     expect(email.html).toContain('display:none'); // preheader

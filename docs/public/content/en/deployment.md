@@ -17,7 +17,7 @@ How the platform is run. This is the public summary; the operator's runbook has 
 | Staging     | Synthetic data                               | Fake providers; a fixed test code instead of WhatsApp |
 | Production  | Real                                         | Real WhatsApp and push                                |
 
-Production serves the web app at `https://qurancircle.doraquran.pk` and the API under `/api` on the same address. The admin console has its own address and is not linked from public pages.
+Production serves the web app at `https://qurancircles.doraquran.pk` and the API under `/api` on the same address. The admin console has its own address and is not linked from public pages.
 
 ## What runs
 
