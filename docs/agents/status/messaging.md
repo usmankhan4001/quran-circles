@@ -17,6 +17,10 @@ Branch: claude/peaceful-archimedes-ain95k (lane `messaging`, no commits made by 
   - **ui:** review the English wording; a native speaker must review every Urdu line (all are drafts). The `/privacy` page must exist at the app origin.
   - No real send was made.
 
+## Done (2026-10-25: email provider, change request `email-otp`)
+
+- `ResendEmailProvider`, `ConsoleEmailProvider` (development, masks the address), `FakeEmailProvider`, the `EmailRenderer` hook (template name, locale, data; plain placeholder `renderPlainEmail`) and `MAIL_DOMAIN` with the default sender and contact addresses. `ProviderCodeSender` and `TestCodeSender` take an email target. Env: `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`; production live mode needs the key. WhatsApp reminder path untouched. 251 tests.
+
 ## Done (2026-10-18: Gate 5 push drain on staging, orchestrator request)
 
 - **Cause** (reproduced locally with production worker defaults, worker pinned to one core with `taskset`, API on another, the remote `/healthz` probe as on staging; 800 push rows per burst; numbers below):

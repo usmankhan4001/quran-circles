@@ -302,8 +302,10 @@ describe('HttpsUrl and online links (SEC-09)', () => {
 });
 
 describe('sign-in phone numbers (SEC-04)', () => {
+  // WhatsApp sign-in is off by default, but its number rule stays: the API checks a body without an
+  // email against `PakistaniMobilePhone`.
   const issues = (phone: string) => {
-    const r = RequestCodeBody.safeParse({ phone });
+    const r = PakistaniMobilePhone.safeParse(phone);
     return r.success ? [] : issuesFromZod(r.error);
   };
 
@@ -322,14 +324,27 @@ describe('sign-in phone numbers (SEC-04)', () => {
       '+925112345678', // landline range, 10 digits
       '+92300123456', // one digit short
     ]) {
-      expect(issues(phone), phone).toEqual([{ path: 'phone', code: PHONE_NOT_PAKISTAN_MOBILE }]);
+      expect(issues(phone), phone).toEqual([{ path: '', code: PHONE_NOT_PAKISTAN_MOBILE }]);
     }
   });
 
   it('reports a malformed number as a format issue only', () => {
     for (const phone of ['03001234567', '+92 300 1234567', '+9230012345678901', 'abc', '']) {
-      expect(issues(phone), phone).toEqual([{ path: 'phone', code: 'invalid_format' }]);
+      expect(issues(phone), phone).toEqual([{ path: '', code: 'invalid_format' }]);
     }
+  });
+
+  it('takes an email, lower-cased and trimmed, with an optional WhatsApp number of any country', () => {
+    const ok = RequestCodeBody.parse({ email: '  Reader@Example.ORG ', phone: '+447700900123' });
+    expect(ok.email).toBe('reader@example.org');
+    expect(ok.phone).toBe('+447700900123');
+    expect(ok.channel).toBe('email');
+    for (const email of ['', 'no-at-sign', 'a@b', 'a b@c.org', `${'x'.repeat(250)}@a.org`]) {
+      expect(RequestCodeBody.safeParse({ email }).success, email).toBe(false);
+    }
+    expect(RequestCodeBody.safeParse({ email: 'a@b.org', phone: '03001234567' }).success).toBe(
+      false,
+    );
   });
 
   it('leaves the other phone fields as E.164 for any country', () => {

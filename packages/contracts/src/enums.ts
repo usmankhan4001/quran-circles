@@ -166,7 +166,7 @@ export const INVITE_STATUSES = ['pending', 'accepted', 'revoked', 'expired'] as 
 export const InviteStatus = lazy(() => z.enum(INVITE_STATUSES));
 export type InviteStatus = z.infer<typeof InviteStatus>;
 
-export const OTP_CHANNELS = ['whatsapp', 'sms'] as const;
+export const OTP_CHANNELS = ['whatsapp', 'sms', 'email'] as const;
 export const OtpChannel = lazy(() => z.enum(OTP_CHANNELS));
 export type OtpChannel = z.infer<typeof OtpChannel>;
 

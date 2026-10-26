@@ -151,7 +151,7 @@ const noContent = { status: 204 } as const;
  * `x-rate-limit` is not applied as such: the auth lane's own limits below replace it.
  */
 const AUTH_LIMITS_NOTE =
-  'Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. ' +
+  'Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each email address or number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. ' +
   'Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.';
 
 /** SEC-13: poster make and remake share a per-staff allowance on top of the default bucket. */
@@ -201,12 +201,13 @@ export const endpoints = {
     id: 'auth.requestCode',
     method: 'POST',
     path: '/v1/auth/code',
-    summary: 'Send a sign-in code to a WhatsApp number',
+    summary: 'Send a sign-in code to an email address',
     tag: 'Sign-in',
     auth: 'public',
     actions: ['auth.request_code'],
     description:
-      'Only a Pakistani mobile number (`+923` and nine digits) gets a code: any other number is validation_failed with `{ path: "phone", code: "phone_not_pakistan_mobile" }`, before anything is counted or sent. ' +
+      "The code goes to `email` (owner decision 2026-10-25). Pass the person's WhatsApp number as `phone` when they are signing up; it is saved unverified, for reminders and coordinator contact. " +
+      'WhatsApp sign-in is off unless the API has `AUTH_PHONE_SIGN_IN` on: a body without `email` is then validation_failed with `{ path: "email", code: "email_required" }`, before anything is counted or sent. With it on, only a Pakistani mobile number (`+923` and nine digits) gets a code: any other number is validation_failed with `{ path: "phone", code: "phone_not_pakistan_mobile" }`. ' +
       AUTH_LIMITS_NOTE,
     body: RequestCodeBody,
     success: json(202, RequestCodeResponse),
@@ -221,7 +222,9 @@ export const endpoints = {
     tag: 'Sign-in',
     auth: 'public',
     actions: ['auth.verify_code'],
-    description: AUTH_LIMITS_NOTE,
+    description:
+      'A first sign-in by email creates the account, which needs the WhatsApp number given with the code request: without it, validation_failed with `{ path: "phone", code: "phone_required" }`; a number another account already holds is `{ path: "phone", code: "phone_in_use" }`. The code stays usable after either. ' +
+      AUTH_LIMITS_NOTE,
     body: VerifyCodeBody,
     success: json(200, SignInResponse),
     errors: ['otp_invalid', 'otp_expired', 'otp_too_many_attempts'],

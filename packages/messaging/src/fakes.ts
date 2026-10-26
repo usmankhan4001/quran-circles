@@ -1,5 +1,6 @@
 import type { PushPayload } from '@qc/contracts';
 import type { PushProvider, PushSendResult, PushTarget } from './providers/push';
+import type { EmailMessage, EmailProvider, EmailSendResult } from './providers/email';
 import type { SmsMessage, SmsProvider, SmsSendResult } from './providers/sms';
 import type {
   WhatsAppProvider,
@@ -111,6 +112,26 @@ export class FakeSmsProvider extends Scriptable<SmsMessage, SmsSendResult> imple
       this.answer(message, () => ({
         status: 'ok',
         providerMessageId: `fake-sms-${++this.counter}`,
+      })),
+    );
+  }
+}
+
+export class FakeEmailProvider
+  extends Scriptable<EmailMessage, EmailSendResult>
+  implements EmailProvider
+{
+  private counter = 0;
+
+  get sent(): EmailMessage[] {
+    return this.calls;
+  }
+
+  send(message: EmailMessage): Promise<EmailSendResult> {
+    return Promise.resolve(
+      this.answer(message, () => ({
+        status: 'ok',
+        providerMessageId: `fake-email-${++this.counter}`,
       })),
     );
   }

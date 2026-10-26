@@ -81,8 +81,7 @@ describe('AttendanceScreen', () => {
     );
     const total = backend.state.registrants
       .get(ids.sessionDora)!
-      .filter((r) => r.status === 'confirmed')
-      .length;
+      .filter((r) => r.status === 'confirmed').length;
     expect((screen.getByTestId('attendance-headcount-input') as HTMLInputElement).value).toBe(
       String(total),
     );

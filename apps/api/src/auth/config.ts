@@ -25,6 +25,12 @@ export interface AuthConfig {
     cooldownMaxSeconds: number;
     /** Test mode: every code is this value. Never allowed in production. */
     fixedCode: string | null;
+    /**
+     * WhatsApp sign-in (a code to a Pakistani mobile number, by WhatsApp with an SMS fallback).
+     * Off since 2026-10-25: sign-in codes go to an email address. The code path is kept; set
+     * `AUTH_PHONE_SIGN_IN=true` to bring it back next to email.
+     */
+    phoneSignIn: boolean;
   };
   rateLimits: {
     requestPerPhone: RateRule;
@@ -83,6 +89,7 @@ export function createAuthConfig(input: AuthConfigInput): AuthConfig {
       cooldownBaseSeconds: 60,
       cooldownMaxSeconds: 15 * 60,
       fixedCode: null,
+      phoneSignIn: false,
       ...input.otp,
     },
     rateLimits: {
@@ -141,7 +148,8 @@ type Env = Record<string, string | undefined>;
 /**
  * Reads the configuration from environment variables.
  * `AUTH_SECRET` (required), `APP_ENV` (production | staging | development | test; production when
- * unset), `AUTH_FIXED_CODE` (test mode, refused in production), `AUTH_TRUST_PROXY` (`true`).
+ * unset), `AUTH_FIXED_CODE` (test mode, refused in production), `AUTH_TRUST_PROXY` (`true`),
+ * `AUTH_PHONE_SIGN_IN` (`true` brings back WhatsApp sign-in next to email; off by default).
  */
 export function loadAuthConfigFromEnv(env: Env = process.env): AuthConfig {
   const appEnv = (env.APP_ENV ?? 'production') as AppEnv;
@@ -151,6 +159,9 @@ export function loadAuthConfigFromEnv(env: Env = process.env): AuthConfig {
     appEnv,
     secret,
     trustProxy: env.AUTH_TRUST_PROXY === 'true',
-    ...(env.AUTH_FIXED_CODE ? { otp: { fixedCode: env.AUTH_FIXED_CODE } } : {}),
+    otp: {
+      ...(env.AUTH_FIXED_CODE ? { fixedCode: env.AUTH_FIXED_CODE } : {}),
+      phoneSignIn: env.AUTH_PHONE_SIGN_IN === 'true',
+    },
   });
 }

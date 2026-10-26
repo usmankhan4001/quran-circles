@@ -33,7 +33,7 @@ Quran Circles helps you find and join Quran study circles at masjids near you.
 
 **Know what you will study.** Each circle shows tonight's portion and the portions coming up, so you can read ahead.
 
-**Reserve your seat.** Register for a circle in a few taps, signing in with a code sent on WhatsApp or by SMS.
+**Reserve your seat.** Register for a circle in a few taps, signing in with a code sent to your email.
 
 **Read along.** Open tonight's portion in the Quran reader, with translation, keep your place, and track the surahs you are memorising.
 

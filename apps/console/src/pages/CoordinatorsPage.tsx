@@ -10,6 +10,7 @@ import {
   type InviteStatus,
   type Role,
   type StaffRoleAssignment,
+  EmailAddress,
 } from '@qc/contracts';
 import type { MessageKey } from '@qc/i18n';
 import { useSignedIn } from '../api/auth';
@@ -80,11 +81,12 @@ const INVITE_FILTERS: readonly InviteFilter[] = [
 /** Fields of an invite form, by the path the server names in a `validation_failed` answer. */
 const INVITE_FIELD_PATHS = {
   phone: 'phone',
+  email: 'email',
   displayName: 'name',
   role: 'role',
   cityId: 'scope',
   venueId: 'scope',
-} as const satisfies Record<string, 'phone' | 'name' | 'role' | 'scope'>;
+} as const satisfies Record<string, 'phone' | 'email' | 'name' | 'role' | 'scope'>;
 
 type Translate = ReturnType<typeof useI18n>['t'];
 
@@ -104,6 +106,7 @@ function serverFieldErrors(error: unknown, t: Translate): Record<string, string>
   // The invite limit is reported on `phone`, but nothing is wrong with the number.
   if (rejected.phone && rejected.phone.code !== INVITE_DAILY_LIMIT)
     out.phone = t(PHONE_ISSUE_KEYS.invalid);
+  if (rejected.email) out.email = t('console.invites.form.email.invalid');
   if (rejected.name) out.name = t('console.invites.form.name.invalid');
   if (rejected.role) out.role = t('console.invites.form.rejected');
   if (rejected.scope) out.scope = t('console.invites.form.rejected');
@@ -133,6 +136,7 @@ export function resendBody(
   const parsed = InviteBody.safeParse({
     role: invite.role,
     phone: invite.phone,
+    ...(invite.email ? { email: invite.email } : {}),
     ...name,
     ...(invite.role === 'city_coordinator' ? { cityId: invite.cityId, ...handover } : {}),
     ...(invite.role === 'venue_coordinator' ? { venueId: invite.venueId, ...handover } : {}),
@@ -627,6 +631,7 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
   const [cityId, setCityId] = useState('');
   const [venueId, setVenueId] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<unknown>(null);
@@ -659,15 +664,18 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
       next.scope = t('console.invites.form.scope.required');
     const phoneResult = normalizePhone(phone, { mobileOnly: true });
     if (!phoneResult.ok) next.phone = t(PHONE_ISSUE_KEYS[phoneResult.issue]);
+    const emailResult = EmailAddress.safeParse(email);
+    if (!emailResult.success) next.email = t('console.invites.form.email.invalid');
     const trimmed = name.trim();
     if (trimmed && !PersonName.safeParse(trimmed).success)
       next.name = t('console.invites.form.name.invalid');
     setErrors(next);
-    if (Object.keys(next).length > 0 || !phoneResult.ok || !role) return;
+    if (Object.keys(next).length > 0 || !phoneResult.ok || !emailResult.success || !role) return;
 
     const parsed = InviteBody.safeParse({
       role,
       phone: phoneResult.e164,
+      email: emailResult.data,
       ...(trimmed ? { displayName: trimmed } : {}),
       ...(role === 'city_coordinator' ? { cityId } : {}),
       ...(role === 'venue_coordinator' ? { venueId } : {}),
@@ -684,6 +692,7 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
       setCityId('');
       setVenueId('');
       setPhone('');
+      setEmail('');
       setName('');
       setErrors({});
       onDone();
@@ -756,6 +765,19 @@ function InvitePanel({ onDone }: { onDone: () => void }) {
         ) : null}
         <div className="assign-pair">
           <TextField
+            id="invite-email"
+            type="email"
+            inputMode="email"
+            autoComplete="off"
+            dir="ltr"
+            label={t('console.invites.form.email.label')}
+            hint={t('console.invites.form.email.hint')}
+            error={errors.email}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <TextField
             id="invite-phone"
             type="tel"
             inputMode="tel"
@@ -825,6 +847,7 @@ function HandoverDialog({
   const [chosenMode, setMode] = useState<HandoverMode | null>(null);
   const [userId, setUserId] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [failure, setFailure] = useState<unknown>(null);
@@ -887,14 +910,17 @@ function HandoverDialog({
     const next: Record<string, string> = {};
     const phoneResult = normalizePhone(phone, { mobileOnly: true });
     if (!phoneResult.ok) next.phone = t(PHONE_ISSUE_KEYS[phoneResult.issue]);
+    const emailResult = EmailAddress.safeParse(email);
+    if (!emailResult.success) next.email = t('console.invites.form.email.invalid');
     const trimmed = name.trim();
     if (trimmed && !PersonName.safeParse(trimmed).success)
       next.name = t('console.invites.form.name.invalid');
     setErrors(next);
-    if (Object.keys(next).length > 0 || !phoneResult.ok) return;
+    if (Object.keys(next).length > 0 || !phoneResult.ok || !emailResult.success) return;
     const parsed = InviteBody.safeParse({
       ...place,
       phone: phoneResult.e164,
+      email: emailResult.data,
       ...(trimmed ? { displayName: trimmed } : {}),
       replacesAssignmentId: assignment.id,
     });
@@ -978,6 +1004,19 @@ function HandoverDialog({
         ) : null}
         {mode === 'phone' ? (
           <>
+            <TextField
+              id="handover-email"
+              type="email"
+              inputMode="email"
+              autoComplete="off"
+              dir="ltr"
+              label={t('console.invites.form.email.label')}
+              hint={t('console.invites.form.email.hint')}
+              error={errors.email}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
             <TextField
               id="handover-phone"
               type="tel"

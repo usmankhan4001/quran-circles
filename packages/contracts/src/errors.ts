@@ -91,12 +91,22 @@ export const issueCodeOf = (issue: z.core.$ZodIssue): string => {
  * each has the message `issues.<code>` in @qc/i18n, English and Urdu (a contract test checks).
  * - `phone_not_pakistan_mobile`: sign-in takes only a Pakistani mobile number (`auth.requestCode`,
  *   path `phone`).
+ * - `phone_required`, `phone_in_use` (`auth.verifyCode`, path `phone`): a first sign-in by email
+ *   needs the WhatsApp number given when the code was asked for; the number belongs to another
+ *   account.
+ * - `email_required` (`auth.requestCode`, path `email`): the code goes to an email address.
  * - `invite_daily_limit`: the caller has sent as many coordinator invitations as allowed in 24
  *   hours (`adminRoles.invite` on `phone`, `adminImport.coordinators` on `rows`).
  * Per-row import codes have their own console messages; a coordinator file over
  * `COORDINATOR_IMPORT_MAX_ROWS` (`too_big` on `rows`) has `console.import.issue.tooManyInviteRows`.
  */
-export const WORDED_ISSUE_CODES = ['phone_not_pakistan_mobile', 'invite_daily_limit'] as const;
+export const WORDED_ISSUE_CODES = [
+  'phone_not_pakistan_mobile',
+  'phone_required',
+  'phone_in_use',
+  'email_required',
+  'invite_daily_limit',
+] as const;
 export type WordedIssueCode = (typeof WORDED_ISSUE_CODES)[number];
 
 /** The i18n key for a worded issue code's message. */

@@ -149,6 +149,8 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in the env file}
       CORS_ORIGINS:
       AUTH_FIXED_CODE:
+      # WhatsApp sign-in is off; set to 'true' to bring it back next to email.
+      AUTH_PHONE_SIGN_IN:
       MESSAGING_MODE:
       CODE_DELIVERY_MODE:
       CODE_SMS_FALLBACK:
@@ -160,6 +162,10 @@ services:
       SMS_GATEWAY_URL:
       SMS_GATEWAY_KEY:
       SMS_SENDER:
+      # Sign-in codes by email (Resend). Production refuses to start without the key.
+      RESEND_API_KEY:
+      EMAIL_FROM:
+      EMAIL_REPLY_TO:
     volumes:
       # Read-only: the api only serves poster files; the worker writes and deletes them.
       - poster-files:/var/lib/qc/posters:ro
@@ -246,6 +252,10 @@ services:
       SMS_GATEWAY_URL:
       SMS_GATEWAY_KEY:
       SMS_SENDER:
+      # Sign-in codes by email (Resend). Production refuses to start without the key.
+      RESEND_API_KEY:
+      EMAIL_FROM:
+      EMAIL_REPLY_TO:
     volumes:
       - poster-files:/var/lib/qc/posters
     networks:

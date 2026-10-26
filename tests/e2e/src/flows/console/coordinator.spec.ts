@@ -7,6 +7,7 @@ import {
   nationalAdminInvite,
   signIn,
   syntheticPhone,
+  syntheticEmail,
 } from '../../support/people';
 import { SEED } from '../../support/seed';
 
@@ -18,7 +19,9 @@ const at = (path: string): string => `${stack().consoleUrl ?? ''}${path}`;
 
 async function consoleSignIn(page: Page, phone: string): Promise<void> {
   await page.goto(at('/sign-in'));
-  await page.getByLabel('WhatsApp number').fill(phone);
+  await page.getByLabel('Email address').fill(syntheticEmail(phone));
+  // A first sign-in also gives the WhatsApp number.
+  await page.getByLabel('WhatsApp number (first sign-in only)').fill(phone);
   await page.getByRole('button', { name: 'Send code' }).click();
   await page.getByLabel('6-digit code').fill(stack().fixedCode);
   // Wait for the answer, so a following navigation does not cut the sign-in short.
@@ -36,7 +39,7 @@ test.describe('console against the real API', () => {
 
   test('an attendee with no role is told the console is not for them', async ({ page }) => {
     await consoleSignIn(page, syntheticPhone());
-    await expect(page.getByText('This number cannot open the console')).toBeVisible();
+    await expect(page.getByText('This email cannot open the console')).toBeVisible();
   });
 
   test('a national admin invites a venue coordinator, who then signs in and sees only their venue', async ({
@@ -50,6 +53,7 @@ test.describe('console against the real API', () => {
     const invitee = syntheticPhone();
     await page.locator('#invite-role').selectOption('venue_coordinator');
     await page.locator('#invite-venue').selectOption(SEED.venueNoor);
+    await page.locator('#invite-email').fill(syntheticEmail(invitee));
     await page.locator('#invite-phone').fill(invitee);
     await page.locator('#invite-name').fill('E2E Console Invitee');
     await page.getByRole('button', { name: 'Send invite' }).click();
@@ -87,6 +91,7 @@ test.describe('console against the real API', () => {
         role: 'venue_coordinator',
         venueId: SEED.venueNoor,
         phone,
+        email: syntheticEmail(phone),
         displayName: 'E2E Reg Viewer',
       },
     });

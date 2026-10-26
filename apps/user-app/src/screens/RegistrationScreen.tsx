@@ -19,7 +19,6 @@ import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { Page } from '../components/Page';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { errorMessageKey } from '../core/errors';
-import { formatPhoneForDisplay, normalizePhone } from '../core/phone';
 import { retryAfterText } from '../core/wait';
 import { useSignIn } from '../features/auth/useSignIn';
 import { splitClock } from '../features/home/clock';
@@ -160,7 +159,10 @@ function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: 
     ...(occurrenceId ? { occurrenceId } : {}),
     displayName: me?.displayName ?? null,
   });
-  const signIn = useSignIn(() => void reg.submit(), { presetName: reg.form.name });
+  const signIn = useSignIn(() => void reg.submit(), {
+    presetName: reg.form.name,
+    askPhone: true,
+  });
   const areas = useAreas(reg.form.cityId);
   const [showAreas, setShowAreas] = useState(false);
   const [local, setLocal] = useState<RegistrationProblems>({});
@@ -173,25 +175,30 @@ function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: 
   const area = areas.data?.find((a) => a.id === reg.form.areaId);
   const when = describeWhenParts(session, t, locale, true);
   const problems = { ...reg.problems, ...local };
-  const codeStep = !signedIn && signIn.step !== 'phone';
+  const codeStep = !signedIn && signIn.step !== 'email';
 
   const problemText =
     signIn.problem === 'invalid_phone'
-      ? t('signIn.problem.phone')
-      : signIn.problem === 'phone_not_pakistan_mobile'
-        ? t(issueMessageKey('phone_not_pakistan_mobile'))
-        : signIn.problem === 'invalid_code'
-          ? t('signIn.problem.code')
-          : signIn.error
-            ? signIn.error.code === 'rate_limited' || signIn.error.code === 'otp_too_many_attempts'
-              ? [
-                  t(errorMessageKey(signIn.error.code)),
-                  retryAfterText(t, signIn.error.retryAfterSeconds),
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-              : t(errorMessageKey(signIn.error.code))
-            : undefined;
+      ? t('signUp.problem.phone')
+      : signIn.problem === 'phone_in_use'
+        ? t(issueMessageKey('phone_in_use'))
+        : signIn.problem === 'no_account'
+          ? t(issueMessageKey('phone_required'))
+          : signIn.problem === 'invalid_code'
+            ? t('signIn.problem.code')
+            : signIn.error
+              ? signIn.error.code === 'rate_limited' ||
+                signIn.error.code === 'otp_too_many_attempts'
+                ? [
+                    t(errorMessageKey(signIn.error.code)),
+                    retryAfterText(t, signIn.error.retryAfterSeconds),
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                : t(errorMessageKey(signIn.error.code))
+              : undefined;
+  const emailProblemText =
+    signIn.problem === 'invalid_email' ? t('signIn.problem.email') : undefined;
 
   const send = async () => {
     if (signedIn) {
@@ -201,7 +208,7 @@ function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: 
     const found = validateRegistration(reg.form, { needsName: true, session });
     setLocal(found);
     if (Object.keys(found).length > 0) return;
-    await signIn.submitPhone();
+    await signIn.submitEmail();
   };
 
   const failure = reg.error;
@@ -222,11 +229,7 @@ function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: 
               {t('join.code.title')}
             </Text>
             <Text variant="body" color="textMuted">
-              {t(signIn.channel === 'sms' ? 'signUp.code.introSms' : 'signUp.code.intro', {
-                phone: formatPhoneForDisplay(
-                  normalizePhone(signIn.phoneInput) ?? signIn.phoneInput,
-                ),
-              })}
+              {t('signUp.code.intro', { email: signIn.email ?? '' })}
             </Text>
             <CodeField
               accessibilityLabel={t('signIn.code.label')}
@@ -250,22 +253,16 @@ function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: 
                   <Button
                     variant="tertiary"
                     label={t('signIn.code.resend')}
-                    onPress={() => void signIn.resend('whatsapp')}
+                    onPress={() => void signIn.resend()}
                     testID="resend-code"
-                  />
-                  <Button
-                    variant="tertiary"
-                    label={t('signIn.code.useSms')}
-                    onPress={() => void signIn.resend('sms')}
-                    testID="resend-sms"
                   />
                 </>
               )}
               <Button
                 variant="tertiary"
-                label={t('signIn.code.changeNumber')}
-                onPress={signIn.changeNumber}
-                testID="change-number"
+                label={t('signIn.code.changeEmail')}
+                onPress={signIn.changeEmail}
+                testID="change-email"
               />
             </View>
             <Button
@@ -296,6 +293,19 @@ function JoinBody({ session, occurrenceId }: { session: Session; occurrenceId?: 
                   required
                   {...(problems.name ? { error: t(problems.name) } : {})}
                   testID="registration-name"
+                />
+                <TextField
+                  label={t('signUp.email.label')}
+                  helper={t('signUp.email.hint')}
+                  value={signIn.emailInput}
+                  onChangeText={signIn.setEmailInput}
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  contentDirection="ltr"
+                  required
+                  {...(emailProblemText ? { error: emailProblemText } : {})}
+                  testID="email-input"
                 />
                 <TextField
                   label={t('signUp.phone.label')}

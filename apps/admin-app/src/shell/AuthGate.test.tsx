@@ -67,15 +67,18 @@ describe('AuthGate and phone-code sign-in', () => {
     expect(await tokenStore.get(TOKENS_KEY)).toBeNull();
   });
 
-  it('signs a coordinator in with a phone code and opens the app', async () => {
+  it('signs a coordinator in with an email code and opens the app', async () => {
     const backend = createBackend({ me: meFor('venue') });
     const { tokenStore } = mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '0300 1234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
-    expect(backend.callsTo('auth.requestCode')[0]!.body).toMatchObject({ phone: '+923001234567' });
+    expect(backend.callsTo('auth.requestCode')[0]!.body).toMatchObject({
+      email: 'coordinator@example.com',
+      channel: 'email',
+    });
     type('sign-in-code', '123456');
     fireEvent.click(screen.getByTestId('sign-in-verify'));
     expect(await screen.findByTestId('the-app')).toBeTruthy();
@@ -84,14 +87,14 @@ describe('AuthGate and phone-code sign-in', () => {
     });
   });
 
-  it('rejects a malformed number before asking the server', async () => {
+  it('rejects a malformed email before asking the server', async () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '12');
+    type('sign-in-email', 'coordinator@');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
-    expect(await screen.findByText(/Enter a Pakistan mobile number/)).toBeTruthy();
+    expect(await screen.findByText(messages.en['admin.signIn.emailInvalid'])).toBeTruthy();
     expect(backend.callsTo('auth.requestCode')).toHaveLength(0);
   });
 
@@ -100,7 +103,7 @@ describe('AuthGate and phone-code sign-in', () => {
     mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '03001234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
     type('sign-in-code', '123');
@@ -114,7 +117,7 @@ describe('AuthGate and phone-code sign-in', () => {
     mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '03001234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
     type('sign-in-code', '000000');
@@ -129,7 +132,7 @@ describe('AuthGate and phone-code sign-in', () => {
     mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '03001234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     const notice = await screen.findByTestId('sign-in-notice');
     expect(notice.textContent).toMatch(/Too many tries/);
@@ -142,28 +145,28 @@ describe('AuthGate and phone-code sign-in', () => {
     await screen.findByTestId('sign-in');
     await passWelcome();
     backend.setOffline(true);
-    type('sign-in-phone', '03001234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     expect(await screen.findByTestId('sign-in-notice')).toBeTruthy();
   });
 
-  it('lets the person go back and use another number', async () => {
+  it('lets the person go back and use another email', async () => {
     mountApp(createBackend({ me: meFor('venue') }));
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '03001234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
-    fireEvent.click(screen.getByTestId('sign-in-change-number'));
-    expect(await screen.findByTestId('sign-in-phone')).toBeTruthy();
+    fireEvent.click(screen.getByTestId('sign-in-change-email'));
+    expect(await screen.findByTestId('sign-in-email')).toBeTruthy();
   });
 
-  it('gives a verified number with no staff role no access to anything', async () => {
+  it('gives a verified email with no staff role no access to anything', async () => {
     const backend = createBackend({ me: { ...fx.fixtureMe, roles: [] } });
     mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    type('sign-in-phone', '03001234567');
+    type('sign-in-email', 'coordinator@example.com');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
     type('sign-in-code', '123456');
@@ -190,20 +193,52 @@ describe('AuthGate and phone-code sign-in', () => {
     expect(await prefsStore.get(WORKING_SCOPE_KEY)).toBe(second);
   });
 
-  it('says the code goes on WhatsApp with SMS as the fallback, and asks for WhatsApp', async () => {
+  it('says the code goes by email, and asks for the WhatsApp number only for a first sign-in', async () => {
     const backend = createBackend({ me: meFor('venue') });
     mountApp(backend);
     await screen.findByTestId('sign-in');
     await passWelcome();
-    const helper = messages.en['admin.signIn.phoneHelper'];
-    expect(helper).toMatch(/WhatsApp/);
-    expect(helper).toMatch(/SMS/);
-    expect(helper).not.toMatch(/text message/);
+    const helper = messages.en['admin.signIn.emailHelper'];
+    expect(helper).toMatch(/code/);
     expect(screen.getByText(helper)).toBeTruthy();
+    type('sign-in-email', 'coordinator@example.com');
+    fireEvent.click(screen.getByTestId('sign-in-send-code'));
+    await screen.findByTestId('sign-in-code');
+    const body = backend.callsTo('auth.requestCode')[0]!.body as Record<string, unknown>;
+    expect(body).toMatchObject({ channel: 'email' });
+    expect(body).not.toHaveProperty('phone');
+  });
+
+  it('sends the WhatsApp number with the code request when it is filled in', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    mountApp(backend);
+    await screen.findByTestId('sign-in');
+    await passWelcome();
+    type('sign-in-email', 'coordinator@example.com');
     type('sign-in-phone', '0300 1234567');
     fireEvent.click(screen.getByTestId('sign-in-send-code'));
     await screen.findByTestId('sign-in-code');
-    expect(backend.callsTo('auth.requestCode')[0]!.body).toMatchObject({ channel: 'whatsapp' });
+    expect(backend.callsTo('auth.requestCode')[0]!.body).toMatchObject({
+      email: 'coordinator@example.com',
+      phone: '+923001234567',
+    });
+  });
+
+  it('asks for the WhatsApp number when the server says this is a first sign-in', async () => {
+    const backend = createBackend({ me: meFor('venue') });
+    backend.failWith('auth.verifyCode', 'validation_failed', {
+      issues: [{ path: 'phone', code: 'phone_required' }],
+    });
+    mountApp(backend);
+    await screen.findByTestId('sign-in');
+    await passWelcome();
+    type('sign-in-email', 'coordinator@example.com');
+    fireEvent.click(screen.getByTestId('sign-in-send-code'));
+    await screen.findByTestId('sign-in-code');
+    type('sign-in-code', '123456');
+    fireEvent.click(screen.getByTestId('sign-in-verify'));
+    expect(await screen.findByText(messages.en['admin.signIn.firstTimeNeeded'])).toBeTruthy();
+    expect(screen.getByTestId('sign-in-email')).toBeTruthy();
   });
 
   it('shows the sign-in screen in Urdu, right to left', async () => {
@@ -212,7 +247,7 @@ describe('AuthGate and phone-code sign-in', () => {
     const root = screen.getByTestId('sign-in');
     expect(root.closest('[dir]')?.getAttribute('dir')).toBe('rtl');
     expect(screen.getByTestId('sign-in-send-code').textContent).toBe('کوڈ بھیجیں');
-    expect(screen.getByText(messages.ur['admin.signIn.phoneHelper'])).toBeTruthy();
-    expect(messages.ur['admin.signIn.phoneHelper']).toMatch(/واٹس ایپ/);
+    expect(screen.getByText(messages.ur['admin.signIn.emailHelper'])).toBeTruthy();
+    expect(messages.ur['admin.signIn.emailHelper']).toMatch(/ای میل/);
   });
 });

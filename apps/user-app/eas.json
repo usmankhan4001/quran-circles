@@ -27,7 +27,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://qurancircle.doraquran.pk/api"
+        "EXPO_PUBLIC_API_URL": "https://qurancircles.doraquran.pk/api"
       }
     }
   },

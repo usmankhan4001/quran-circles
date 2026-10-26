@@ -629,6 +629,7 @@ export const contentPages: ContentPage[] = [
 
 export const fixtureMe: Me = {
   id: fixtureId('user', 1),
+  email: 'sample.person@example.org',
   phone: '+923000000099',
   displayName: 'Sample Person',
   locale: 'ur',
@@ -671,6 +672,7 @@ const CITY_RAWALPINDI = cities.find((c) => c.id === VENUE_AL_NOOR.cityId)!;
 
 const staffMe = (n: number, displayName: string, phone: string, roles: Me['roles']): Me => ({
   id: fixtureId('user', n),
+  email: `staff.${n}@example.org`,
   phone,
   displayName,
   locale: 'en',

@@ -3,11 +3,16 @@
 Updated: 2026-10-26
 Branch: lane/console/redesign
 
+## Done (2026-10-25: email sign-in)
+
+- Sign-in is email then code (optional WhatsApp field for a first sign-in); the invite and handover forms ask for the invitee's email. 518 tests.
+
 ## Console redesign (26 Oct 2026, approved canvas: Welcome, Sign in, Enter the code and 11 screens)
 
 Branch `lane/console/redesign`. Built on the console's own CSS-variable theme; the shared kit from the member-app thread (`lane/ui/member-redesign`) had not landed, and it has since been merged in: the colours now come from `@qc/ui` semantic colours (my temporary console copy was removed); only the float shadow (`consoleFloatShadow`) and the radii are console-side.
 
 Done:
+
 - **Look.** White page, grey (`fill`) sidebar with a flat brand, one green (#0A6938 day, #4FC386 night), hairlines instead of shadows (only dialogs and menus float), controls and fields radius 12, cards 16, dialogs 20; chips, tags and counters stay pills. The current menu entry is a white row with a hairline and a green label.
 - **Shell.** The signed-in person (name, role, scope) is a card at the foot of the sidebar; the top bar has the search, city chips and an EN / اردو switch (the Language, Colours and Text size settings stay in the rail's panel).
 - **Welcome** (`pages/WelcomePage.tsx`, `/welcome`): signed-out people land here, one Sign in link; a signed-in person is sent on. Logo is the app icon (`public/logo.png`), 72 px on the green panel.
@@ -19,6 +24,7 @@ Done:
 - Tests: new `pages/welcome.test.tsx`; sign-in, shell and theme tests follow the Welcome landing page and the new sidebar.
 
 Page-by-page pass (same day):
+
 - Page titles and intros are visible again on every page, as on the boards; Daily ayahs is named "Daily ayahs" everywhere.
 - Number cards on Sessions (active masjids, circles, meeting this week, waiting for approval), Venues (venues, women's section, no contact number, archived) and Registrations (registrations, opted in to WhatsApp). Only counts of loaded rows; "load more" note while more pages exist; no check-in, seat or made-up figures.
 - Sidebar matches the boards: no season pill, no count or PDF badges.
@@ -31,6 +37,7 @@ Page-by-page pass (same day):
 - Registrations checked on screen (no party size, number cards, export button).
 
 Not done:
+
 - "Send it by SMS" on the code screen: no API for a second channel (left out on the coordinator's say).
 - Poster maker files belong to the "Build poster maker" thread; untouched.
 

@@ -7,6 +7,7 @@ import {
   bootstrapNationalAdmin,
   signIn,
   syntheticPhone,
+  syntheticEmail,
 } from '../../support/people';
 import { SEED } from '../../support/seed';
 import { pktDate } from '../../support/time';
@@ -23,6 +24,8 @@ async function adminSignIn(page: Page, phone: string): Promise<void> {
   await page.goto(at('/'));
   // Before sign-in the app opens on its welcome screen (design: Welcome); one tap goes on.
   await page.getByTestId('welcome-sign-in').click();
+  await page.getByTestId('sign-in-email').fill(syntheticEmail(phone));
+  // A first sign-in also gives the WhatsApp number.
   await page.getByTestId('sign-in-phone').fill(phone);
   await page.getByTestId('sign-in-send-code').click();
   await page.getByTestId('sign-in-code').fill(stack().fixedCode);
@@ -35,7 +38,13 @@ async function invitedCoordinator(venueId: string): Promise<string> {
   const admin = await bootstrapNationalAdmin();
   const phone = syntheticPhone();
   await admin.api.adminRoles.invite({
-    body: { role: 'venue_coordinator', venueId, phone, displayName: 'E2E App Coordinator' },
+    body: {
+      role: 'venue_coordinator',
+      venueId,
+      phone,
+      email: syntheticEmail(phone),
+      displayName: 'E2E App Coordinator',
+    },
   });
   return phone;
 }

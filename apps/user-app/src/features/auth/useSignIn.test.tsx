@@ -3,117 +3,152 @@ import { ERROR_CODES, makeApiError } from '@qc/contracts';
 import { act, createWorld, renderHookInApp, signInHandlers, waitFor } from '../../test/harness';
 import { secondsUntil, useSignIn } from './useSignIn';
 
-/** The server's answer for a number it will not send a code to (contract `auth.requestCode`). */
-const notPakistanMobile = {
-  'auth.requestCode': (_c: unknown, id: string) =>
+/** The server's answer for a code it cannot use to make an account (contract `auth.verifyCode`). */
+const verifyRefusedWith = (code: 'phone_required' | 'phone_in_use') => ({
+  ...signInHandlers(),
+  'auth.verifyCode': (_c: unknown, id: string) =>
     new Response(
-      JSON.stringify(
-        makeApiError('validation_failed', id, {
-          issues: [{ path: 'phone', code: 'phone_not_pakistan_mobile' }],
-        }),
-      ),
+      JSON.stringify(makeApiError('validation_failed', id, { issues: [{ path: 'phone', code }] })),
       { status: ERROR_CODES.validation_failed, headers: { 'content-type': 'application/json' } },
     ),
-};
+});
 
 async function start(
   options: Parameters<typeof signInHandlers>[0] = {},
   overrides: Record<string, unknown> = {},
+  hookOptions: Parameters<typeof useSignIn>[1] = {},
 ) {
   const world = await createWorld({
     mock: { handlers: { ...signInHandlers(options), ...overrides } },
   });
   const onDone = vi.fn();
-  const hook = await renderHookInApp(() => useSignIn(onDone), { world });
+  const hook = await renderHookInApp(() => useSignIn(onDone, hookOptions), { world });
   return { world, onDone, hook, flow: () => hook.result.current };
 }
 
-async function enterPhone(flow: () => ReturnType<typeof useSignIn>, text = '0300 1234567') {
-  await act(async () => flow().setPhoneInput(text));
+async function enterEmail(
+  flow: () => ReturnType<typeof useSignIn>,
+  text = ' Aisha@Example.com ',
+  phone?: string,
+) {
+  await act(async () => flow().setEmailInput(text));
+  if (phone !== undefined) await act(async () => flow().setPhoneInput(phone));
   await act(async () => {
-    await flow().submitPhone();
+    await flow().submitEmail();
   });
 }
 
 describe('useSignIn', () => {
-  it('rejects a phone number that cannot be right, without calling the server', async () => {
+  it('rejects an email that cannot be right, without calling the server', async () => {
     const { world, flow } = await start();
-    await enterPhone(flow, '12');
-    expect(flow().problem).toBe('invalid_phone');
-    expect(flow().step).toBe('phone');
+    await enterEmail(flow, 'aisha@');
+    expect(flow().problem).toBe('invalid_email');
+    expect(flow().step).toBe('email');
     expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
   });
 
-  it('asks for a code on WhatsApp for a normalised number, then moves to the code step', async () => {
+  it('asks for a code by email for a normalised address, then moves to the code step', async () => {
     const { world, flow } = await start();
-    await enterPhone(flow);
+    await enterEmail(flow);
     expect(flow().step).toBe('code');
-    expect(flow().channel).toBe('whatsapp');
+    expect(flow().email).toBe('aisha@example.com');
     expect(flow().resendIn).toBe(30);
     expect(world.http.callsTo('POST /v1/auth/code')[0]!.body).toEqual({
-      phone: '+923001234567',
+      email: 'aisha@example.com',
       locale: 'en',
-      channel: 'whatsapp',
+      channel: 'email',
     });
   });
 
   it('sends the code language the person chose', async () => {
     const world = await createWorld({ locale: 'ur', mock: { handlers: signInHandlers() } });
     const hook = await renderHookInApp(() => useSignIn(() => undefined), { world });
-    await act(async () => hook.result.current.setPhoneInput('03001234567'));
+    await act(async () => hook.result.current.setEmailInput('aisha@example.com'));
     await act(async () => {
-      await hook.result.current.submitPhone();
+      await hook.result.current.submitEmail();
     });
     expect(world.http.callsTo('POST /v1/auth/code')[0]!.body).toMatchObject({ locale: 'ur' });
   });
 
-  it('can send the code by SMS instead', async () => {
-    const { world, flow } = await start();
-    await enterPhone(flow);
-    await act(async () => {
-      await flow().resend('sms');
+  describe('signing up (the WhatsApp number is required)', () => {
+    it('refuses to ask for a code without a usable WhatsApp number', async () => {
+      const { world, flow } = await start({}, {}, { askPhone: true });
+      await enterEmail(flow, 'aisha@example.com', '12');
+      expect(flow().problem).toBe('invalid_phone');
+      expect(flow().step).toBe('email');
+      expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
     });
-    expect(world.http.callsTo('POST /v1/auth/code')[1]!.body).toMatchObject({ channel: 'sms' });
-    expect(flow().channel).toBe('sms');
+
+    it('sends the number with the email, normalised, from any country', async () => {
+      const { world, flow } = await start({}, {}, { askPhone: true });
+      await enterEmail(flow, 'aisha@example.com', '0300 1234567');
+      expect(world.http.callsTo('POST /v1/auth/code')[0]!.body).toEqual({
+        email: 'aisha@example.com',
+        phone: '+923001234567',
+        locale: 'en',
+        channel: 'email',
+      });
+      await act(async () => flow().changeEmail());
+      await enterEmail(flow, 'aisha@example.com', '+44 7700 900123');
+      expect(world.http.callsTo('POST /v1/auth/code')[1]!.body).toMatchObject({
+        phone: '+447700900123',
+      });
+    });
+
+    it('sends the same number again when the code is asked for again', async () => {
+      const { world, flow } = await start({}, {}, { askPhone: true });
+      await enterEmail(flow, 'aisha@example.com', '03001234567');
+      await act(async () => {
+        await flow().resend();
+      });
+      expect(world.http.callsTo('POST /v1/auth/code')[1]!.body).toMatchObject({
+        email: 'aisha@example.com',
+        phone: '+923001234567',
+      });
+    });
+
+    it('goes back to the start when the number is already used by another account', async () => {
+      const { flow } = await start({}, verifyRefusedWith('phone_in_use'), { askPhone: true });
+      await enterEmail(flow, 'aisha@example.com', '03001234567');
+      await act(async () => flow().setCodeInput('123456'));
+      await act(async () => {
+        await flow().submitCode();
+      });
+      expect(flow().problem).toBe('phone_in_use');
+      expect(flow().step).toBe('email');
+    });
+  });
+
+  it('says there is no account when signing in with an email that has none', async () => {
+    const { flow } = await start({}, verifyRefusedWith('phone_required'));
+    await enterEmail(flow);
+    await act(async () => flow().setCodeInput('123456'));
+    await act(async () => {
+      await flow().submitCode();
+    });
+    expect(flow().problem).toBe('no_account');
+    expect(flow().step).toBe('email');
   });
 
   it('shows how long to wait when asking too often', async () => {
     const { world, flow } = await start();
     world.http.failNext('POST /v1/auth/code', 'rate_limited');
-    await enterPhone(flow);
-    expect(flow().step).toBe('phone');
+    await enterEmail(flow);
+    expect(flow().step).toBe('email');
     expect(flow().error).toMatchObject({ code: 'rate_limited', retryAfterSeconds: 30 });
   });
 
-  it('says a number from abroad cannot sign in, without calling the server', async () => {
-    const { world, flow } = await start();
-    await enterPhone(flow, '+44 7700 900123');
-    expect(flow().problem).toBe('phone_not_pakistan_mobile');
-    expect(flow().error).toBeUndefined();
-    expect(flow().step).toBe('phone');
-    expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
-  });
-
-  it('shows the server’s word when it refuses the number as not a Pakistani mobile', async () => {
-    const { world, flow } = await start({}, notPakistanMobile);
-    await enterPhone(flow);
-    expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(1);
-    expect(flow().problem).toBe('phone_not_pakistan_mobile');
-    expect(flow().error).toBeUndefined();
-    expect(flow().step).toBe('phone');
-  });
-
-  it('keeps other validation failures as an error, not as the phone message', async () => {
+  it('keeps other validation failures as an error, not as a field message', async () => {
     const { world, flow } = await start();
     world.http.failNext('POST /v1/auth/code', 'validation_failed');
-    await enterPhone(flow);
+    await enterEmail(flow);
     expect(flow().problem).toBeNull();
     expect(flow().error).toMatchObject({ code: 'validation_failed' });
   });
 
   it('checks the code has six digits before asking the server', async () => {
     const { world, flow } = await start();
-    await enterPhone(flow);
+    await enterEmail(flow);
     await act(async () => flow().setCodeInput('12345'));
     await act(async () => {
       await flow().submitCode();
@@ -124,7 +159,7 @@ describe('useSignIn', () => {
 
   it('keeps the person on the code step after a wrong code', async () => {
     const { world, flow, onDone } = await start();
-    await enterPhone(flow);
+    await enterEmail(flow);
     await act(async () => flow().setCodeInput('000000'));
     await act(async () => {
       await flow().submitCode();
@@ -137,7 +172,7 @@ describe('useSignIn', () => {
 
   it('signs in an existing person with a name and finishes', async () => {
     const { world, flow, onDone } = await start();
-    await enterPhone(flow);
+    await enterEmail(flow);
     await act(async () => flow().setCodeInput('123 456'));
     await act(async () => {
       await flow().submitCode();
@@ -150,7 +185,7 @@ describe('useSignIn', () => {
 
   it('asks a new person for a name, which can be saved or skipped', async () => {
     const { world, flow, onDone } = await start({ isNewAccount: true, displayName: null });
-    await enterPhone(flow);
+    await enterEmail(flow);
     await act(async () => flow().setCodeInput('123456'));
     await act(async () => {
       await flow().submitCode();
@@ -174,7 +209,7 @@ describe('useSignIn', () => {
 
   it('lets a new person skip the name', async () => {
     const { flow, onDone } = await start({ isNewAccount: true, displayName: null });
-    await enterPhone(flow);
+    await enterEmail(flow);
     await act(async () => flow().setCodeInput('123456'));
     await act(async () => {
       await flow().submitCode();
@@ -183,11 +218,11 @@ describe('useSignIn', () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
-  it('goes back to the phone step to use another number', async () => {
+  it('goes back to the email step to use another address', async () => {
     const { flow } = await start();
-    await enterPhone(flow);
-    await act(async () => flow().changeNumber());
-    expect(flow().step).toBe('phone');
+    await enterEmail(flow);
+    await act(async () => flow().changeEmail());
+    expect(flow().step).toBe('email');
     expect(flow().channel).toBeNull();
     await waitFor(() => expect(flow().resendIn).toBe(0));
   });

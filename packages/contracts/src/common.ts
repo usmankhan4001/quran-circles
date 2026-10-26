@@ -19,6 +19,22 @@ export const PhoneE164 = lazy(() =>
 );
 export type PhoneE164 = z.infer<typeof PhoneE164>;
 
+/**
+ * An email address, the sign-in identity (owner decision 2026-10-25). Trimmed, lower case and at
+ * most 254 characters, so one mailbox is one account whatever case it was typed in.
+ */
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+export const EmailAddress = lazy(() =>
+  z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(254)
+    .regex(EMAIL_PATTERN)
+    .meta({ examples: ['reader@example.org'], description: 'An email address, lower case' }),
+);
+export type EmailAddress = z.infer<typeof EmailAddress>;
+
 /** A Pakistani mobile number in E.164: +92, then 3, then nine digits (+92 3xx xxxxxxx). */
 export const PAKISTAN_MOBILE_PATTERN = /^\+923[0-9]{9}$/;
 

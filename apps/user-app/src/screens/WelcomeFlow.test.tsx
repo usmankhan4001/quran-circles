@@ -82,12 +82,13 @@ describe('SignUpScreen', () => {
     const view = await renderScreen(<SignUpScreen returnTo="/nearby" />, { world });
     expect(view.getByText(en['signUp.title'])).toBeTruthy();
     fireEvent.change(view.getByTestId('name-input'), { target: { value: 'Ayesha Siddiqui' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'ayesha@example.com' } });
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
     fireEvent.click(view.getByTestId('section-choice-women'));
     fireEvent.click(view.getByTestId('send-code'));
     const code = await view.findByTestId('code-input');
     expect(view.getByText(en['signUp.code.title'])).toBeTruthy();
-    expect(view.getByText(/6-digit code on WhatsApp to/)).toBeTruthy();
+    expect(view.getByText(/6-digit code to ayesha@example.com/)).toBeTruthy();
     fireEvent.change(code, { target: { value: '123456' } });
     fireEvent.click(view.getByTestId('verify-code'));
     await waitFor(() =>
@@ -102,6 +103,7 @@ describe('SignUpScreen', () => {
   it('does not send a code until the name, area and section are filled in', async () => {
     const world = await createWorld({ mock: { handlers: signInHandlers() } });
     const view = await renderScreen(<SignUpScreen />, { world });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'ayesha@example.com' } });
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
     fireEvent.click(view.getByTestId('send-code'));
     expect(await view.findByText(en['signIn.problem.name'])).toBeTruthy();
@@ -111,10 +113,22 @@ describe('SignUpScreen', () => {
     expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
   });
 
+  it('does not send a code without a usable WhatsApp number', async () => {
+    const world = await openWorld();
+    const view = await renderScreen(<SignUpScreen />, { world });
+    fireEvent.change(view.getByTestId('name-input'), { target: { value: 'Ayesha' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'ayesha@example.com' } });
+    fireEvent.click(view.getByTestId('section-choice-women'));
+    fireEvent.click(view.getByTestId('send-code'));
+    expect(await view.findByText(en['signUp.problem.phone'])).toBeTruthy();
+    expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
+  });
+
   it('asks for the section after the area', async () => {
     const world = await openWorld();
     const view = await renderScreen(<SignUpScreen />, { world });
     fireEvent.change(view.getByTestId('name-input'), { target: { value: 'Ayesha' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'ayesha@example.com' } });
     fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
     fireEvent.click(view.getByTestId('send-code'));
     expect(await view.findByText(en['signUp.problem.section'])).toBeTruthy();

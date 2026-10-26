@@ -42,8 +42,13 @@ export const users = pgTable(
   'users',
   {
     id: pk(),
+    /** The WhatsApp number: required, one account each, for reminders and coordinator contact. */
     phoneE164: text('phone_e164').notNull().unique(),
-    phoneVerifiedAt: tstz('phone_verified_at').notNull(),
+    /** When a code proved the number. NULL for accounts made by email: the number is not verified. */
+    phoneVerifiedAt: tstz('phone_verified_at'),
+    /** Signs the person in (lower case). NULL for accounts made before email sign-in. */
+    email: text('email'),
+    emailVerifiedAt: tstz('email_verified_at'),
     /** NULL until registration asks for the name. A non-null name is never blank. */
     displayName: text('display_name'),
     locale: text('locale', { enum: LOCALES }).notNull().default('ur'),
@@ -51,7 +56,18 @@ export const users = pgTable(
     createdAt: createdAt(),
     lastSeenAt: tstz('last_seen_at'),
   },
-  () => [
+  (t) => [
+    uniqueIndex('users_email_uq')
+      .on(t.email)
+      .where(sql`${t.email} IS NOT NULL`),
+    rawCheck(
+      'users_email_chk',
+      `"email" IS NULL OR ("email" = lower(btrim("email")) AND char_length("email") <= 254 AND "email" ~ '^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$')`,
+    ),
+    rawCheck(
+      'users_identity_chk',
+      '("email" IS NOT NULL AND "email_verified_at" IS NOT NULL) OR "phone_verified_at" IS NOT NULL',
+    ),
     e164Check('users', 'phone_e164'),
     enumCheck('users', 'locale', LOCALES),
     enumCheck('users', 'status', ACCOUNT_STATUSES),
@@ -154,7 +170,12 @@ export const otpChallenges = pgTable(
   'otp_challenges',
   {
     id: pk(),
-    phoneE164: text('phone_e164').notNull(),
+    /** The number a WhatsApp code goes to (WhatsApp sign-in only). Exactly one of this and `email`. */
+    phoneE164: text('phone_e164'),
+    /** The address an email code goes to. */
+    email: text('email'),
+    /** The WhatsApp number typed at sign-up, copied to a new account unverified. */
+    claimedPhoneE164: text('claimed_phone_e164'),
     channel: text('channel', { enum: OTP_CHANNELS }).notNull(),
     codeHash: text('code_hash').notNull(),
     /** Language the person was using when they asked for the code; copied to a new account. */
@@ -168,7 +189,10 @@ export const otpChallenges = pgTable(
   },
   (t) => [
     index('otp_challenges_phone_created_idx').on(t.phoneE164, t.createdAt),
+    index('otp_challenges_email_created_idx').on(t.email, t.createdAt),
     e164Check('otp_challenges', 'phone_e164'),
+    e164Check('otp_challenges', 'claimed_phone_e164'),
+    rawCheck('otp_challenges_target_chk', '("phone_e164" IS NOT NULL) <> ("email" IS NOT NULL)'),
     enumCheck('otp_challenges', 'channel', OTP_CHANNELS),
     enumCheck('otp_challenges', 'locale', LOCALES),
     rawCheck('otp_challenges_attempts_chk', '"attempts" >= 0'),
@@ -204,6 +228,8 @@ export const coordinatorInvites = pgTable(
   {
     id: pk(),
     phoneE164: text('phone_e164').notNull(),
+    /** The address the invitee signs in with. NULL: accepted only by an account with a verified number. */
+    email: text('email'),
     displayName: text('display_name'),
     role: text('role', { enum: ROLES }).notNull(),
     scopeType: text('scope_type', { enum: SCOPE_TYPES }).notNull(),
@@ -226,6 +252,8 @@ export const coordinatorInvites = pgTable(
       .on(t.phoneE164, t.role, sql`coalesce(${t.venueId}, ${t.cityId}, ${NIL_UUID})`)
       .where(sql`${t.status} = 'pending'`),
     index('coordinator_invites_phone_idx').on(t.phoneE164),
+    index('coordinator_invites_email_idx').on(t.email),
+    rawCheck('coordinator_invites_email_chk', '"email" IS NULL OR "email" = lower(btrim("email"))'),
     foreignKey({
       name: 'coordinator_invites_replaces_assignment_fk',
       columns: [t.replacesAssignmentId],

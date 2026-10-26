@@ -425,8 +425,8 @@
     "/v1/auth/code": {
       "post": {
         "operationId": "auth.requestCode",
-        "summary": "Send a sign-in code to a WhatsApp number",
-        "description": "Only a Pakistani mobile number (`+923` and nine digits) gets a code: any other number is validation_failed with `{ path: \"phone\", code: \"phone_not_pakistan_mobile\" }`, before anything is counted or sent. Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.",
+        "summary": "Send a sign-in code to an email address",
+        "description": "The code goes to `email` (owner decision 2026-10-25). Pass the person's WhatsApp number as `phone` when they are signing up; it is saved unverified, for reminders and coordinator contact. WhatsApp sign-in is off unless the API has `AUTH_PHONE_SIGN_IN` on: a body without `email` is then validation_failed with `{ path: \"email\", code: \"email_required\" }`, before anything is counted or sent. With it on, only a Pakistani mobile number (`+923` and nine digits) gets a code: any other number is validation_failed with `{ path: \"phone\", code: \"phone_not_pakistan_mobile\" }`. Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each email address or number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.",
         "tags": [
           "Sign-in"
         ],
@@ -437,13 +437,22 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                    "examples": [
+                      "reader@example.org"
+                    ],
+                    "description": "An email address, lower case"
+                  },
                   "phone": {
                     "type": "string",
                     "pattern": "^\\+[1-9][0-9]{7,14}$",
                     "examples": [
                       "+923001234567"
                     ],
-                    "description": "A Pakistani mobile number in E.164: +923 followed by nine digits"
+                    "description": "E.164, for example +923001234567"
                   },
                   "locale": {
                     "default": "ur",
@@ -454,17 +463,15 @@
                     ]
                   },
                   "channel": {
-                    "default": "whatsapp",
+                    "default": "email",
                     "type": "string",
                     "enum": [
                       "whatsapp",
-                      "sms"
+                      "sms",
+                      "email"
                     ]
                   }
-                },
-                "required": [
-                  "phone"
-                ]
+                }
               }
             }
           }
@@ -488,7 +495,8 @@
                       "type": "string",
                       "enum": [
                         "whatsapp",
-                        "sms"
+                        "sms",
+                        "email"
                       ]
                     },
                     "expiresAt": {
@@ -578,7 +586,7 @@
       "post": {
         "operationId": "auth.verifyCode",
         "summary": "Verify a code and sign in",
-        "description": "Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.",
+        "description": "A first sign-in by email creates the account, which needs the WhatsApp number given with the code request: without it, validation_failed with `{ path: \"phone\", code: \"phone_required\" }`; a number another account already holds is `{ path: \"phone\", code: \"phone_in_use\" }`. The code stays usable after either. Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each email address or number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.",
         "tags": [
           "Sign-in"
         ],
@@ -734,7 +742,7 @@
       "post": {
         "operationId": "auth.refresh",
         "summary": "Exchange a refresh token for new tokens",
-        "description": "Limited per client address (generous, because many people share one carrier address); over the limit it is `rate_limited` with `retryAfterSeconds` and the refresh token is not used up. Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.",
+        "description": "Limited per client address (generous, because many people share one carrier address); over the limit it is `rate_limited` with `retryAfterSeconds` and the refresh token is not used up. Sign-in limits replace the `auth_code` bucket: code requests and code checks are limited per number and per client address, each email address or number gets at most 10 codes a day, and codes for the whole country have hourly and daily ceilings; refresh is limited per client address. Every limit answers `rate_limited` with `retryAfterSeconds` (and a `Retry-After` header). The numbers are API settings, not part of the contract.",
         "tags": [
           "Sign-in"
         ],
@@ -1039,6 +1047,14 @@
                     "type": "string",
                     "minLength": 2,
                     "maxLength": 80
+                  },
+                  "phone": {
+                    "type": "string",
+                    "pattern": "^\\+[1-9][0-9]{7,14}$",
+                    "examples": [
+                      "+923001234567"
+                    ],
+                    "description": "E.164, for example +923001234567"
                   },
                   "locale": {
                     "type": "string",
@@ -12645,6 +12661,15 @@
                         ],
                         "description": "E.164, for example +923001234567"
                       },
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                        "examples": [
+                          "reader@example.org"
+                        ],
+                        "description": "An email address, lower case"
+                      },
                       "displayName": {
                         "type": "string",
                         "minLength": 2,
@@ -12677,6 +12702,15 @@
                           "+923001234567"
                         ],
                         "description": "E.164, for example +923001234567"
+                      },
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                        "examples": [
+                          "reader@example.org"
+                        ],
+                        "description": "An email address, lower case"
                       },
                       "displayName": {
                         "type": "string",
@@ -12718,6 +12752,15 @@
                           "+923001234567"
                         ],
                         "description": "E.164, for example +923001234567"
+                      },
+                      "email": {
+                        "type": "string",
+                        "maxLength": 254,
+                        "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                        "examples": [
+                          "reader@example.org"
+                        ],
+                        "description": "An email address, lower case"
                       },
                       "displayName": {
                         "type": "string",
@@ -12765,6 +12808,22 @@
                         "+923001234567"
                       ],
                       "description": "E.164, for example +923001234567"
+                    },
+                    "email": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 254,
+                          "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                          "examples": [
+                            "reader@example.org"
+                          ],
+                          "description": "An email address, lower case"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     },
                     "displayName": {
                       "type": [
@@ -12999,6 +13058,22 @@
                               "+923001234567"
                             ],
                             "description": "E.164, for example +923001234567"
+                          },
+                          "email": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 254,
+                                "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                                "examples": [
+                                  "reader@example.org"
+                                ],
+                                "description": "An email address, lower case"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "displayName": {
                             "type": [
@@ -21375,6 +21450,22 @@
               "00000000-0000-4000-8000-000000000001"
             ]
           },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 254,
+                "pattern": "^[^\\s@]+@[^\\s@.]+(\\.[^\\s@.]+)+$",
+                "examples": [
+                  "reader@example.org"
+                ],
+                "description": "An email address, lower case"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "phone": {
             "type": "string",
             "pattern": "^\\+[1-9][0-9]{7,14}$",
@@ -21633,6 +21724,7 @@
         },
         "required": [
           "id",
+          "email",
           "phone",
           "displayName",
           "locale",
