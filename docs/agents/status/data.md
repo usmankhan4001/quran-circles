@@ -1,6 +1,6 @@
 # Status: data (circles data load)
 
-Updated: 2026-10-26
+Updated: 2026-10-26 (local seed done)
 Branch: lane/data/tanzeem-seed
 
 ## Done
@@ -21,13 +21,15 @@ Branch: lane/data/tanzeem-seed
 
 - Geocoding step (Google, owner's key kept outside the repo in a local env file), approximate pins flagged (owner chose to import them as test data), and the builders that turn planned venues and rows into API import rows, validated against the real contracts. 62 tests.
 
+- `places` (idempotent SQL for provinces, 42 cities, one area per city), `load` (email sign-in, venues then sessions through `adminImport.*`, dry run first, manifest of created ids) and `unload` (archives the manifest). Run on the owner's PC against a local Postgres: 42 cities, 167 venues (75 flagged approximate), 172 sessions (33 monthly drafts), 2236 occurrences; public `places.cities` lists 42.
+
 ## In progress
 
-- The dry run through the API, the batch manifest, and the rollback (archive exactly what was imported). Needs the API address and a sign-in.
+- Env-driven first admin (owner decision: fixed identity, codes to a redirect address), on `lane/auth/admin-bootstrap`.
 
 ## Blocked
 
 - Cleaned source files: path not yet supplied.
 - Cities and areas: the API has no endpoint to create them, so the 42 cities and their areas must already exist in the target database (a db seed or migration, contracts lane).
 - Geocoding service: owner has not chosen one.
-- Production: needs API address and sign-in, a backup, a dry run the owner has seen, and the owner's go-ahead.
+- Production: the owner approved the counts and the seed, but the PC permission layer refuses the Dokploy schedule step (remote shell write) and the push to main. Needs a settings change or the owner pasting the commands into the Dokploy terminals.
