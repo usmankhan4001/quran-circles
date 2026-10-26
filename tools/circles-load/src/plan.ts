@@ -21,6 +21,8 @@ export interface PlannedVenue {
   otherRows: { id: string; status: 'hold' | 'skip'; flags: string[] }[];
   /** True when the venue has a trusted pin and at least one importable row. */
   importable: boolean;
+  /** The pin is an approximate geocoder match, not an exact one. */
+  approximate: boolean;
 }
 
 export interface Plan {
@@ -38,6 +40,8 @@ export interface Plan {
     sessionsWaitingForLocation: number;
     pinsFromNotes: { coordinates: number; plusCodes: number };
     pinsFromGeocoding: number;
+    /** Venues pinned from an approximate match, imported with an "approximate location" flag. */
+    pinsApproximate: number;
   };
 }
 
@@ -56,6 +60,8 @@ export function buildPlan(
   resolutions: ReadonlyMap<string, Resolution>,
   /** Pins found by geocoding, by venue key. Only high-confidence results belong here. */
   geocoded: ReadonlyMap<string, LatLng> = new Map(),
+  /** Approximate geocoder matches (owner decision: import them, flagged). Used only when nothing better pins the venue. */
+  approximate: ReadonlyMap<string, LatLng> = new Map(),
 ): Plan {
   const groups = new Map<string, CleanRow[]>();
   for (const r of rows) groups.set(r.venueKey, [...(groups.get(r.venueKey) ?? []), r]);
@@ -102,15 +108,19 @@ export function buildPlan(
     }
   }
   let fromGeocoding = 0;
+  const approximateKeys = new Set<string>();
   for (const input of inputs) {
-    const pin = geocoded.get(input.venueKey);
+    const exact = geocoded.get(input.venueKey);
+    const pin = exact ?? approximate.get(input.venueKey);
     const loc = locations.find((l) => l.venueKey === input.venueKey);
     if (pin && !input.given && loc?.status !== 'resolved') {
       input.given = pin;
-      fromGeocoding++;
+      if (exact) fromGeocoding++;
+      else approximateKeys.add(input.venueKey);
     }
   }
-  if (fromPlus > 0 || fromGeocoding > 0) locations = locateVenues(inputs, resolutions);
+  if (fromPlus > 0 || fromGeocoding > 0 || approximateKeys.size > 0)
+    locations = locateVenues(inputs, resolutions);
 
   const venues = [...groups.entries()].map(([key, group]): PlannedVenue => {
     const location = locations.find((l) => l.venueKey === key)!;
@@ -125,6 +135,7 @@ export function buildPlan(
         .filter((r) => r.status !== 'import')
         .map((r) => ({ id: r.id, status: r.status as 'hold' | 'skip', flags: r.flags })),
       importable: location.status === 'resolved' && sessionRows.length > 0,
+      approximate: approximateKeys.has(key) && location.status === 'resolved',
     };
   });
 
@@ -152,6 +163,7 @@ export function buildPlan(
         .reduce((n, v) => n + v.sessionRows.length, 0),
       pinsFromNotes: { coordinates: fromCoords, plusCodes: fromPlus },
       pinsFromGeocoding: fromGeocoding,
+      pinsApproximate: venues.filter((v) => v.approximate && v.importable).length,
     },
   };
 }
