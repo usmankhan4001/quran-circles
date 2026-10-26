@@ -23,13 +23,15 @@ Branch: lane/data/tanzeem-seed
 
 - `places` (idempotent SQL for provinces, 42 cities, one area per city), `load` (email sign-in, venues then sessions through `adminImport.*`, dry run first, manifest of created ids) and `unload` (archives the manifest). Run on the owner's PC against a local Postgres: 42 cities, 167 venues (75 flagged approximate), 172 sessions (33 monthly drafts), 2236 occurrences; public `places.cities` lists 42.
 
+- `export` writes the console import files (venues.csv, sessions.csv) from the plan. First-admin-from-env built on `lane/auth/admin-bootstrap` (see `status/auth-scopes.md`).
+
 ## In progress
 
-- Env-driven first admin (owner decision: fixed identity, codes to a redirect address), on `lane/auth/admin-bootstrap`.
+- Nothing in this lane; production steps wait on the owner.
 
 ## Blocked
 
 - Cleaned source files: path not yet supplied.
 - Cities and areas: the API has no endpoint to create them, so the 42 cities and their areas must already exist in the target database (a db seed or migration, contracts lane).
 - Geocoding service: owner has not chosen one.
-- Production: the owner approved the counts and the seed, but the PC permission layer refuses the Dokploy schedule step (remote shell write) and the push to main. Needs a settings change or the owner pasting the commands into the Dokploy terminals.
+- Production: the owner approved the counts and the seed. The PC permission layer refuses every production write from the agent (Dokploy API schedule, Dokploy UI env edit, push to main). The owner has the copy-paste steps (backup, places SQL, admin invite, `load` from the PC against the live API, verify, `unload`).
