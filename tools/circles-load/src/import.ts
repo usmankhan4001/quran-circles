@@ -62,7 +62,8 @@ export class Api {
     body?: unknown,
     query?: Record<string, string>,
   ): Promise<T> {
-    const url = new URL(path, this.base);
+    // The base may carry a path (production serves the API under /api), so paths are appended.
+    const url = new URL(this.base.replace(/\/$/, '') + path);
     for (const [k, v] of Object.entries(query ?? {})) url.searchParams.set(k, v);
     const res = await this.fetchImpl(url, {
       method,

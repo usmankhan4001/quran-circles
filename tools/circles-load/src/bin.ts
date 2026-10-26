@@ -1,7 +1,9 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { cleanRows, type RawRow } from './clean';
 import type { LatLng } from './coords';
 import { parseCsv } from './csv';
+import { exportCsv } from './csv-export';
 import { geocodeVenue, type GeocodeOutcome } from './geocode';
 import { Api, load, unload, type PlanFile } from './import';
 import { placeRows, placesSql } from './places';
@@ -14,6 +16,7 @@ const USAGE = `circles-load <command> ...
   places  --in <file.csv> --out <places.sql>
   load    --plan <report.json> --api <url> --email <e> --phone <E.164> --code <6 digits>
           [--apply] [--starts-on YYYY-MM-DD] [--manifest <file.json>]
+  export  --plan <report.json> --out-dir <folder> [--starts-on YYYY-MM-DD]
   unload  --manifest <file.json> --api <url> --email <e> --phone <E.164> --code <6 digits>
 
 report: cleans the circles file, finds one map position per venue (map links, then coordinates
@@ -21,6 +24,8 @@ or a plus code in the note), checks each against its city, and writes the full r
 Only counts are printed. --offline skips the network. --geocode looks up venues still unpinned
 on Google (address and city are sent; key from CIRCLES_GEOCODE_KEY): exact street matches are
 accepted, approximate ones are imported flagged (owner decision), the rest go to the review list.
+export: the same venues and circles as two CSV files (venues.csv, sessions.csv) for the console's
+own import screen: venues first, then sessions.
 places: idempotent SQL for the provinces, one city per distinct city in the file and one area per
 city. The app has no endpoint for these, so a database owner runs the SQL.
 load: signs in by email with a code and sends the report's importable venues, then their circles,
@@ -92,10 +97,22 @@ function places(): void {
   );
 }
 
+/** Signs in. Without --code the code is asked for on the terminal once the API has sent it. */
 async function signedIn(): Promise<Api> {
   const api = new Api(need('api'));
-  await api.signIn(need('email'), need('phone'), need('code'));
+  const code = arg('code') ?? (await askCode());
+  await api.signIn(need('email'), need('phone'), code);
   return api;
+}
+
+async function askCode(): Promise<string> {
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    return (await rl.question('Sign-in code from the email: ')).trim();
+  } finally {
+    rl.close();
+  }
 }
 
 async function loadCommand(): Promise<void> {
@@ -130,6 +147,18 @@ async function loadCommand(): Promise<void> {
   }
 }
 
+function exportCommand(): void {
+  const plan = JSON.parse(readFileSync(need('plan'), 'utf8')) as PlanFile;
+  const dir = need('out-dir');
+  const out = exportCsv(plan, arg('starts-on') ?? new Date().toISOString().slice(0, 10));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'venues.csv'), '﻿' + out.venues);
+  writeFileSync(join(dir, 'sessions.csv'), '﻿' + out.sessions);
+  console.log(
+    `venues.csv: ${out.counts.venues} rows; sessions.csv: ${out.counts.sessions} rows; in ${dir}`,
+  );
+}
+
 async function unloadCommand(): Promise<void> {
   const manifest = JSON.parse(readFileSync(need('manifest'), 'utf8')) as {
     venueIds: string[];
@@ -144,6 +173,7 @@ try {
   if (command === 'report') await report();
   else if (command === 'places') places();
   else if (command === 'load') await loadCommand();
+  else if (command === 'export') exportCommand();
   else if (command === 'unload') await unloadCommand();
   else {
     console.error(USAGE);
