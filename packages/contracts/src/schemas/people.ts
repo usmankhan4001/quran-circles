@@ -1,5 +1,14 @@
 import { z } from 'zod';
-import { InstantUtc, Localized, PageQuery, PersonName, PhoneE164, Uuid, pageOf } from '../common';
+import {
+  EmailAddress,
+  InstantUtc,
+  Localized,
+  PageQuery,
+  PersonName,
+  PhoneE164,
+  Uuid,
+  pageOf,
+} from '../common';
 import {
   AgeBand,
   BookmarkKind,
@@ -44,6 +53,12 @@ export type Profile = z.infer<typeof Profile>;
 export const ProfileUpdate = lazy(() =>
   z.object({
     displayName: PersonName.optional(),
+    /**
+     * The WhatsApp number (any country, E.164). It cannot be cleared, and a code does not verify
+     * it. `validation_failed` with `{ path: "phone", code: "phone_in_use" }` when another account
+     * holds it.
+     */
+    phone: PhoneE164.optional(),
     locale: Locale.optional(),
     areaId: Uuid.nullable().optional(),
     ageBand: AgeBand.nullable().optional(),
@@ -78,6 +93,9 @@ export const Me = lazy(() =>
   z
     .object({
       id: Uuid,
+      /** Signs the person in. NULL for accounts made before email sign-in, until one is added. */
+      email: EmailAddress.nullable(),
+      /** The WhatsApp number: required at sign-up, not verified by a code. */
       phone: PhoneE164,
       displayName: z.string().nullable(),
       locale: Locale,

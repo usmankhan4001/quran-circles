@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ApiClientError,
-  PHONE_NOT_PAKISTAN_MOBILE,
-  PakistaniMobilePhone,
-  issueCodeOf,
-  issueMessageKey,
-  type ApiClient,
-} from '@qc/contracts';
+import { ApiClientError, EmailAddress, issueMessageKey, type ApiClient } from '@qc/contracts';
 import { errorCodeOf, retryAfterOf } from '../../api/errors';
 import type { SignInResult } from '../../auth/AuthProvider';
 import type { MessageKey } from '../../i18n/translate';
 import { normalizePhone } from '../../lib/phone';
 
-export type SignInStep = 'phone' | 'code';
+export type SignInStep = 'email' | 'code';
 
 export interface SignInState {
   step: SignInStep;
+  emailInput: string;
+  /** The WhatsApp number, needed only the first time the email signs in. Optional here. */
   phoneInput: string;
-  /** The number the code was sent to, in E.164. Kept for the resend. */
-  phone: string | null;
+  /** The address the code was sent to. Kept for the resend. */
+  email: string | null;
   code: string;
   busy: boolean;
   /** Seconds before another code may be asked for. 0 when it may be asked now. */
   resendIn: number;
+  emailError: MessageKey | null;
   phoneError: MessageKey | null;
   codeError: MessageKey | null;
   /** A failure that is not about one field, such as being offline or rate limited. */
@@ -32,39 +28,23 @@ export interface SignInState {
 }
 
 export interface SignInActions {
+  setEmailInput: (value: string) => void;
   setPhoneInput: (value: string) => void;
   setCode: (value: string) => void;
-  submitPhone: () => Promise<void>;
+  submitEmail: () => Promise<void>;
   submitCode: () => Promise<void>;
   resend: () => Promise<void>;
-  changeNumber: () => void;
+  changeEmail: () => void;
 }
 
 const DIGITS_ONLY = /^[0-9]{6}$/;
 
-/** "Sign-in works only with a Pakistani mobile number, such as 0300 1234567." */
-const NOT_PAKISTAN_MOBILE: MessageKey = issueMessageKey(PHONE_NOT_PAKISTAN_MOBILE);
-
-/**
- * The message under the number field for a typed number, or null when a code may be asked for.
- * It is the contract's own check (`PakistaniMobilePhone`), so a number from abroad or a
- * Pakistani landline gets its message with no round trip.
- */
-function phoneProblem(e164: string | null): MessageKey | null {
-  if (!e164) return 'admin.signIn.phoneInvalid';
-  const parsed = PakistaniMobilePhone.safeParse(e164);
-  if (parsed.success) return null;
-  return parsed.error.issues.some((i) => issueCodeOf(i) === PHONE_NOT_PAKISTAN_MOBILE)
-    ? NOT_PAKISTAN_MOBILE
-    : 'admin.signIn.phoneInvalid';
-}
-
-/** True when the server refused the number because it is not a Pakistani mobile number. */
-function isNotPakistanMobile(error: unknown): boolean {
+/** True when the server refused the request with this issue on this field. */
+function hasIssue(error: unknown, path: string, code: string): boolean {
   return (
     error instanceof ApiClientError &&
     error.code === 'validation_failed' &&
-    (error.issues ?? []).some((i) => i.path === 'phone' && i.code === PHONE_NOT_PAKISTAN_MOBILE)
+    (error.issues ?? []).some((i) => i.path === path && i.code === code)
   );
 }
 
@@ -77,22 +57,25 @@ function noticeFor(error: unknown): { key: MessageKey; wait: number | null } {
 }
 
 /**
- * The phone-code sign-in as a small state machine, apart from any view. Step one asks for the
- * number and sends a code; step two takes the six digits. The number is never logged and never
- * kept after a successful sign-in beyond the sign-in response itself.
+ * The email-code sign-in as a small state machine, apart from any view. Step one asks for the
+ * email (and, the first time only, the WhatsApp number) and sends a code; step two takes the six
+ * digits. Neither is ever logged or kept after a successful sign-in beyond the response itself.
  */
 export function useSignIn(
   publicApi: ApiClient,
   onSignedIn: (result: SignInResult) => Promise<void> | void,
   options: { locale: 'en' | 'ur' },
 ): SignInState & SignInActions {
-  const [step, setStep] = useState<SignInStep>('phone');
+  const [step, setStep] = useState<SignInStep>('email');
+  const [emailInput, setEmailInputState] = useState('');
   const [phoneInput, setPhoneInputState] = useState('');
+  const [email, setEmail] = useState<string | null>(null);
   const [phone, setPhone] = useState<string | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [code, setCodeState] = useState('');
   const [busy, setBusy] = useState(false);
   const [resendIn, setResendIn] = useState(0);
+  const [emailError, setEmailError] = useState<MessageKey | null>(null);
   const [phoneError, setPhoneError] = useState<MessageKey | null>(null);
   const [codeError, setCodeError] = useState<MessageKey | null>(null);
   const [notice, setNotice] = useState<MessageKey | null>(null);
@@ -113,6 +96,7 @@ export function useSignIn(
   }, [resendIn]);
 
   const clearMessages = () => {
+    setEmailError(null);
     setPhoneError(null);
     setCodeError(null);
     setNotice(null);
@@ -120,30 +104,30 @@ export function useSignIn(
   };
 
   const sendCode = useCallback(
-    async (e164: string): Promise<boolean> => {
+    async (address: string, whatsapp: string | null): Promise<boolean> => {
       setBusy(true);
       clearMessages();
       try {
         const res = await publicApi.auth.requestCode({
-          body: { phone: e164, locale: options.locale, channel: 'whatsapp' },
+          body: {
+            email: address,
+            ...(whatsapp ? { phone: whatsapp } : {}),
+            locale: options.locale,
+            channel: 'email',
+          },
         });
         if (!mounted.current) return false;
         setChallengeId(res.challengeId);
         setResendIn(res.resendAfterSeconds);
-        setPhone(e164);
+        setEmail(address);
+        setPhone(whatsapp);
         setStep('code');
         return true;
       } catch (error) {
         if (mounted.current) {
-          if (isNotPakistanMobile(error)) {
-            // The server's word on the number goes under the number field.
-            setStep('phone');
-            setPhoneError(NOT_PAKISTAN_MOBILE);
-          } else {
-            const n = noticeFor(error);
-            setNotice(n.key);
-            setWaitSeconds(n.wait);
-          }
+          const n = noticeFor(error);
+          setNotice(n.key);
+          setWaitSeconds(n.wait);
         }
         return false;
       } finally {
@@ -153,15 +137,22 @@ export function useSignIn(
     [publicApi, options.locale],
   );
 
-  const submitPhone = useCallback(async () => {
-    const e164 = normalizePhone(phoneInput);
-    const problem = phoneProblem(e164);
-    if (problem || !e164) {
-      setPhoneError(problem ?? 'admin.signIn.phoneInvalid');
+  const submitEmail = useCallback(async () => {
+    const parsed = EmailAddress.safeParse(emailInput);
+    if (!parsed.success) {
+      setEmailError('admin.signIn.emailInvalid');
       return;
     }
-    await sendCode(e164);
-  }, [phoneInput, sendCode]);
+    let whatsapp: string | null = null;
+    if (phoneInput.trim()) {
+      whatsapp = normalizePhone(phoneInput);
+      if (!whatsapp) {
+        setPhoneError('admin.signIn.phoneInvalid');
+        return;
+      }
+    }
+    await sendCode(parsed.data, whatsapp);
+  }, [emailInput, phoneInput, sendCode]);
 
   const submitCode = useCallback(async () => {
     if (!DIGITS_ONLY.test(code)) {
@@ -178,7 +169,18 @@ export function useSignIn(
       if (!mounted.current) return;
       const c = errorCodeOf(error);
       if (c === 'otp_invalid') setCodeError('errors.otp_invalid');
-      else {
+      else if (hasIssue(error, 'phone', 'phone_required')) {
+        // A first sign-in needs the WhatsApp number asked for with the code: back to step one.
+        setStep('email');
+        setCodeState('');
+        setChallengeId(null);
+        setPhoneError('admin.signIn.firstTimeNeeded');
+      } else if (hasIssue(error, 'phone', 'phone_in_use')) {
+        setStep('email');
+        setCodeState('');
+        setChallengeId(null);
+        setPhoneError(issueMessageKey('phone_in_use'));
+      } else {
         const n = noticeFor(error);
         setNotice(n.key);
         setWaitSeconds(n.wait);
@@ -191,14 +193,14 @@ export function useSignIn(
   }, [challengeId, code, onSignedIn, publicApi]);
 
   const resend = useCallback(async () => {
-    if (phone && resendIn <= 0) {
+    if (email && resendIn <= 0) {
       setCodeState('');
-      await sendCode(phone);
+      await sendCode(email, phone);
     }
-  }, [phone, resendIn, sendCode]);
+  }, [email, phone, resendIn, sendCode]);
 
-  const changeNumber = useCallback(() => {
-    setStep('phone');
+  const changeEmail = useCallback(() => {
+    setStep('email');
     setCodeState('');
     setChallengeId(null);
     clearMessages();
@@ -206,8 +208,9 @@ export function useSignIn(
 
   return {
     step,
+    emailInput,
     phoneInput,
-    phone,
+    email,
     code,
     busy,
     resendIn,
@@ -215,6 +218,11 @@ export function useSignIn(
     codeError,
     notice,
     waitSeconds,
+    emailError,
+    setEmailInput: (v) => {
+      setEmailInputState(v);
+      setEmailError(null);
+    },
     setPhoneInput: (v) => {
       setPhoneInputState(v);
       setPhoneError(null);
@@ -223,9 +231,9 @@ export function useSignIn(
       setCodeState(v.replace(/[^0-9]/g, '').slice(0, 6));
       setCodeError(null);
     },
-    submitPhone,
+    submitEmail,
     submitCode,
     resend,
-    changeNumber,
+    changeEmail,
   };
 }

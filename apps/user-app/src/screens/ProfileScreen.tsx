@@ -18,7 +18,11 @@ import {
   type IconName,
   type TextSizeStep,
 } from '@qc/ui';
-import { MEMORISATION_REVISE_AFTER_DAYS_DEFAULT, type Locale } from '@qc/contracts';
+import {
+  MEMORISATION_REVISE_AFTER_DAYS_DEFAULT,
+  issueMessageKey,
+  type Locale,
+} from '@qc/contracts';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 import { QueryBoundary } from '../components/QueryBoundary';
 import { Page } from '../components/Page';
@@ -27,13 +31,14 @@ import { errorMessageKey } from '../core/errors';
 import { formatPhoneForDisplay } from '../core/phone';
 import { useAction } from '../data/useAction';
 import { deleteAccount, signOut } from '../features/auth/actions';
-import { checkName } from '../features/auth/validation';
+import { checkName, checkWhatsAppNumber } from '../features/auth/validation';
 import { useMyFollows } from '../features/journey/hooks';
 import {
   useAlertToggle,
   useAyahNotification,
   useLocaleSync,
   useProfileName,
+  useProfileWhatsApp,
   useProfileSettings,
   useWhatsappConsent,
 } from '../features/profile/hooks';
@@ -170,13 +175,22 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
   const toast = useToast();
   const { me } = useAuthState();
   const saveName = useProfileName();
+  const saveWhatsApp = useProfileWhatsApp();
   const [name, setName] = useState('');
   const [nameProblem, setNameProblem] = useState(false);
+  const [whatsApp, setWhatsApp] = useState('');
+  const [whatsAppProblem, setWhatsAppProblem] = useState<'invalid_phone' | 'phone_in_use' | null>(
+    null,
+  );
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (me?.displayName) setName(me.displayName);
   }, [me?.displayName]);
+
+  useEffect(() => {
+    if (me?.phone) setWhatsApp(formatPhoneForDisplay(me.phone));
+  }, [me?.phone]);
 
   const remove = useAction(async () => {
     await deleteAccount(services);
@@ -213,6 +227,11 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
         <Avatar name={me?.displayName ?? t('profile.guestName')} size="md" />
         <View style={styles.grow}>
           <Text variant="title3">{me?.displayName ?? t('profile.guestName')}</Text>
+          {me?.email ? (
+            <Text variant="caption" color="textSecondary" direction="ltr" testID="profile-email">
+              {me.email}
+            </Text>
+          ) : null}
           {me ? (
             <Text variant="caption" color="textSecondary" direction="ltr" testID="profile-phone">
               {formatPhoneForDisplay(me.phone)}
@@ -246,6 +265,44 @@ function AccountSection({ signedIn }: { signedIn: boolean }) {
             if (saved) toast.show(t('profile.saved'), 'success');
           }}
           testID="profile-name-save"
+        />
+        <TextField
+          label={t('signUp.phone.label')}
+          helper={t('profile.whatsapp.hint')}
+          value={whatsApp}
+          onChangeText={(value) => {
+            setWhatsApp(value);
+            setWhatsAppProblem(null);
+          }}
+          keyboardType="phone-pad"
+          autoComplete="tel"
+          contentDirection="ltr"
+          {...(whatsAppProblem
+            ? {
+                error:
+                  whatsAppProblem === 'phone_in_use'
+                    ? t(issueMessageKey('phone_in_use'))
+                    : t('signUp.problem.phone'),
+              }
+            : {})}
+          testID="profile-whatsapp-number"
+        />
+        <Button
+          variant="secondary"
+          fullWidth
+          label={t('profile.save')}
+          loading={saveWhatsApp.running}
+          onPress={async () => {
+            const checked = checkWhatsAppNumber(whatsApp);
+            if ('problem' in checked) {
+              setWhatsAppProblem('invalid_phone');
+              return;
+            }
+            const result = await saveWhatsApp.run(checked.phone);
+            if (result === 'in_use') setWhatsAppProblem('phone_in_use');
+            else if (result) toast.show(t('profile.saved'), 'success');
+          }}
+          testID="profile-whatsapp-number-save"
         />
       </View>
       <View>

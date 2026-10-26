@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  EmailAddress,
   HttpsUrl,
   InstantUtc,
   Latitude,
@@ -45,7 +46,7 @@ const roleTargetShapes = {
 };
 
 /**
- * Invite a person who may not have an account yet. Coordinators sign in with a phone code.
+ * Invite a person who may not have an account yet. Coordinators sign in with an email code, so pass their `email`: an invite without one is only accepted by an account whose number was verified before email sign-in.
  *
  * Handover: pass `replacesAssignmentId` (city or venue coordinator) to hand a place over to
  * someone with no account yet. The replaced assignment is revoked at once, when the invite is
@@ -59,15 +60,21 @@ export const InviteBody = lazy(() =>
   z.discriminatedUnion('role', [
     roleTargetShapes.national_admin.extend({
       phone: PhoneE164,
+      /** The address the invitee signs in with; the invite is accepted by this verified address. */
+      email: EmailAddress.optional(),
       displayName: PersonName.optional(),
     }),
     roleTargetShapes.city_coordinator.extend({
       phone: PhoneE164,
+      /** The address the invitee signs in with; the invite is accepted by this verified address. */
+      email: EmailAddress.optional(),
       displayName: PersonName.optional(),
       replacesAssignmentId: Uuid.optional(),
     }),
     roleTargetShapes.venue_coordinator.extend({
       phone: PhoneE164,
+      /** The address the invitee signs in with; the invite is accepted by this verified address. */
+      email: EmailAddress.optional(),
       displayName: PersonName.optional(),
       replacesAssignmentId: Uuid.optional(),
     }),
@@ -79,6 +86,7 @@ export const Invite = lazy(() =>
   z.object({
     id: Uuid,
     phone: PhoneE164,
+    email: EmailAddress.nullable().optional(),
     displayName: z.string().nullable(),
     role: Role,
     scopeType: ScopeType,

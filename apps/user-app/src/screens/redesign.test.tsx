@@ -417,7 +417,7 @@ describe('Profile, Updates and Sign-in (B)', () => {
 
   it('takes the sign-in code in boxed cells and accepts digits only', async () => {
     const view = await renderScreen(<SignInScreen />);
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const code = await view.findByTestId('code-input');
     fireEvent.change(code, { target: { value: '12a3b4' } });

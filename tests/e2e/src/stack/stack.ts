@@ -113,6 +113,8 @@ export async function startStack(
       PORT: String(apiPort),
       AUTH_SECRET: authSecret,
       AUTH_FIXED_CODE: FIXED_CODE,
+      // The API-level flows sign in by phone; the browser flows use the email screens.
+      AUTH_PHONE_SIGN_IN: 'true',
       // Behind the production proxy the caller address comes from X-Forwarded-For. The API-level
       // tests give each synthetic person their own address so per-address limits behave as live.
       TRUST_PROXY: 'true',

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type { Me, ProfileUpdate } from '@qc/contracts';
 import { schema, type Db } from '../../db';
 import { fail, invalid } from '../shared/errors';
@@ -44,6 +44,7 @@ export async function getMe(db: Db, userId: string): Promise<Me> {
 
   return {
     id: user.id,
+    email: user.email,
     phone: user.phoneE164,
     displayName: visibleName(user.displayName),
     locale: user.locale,
@@ -84,6 +85,21 @@ export async function updateMe(db: Db, userId: string, patch: ProfileUpdate): Pr
   }
   await db.transaction(async (tx) => {
     const userSet: Partial<typeof users.$inferInsert> = {};
+    if (patch.phone !== undefined) {
+      const [me] = await tx.select().from(users).where(eq(users.id, userId));
+      if (me && patch.phone !== me.phoneE164) {
+        // A number that signs the person in (no verified email yet) is not changed from here.
+        if (!me.emailVerifiedAt) invalid('phone', 'invalid_reference');
+        const [taken] = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(and(eq(users.phoneE164, patch.phone), ne(users.id, userId)));
+        if (taken) invalid('phone', 'phone_in_use');
+        userSet.phoneE164 = patch.phone;
+        // A typed number is not proved by a code.
+        userSet.phoneVerifiedAt = null;
+      }
+    }
     if (patch.displayName !== undefined) userSet.displayName = patch.displayName;
     if (patch.locale !== undefined) userSet.locale = patch.locale;
     if (Object.keys(userSet).length) {
@@ -177,8 +193,30 @@ export async function deleteAccount(db: Db, userId: string, now: Date): Promise<
       })
       .where(eq(messageOutbox.recipientUserId, userId));
 
-    await tx.delete(coordinatorInvites).where(eq(coordinatorInvites.phoneE164, user.phoneE164));
-    await tx.delete(otpChallenges).where(eq(otpChallenges.phoneE164, user.phoneE164));
+    await tx
+      .delete(coordinatorInvites)
+      .where(
+        user.email
+          ? or(
+              eq(coordinatorInvites.phoneE164, user.phoneE164),
+              eq(coordinatorInvites.email, user.email),
+            )
+          : eq(coordinatorInvites.phoneE164, user.phoneE164),
+      );
+    await tx
+      .delete(otpChallenges)
+      .where(
+        user.email
+          ? or(
+              eq(otpChallenges.phoneE164, user.phoneE164),
+              eq(otpChallenges.email, user.email),
+              eq(otpChallenges.claimedPhoneE164, user.phoneE164),
+            )
+          : or(
+              eq(otpChallenges.phoneE164, user.phoneE164),
+              eq(otpChallenges.claimedPhoneE164, user.phoneE164),
+            ),
+      );
     // V1 legacy rows (SEC-05): both tables keep the E.164 number in `phone_raw` (ADR 0004), so
     // the match is exact. Deleted rather than anonymised: they hold nothing but the person's
     // name, number and V1 answers, and no V2 row refers to them.

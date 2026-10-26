@@ -28,6 +28,7 @@ export interface TextFieldProps {
   secureTextEntry?: boolean;
   keyboardType?: KeyboardTypeOptions;
   autoComplete?: TextInputProps['autoComplete'];
+  autoCapitalize?: TextInputProps['autoCapitalize'];
   maxLength?: number;
   /**
    * The reading direction of what is typed. Default: the screen's. Use `ltr` for phone numbers
@@ -72,6 +73,7 @@ export function TextField({
   secureTextEntry,
   keyboardType,
   autoComplete,
+  autoCapitalize,
   maxLength,
   contentDirection,
   onBlur,
@@ -121,6 +123,7 @@ export function TextField({
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
           autoComplete={autoComplete}
+          autoCapitalize={autoCapitalize}
           maxLength={maxLength}
           onFocus={() => setFocused(true)}
           onBlur={() => {

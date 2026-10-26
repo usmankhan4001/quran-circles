@@ -278,7 +278,13 @@ describe('error codes', () => {
   });
 
   it('has an English and an Urdu message for every worded issue code', () => {
-    expect(WORDED_ISSUE_CODES).toEqual(['phone_not_pakistan_mobile', 'invite_daily_limit']);
+    expect(WORDED_ISSUE_CODES).toEqual([
+      'phone_not_pakistan_mobile',
+      'phone_required',
+      'phone_in_use',
+      'email_required',
+      'invite_daily_limit',
+    ]);
     expect(WORDED_ISSUE_CODES).toContain(PHONE_NOT_PAKISTAN_MOBILE);
     expect(WORDED_ISSUE_CODES).toContain(INVITE_DAILY_LIMIT);
     for (const code of WORDED_ISSUE_CODES) {

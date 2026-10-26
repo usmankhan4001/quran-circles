@@ -1,9 +1,7 @@
 import { StyleSheet, View } from 'react-native';
-import { issueMessageKey } from '@qc/contracts';
 import { Button, CodeField, Text, TextField, spacing } from '@qc/ui';
 import { Page } from '../components/Page';
 import { errorMessageKey } from '../core/errors';
-import { formatPhoneForDisplay, normalizePhone } from '../core/phone';
 import { retryAfterText } from '../core/wait';
 import { useSignIn } from '../features/auth/useSignIn';
 import { useI18n } from '../i18n/I18nProvider';
@@ -22,8 +20,7 @@ export function routeAfterSignIn(returnTo: string | undefined): Route {
 }
 
 /**
- * Sign in with a mobile number: the number, then "Enter the code" (WhatsApp first, SMS as a
- * fallback). A person whose account has no name yet is asked for one last. Creating an account
+ * Sign in with an email address: the address, then "Enter the code" sent to it. A person whose account has no name yet is asked for one last. Creating an account
  * has its own screens (`SignUpScreen`).
  */
 export function SignInScreen({ returnTo }: { returnTo?: string }) {
@@ -32,10 +29,10 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
   const flow = useSignIn(() => nav.replace(routeAfterSignIn(returnTo)));
 
   const problemText =
-    flow.problem === 'invalid_phone'
-      ? t('signIn.problem.phone')
-      : flow.problem === 'phone_not_pakistan_mobile'
-        ? t(issueMessageKey('phone_not_pakistan_mobile'))
+    flow.problem === 'invalid_email'
+      ? t('signIn.problem.email')
+      : flow.problem === 'no_account'
+        ? t('signIn.problem.noAccount')
         : flow.problem === 'invalid_code'
           ? t('signIn.problem.code')
           : flow.problem === 'invalid_name'
@@ -51,14 +48,13 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
                 : t(errorMessageKey(flow.error.code))
               : undefined;
 
-  const shownPhone = formatPhoneForDisplay(normalizePhone(flow.phoneInput) ?? flow.phoneInput);
   const back = returnTo ? hrefToRoute(returnTo) : null;
 
   if (flow.step === 'code') {
     return (
       <Page
         testID="sign-in-screen"
-        onBack={flow.changeNumber}
+        onBack={flow.changeEmail}
         footer={
           <Button
             label={t('signIn.code.submit')}
@@ -77,9 +73,7 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
               {t('signIn.code.title')}
             </Text>
             <Text variant="body" color="textMuted">
-              {t(flow.channel === 'sms' ? 'signIn.code.introSmsTo' : 'signIn.code.intro', {
-                phone: shownPhone,
-              })}
+              {t('signIn.code.intro', { email: flow.email ?? '' })}
             </Text>
           </View>
           <CodeField
@@ -99,24 +93,15 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
                 variant="tertiary"
                 label={t('signIn.code.resend')}
                 disabled={flow.working}
-                onPress={() => void flow.resend('whatsapp')}
+                onPress={() => void flow.resend()}
                 testID="resend-code"
               />
             )}
-            {flow.resendIn === 0 ? (
-              <Button
-                variant="tertiary"
-                label={t('signIn.code.useSms')}
-                disabled={flow.working}
-                onPress={() => void flow.resend('sms')}
-                testID="resend-sms"
-              />
-            ) : null}
             <Button
               variant="tertiary"
-              label={t('signIn.code.changeNumber')}
-              onPress={flow.changeNumber}
-              testID="change-number"
+              label={t('signIn.code.changeEmail')}
+              onPress={flow.changeEmail}
+              testID="change-email"
             />
           </View>
         </View>
@@ -186,12 +171,12 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
       footer={
         <>
           <Button
-            label={t('signIn.phone.submit')}
+            label={t('signIn.email.submit')}
             icon="paper-plane-tilt"
             size="large"
             fullWidth
             loading={flow.working}
-            onPress={() => void flow.submitPhone()}
+            onPress={() => void flow.submitEmail()}
             testID="send-code"
           />
           <Button
@@ -214,17 +199,18 @@ export function SignInScreen({ returnTo }: { returnTo?: string }) {
           </Text>
         </View>
         <TextField
-          label={t('signIn.phone.label')}
-          helper={t('signIn.phone.helper')}
-          value={flow.phoneInput}
-          onChangeText={flow.setPhoneInput}
-          keyboardType="phone-pad"
-          autoComplete="tel"
+          label={t('signIn.email.label')}
+          helper={t('signIn.email.helper')}
+          value={flow.emailInput}
+          onChangeText={flow.setEmailInput}
+          keyboardType="email-address"
+          autoComplete="email"
+          autoCapitalize="none"
           contentDirection="ltr"
           required
           error={problemText}
-          onSubmitEditing={() => void flow.submitPhone()}
-          testID="phone-input"
+          onSubmitEditing={() => void flow.submitEmail()}
+          testID="email-input"
         />
       </View>
     </Page>

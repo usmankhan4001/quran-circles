@@ -18,6 +18,7 @@ const admin: Person = {
   ip: '10.0.0.1',
   me: {
     id: '00000000-0000-4000-8000-000000000001',
+    email: null,
     phone: '+923130000000',
     displayName: null,
     locale: 'en',

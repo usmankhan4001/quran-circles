@@ -40,13 +40,75 @@ describe('users and phone numbers', () => {
     expect(error).toEqual({ code: UNIQUE_VIOLATION, constraint: 'users_phone_e164_unique' });
   });
 
-  it('requires a verification time and a name', async () => {
+  it('requires some verified way in, and a name that is not blank', async () => {
+    // A number nobody verified and no verified email: nothing can sign this account in.
     const noVerification = await violation(
       test.pg.query(`INSERT INTO users (phone_e164, display_name) VALUES ($1, 'x')`, [nextPhone()]),
     );
-    expect(noVerification.code).toBe(NOT_NULL_VIOLATION);
+    expect(noVerification).toEqual({ code: CHECK_VIOLATION, constraint: 'users_identity_chk' });
     const blankName = await violation(world.make.user({ displayName: '   ' }));
     expect(blankName).toEqual({ code: CHECK_VIOLATION, constraint: 'users_display_name_chk' });
+  });
+
+  it('lets an account made by email hold an unverified WhatsApp number', async () => {
+    const byEmail = await world.make.user({
+      email: 'reader@example.org',
+      emailVerifiedAt: new Date('2026-01-01T00:00:00Z'),
+      phoneVerifiedAt: null,
+    });
+    expect(byEmail.phoneVerifiedAt).toBeNull();
+    // An email that is not verified is not a way in.
+    const unverifiedEmail = await violation(
+      world.make.user({ email: 'other@example.org', phoneVerifiedAt: null }),
+    );
+    expect(unverifiedEmail.constraint).toBe('users_identity_chk');
+  });
+
+  it('keeps one account per email address, lower case only', async () => {
+    const at = new Date('2026-01-01T00:00:00Z');
+    await world.make.user({ email: 'one@example.org', emailVerifiedAt: at });
+    const dup = await violation(world.make.user({ email: 'one@example.org', emailVerifiedAt: at }));
+    expect(dup).toEqual({ code: UNIQUE_VIOLATION, constraint: 'users_email_uq' });
+    for (const email of [
+      'Two@example.org',
+      'two@example',
+      'two @example.org',
+      ' two@example.org',
+    ]) {
+      const bad = await violation(world.make.user({ email, emailVerifiedAt: at }));
+      expect(bad, email).toEqual({ code: CHECK_VIOLATION, constraint: 'users_email_chk' });
+    }
+    // Many accounts without an email are fine.
+    await world.make.user({});
+    await world.make.user({});
+  });
+
+  it('asks for a code by exactly one of email and number', async () => {
+    const both = await violation(
+      test.pg.query(
+        `INSERT INTO otp_challenges (phone_e164, email, channel, code_hash, expires_at)
+         VALUES ($1, 'a@example.org', 'email', 'h', now())`,
+        [nextPhone()],
+      ),
+    );
+    expect(both.constraint).toBe('otp_challenges_target_chk');
+    const neither = await violation(
+      test.pg.query(
+        `INSERT INTO otp_challenges (channel, code_hash, expires_at) VALUES ('email', 'h', now())`,
+      ),
+    );
+    expect(neither.constraint).toBe('otp_challenges_target_chk');
+    const badClaim = await violation(
+      test.pg.query(
+        `INSERT INTO otp_challenges (email, claimed_phone_e164, channel, code_hash, expires_at)
+         VALUES ('a@example.org', '03001234567', 'email', 'h', now())`,
+      ),
+    );
+    expect(badClaim.constraint).toBe('otp_challenges_claimed_phone_e164_chk');
+    await test.pg.query(
+      `INSERT INTO otp_challenges (email, claimed_phone_e164, channel, code_hash, expires_at)
+       VALUES ('a@example.org', '+923001234567', 'email', 'h', now())`,
+    );
   });
 
   it('lets an account exist without a name until registration asks for one, but never a blank one', async () => {

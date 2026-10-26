@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { ApnsPushProvider } from './providers/apns';
+import { ConsoleEmailProvider, type EmailProvider } from './providers/email';
+import { DEFAULT_EMAIL_FROM } from './mail-domain';
+import { ResendEmailProvider } from './providers/resend';
 import { FcmPushProvider, GoogleServiceAccountTokenSource } from './providers/fcm';
 import { HttpSmsProvider } from './providers/http-sms';
 import { PushRouter, type PushProvider } from './providers/push';
@@ -14,7 +17,12 @@ import {
   type CodeDeliveryReport,
   type CodeSender,
 } from './code-sender';
-import { FakePushProvider, FakeSmsProvider, FakeWhatsAppProvider } from './fakes';
+import {
+  FakeEmailProvider,
+  FakePushProvider,
+  FakeSmsProvider,
+  FakeWhatsAppProvider,
+} from './fakes';
 import { defaultFetch, type FetchLike } from './http';
 import { createHttp2Fetch } from './http2-fetch';
 import { silentLogger, type Logger } from './logger';
@@ -47,6 +55,16 @@ export const MessagingEnv = z.object({
     .min(1)
     .max(60)
     .default(DEFAULT_CODE_VALIDITY_MINUTES),
+
+  /**
+   * Resend (https://resend.com), which sends the sign-in code emails. `EMAIL_FROM` must be on a
+   * domain verified in Resend. Default: `DEFAULT_EMAIL_FROM` (`notifications@` on `MAIL_DOMAIN`). Without a key
+   * outside production, codes are printed to the console instead (`ConsoleEmailProvider`); in
+   * production live messaging refuses to start without both.
+   */
+  RESEND_API_KEY: optional,
+  EMAIL_FROM: optional,
+  EMAIL_REPLY_TO: optional,
 
   WHATSAPP_PHONE_NUMBER_ID: optional,
   WHATSAPP_ACCESS_TOKEN: optional,
@@ -85,12 +103,14 @@ export interface Messaging {
   push: PushProvider;
   whatsapp: WhatsAppProvider;
   sms: SmsProvider | undefined;
+  email: EmailProvider;
   codeSender: CodeSender;
   /** Present in fake mode, so a dev server or a test can inspect what was "sent". */
   fakes?: {
     push: FakePushProvider;
     whatsapp: FakeWhatsAppProvider;
     sms: FakeSmsProvider;
+    email: FakeEmailProvider;
     codes: TestCodeSender;
   };
   /** Webhook credentials; undefined when not configured. */
@@ -134,6 +154,7 @@ export function createMessaging(
       push: new FakePushProvider(),
       whatsapp: new FakeWhatsAppProvider(),
       sms: new FakeSmsProvider(),
+      email: new FakeEmailProvider(),
       codes: new TestCodeSender(),
     };
     return {
@@ -141,6 +162,7 @@ export function createMessaging(
       push: fakes.push,
       whatsapp: fakes.whatsapp,
       sms: fakes.sms,
+      email: fakes.email,
       codeSender: fakes.codes,
       fakes,
       webhook,
@@ -170,6 +192,21 @@ export function createMessaging(
       fetch: fetchImpl,
       ...(env.SMS_SENDER ? { sender: env.SMS_SENDER } : {}),
     });
+  }
+
+  let email: EmailProvider;
+  if (env.RESEND_API_KEY) {
+    email = new ResendEmailProvider({
+      apiKey: env.RESEND_API_KEY,
+      from: env.EMAIL_FROM ?? DEFAULT_EMAIL_FROM,
+      ...(env.EMAIL_REPLY_TO ? { replyTo: env.EMAIL_REPLY_TO } : {}),
+      fetch: fetchImpl,
+    });
+  } else if (env.APP_ENV === 'production') {
+    throw new MessagingConfigError('Sign-in codes by email need RESEND_API_KEY');
+  } else {
+    // Development: print the code instead of sending it.
+    email = new ConsoleEmailProvider();
   }
 
   const transports: ConstructorParameters<typeof PushRouter>[0] = {};
@@ -222,6 +259,7 @@ export function createMessaging(
     codeMode === 'test'
       ? new TestCodeSender()
       : new ProviderCodeSender({
+          email,
           whatsapp,
           ...(sms ? { sms } : {}),
           smsFallback: env.CODE_SMS_FALLBACK,
@@ -235,6 +273,7 @@ export function createMessaging(
     push: new PushRouter(transports),
     whatsapp,
     sms,
+    email,
     codeSender,
     webhook,
     close: () => http2?.close?.(),

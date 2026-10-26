@@ -3,6 +3,10 @@
 Updated: 2026-10-25 (SEC-22 handover semantics, done in api-core)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; lane branch name to be set by the orchestrator)
 
+## Done (2026-10-25: sign-in code by email, change request `email-otp`)
+
+- Branch `lane/auth/email-otp`. Email is the identity and code channel; WhatsApp sign-in is behind `AUTH_PHONE_SIGN_IN` (default off). `requestCode` and `verifyCode` work on a `CodeTarget` (email or phone) with the same limits, caps and expiry; a new email account sends its WhatsApp number with the request (`claimed_phone_e164`) and verify answers `phone_required` / `phone_in_use`. Invites accept by verified email, or by phone only when `phone_verified_at` is set. `Me.email`, `ProfileUpdate.phone`. Tests: `modules/auth/email-sign-in.test.ts` (new), `sign-in.test.ts`, `auth-wiring.test.ts` (email in production). Details and what the owner must do: `docs/engineering/change-requests/2026-10-25-email-otp.md`.
+
 ## Done (2026-10-25: SEC-22)
 
 - Handover access now ends when the handover invite is created, not on acceptance (`apps/api/src/modules/roles/service.ts`; details in `status/api-core.md`). `acceptInvites` (`modules/auth/invites.ts`) keeps ending a live replaced assignment, which now only matters for invites created before the change; its comment says so. No change to sign-in.

@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, lte, ne } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, lte, ne, or, sql, type SQL } from 'drizzle-orm';
 import { schema } from '@qc/db';
 import type { AuthContext } from '../../auth/context';
 import type { AuthDb } from '../../auth/types';
@@ -8,13 +8,30 @@ const { coordinatorInvites, roleAssignments, auditLog, venues } = schema;
 type Tx = Pick<AuthDb, 'insert' | 'update' | 'select'>;
 
 /**
+ * Who an invitation can be for: a number or an email address the person has proved with a code.
+ * Never pass a number that was only typed in (an account made by email has an unverified one), or
+ * anyone could take another person's invitation by entering their number.
+ */
+export interface InviteIdentity {
+  phone?: string | null;
+  email?: string | null;
+}
+
+/** Matches the identity's invites; matches nothing when it holds neither. */
+const invitedAs = (who: InviteIdentity): SQL =>
+  or(
+    who.phone ? eq(coordinatorInvites.phoneE164, who.phone) : undefined,
+    who.email ? eq(coordinatorInvites.email, who.email) : undefined,
+  ) ?? sql`false`;
+
+/**
  * Marks this number's lapsed pending invites as expired. Returns how many it changed and whether
  * a live pending invite is left, so the caller can tell "your invitation has expired" from
  * "nothing was ever pending".
  */
 export async function expireLapsedInvites(
   ctx: AuthContext,
-  phone: string,
+  who: InviteIdentity,
   now: Date,
 ): Promise<{ expired: number; livePending: number }> {
   const expired = await ctx.db
@@ -22,7 +39,7 @@ export async function expireLapsedInvites(
     .set({ status: 'expired' })
     .where(
       and(
-        eq(coordinatorInvites.phoneE164, phone),
+        invitedAs(who),
         eq(coordinatorInvites.status, 'pending'),
         lte(coordinatorInvites.expiresAt, now),
       ),
@@ -33,7 +50,7 @@ export async function expireLapsedInvites(
     .from(coordinatorInvites)
     .where(
       and(
-        eq(coordinatorInvites.phoneE164, phone),
+        invitedAs(who),
         eq(coordinatorInvites.status, 'pending'),
         gt(coordinatorInvites.expiresAt, now),
       ),
@@ -61,14 +78,14 @@ export interface AcceptedInvites {
  */
 export async function acceptInvites(
   tx: Tx,
-  input: { userId: string; phone: string; now: Date },
+  input: { userId: string; who: InviteIdentity; now: Date },
 ): Promise<AcceptedInvites> {
   const pending = await tx
     .select()
     .from(coordinatorInvites)
     .where(
       and(
-        eq(coordinatorInvites.phoneE164, input.phone),
+        invitedAs(input.who),
         eq(coordinatorInvites.status, 'pending'),
         gt(coordinatorInvites.expiresAt, input.now),
       ),

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   renderConsole,
   screen,
-  phoneField,
+  emailField,
   shellReady,
   text,
   waitFor,
@@ -133,26 +133,26 @@ describe('page guards', () => {
 });
 
 describe('sign in', () => {
-  it('sends a signed-out person to sign in and rejects a bad number before any request', async () => {
+  it('sends a signed-out person to sign in and rejects a bad email before any request', async () => {
     const { user, calls } = renderConsole({ signedIn: false, path: '/sessions' });
-    const phone = await phoneField(user);
-    await user.type(phone, '12345');
+    const email = await emailField(user);
+    await user.type(email, 'coordinator@');
     await user.click(screen.getByRole('button', { name: text('console.signIn.sendCode') }));
-    expect(await screen.findByText(text('console.phone.error.invalid'))).toBeTruthy();
+    expect(await screen.findByText(text('console.signIn.email.invalid'))).toBeTruthy();
     expect(writes(calls)).toEqual([]);
   });
 
-  it('signs in with the phone code and lands on the first allowed page', async () => {
+  it('signs in with the email code and lands on the first allowed page', async () => {
     const { user, calls, tokenStore } = renderConsole({
       role: 'city',
       signedIn: false,
       path: '/sessions',
     });
-    await user.type(await phoneField(user), '0300 0000099');
+    await user.type(await emailField(user), 'coordinator@example.com');
     await user.click(screen.getByRole('button', { name: text('console.signIn.sendCode') }));
     const code = await screen.findByLabelText(new RegExp(text('console.signIn.code.label')));
     expect(calls.find((c) => c.path === '/v1/auth/code')?.body).toMatchObject({
-      phone: '+923000000099',
+      email: 'coordinator@example.com',
     });
     await user.type(code, '123456');
     await user.click(screen.getByRole('button', { name: text('console.signIn.verify') }));
@@ -164,7 +164,7 @@ describe('sign in', () => {
 
   it('maps a wrong code to the otp_invalid message', async () => {
     const { user } = renderConsole({ signedIn: false });
-    await user.type(await phoneField(user), '03000000099');
+    await user.type(await emailField(user), 'coordinator@example.com');
     await user.click(screen.getByRole('button', { name: text('console.signIn.sendCode') }));
     await user.type(
       await screen.findByLabelText(new RegExp(text('console.signIn.code.label'))),
@@ -176,7 +176,7 @@ describe('sign in', () => {
 
   it('refuses a code with fewer than 6 digits without calling the API', async () => {
     const { user, calls } = renderConsole({ signedIn: false });
-    await user.type(await phoneField(user), '03000000099');
+    await user.type(await emailField(user), 'coordinator@example.com');
     await user.click(screen.getByRole('button', { name: text('console.signIn.sendCode') }));
     await user.type(
       await screen.findByLabelText(new RegExp(text('console.signIn.code.label'))),
@@ -189,7 +189,7 @@ describe('sign in', () => {
 
   it('tells an account with no console role that it has no access, and signs it out', async () => {
     const { user, tokenStore } = renderConsole({ role: 'none', signedIn: false });
-    await user.type(await phoneField(user), '03000000099');
+    await user.type(await emailField(user), 'coordinator@example.com');
     await user.click(screen.getByRole('button', { name: text('console.signIn.sendCode') }));
     await user.type(
       await screen.findByLabelText(new RegExp(text('console.signIn.code.label'))),
@@ -204,7 +204,7 @@ describe('sign in', () => {
     const { user, tokenStore } = renderConsole({ role: 'national', path: '/sessions' });
     await shellReady();
     await user.click(screen.getByRole('button', { name: text('console.shell.signOut') }));
-    expect(await phoneField(user)).toBeTruthy();
+    expect(await emailField(user)).toBeTruthy();
     expect(tokenStore.get('qc.console.refresh')).toBeNull();
   });
 });

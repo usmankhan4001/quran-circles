@@ -3,6 +3,10 @@
 Updated: 2026-10-25 (migration 0013, message template catalog; withSeasonEnd)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits)
 
+## Done (2026-10-25: migration 0015, email sign-in)
+
+- `0015_email_sign_in` (with down): `users.email` / `email_verified_at`, `phone_verified_at` nullable, `users_identity_chk`; `otp_challenges.email` / `claimed_phone_e164`, `phone_e164` nullable, target check; `coordinator_invites.email`; `bootstrap-admin --email`. Phone users unchanged.
+
 ## Done (2026-10-25)
 
 - **Migration 0014 `poster_template_catalog`** (owner's request, from the poster maker): writes the renderer's three templates (`cloud`, `night`, `quranic_circles`) with the fixture ids; before, only the dev seed wrote `poster_templates`, so the console on a live database had no template to pick. Idempotent (`ON CONFLICT (key) DO NOTHING`); down removes rows no poster uses. Tests: `src/poster-templates.test.ts` (parity with `DEMO_POSTER_TEMPLATES`, fails when a template is added without a migration), `migrate.test.ts` +1 describe, `seed.test.ts` (the seed finds the three rows already there). Change request `docs/engineering/change-requests/2026-10-25-halaqa-flyer.md`.

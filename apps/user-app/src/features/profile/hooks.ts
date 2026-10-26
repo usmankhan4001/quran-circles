@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { consentGranted, type Consent, type Follow, type ProfileUpdate } from '@qc/contracts';
 import { useAction } from '../../data/useAction';
 import { useQuery } from '../../data/useQuery';
+import { hasIssue } from '../auth/validation';
 import { useAuthStatus } from '../../providers/hooks';
 import { useServices } from '../../providers/services';
 
@@ -69,6 +70,20 @@ export function useProfileName() {
     const me = await api.me.update({ body: { displayName } });
     auth.setMe(me);
     return me;
+  });
+}
+
+/** Saves the WhatsApp number: kept for reminders and coordinator contact, never verified by a code. */
+export function useProfileWhatsApp() {
+  const { api, auth } = useServices();
+  return useAction(async (phone: string): Promise<'saved' | 'in_use'> => {
+    try {
+      auth.setMe(await api.me.update({ body: { phone } }));
+      return 'saved';
+    } catch (e) {
+      if (hasIssue(e, 'phone', 'phone_in_use')) return 'in_use';
+      throw e;
+    }
   });
 }
 

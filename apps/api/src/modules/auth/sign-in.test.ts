@@ -235,7 +235,7 @@ describe('auth.verifyCode', () => {
     const users = await h.db.select().from(schema.users);
     expect(users).toHaveLength(1);
     expect(users[0]?.phoneE164).toBe(PHONE_A);
-    expect(users[0]?.phoneVerifiedAt.getTime()).toBe(h.clock.now().getTime());
+    expect(users[0]?.phoneVerifiedAt?.getTime()).toBe(h.clock.now().getTime());
     const [session] = await h.db.select().from(schema.authSessions);
     expect(session?.deviceLabel).toBe('Android phone');
     expect(session?.userId).toBe(body.me.id);
@@ -441,7 +441,7 @@ describe('auth.verifyCode', () => {
     const signedIn = await h.signIn(PHONE_A);
     expect(signedIn.body.me.displayName).toBe('Amina Khan');
     const [row] = await h.db.select().from(schema.users).where(eq(schema.users.id, user.id));
-    expect(row?.phoneVerifiedAt.getTime()).toBe(h.clock.now().getTime());
+    expect(row?.phoneVerifiedAt?.getTime()).toBe(h.clock.now().getTime());
     expect(row?.lastSeenAt?.getTime()).toBe(h.clock.now().getTime());
   });
 

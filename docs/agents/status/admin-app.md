@@ -3,6 +3,10 @@
 Updated: 2026-10-26
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Done (2026-10-25: email sign-in)
+
+- Sign-in is email then code, with an optional WhatsApp field for a first sign-in. 895 tests.
+
 ## Coordinator redesign (26 Oct 2026, branch lane/admin-app/redesign)
 
 Built from the approved coordinator canvas (Tonight, Tell people, Places and schedule, plus Welcome and Features). Merged the shared kit from `lane/ui/member-redesign`; nothing in `packages/ui` was edited.

@@ -87,6 +87,20 @@ describe('ProfileScreen', () => {
     expect(world.http.callsTo('PATCH /v1/me')[0]!.body).toEqual({ displayName: 'Maryam Noor' });
   });
 
+  it('saves a new WhatsApp number, and refuses one that cannot be right', async () => {
+    const { world, view } = await open();
+    fireEvent.change(view.getByTestId('profile-whatsapp-number'), { target: { value: '12' } });
+    fireEvent.click(view.getByTestId('profile-whatsapp-number-save'));
+    expect(await view.findByText(en['signUp.problem.phone'])).toBeTruthy();
+    expect(world.http.callsTo('PATCH /v1/me')).toHaveLength(0);
+    fireEvent.change(view.getByTestId('profile-whatsapp-number'), {
+      target: { value: '+44 7700 900123' },
+    });
+    fireEvent.click(view.getByTestId('profile-whatsapp-number-save'));
+    await waitFor(() => expect(world.http.callsTo('PATCH /v1/me')).toHaveLength(1));
+    expect(world.http.callsTo('PATCH /v1/me')[0]!.body).toEqual({ phone: '+447700900123' });
+  });
+
   it('turns alerts on and off for each followed venue', async () => {
     const { world, view } = await open();
     const toggle = await view.findByTestId(`alerts-${FOLLOW.id}`);

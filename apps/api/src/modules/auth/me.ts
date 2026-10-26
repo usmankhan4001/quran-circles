@@ -43,6 +43,7 @@ export async function loadMe(db: AuthDb, userId: string): Promise<Me | null> {
 
   return {
     id: user.id,
+    email: user.email,
     phone: user.phoneE164,
     displayName: named(user.displayName),
     locale: user.locale,

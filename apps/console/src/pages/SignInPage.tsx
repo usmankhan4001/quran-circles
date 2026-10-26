@@ -1,6 +1,6 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Navigate, useLocation } from 'react-router';
-import { PHONE_NOT_PAKISTAN_MOBILE, PakistaniMobilePhone, issueMessageKey } from '@qc/contracts';
+import { EmailAddress, issueMessageKey } from '@qc/contracts';
 import { useAuth } from '../api/auth';
 import { BrandLogo } from '../components/BrandLogo';
 import { DisplayControls } from '../components/Shell';
@@ -9,14 +9,11 @@ import { Banner, Button, PageHeader, TextField } from '../components/ui';
 import { useI18n } from '../i18n';
 import { ltrRun } from '../lib/ui-tokens';
 import { errorMessageKeyOf, issuesOf } from '../lib/errors';
-import { PHONE_ISSUE_KEYS, formatPhone, normalizePhone, toAsciiDigits } from '../lib/phone';
+import { PHONE_ISSUE_KEYS, normalizePhone, toAsciiDigits } from '../lib/phone';
 
-/** "Sign-in works only with a Pakistani mobile number, such as 0300 1234567." */
-const NOT_PAKISTAN_MOBILE = issueMessageKey(PHONE_NOT_PAKISTAN_MOBILE);
-
-/** True when `auth.requestCode` refused the number as not a Pakistani mobile. */
-function refusedAsNotPakistanMobile(error: unknown): boolean {
-  return issuesOf(error).some((i) => i.path === 'phone' && i.code === PHONE_NOT_PAKISTAN_MOBILE);
+/** True when `auth.verifyCode` refused a first sign-in with this issue on the WhatsApp number. */
+function refusedWith(error: unknown, code: string): boolean {
+  return issuesOf(error).some((i) => i.path === 'phone' && i.code === code);
 }
 
 /**
@@ -81,18 +78,22 @@ const clock = (seconds: number) =>
 
 interface Challenge {
   id: string;
-  phone: string;
+  email: string;
+  /** The WhatsApp number sent with the request (first sign-in), kept for the resend. */
+  phone: string | null;
   /** Seconds until a new code may be requested, counted down on screen. */
   resendIn: number;
 }
 
-/** Coordinators sign in with a code sent to their WhatsApp number. */
+/** Coordinators sign in with a code sent to their email. The WhatsApp number is for a first sign-in. */
 export default function SignInPage() {
   const { t } = useI18n();
   const auth = useAuth();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
 
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [code, setCode] = useState('');
@@ -115,32 +116,43 @@ export default function SignInPage() {
 
   const sendCode = async (event?: FormEvent) => {
     event?.preventDefault();
-    const result = normalizePhone(phone, { mobileOnly: true });
-    if (!result.ok) {
-      // A landline is a real number that cannot sign in: the same words as the server's.
-      setPhoneError(
-        t(result.issue === 'not_mobile' ? NOT_PAKISTAN_MOBILE : PHONE_ISSUE_KEYS[result.issue]),
-      );
-      return;
+    // A resend asks again for the address and number the first code went to.
+    const resend = event === undefined && challenge !== null;
+    let address = challenge?.email ?? '';
+    let whatsapp: string | null = challenge?.phone ?? null;
+    if (!resend) {
+      const parsed = EmailAddress.safeParse(email);
+      if (!parsed.success) {
+        setEmailError(t('console.signIn.email.invalid'));
+        return;
+      }
+      address = parsed.data;
+      whatsapp = null;
+      if (phone.trim()) {
+        const result = normalizePhone(phone);
+        if (!result.ok) {
+          setPhoneError(t(PHONE_ISSUE_KEYS[result.issue]));
+          return;
+        }
+        whatsapp = result.e164;
+      }
     }
-    // The contract's own check, so a number from abroad is told no without a round trip.
-    if (!PakistaniMobilePhone.safeParse(result.e164).success) {
-      setPhoneError(t(NOT_PAKISTAN_MOBILE));
-      return;
-    }
+    setEmailError(null);
     setPhoneError(null);
     setFailure(null);
     setNoAccess(false);
     setBusy(true);
     try {
-      const res = await auth.requestCode(result.e164);
-      setChallenge({ id: res.challengeId, phone: result.e164, resendIn: res.resendAfterSeconds });
+      const res = await auth.requestCode(address, whatsapp);
+      setChallenge({
+        id: res.challengeId,
+        email: address,
+        phone: whatsapp,
+        resendIn: res.resendAfterSeconds,
+      });
       setCode('');
     } catch (error) {
-      if (refusedAsNotPakistanMobile(error)) {
-        setChallenge(null);
-        setPhoneError(t(NOT_PAKISTAN_MOBILE));
-      } else setFailure(error);
+      setFailure(error);
     } finally {
       setBusy(false);
     }
@@ -165,7 +177,18 @@ export default function SignInPage() {
         setCode('');
       }
     } catch (error) {
-      setFailure(error);
+      if (refusedWith(error, 'phone_required') || refusedWith(error, 'phone_in_use')) {
+        // A first sign-in needs a WhatsApp number asked for with the code: back to step one.
+        setChallenge(null);
+        setCode('');
+        setPhoneError(
+          t(
+            refusedWith(error, 'phone_in_use')
+              ? issueMessageKey('phone_in_use')
+              : 'console.signIn.phone.needed',
+          ),
+        );
+      } else setFailure(error);
     } finally {
       setBusy(false);
     }
@@ -183,7 +206,7 @@ export default function SignInPage() {
             title={t(challenge ? 'console.signIn.code.title' : 'console.signIn.title')}
             intro={
               challenge
-                ? t('console.signIn.code.sent', { phone: ltrRun(formatPhone(challenge.phone)) })
+                ? t('console.signIn.code.sent', { email: ltrRun(challenge.email) })
                 : t('console.signIn.intro')
             }
           />
@@ -199,6 +222,22 @@ export default function SignInPage() {
           {challenge === null ? (
             <form className="form" onSubmit={(e) => void sendCode(e)} noValidate>
               <TextField
+                id="signin-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                dir="ltr"
+                label={t('console.signIn.email.label')}
+                hint={t('console.signIn.email.hint')}
+                error={emailError}
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError(null);
+                }}
+                required
+              />
+              <TextField
                 id="signin-phone"
                 type="tel"
                 inputMode="tel"
@@ -208,8 +247,10 @@ export default function SignInPage() {
                 hint={t('console.signIn.phone.hint')}
                 error={phoneError}
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setPhoneError(null);
+                }}
               />
               <div className="form-actions">
                 <Button type="submit" variant="primary" busy={busy}>
@@ -251,7 +292,7 @@ export default function SignInPage() {
                     setFailure(null);
                   }}
                 >
-                  {t('console.signIn.changeNumber')}
+                  {t('console.signIn.changeEmail')}
                 </Button>
               </div>
             </form>

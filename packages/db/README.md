@@ -7,13 +7,13 @@ Every command runs from the repository root and reads `DATABASE_URL` (default: t
 `infra/docker-compose.dev.yml`). A `.env` file at the repository root is loaded if there is one; variables already
 set in the environment win.
 
-| Command                                                        | What it does                                  |
-| -------------------------------------------------------------- | --------------------------------------------- |
-| `pnpm --filter @qc/db migrate`                                 | Applies every pending migration.              |
-| `pnpm --filter @qc/db rollback [--steps N \| --all]`           | Rolls back the last migration (or N, or all). |
-| `pnpm --filter @qc/db seed [--anchor DATE \| --fixture-dates]` | Inserts the synthetic development data.       |
-| `pnpm --filter @qc/db bootstrap-admin --phone <E.164>`         | Invites the first national admin (see below). |
-| `pnpm --filter @qc/db generate`                                | Generates a migration from a schema change.   |
+| Command                                                                  | What it does                                  |
+| ------------------------------------------------------------------------ | --------------------------------------------- |
+| `pnpm --filter @qc/db migrate`                                           | Applies every pending migration.              |
+| `pnpm --filter @qc/db rollback [--steps N \| --all]`                     | Rolls back the last migration (or N, or all). |
+| `pnpm --filter @qc/db seed [--anchor DATE \| --fixture-dates]`           | Inserts the synthetic development data.       |
+| `pnpm --filter @qc/db bootstrap-admin --phone <E.164> --email <address>` | Invites the first national admin (see below). |
+| `pnpm --filter @qc/db generate`                                          | Generates a migration from a schema change.   |
 
 ## First national admin (`bootstrap-admin`)
 
@@ -21,13 +21,15 @@ A fresh database has no staff, and the API grants roles only to callers who alre
 start, invite the first national admin from the command line:
 
 ```sh
-DATABASE_URL=postgres://... pnpm --filter @qc/db bootstrap-admin --phone +923000000001
+DATABASE_URL=postgres://... pnpm --filter @qc/db bootstrap-admin --phone +923000000001 --email admin@example.org
 ```
 
 It creates the same pending national-admin invite that the console's invite creates (valid for
 7 days) and writes a `role.invite` audit row with no actor and `source: "bootstrap-admin"`. The
 person then signs in to the console or the admin app with a code; sign-in turns the invite into
-the role, as for any invited coordinator. No WhatsApp invitation is sent: tell the person to sign
+the role, as for any invited coordinator. Sign-in codes go by email, so pass `--email`: the invite
+is accepted by that verified address (an invite without one is accepted only by an account whose
+number was verified by a code, which needs WhatsApp sign-in switched on). No WhatsApp invitation is sent: tell the person to sign
 in. Running it again for the same number replaces the pending invite.
 
 It prints only the invite id, never the phone number. It refuses:
@@ -37,7 +39,7 @@ It prints only the invite id, never the phone number. It refuses:
 - when `APP_ENV` or `NODE_ENV` is `production`, unless `--yes` is passed;
 - a number that is not E.164, or that already holds the national admin role.
 
-The function behind it is `bootstrapNationalAdmin(db, { phone, forceAdditional, confirmProduction })`.
+The function behind it is `bootstrapNationalAdmin(db, { phone, email, forceAdditional, confirmProduction })`.
 
 ## Message templates
 

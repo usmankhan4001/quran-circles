@@ -1,7 +1,10 @@
 import type { Locale, OtpChannel, PhoneE164 } from '@qc/contracts';
 
 export interface CodeMessage {
-  phone: PhoneE164;
+  /** Where an email code goes. Exactly one of `email` and `phone` is set. */
+  email?: string;
+  /** Where a WhatsApp or SMS code goes (WhatsApp sign-in, when switched on). */
+  phone?: PhoneE164;
   /** The six digits. Never logged. */
   code: string;
   /** The language of the message that carries the code. */
@@ -10,8 +13,9 @@ export interface CodeMessage {
 }
 
 /**
- * Delivers a sign-in code. The messaging lane provides the real one (a WhatsApp authentication
- * template, with the SMS gateway as fallback) through `@qc/messaging`. It throws when the message
+ * Delivers a sign-in code. The messaging lane provides the real one (an email through Resend; a
+ * WhatsApp authentication template with the SMS gateway as fallback when WhatsApp sign-in is on)
+ * through `@qc/messaging`. It throws when the message
  * could not be handed to the provider. It may return the channel it actually used when it fell
  * back, so the response can tell the person where to look.
  */

@@ -8,6 +8,8 @@ const live = {
   MESSAGING_MODE: 'live',
   WHATSAPP_PHONE_NUMBER_ID: '100200300',
   WHATSAPP_ACCESS_TOKEN: 'test-token',
+  RESEND_API_KEY: 're_test_not_a_real_key',
+  EMAIL_FROM: 'Quran Circles <codes@mail.example.org>',
 };
 
 describe('createMessaging', () => {

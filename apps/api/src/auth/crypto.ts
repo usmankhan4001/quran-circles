@@ -40,9 +40,12 @@ export const generateCode = (): string => String(randomInt(0, 1_000_000)).padSta
 export const hashCode = (keys: AuthKeys, challengeId: string, code: string): string =>
   createHmac('sha256', keys.otp).update(`${challengeId}:${code}`).digest('hex');
 
-/** A stable, non-reversible stand-in for a phone number or address (rate-limit keys, `ip_hash`). */
-export const hashIdentifier = (keys: AuthKeys, kind: 'phone' | 'ip', value: string): string =>
-  createHmac('sha256', keys.id).update(`${kind}:${value}`).digest('hex');
+/** A stable, non-reversible stand-in for a phone number, email address or IP address (rate-limit keys, `ip_hash`). */
+export const hashIdentifier = (
+  keys: AuthKeys,
+  kind: 'phone' | 'email' | 'ip',
+  value: string,
+): string => createHmac('sha256', keys.id).update(`${kind}:${value}`).digest('hex');
 
 export const sha256Hex = (value: string): string =>
   createHash('sha256').update(value).digest('hex');

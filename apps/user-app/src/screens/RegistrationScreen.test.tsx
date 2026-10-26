@@ -142,13 +142,16 @@ describe('RegistrationScreen (the join pledge)', () => {
       });
     }
 
-    it('is not sent away: name, number and the code are all inside the sheet, once', async () => {
+    it('is not sent away: name, email, number and the code are all inside the sheet, once', async () => {
       const s = SESSIONS.taraweeh;
       const world = await visitor();
       const view = await renderScreen(<RegistrationScreen sessionId={s.id} />, { world });
       await view.findByTestId('registration-form');
       expect(world.nav.last()).toBeUndefined();
       fireEvent.change(view.getByTestId('registration-name'), { target: { value: 'Ayesha' } });
+      fireEvent.change(view.getByTestId('email-input'), {
+        target: { value: 'ayesha@example.com' },
+      });
       fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
       fireEvent.click(view.getByTestId('registration-section-family'));
       fireEvent.click(view.getByTestId('registration-submit'));
@@ -193,6 +196,9 @@ describe('RegistrationScreen (the join pledge)', () => {
       });
       await view.findByTestId('registration-form');
       fireEvent.change(view.getByTestId('registration-name'), { target: { value: 'Ayesha' } });
+      fireEvent.change(view.getByTestId('email-input'), {
+        target: { value: 'ayesha@example.com' },
+      });
       fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
       fireEvent.click(view.getByTestId('registration-section-family'));
       fireEvent.click(view.getByTestId('registration-submit'));

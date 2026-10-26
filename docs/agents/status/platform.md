@@ -7,7 +7,7 @@ Lane: platform (WP10, Wave 2). No commits, no pull requests, no GitHub Actions (
 
 ### Done
 
-- Maps browser key (GCP project `gen-lang-client-0514632508`, "API key 1"): it has no application restriction, so qurancircle.doraquran.pk already works. Left as is: a website list would block the other sites using it.
+- Maps browser key (GCP project `gen-lang-client-0514632508`, "API key 1"): it has no application restriction, so qurancircles.doraquran.pk already works. Left as is: a website list would block the other sites using it.
 - Firebase: reused project "Quranic Circles" (`quran-connect-app-532598-2b373`); added Android app `pk.doraquran.circles`. `google-services.json` is outside the repository in the owner's secrets folder and in the EAS file variable `GOOGLE_SERVICES_JSON` (secret; production and preview).
 - EAS project `@twoplustwoios-team/quran-circles`, id `b4979929-6d56-42e0-aed0-6aa5e53d3069`, now the default in `app.config.ts` with `owner`. Build d111f193 finished: AAB 0.1.0 (versionCode 3), copy in the owner's secrets folder. EAS generated the Android upload keystore (SHA-1 `F7:46:61:54:D7:DA:CD:24:A6:19:6C:7D:9B:80:68:6D:A7:A7:70:21`).
 - `.gitignore`: `ui/` anchored to `/ui/`. Unanchored it matched `packages/ui`, so the first EAS build archive had no `@qc/ui` and failed in prebuild.

@@ -1,17 +1,28 @@
 import { z } from 'zod';
-import { InstantUtc, PakistaniMobilePhone, Uuid } from '../common';
+import { EmailAddress, InstantUtc, PhoneE164, Uuid } from '../common';
 import { Locale, OtpChannel } from '../enums';
 import { Me } from './people';
 import { lazy } from '../lazy';
 
 export const RequestCodeBody = lazy(() =>
   z.object({
-    /** Sign-in codes go to Pakistani mobile numbers only (SEC-04). */
-    phone: PakistaniMobilePhone,
+    /**
+     * Sign-in codes go to an email address (owner decision 2026-10-25). Required unless the API
+     * has WhatsApp sign-in switched on (`AUTH_PHONE_SIGN_IN`, off by default), in which case a
+     * `phone` alone asks for the older WhatsApp code.
+     */
+    email: EmailAddress.optional(),
+    /**
+     * With `email`: the person's WhatsApp number, required the first time (the account does not
+     * exist yet) and saved unverified for reminders and coordinator contact. Any country, E.164.
+     * Without `email` (WhatsApp sign-in, when switched on): the number the code goes to, a
+     * Pakistani mobile only (SEC-04).
+     */
+    phone: PhoneE164.optional(),
     /** The language of the message that carries the code. */
     locale: Locale.default('ur'),
-    /** WhatsApp is the default. SMS is the fallback until the sender number is verified. */
-    channel: OtpChannel.default('whatsapp'),
+    /** Email unless WhatsApp sign-in is switched on. */
+    channel: OtpChannel.default('email'),
   }),
 );
 export const RequestCodeResponse = lazy(() =>
@@ -45,7 +56,7 @@ export type Tokens = z.infer<typeof Tokens>;
 export const SignInResponse = lazy(() =>
   Tokens.extend({
     me: Me,
-    /** True when this verified number had no account before. */
+    /** True when this verified email (or number) had no account before. */
     isNewAccount: z.boolean(),
   }),
 );

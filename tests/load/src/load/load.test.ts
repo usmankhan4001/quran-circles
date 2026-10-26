@@ -22,6 +22,7 @@ const person = (n: number): Person => ({
   ip: `10.0.0.${n + 1}`,
   me: {
     id: uuid(100 + n),
+    email: null,
     phone: '+923130000000',
     displayName: null,
     locale: 'en',

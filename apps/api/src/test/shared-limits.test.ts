@@ -287,7 +287,7 @@ describe('two API processes on one database', () => {
         post(
           apps[i % 2]!,
           path,
-          { phone: `+92311000${String(1000 + i)}`, locale: 'en', channel: 'whatsapp' },
+          { email: `reader${1000 + i}@example.org`, locale: 'en', channel: 'email' },
           '203.0.113.5',
         ),
       ),
@@ -302,7 +302,7 @@ describe('two API processes on one database', () => {
     const other = await post(
       apps[1]!,
       path,
-      { phone: '+923110009999', locale: 'en', channel: 'whatsapp' },
+      { email: 'reader9999@example.org', locale: 'en', channel: 'email' },
       '203.0.113.6',
     );
     expect(other.status).toBe(202);
