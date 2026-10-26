@@ -1,7 +1,11 @@
-# Code owners. Mirrors docs/engineering/ownership.md, "Human approval needed for": every path
+# Code owners. Extends docs/engineering/ownership.md, "Human approval needed for": every path
 # below needs a human approval, and branch protection should require a code owner review (see
 # docs/engineering/branches-and-review.md). Paths not listed are reviewed by reviewer agents plus a
 # human spot check. Change this file together with ownership.md.
+#
+# Beyond ownership.md, this file also covers scripts/, SECURITY.md, .gitattributes, .editorconfig,
+# .prettierignore, .npmrc, .nvmrc, .env.example and CLAUDE.md (repository-wide rules and tooling),
+# and the api-core paths explained below.
 #
 # GitHub uses the LAST matching line, so keep broad paths above narrower ones. There is one human
 # owner today; when lanes get human reviewers, replace the owner per section.
@@ -31,13 +35,23 @@
 /packages/db/                                 @usmankhan4001
 /docs/engineering/i18n-keys.md                @usmankhan4001
 
-# api-core (WP2): sensitive modules. Account deletion (me), personal data and exports
-# (registrations), bulk import, role assignment and anything returning phone numbers.
+# api-core (WP2): sensitive modules. ownership.md says only "named in the brief", and the brief
+# (docs/agents/briefs/api-core.md) names just the registrations export and anything that returns
+# phone numbers. These paths are the modules that handle phone numbers or personal data:
+#   me/             account deletion, the profile phone number, devices
+#   registrations/  personal data and the CSV export
+#   import/         bulk import of coordinator phone numbers
+#   roles/          role assignment and invites, which carry phone numbers
+#   updates/        publish.ts reads users.phoneE164 to address outbox messages
+#   shared/outbox.ts  stores each recipient's phone number in the outbox
+# Not listed on purpose: shared/mappers.ts (the venue contact number is shown to attendees by
+# design) and oversight/ (shows only the last four digits of an actor's number).
 /apps/api/src/modules/me/                     @usmankhan4001
 /apps/api/src/modules/registrations/          @usmankhan4001
 /apps/api/src/modules/import/                 @usmankhan4001
 /apps/api/src/modules/roles/                  @usmankhan4001
 /apps/api/src/modules/updates/                @usmankhan4001
+/apps/api/src/modules/shared/outbox.ts        @usmankhan4001
 
 # auth-scopes (WP3): all of it.
 /apps/api/src/auth/                           @usmankhan4001
@@ -51,8 +65,7 @@
 /apps/user-app/app.config.ts                  @usmankhan4001
 /apps/user-app/eas.json                       @usmankhan4001
 /apps/admin-app/app.json                      @usmankhan4001
-/apps/admin-app/app.config.*                  @usmankhan4001
-/apps/admin-app/eas.json                      @usmankhan4001
+# The admin app has no eas.json or app.config.* yet. Add a line here when it gets one.
 
 # console (WP7, WP15): bulk import and handover code.
 /apps/console/src/import/                     @usmankhan4001

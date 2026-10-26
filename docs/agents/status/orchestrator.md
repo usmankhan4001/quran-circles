@@ -56,7 +56,7 @@ None. All work is on branch `claude/peaceful-archimedes-ain95k`.
 
 ## Parked (2026-10-18)
 
-The owner parked the project. [`HANDOFF.md`](../../../HANDOFF.md) is the resume point: what runs where, the state of each wave and every open item. `main` is tagged `v2-parked-2026-10-18`.
+The owner parked the project. [`handoff.md`](../../handoff.md) is the resume point: what runs where, the state of each wave and every open item. `main` is tagged `v2-parked-2026-10-18`.
 
 - Staging left running at `main` 8690ca4 (redesigned apps). Production not created.
 - Low-end phone check: Muhammad ran it on staging against the redesigned app on 2026-10-18 and reported all checks OK (phone model not recorded). Checklist `docs/quality/low-end-phone-check.md`.

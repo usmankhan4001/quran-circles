@@ -1,6 +1,19 @@
 # Public documentation
 
-The source of the public documentation site: guides in English and Urdu, the API reference, a platform overview and the ERPNext integration guide. It is built into plain static HTML with no dependencies, so the landing page can host it under `/docs` without a new package.
+The source of the public documentation site: guides for members, coordinators and admins in English and Urdu, the public API reference, a platform overview and the ERPNext integration guide. It is built into plain static HTML with no dependencies, so the landing page can host it under `/docs` without a new package.
+
+This folder is for the people who write and build those pages. To read them, open the pages in [`content/en/`](content/en/) (English) or [`content/ur/`](content/ur/) (Urdu) on GitHub. For the rest of the project's documentation, start at the [documentation index](../README.md) or the [project README](../../README.md).
+
+## Who this is for
+
+| I want to...                                  | Go to                                                                                                                                       |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Learn to use the app                          | [Member guide](content/en/member-guide.md) and [coordinator guide](content/en/coordinator-guide.md); Urdu pages are in `content/ur/`        |
+| Use the web console                           | [Console guide](content/en/console-guide.md)                                                                                                |
+| Call the public API                           | [API overview](content/en/api-overview.md), then the [API reference](content/en/api-reference.md)                                           |
+| Fix or add a page                             | The Markdown in `content/`, the rules at the end of this page and the build below                                                           |
+| Translate or review Urdu                      | The pages in `content/ur/`; set `reviewed: true` in a page's front matter once a native speaker has reviewed it (see the rules below)       |
+| Change the page template, CSS or the API page | [`build.mjs`](build.mjs). The API reference is generated from the contract, so change the contract and rebuild instead of editing the page. |
 
 ## Build
 
@@ -35,4 +48,10 @@ Preview locally: build with an empty base into a folder and serve it with any st
 - Follow `docs/design/accessibility.md` and `docs/design/rtl-urdu-guide.md`. The template uses only logical CSS properties, four text sizes, light and dark, forced colours, 48 px controls, a skip link and no external requests, so a strict content security policy works (no inline scripts or styles).
 - No secrets, internal hostnames, keys, personal data or abuse-enabling numbers (sign-in ceilings, invite caps, backup locations). Say that a limit exists, not its exact internal value, unless it is a plain default a client needs.
 - Urdu is a draft until a native speaker reviews it. A page is marked reviewed by setting `reviewed: true` in its front matter; until then it carries the draft notice.
-- Screenshots come from the current build and say so in the caption. Replace them when the redesign lands.
+- Every image needs a description (alt text) in the Markdown, and a screenshot's caption says which build it came from.
+
+## Screenshots
+
+The images in `assets/screens/` are accessibility captures (forced colours, the largest Urdu text size, a 320 px wide phone) of the app as it looked before the redesign. Their captions in the guides still say "Captured from the current build" and that the image will be replaced after the redesign lands. Read that as "captured before the redesign". They are not the current look of the app.
+
+A set of screenshots of the current build, in English and Urdu, is kept in [`docs/assets/screenshots/`](../assets/screenshots/) and is used by the project README. To use one in a guide, copy it into `assets/screens/` and reference it as `screens/<file>.png` with a description. Use synthetic data only, and rebuild to check.

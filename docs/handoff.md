@@ -1,5 +1,7 @@
 # Handoff: Quran Circles V2, parked on 2026-10-18
 
+_Snapshot from 2026-10-18. Current status lives in [`docs/agents/status/`](agents/status/README.md)._
+
 The project is paused. This page is for whoever picks it up next: what exists, what runs where, and what is left. The final state of `main` is tagged `v2-parked-2026-10-18`.
 
 ## In one paragraph
@@ -8,19 +10,19 @@ The whole V2 platform is built and tested: database, API, worker, poster rendere
 
 ## Where things run
 
-| What            | Where                                                                                           | State                                                                                   |
-| --------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| User app (PWA)  | https://staging.doraquran.pk                                                                    | Staging, redesigned build from `main` 8690ca4, healthy on 2026-10-18                    |
-| Console         | https://staging-console.doraquran.pk                                                            | Staging, same build                                                                     |
-| API health      | https://staging.doraquran.pk/api/health                                                         | Staging                                                                                 |
-| Coordinator app | Not deployed                                                                                    | Store app only; staging has no web build of it                                          |
-| Staging server  | Dokploy, project `quran-circles-staging`, app `quran-circles` (Compose)                         | Deploys from a git clone of this repository; Traefik and a Cloudflare tunnel in front   |
-| Production      | Not created                                                                                     | `infra/` is ready for one VPS with Docker Compose; see [Deployment](docs/deployment.md) |
-| Store assets    | [`tools/store-assets/`](tools/store-assets/README.md), [listing](docs/release/store-listing.md) | Icons in the apps; screenshots and listing drafted, not uploaded                        |
+| What            | Where                                                                                         | State                                                                                 |
+| --------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| User app (PWA)  | https://staging.doraquran.pk                                                                  | Staging, redesigned build from `main` 8690ca4, healthy on 2026-10-18                  |
+| Console         | https://staging-console.doraquran.pk                                                          | Staging, same build                                                                   |
+| API health      | https://staging.doraquran.pk/api/health                                                       | Staging                                                                               |
+| Coordinator app | Not deployed                                                                                  | Store app only; staging has no web build of it                                        |
+| Staging server  | Dokploy, project `quran-circles-staging`, app `quran-circles` (Compose)                       | Deploys from a git clone of this repository; Traefik and a Cloudflare tunnel in front |
+| Production      | Not created                                                                                   | `infra/` is ready for one VPS with Docker Compose; see [Deployment](deployment.md)    |
+| Store assets    | [`tools/store-assets/`](../tools/store-assets/README.md), [listing](release/store-listing.md) | Icons in the apps; screenshots and listing drafted, not uploaded                      |
 
 Staging is left running as it is. It uses synthetic data, `MESSAGING_MODE=fake` (no real WhatsApp, SMS or push) and a fixed sign-in code, `AUTH_FIXED_CODE`, kept only in the Dokploy environment. Sign in with a made-up number, or with one of the seeded test admin numbers for the console; each number can request 5 codes an hour. All secrets live in Dokploy, never in this repository.
 
-To deploy a new version to staging: push to `main`, then start a deploy of the `quran-circles` app in Dokploy. The record of each staging deploy is in [`docs/agents/status/platform.md`](docs/agents/status/platform.md).
+To deploy a new version to staging: push to `main`, then start a deploy of the `quran-circles` app in Dokploy. The record of each staging deploy is in [`docs/agents/status/platform.md`](agents/status/platform.md).
 
 ## State of each wave
 
@@ -35,7 +37,7 @@ To deploy a new version to staging: push to `main`, then start a deploy of the `
 | 6    | Pilot and release (WP13)                                                | Not started. Needs production, store accounts, Meta approval and the Urdu review                                                                                                                                                                                                          |
 | 7    | Circle requests and demand map (WP19, WP20)                             | Not started                                                                                                                                                                                                                                                                               |
 
-The lane-by-lane detail is in [`docs/agents/status/`](docs/agents/status/README.md); gate sign-offs are in [`orchestrator.md`](docs/agents/status/orchestrator.md). The redesign record is [`docs/design/redesign-decisions.md`](docs/design/redesign-decisions.md) (D17 is the current look).
+The lane-by-lane detail is in [`docs/agents/status/`](agents/status/README.md); gate sign-offs are in [`orchestrator.md`](agents/status/orchestrator.md). The redesign record is [`docs/design/redesign-decisions.md`](design/redesign-decisions.md) (D17 is the current look).
 
 ## Open items
 
@@ -52,10 +54,10 @@ The lane-by-lane detail is in [`docs/agents/status/`](docs/agents/status/README.
 
 ### Infrastructure
 
-- **Production VPS and domain.** Not created. The app ID follows from the domain. Checklist: [`infra/README.md`](infra/README.md#what-the-owner-must-provide).
+- **Production VPS and domain.** Not created. The app ID follows from the domain. Checklist: [`infra/README.md`](../infra/README.md#what-the-owner-must-provide).
 - **Web push keys (VAPID), FCM and APNs.** Not generated. Push stays fake until they exist.
-- **Full restore drill.** Needs root on a real server; run it on production once it exists ([`docs/quality/restore-drill.md`](docs/quality/restore-drill.md)).
-- **Database CPU at peak.** Postgres CPU is the limit under load. Watch it on the first Ramadan evening and size up before the pilot if needed ([`infra/ENV.md`](infra/ENV.md), "Database connections").
+- **Full restore drill.** Needs root on a real server; run it on production once it exists ([`docs/quality/restore-drill.md`](quality/restore-drill.md)).
+- **Database CPU at peak.** Postgres CPU is the limit under load. Watch it on the first Ramadan evening and size up before the pilot if needed ([`infra/ENV.md`](../infra/ENV.md), "Database connections").
 - **External keys.** The Quran text comes from api.alquran.cloud at run time and the map needs a Google Maps key; neither works without network access and a key in the environment. Run `node packages/content/scripts/compare-aladhan.mjs` once with internet access to compare prayer times.
 - **Store accounts.** Apple and Google developer accounts are not set up.
 
@@ -75,15 +77,15 @@ The apps show these as placeholder, sample or disabled content (D17: copy every 
 
 ### Decisions and change requests
 
-- Open contract change requests are in [`docs/engineering/change-requests/`](docs/engineering/change-requests/); the list waiting on the orchestrator is in [`orchestrator.md`](docs/agents/status/orchestrator.md).
-- Next features decided with the owner but not scheduled: [`docs/product/features-next.md`](docs/product/features-next.md).
-- Quran text and translation rights: the Maududi translations are used non-commercially under Tanzil's terms. A full offline copy waits for written rights ([credits](docs/credits-and-licences.md)).
-- V1 data migration has only been dry-run; the real run is part of Wave 6 ([`tools/migration`](tools/migration/README.md)).
+- Open contract change requests are in [`docs/engineering/change-requests/`](engineering/change-requests/); the list waiting on the orchestrator is in [`orchestrator.md`](agents/status/orchestrator.md).
+- Next features decided with the owner but not scheduled: [`docs/product/features-next.md`](product/features-next.md).
+- Quran text and translation rights: the Maududi translations are used non-commercially under Tanzil's terms. A full offline copy waits for written rights ([credits](credits-and-licences.md)).
+- V1 data migration has only been dry-run; the real run is part of Wave 6 ([`tools/migration`](../tools/migration/README.md)).
 
 ## Picking it up
 
-1. Read this page, then [README](README.md), [Getting started](docs/getting-started.md) and [Architecture](docs/architecture.md).
+1. Read this page, then [README](../README.md), [Getting started](getting-started.md) and [Architecture](architecture.md).
 2. `corepack enable && pnpm install && pnpm check` must pass before you change anything.
 3. Run the apps against the mock API (README, Quick start), then against a local Postgres.
-4. Agents: read [`CLAUDE.md`](CLAUDE.md) and [`docs/agents/README.md`](docs/agents/README.md). Work is split into lanes with one owner per directory ([ownership](docs/engineering/ownership.md)); the UI lane owns the component kit and its right-to-left and accessibility rules.
+4. Agents: read [`CLAUDE.md`](../CLAUDE.md) and [`docs/agents/README.md`](agents/README.md). Work is split into lanes with one owner per directory ([ownership](engineering/ownership.md)); the UI lane owns the component kit and its right-to-left and accessibility rules.
 5. The next step is Wave 6: create production, finish the open items above, then pilot in one city.

@@ -1,34 +1,36 @@
 # Branch inventory
 
-A snapshot of the branches on 2026-10-25, compared with `origin/main` as this clone last saw it (the audit could not fetch, so refresh with `git fetch origin --prune` and re-run `pnpm branches`). Nothing was deleted.
+A snapshot on 2026-10-26, taken after the local clean-up. `scripts/branch-cleanup.sh` (run as `pnpm branches`) prints the live list; it only lists unless you pass `--delete`. Refresh with `git fetch origin --prune` before trusting any number here.
 
-`scripts/branch-cleanup.sh` (run as `pnpm branches`) prints this list live. It only lists by default. `--delete` removes merged branches, after you type `yes` for each batch.
+## Already removed (local)
 
-## Merged into main and safe to delete after you confirm
+These were fully contained in `integration/ui-redesign` and had clean worktrees, so the local branches and their worktrees were deleted on 2026-10-26: `lane/platform/go-live`, `lane/ui/member-redesign`, `lane/ui/session-screens`, `lane/admin-app/redesign`, `lane/console/redesign`, `lane/ui/member-journey`, `lane/ui/member-quran`, `lane/auth/email-otp`, `lane/messaging/email-templates`.
 
-| Branch                                    | Where                              |
-| ----------------------------------------- | ---------------------------------- |
-| `lane/platform/go-live`                   | local, origin                      |
-| `lane/ui/member-redesign`                 | origin (local copy is also merged) |
-| `lane/ui/session-screens`                 | local, origin                      |
-| `lane/admin-app/session-screen`           | origin                             |
-| `lane/renderer/quranic-circles-template`  | origin                             |
-| `lane/user-app/session-hide-placeholders` | origin                             |
+## Still on origin, merged, waiting for a decision
 
-## Active (merged or not, leave alone)
+Delete these on GitHub once `integration/ui-redesign` is pushed, so their commits are safe on origin first.
 
-`lane/ui/design-fidelity`, `lane/ui/member-journey`, `lane/ui/member-quran`, `lane/auth/email-otp`, `lane/messaging/email-templates`, `lane/messaging/email-templates-bundle`, `lane/data/tanzeem-seed`, `lane/console/redesign`, `lane/admin-app/redesign`, `release/store-pages-and-tools`, `integration/ui-redesign`, `release-now` (local, your current checkout), `lane/repo/tidy`.
+| Branch                                    |
+| ----------------------------------------- |
+| `lane/admin-app/redesign`                 |
+| `lane/admin-app/session-screen`           |
+| `lane/console/redesign`                   |
+| `lane/platform/go-live`                   |
+| `lane/renderer/quranic-circles-template`  |
+| `lane/user-app/session-hide-placeholders` |
+| `lane/ui/member-journey`                  |
+| `lane/ui/member-quran`                    |
+| `lane/ui/member-redesign`                 |
+| `lane/ui/session-screens`                 |
 
-## Not merged, needs a decision
+## Keep: commits not in `integration/ui-redesign`
 
-| Branch                    | Commits not in main | Note                                           |
-| ------------------------- | ------------------- | ---------------------------------------------- |
-| `lane/docs/public-docs`   | 2                   | Has a Windows worktree at `qc-public-docs`     |
-| `lane/web/store-pages`    | 1                   | Has a Windows worktree at `qc-web-store-pages` |
-| `release/member-redesign` | 4                   | Has a Windows worktree at `qc-redesign`        |
+`lane/data/tanzeem-seed`, `lane/docs/public-docs`, `lane/messaging/email-templates-bundle`, `lane/repo/tidy`, `lane/ui/design-fidelity`, `lane/web/store-pages`, `release/member-redesign`, `release/store-pages-and-tools`.
 
-If any of these were squash-merged, the script still calls them unmerged. Check with `git log origin/main..<branch>` and `git diff origin/main...<branch> --stat` before deleting.
+Long-lived: `main`, `integration/ui-redesign`, `release-now`.
 
-## Stale worktrees
+If a branch was squash-merged, the script still calls it unmerged. Check with `git log origin/main..<branch>` and `git diff origin/main...<branch> --stat` before deleting it.
 
-`git worktree list` shows 11 worktrees under `D:/Apps/CSG Venture/USMAN/qc-*` marked `prunable` when the audit ran from a Linux sandbox that cannot see `D:` paths. Run `git worktree list` in Windows first: only worktrees whose folders are really gone should be pruned. `git worktree prune` removes the bookkeeping only; it deletes no branches and no files. Two worktrees under `.worktrees/` (`email-otp`, `email-templates`) are locked by other sessions and are left alone.
+## Worktrees
+
+Parallel worktrees live in sibling `qc-*` folders (see [worktrees](../agents/worktrees.md)). Remove one with `git worktree remove <path>` only when `git -C <path> status` is clean. `git worktree prune` drops the bookkeeping for folders that no longer exist; it deletes no branches and no files.

@@ -8,13 +8,15 @@ coverage
 !.env.example
 *.log
 .DS_Store
+# Local design drafts (mockups and exports kept on one machine). Not part of the repository.
 /ui/
 
 # Local environment files. Only the *.example templates are committed.
 .env.local
 .env.*.local
 
-# Git worktrees for parallel lanes (docs/agents/worktrees.md)
+# Guard only. Lane worktrees are sibling folders (../qc-<lane>-<topic>), not this folder;
+# docs/agents/worktrees.md explains why.
 .worktrees/
 
 # Exported git bundles and patches handed between sessions; the work belongs on a branch
@@ -36,3 +38,29 @@ Desktop.ini
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Mobile signing and push credentials. Never commit these; EAS and Dokploy hold them.
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+
+# Expo prebuild output (native projects are generated, not committed)
+/android/
+/ios/
+/apps/*/android/
+/apps/*/ios/
+web-build/
+
+# Local tool state and caches
+.claude/settings.local.json
+.claude/worktrees/
+.eslintcache
+.cache/
+.pnpm-store/
+tmp/

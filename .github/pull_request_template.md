@@ -1,3 +1,5 @@
+Agent lanes: read [docs/agents/README.md](https://github.com/usmankhan4001/quran-circles/blob/main/docs/agents/README.md) first. Everyone: see [CONTRIBUTING.md](https://github.com/usmankhan4001/quran-circles/blob/main/CONTRIBUTING.md).
+
 ## Lane and work package
 
 Lane: <!-- e.g. api-core -->
@@ -20,7 +22,7 @@ Brief: <!-- link or path under docs/agents/briefs -->
 
 ## Sensitive areas
 
-- [ ] Touches sign-in, scope checks, migrations, WhatsApp, account deletion or infrastructure, so a human must approve
+- [ ] Touches sign-in, scope checks, migrations, WhatsApp, account deletion, infrastructure, anything that stores personal data, or a contract change, so a human must approve
 
 ## Deployment
 
