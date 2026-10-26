@@ -73,14 +73,15 @@ describe('public pages', () => {
   });
 
   describe('the contact address', () => {
-    it('shows a marked placeholder and no mail button until the address is set', async () => {
+    it('falls back to the owner’s address when none is configured', async () => {
       vi.stubEnv('EXPO_PUBLIC_CONTACT_EMAIL', '');
       const view = await renderScreen(<SupportScreen />);
-      expect(view.getByTestId('contact-text').textContent).toContain(en['legal.contact.missing']);
-      expect(view.queryByTestId('contact-mail')).toBeNull();
+      expect(view.getByTestId('contact-text').textContent).toContain('markaz@tanzeem.org');
+      fireEvent.click(view.getByTestId('contact-mail'));
+      await waitFor(() => expect(view.world.opened).toEqual(['mailto:markaz@tanzeem.org']));
     });
 
-    it('shows the address and opens the mail app once it is set', async () => {
+    it('shows a configured address instead', async () => {
       vi.stubEnv('EXPO_PUBLIC_CONTACT_EMAIL', 'help@example.test');
       const view = await renderScreen(<SupportScreen />);
       expect(view.getByTestId('contact-text').textContent).toContain('help@example.test');

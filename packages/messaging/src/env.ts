@@ -1,5 +1,8 @@
 import { z } from 'zod';
 import { ApnsPushProvider } from './providers/apns';
+import { ConsoleEmailProvider, type EmailProvider } from './providers/email';
+import { DEFAULT_EMAIL_FROM } from './mail-domain';
+import { ResendEmailProvider } from './providers/resend';
 import { FcmPushProvider, GoogleServiceAccountTokenSource } from './providers/fcm';
 import { HttpSmsProvider } from './providers/http-sms';
 import { PushRouter, type PushProvider } from './providers/push';
@@ -14,7 +17,12 @@ import {
   type CodeDeliveryReport,
   type CodeSender,
 } from './code-sender';
-import { FakePushProvider, FakeSmsProvider, FakeWhatsAppProvider } from './fakes';
+import {
+  FakeEmailProvider,
+  FakePushProvider,
+  FakeSmsProvider,
+  FakeWhatsAppProvider,
+} from './fakes';
 import { defaultFetch, type FetchLike } from './http';
 import { createHttp2Fetch } from './http2-fetch';
 import { silentLogger, type Logger } from './logger';
@@ -24,7 +32,8 @@ import { silentLogger, type Logger } from './logger';
  * code sender). Secrets come from the environment at runtime; nothing is read from files here.
  *
  * MESSAGING_MODE=fake (default) uses the fake providers and the test-mode code sender.
- * MESSAGING_MODE=live uses the real providers and refuses to start without the WhatsApp settings.
+ * MESSAGING_MODE=live uses the real providers and refuses to start without RESEND_API_KEY or the WhatsApp settings
+ * (email-only is allowed; WhatsApp sends then fail as `whatsapp_not_configured`).
  * APP_ENV=production refuses fake mode.
  */
 const optional = z.string().trim().min(1).optional();
@@ -47,6 +56,16 @@ export const MessagingEnv = z.object({
     .min(1)
     .max(60)
     .default(DEFAULT_CODE_VALIDITY_MINUTES),
+
+  /**
+   * Resend (https://resend.com), which sends the sign-in code emails. `EMAIL_FROM` must be on a
+   * domain verified in Resend. Default: `DEFAULT_EMAIL_FROM` (`notifications@` on `MAIL_DOMAIN`). Without a key
+   * outside production, codes are printed to the console instead (`ConsoleEmailProvider`); in
+   * production live messaging refuses to start without both.
+   */
+  RESEND_API_KEY: optional,
+  EMAIL_FROM: optional,
+  EMAIL_REPLY_TO: optional,
 
   WHATSAPP_PHONE_NUMBER_ID: optional,
   WHATSAPP_ACCESS_TOKEN: optional,
@@ -85,12 +104,14 @@ export interface Messaging {
   push: PushProvider;
   whatsapp: WhatsAppProvider;
   sms: SmsProvider | undefined;
+  email: EmailProvider;
   codeSender: CodeSender;
   /** Present in fake mode, so a dev server or a test can inspect what was "sent". */
   fakes?: {
     push: FakePushProvider;
     whatsapp: FakeWhatsAppProvider;
     sms: FakeSmsProvider;
+    email: FakeEmailProvider;
     codes: TestCodeSender;
   };
   /** Webhook credentials; undefined when not configured. */
@@ -134,6 +155,7 @@ export function createMessaging(
       push: new FakePushProvider(),
       whatsapp: new FakeWhatsAppProvider(),
       sms: new FakeSmsProvider(),
+      email: new FakeEmailProvider(),
       codes: new TestCodeSender(),
     };
     return {
@@ -141,6 +163,7 @@ export function createMessaging(
       push: fakes.push,
       whatsapp: fakes.whatsapp,
       sms: fakes.sms,
+      email: fakes.email,
       codeSender: fakes.codes,
       fakes,
       webhook,
@@ -149,18 +172,30 @@ export function createMessaging(
   }
 
   const fetchImpl = options.fetch ?? defaultFetch;
-  if (!env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_ACCESS_TOKEN) {
+  const hasWhatsApp = Boolean(env.WHATSAPP_PHONE_NUMBER_ID && env.WHATSAPP_ACCESS_TOKEN);
+  if (!hasWhatsApp && !env.RESEND_API_KEY) {
     throw new MessagingConfigError(
-      'Live messaging needs WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN',
+      'Live messaging needs RESEND_API_KEY, or WHATSAPP_PHONE_NUMBER_ID and WHATSAPP_ACCESS_TOKEN',
     );
   }
-  const whatsapp = new WhatsAppCloudClient({
-    phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID,
-    accessToken: env.WHATSAPP_ACCESS_TOKEN,
-    fetch: fetchImpl,
-    ...(env.WHATSAPP_GRAPH_BASE_URL ? { graphBaseUrl: env.WHATSAPP_GRAPH_BASE_URL } : {}),
-    ...(env.WHATSAPP_API_VERSION ? { apiVersion: env.WHATSAPP_API_VERSION } : {}),
-  });
+  // Email-only launch: WhatsApp credentials may be added later; until then every WhatsApp send fails
+  // as a configuration problem (reminders are not delivered) while sign-in codes go out by email.
+  const whatsapp: WhatsAppProvider = hasWhatsApp
+    ? new WhatsAppCloudClient({
+        phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID as string,
+        accessToken: env.WHATSAPP_ACCESS_TOKEN as string,
+        fetch: fetchImpl,
+        ...(env.WHATSAPP_GRAPH_BASE_URL ? { graphBaseUrl: env.WHATSAPP_GRAPH_BASE_URL } : {}),
+        ...(env.WHATSAPP_API_VERSION ? { apiVersion: env.WHATSAPP_API_VERSION } : {}),
+      })
+    : {
+        sendTemplate: () =>
+          Promise.resolve({
+            status: 'permanent_failure',
+            code: 'whatsapp_not_configured',
+            cause: 'configuration',
+          } as const),
+      };
 
   let sms: SmsProvider | undefined;
   if (env.SMS_GATEWAY_URL && env.SMS_GATEWAY_KEY) {
@@ -170,6 +205,21 @@ export function createMessaging(
       fetch: fetchImpl,
       ...(env.SMS_SENDER ? { sender: env.SMS_SENDER } : {}),
     });
+  }
+
+  let email: EmailProvider;
+  if (env.RESEND_API_KEY) {
+    email = new ResendEmailProvider({
+      apiKey: env.RESEND_API_KEY,
+      from: env.EMAIL_FROM ?? DEFAULT_EMAIL_FROM,
+      ...(env.EMAIL_REPLY_TO ? { replyTo: env.EMAIL_REPLY_TO } : {}),
+      fetch: fetchImpl,
+    });
+  } else if (env.APP_ENV === 'production') {
+    throw new MessagingConfigError('Sign-in codes by email need RESEND_API_KEY');
+  } else {
+    // Development: print the code instead of sending it.
+    email = new ConsoleEmailProvider();
   }
 
   const transports: ConstructorParameters<typeof PushRouter>[0] = {};
@@ -222,6 +272,7 @@ export function createMessaging(
     codeMode === 'test'
       ? new TestCodeSender()
       : new ProviderCodeSender({
+          email,
           whatsapp,
           ...(sms ? { sms } : {}),
           smsFallback: env.CODE_SMS_FALLBACK,
@@ -235,6 +286,7 @@ export function createMessaging(
     push: new PushRouter(transports),
     whatsapp,
     sms,
+    email,
     codeSender,
     webhook,
     close: () => http2?.close?.(),

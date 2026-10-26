@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { messages } from '@qc/i18n';
-import { creditGroups, creditLinks, fonts } from './index';
+import { creditGroups, creditLinks, fonts, urduFallbackFont } from './index';
 
 const en = messages.en as Record<string, string>;
 const ur = messages.ur as Record<string, string>;
@@ -10,6 +10,7 @@ describe('credits', () => {
   it('credits each bundled font, the Quran text and both translations', () => {
     expect(entries.map((e) => e.id)).toEqual([
       'jakarta',
+      'jameel',
       'mehr',
       'kfgqpc',
       'tanzil',
@@ -17,7 +18,8 @@ describe('credits', () => {
       'translationEn',
     ]);
     expect(en['credits.jakarta.name']).toBe(fonts.sans);
-    expect(en['credits.mehr.name']).toBe(fonts.urdu);
+    expect(en['credits.jameel.name']).toBe(fonts.urdu);
+    expect(en['credits.mehr.name']).toBe(urduFallbackFont);
     expect(en['credits.kfgqpc.name']).toBe(fonts.quran);
   });
 

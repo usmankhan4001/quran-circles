@@ -5,13 +5,14 @@ import { useI18n } from '../../i18n/I18nProvider';
 import { useServices } from '../../providers/services';
 import {
   checkCode,
+  checkEmail,
   checkName,
-  checkPhone,
-  isNotPakistanMobile,
+  checkWhatsAppNumber,
+  hasIssue,
   type FieldProblem,
 } from './validation';
 
-export type SignInStep = 'phone' | 'code' | 'name' | 'done';
+export type SignInStep = 'email' | 'code' | 'name' | 'done';
 
 interface Challenge {
   challengeId: string;
@@ -22,6 +23,9 @@ interface Challenge {
 
 export interface SignInFlow {
   step: SignInStep;
+  emailInput: string;
+  setEmailInput: (value: string) => void;
+  /** The WhatsApp number (sign up only). */
   phoneInput: string;
   setPhoneInput: (value: string) => void;
   codeInput: string;
@@ -35,12 +39,14 @@ export interface SignInFlow {
   error: AppError | undefined;
   /** Seconds before another code may be sent. Zero when it may. */
   resendIn: number;
-  submitPhone: () => Promise<void>;
+  /** The address the current code was sent to. */
+  email: string | null;
+  submitEmail: () => Promise<void>;
   submitCode: () => Promise<void>;
-  resend: (channel: OtpChannel) => Promise<void>;
+  resend: () => Promise<void>;
   submitName: () => Promise<void>;
   skipName: () => void;
-  changeNumber: () => void;
+  changeEmail: () => void;
 }
 
 /** Seconds from `now` until `target`, rounded up, never negative. */
@@ -49,19 +55,24 @@ export function secondsUntil(target: number, now: number): number {
 }
 
 /**
- * Phone, then the code from WhatsApp (SMS as a fallback), then, for a new account, a name.
- * The screen only draws this; every rule is here and in `validation.ts`.
+ * Email, then the code sent to it, then, for a new account, a name. Signing up also asks for the
+ * WhatsApp number (`askPhone`): a new account cannot be made without it. The screen only draws
+ * this; every rule is here and in `validation.ts`.
  */
 export function useSignIn(
   onDone: () => void,
   options: {
     /** A name asked for earlier (sign up). A new account is given it and skips the name step. */
     presetName?: string;
+    /** Sign up: the WhatsApp number is asked for with the email and is required. */
+    askPhone?: boolean;
   } = {},
 ): SignInFlow {
   const { api, auth, now } = useServices();
   const { locale } = useI18n();
-  const [step, setStep] = useState<SignInStep>('phone');
+  const [step, setStep] = useState<SignInStep>('email');
+  const [emailInput, setEmailInput] = useState('');
+  const [email, setEmail] = useState<string | null>(null);
   const [phoneInput, setPhoneInput] = useState('');
   const [codeInput, setCodeInput] = useState('');
   const [nameInput, setNameInput] = useState('');
@@ -99,9 +110,17 @@ export function useSignIn(
   }, []);
 
   const requestCode = useCallback(
-    async (target: string, channel: OtpChannel) => {
-      const response = await api.auth.requestCode({ body: { phone: target, locale, channel } });
-      setPhone(target);
+    async (address: string, whatsapp: string | null) => {
+      const response = await api.auth.requestCode({
+        body: {
+          email: address,
+          ...(whatsapp ? { phone: whatsapp } : {}),
+          locale,
+          channel: 'email',
+        },
+      });
+      setEmail(address);
+      setPhone(whatsapp);
       setChallenge({
         challengeId: response.challengeId,
         channel: response.channel,
@@ -113,32 +132,35 @@ export function useSignIn(
     [api, locale, now],
   );
 
-  const submitPhone = useCallback(
+  const submitEmail = useCallback(
     () =>
       guard(async () => {
-        const checked = checkPhone(phoneInput);
-        if ('problem' in checked) {
-          setProblem(checked.problem);
+        const checkedEmail = checkEmail(emailInput);
+        if ('problem' in checkedEmail) {
+          setProblem(checkedEmail.problem);
           return;
         }
-        try {
-          await requestCode(checked.phone, 'whatsapp');
-        } catch (e) {
-          // The server's own word on the number goes under the field, like the check above.
-          if (!isNotPakistanMobile(e)) throw e;
-          setProblem('phone_not_pakistan_mobile');
+        let whatsapp: string | null = null;
+        if (options.askPhone) {
+          const checkedPhone = checkWhatsAppNumber(phoneInput);
+          if ('problem' in checkedPhone) {
+            setProblem(checkedPhone.problem);
+            return;
+          }
+          whatsapp = checkedPhone.phone;
         }
+        await requestCode(checkedEmail.email, whatsapp);
       }),
-    [guard, phoneInput, requestCode],
+    [guard, emailInput, phoneInput, options.askPhone, requestCode],
   );
 
   const resend = useCallback(
-    (channel: OtpChannel) =>
+    () =>
       guard(async () => {
-        if (!phone) return;
-        await requestCode(phone, channel);
+        if (!email) return;
+        await requestCode(email, phone);
       }),
-    [guard, phone, requestCode],
+    [guard, email, phone, requestCode],
   );
 
   const submitCode = useCallback(
@@ -150,9 +172,23 @@ export function useSignIn(
           return;
         }
         if (!challenge) return;
-        const result = await api.auth.verifyCode({
-          body: { challengeId: challenge.challengeId, code: checked.code },
-        });
+        let result;
+        try {
+          result = await api.auth.verifyCode({
+            body: { challengeId: challenge.challengeId, code: checked.code },
+          });
+        } catch (e) {
+          // The code was right but the account could not be made: say what to fix, and go back.
+          const noAccount = hasIssue(e, 'phone', 'phone_required');
+          if (noAccount || hasIssue(e, 'phone', 'phone_in_use')) {
+            setStep('email');
+            setChallenge(null);
+            setCodeInput('');
+            setProblem(noAccount ? 'no_account' : 'phone_in_use');
+            return;
+          }
+          throw e;
+        }
         const { me, isNewAccount, ...tokens } = result;
         await auth.signIn(tokens, me);
         const preset = options.presetName ? checkName(options.presetName) : null;
@@ -191,8 +227,8 @@ export function useSignIn(
     onDoneRef.current();
   }, []);
 
-  const changeNumber = useCallback(() => {
-    setStep('phone');
+  const changeEmail = useCallback(() => {
+    setStep('email');
     setChallenge(null);
     setCodeInput('');
     setProblem(null);
@@ -201,6 +237,9 @@ export function useSignIn(
 
   return {
     step,
+    emailInput,
+    setEmailInput,
+    email,
     phoneInput,
     setPhoneInput,
     codeInput,
@@ -212,11 +251,11 @@ export function useSignIn(
     problem,
     error,
     resendIn,
-    submitPhone,
+    submitEmail,
     submitCode,
     resend,
     submitName,
     skipName,
-    changeNumber,
+    changeEmail,
   };
 }

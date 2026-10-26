@@ -74,11 +74,13 @@ function BottomTabs({
 /** The four tabs. Their bar is the kit's TabBar, so it follows the theme, size and direction. */
 export default function TabsLayout() {
   const { locale } = useI18n();
+  const theme = useTheme();
   usePrefetchNearby();
   usePrefetchOtherLanguage(locale);
   return (
     <Tabs
-      screenOptions={{ headerShown: false }}
+      // A short shared fade when the tab changes; none when the person asks for reduced motion.
+      screenOptions={{ headerShown: false, animation: theme.reduceMotion ? 'none' : 'fade' }}
       tabBar={({ state, navigateToTab }) => (
         <BottomTabs
           activeKey={state.routes[state.index]?.name ?? 'home'}

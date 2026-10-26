@@ -119,6 +119,7 @@ type InviteRow = typeof coordinatorInvites.$inferSelect;
 const toInvite = (r: InviteRow, now: Date): Invite => ({
   id: r.id,
   phone: r.phoneE164,
+  email: r.email,
   displayName: r.displayName,
   role: r.role,
   scopeType: r.scopeType,
@@ -317,10 +318,11 @@ export const inviteValues = (
   deps: InviteDeps,
   actorId: string,
   target: RoleTarget,
-  body: { phone: string; displayName?: string | undefined },
+  body: { phone: string; email?: string | undefined; displayName?: string | undefined },
   replacesAssignmentId: string | null,
 ): typeof coordinatorInvites.$inferInsert => ({
   phoneE164: body.phone,
+  email: body.email ?? null,
   displayName: body.displayName ?? null,
   role: target.role,
   scopeType: target.scopeType,

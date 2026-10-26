@@ -9,7 +9,7 @@
  *
  * - Plus Jakarta Sans (D17): the unmodified TTFs of `@expo-google-fonts/plus-jakarta-sans`
  *   (SIL OFL 1.1), only the weights the type roles use.
- * - Mehr Nastaliq Web and KFGQPC Uthmanic Script HAFS: the unmodified files in `assets/fonts`.
+ * - Jameel Noori Nastaleeq (the full TTF, Urdu), Mehr Nastaliq Web (its fallback) and KFGQPC Uthmanic Script HAFS: the unmodified files in `assets/fonts`.
  *   The KFGQPC licence forbids changing the file, so it is never subset or converted.
  *
  * Licences, credits and checksums: `assets/fonts/LICENSES.md`.
@@ -19,9 +19,10 @@ import jakarta500 from '@expo-google-fonts/plus-jakarta-sans/500Medium/PlusJakar
 import jakarta600 from '@expo-google-fonts/plus-jakarta-sans/600SemiBold/PlusJakartaSans_600SemiBold.ttf';
 import jakarta700 from '@expo-google-fonts/plus-jakarta-sans/700Bold/PlusJakartaSans_700Bold.ttf';
 import jakarta800 from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold/PlusJakartaSans_800ExtraBold.ttf';
+import jameelNoori from '../assets/fonts/JameelNooriNastaleeq-Regular.ttf';
 import kfgqpcHafs from '../assets/fonts/KFGQPCUthmanicScriptHAFS-Regular.otf';
 import mehrNastaliq from '../assets/fonts/MehrNastaliqWeb-Regular.ttf';
-import { fonts, type SansWeight } from './tokens';
+import { fonts, urduFallbackFont, type SansWeight } from './tokens';
 
 /** A bundled font file: a Metro module id on iOS and Android, a URL on the web. */
 export type FontAsset = number | string;
@@ -57,6 +58,10 @@ export const bundledFonts: readonly BundledFontFamily[] = [
   },
   {
     fontFamily: fonts.urdu,
+    fontDefinitions: [{ path: jameelNoori, weight: 400, style: 'normal' }],
+  },
+  {
+    fontFamily: urduFallbackFont,
     fontDefinitions: [{ path: mehrNastaliq, weight: 400, style: 'normal' }],
   },
   {

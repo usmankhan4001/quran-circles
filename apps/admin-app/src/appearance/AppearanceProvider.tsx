@@ -95,7 +95,8 @@ export function AppearanceProvider({
     // for nothing (a phone, and tests, start in English as before).
     locale: initial?.locale ?? pageLocale(),
     textSize: initial?.textSize ?? 0,
-    colorChoice: initial?.colorChoice ?? 'system',
+    // Light is the default for everyone; the phone's dark setting only when picked.
+    colorChoice: initial?.colorChoice ?? 'light',
   });
   const [ready, setReady] = useState(Boolean(initial));
   const scheme = useColorScheme();

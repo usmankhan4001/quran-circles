@@ -89,7 +89,7 @@ export function JoinHalqaSheet({
     void executeFollow();
   }, [executeFollow]);
 
-  const signInFlow = useSignIn(handleAuthDone);
+  const signInFlow = useSignIn(handleAuthDone, { askPhone: true });
 
   // If the user was already signed in when the sheet opened, immediately follow
   useEffect(() => {
@@ -105,23 +105,27 @@ export function JoinHalqaSheet({
 
   const problemText =
     signInFlow.problem === 'invalid_phone'
-      ? t('signIn.problem.phone')
-      : signInFlow.problem === 'phone_not_pakistan_mobile'
-        ? t(issueMessageKey('phone_not_pakistan_mobile'))
-        : signInFlow.problem === 'invalid_code'
-          ? t('signIn.problem.code')
-          : signInFlow.problem === 'invalid_name'
-            ? t('signIn.problem.name')
-            : signInFlow.error
-              ? signInFlow.error.code === 'rate_limited' ||
-                signInFlow.error.code === 'otp_too_many_attempts'
-                ? `${t(errorMessageKey(signInFlow.error.code))}${
-                    signInFlow.error.retryAfterSeconds
-                      ? ` ${t('signIn.retryAfter', { count: signInFlow.error.retryAfterSeconds })}`
-                      : ''
-                  }`
-                : t(errorMessageKey(signInFlow.error.code))
-              : undefined;
+      ? t('signUp.problem.phone')
+      : signInFlow.problem === 'phone_in_use'
+        ? t(issueMessageKey('phone_in_use'))
+        : signInFlow.problem === 'no_account'
+          ? t(issueMessageKey('phone_required'))
+          : signInFlow.problem === 'invalid_code'
+            ? t('signIn.problem.code')
+            : signInFlow.problem === 'invalid_name'
+              ? t('signIn.problem.name')
+              : signInFlow.error
+                ? signInFlow.error.code === 'rate_limited' ||
+                  signInFlow.error.code === 'otp_too_many_attempts'
+                  ? `${t(errorMessageKey(signInFlow.error.code))}${
+                      signInFlow.error.retryAfterSeconds
+                        ? ` ${t('signIn.retryAfter', { count: signInFlow.error.retryAfterSeconds })}`
+                        : ''
+                    }`
+                  : t(errorMessageKey(signInFlow.error.code))
+                : undefined;
+  const emailProblemText =
+    signInFlow.problem === 'invalid_email' ? t('signIn.problem.email') : undefined;
 
   return (
     <Sheet
@@ -163,14 +167,27 @@ export function JoinHalqaSheet({
           </View>
 
           <Text variant="body" color="textSecondary">
-            {t('signIn.phone.intro')}
+            {t('signIn.email.intro')}
           </Text>
 
-          {signInFlow.step === 'phone' ? (
+          {signInFlow.step === 'email' ? (
             <>
               <TextField
-                label={t('signIn.phone.label')}
-                helper={t('signIn.phone.helper')}
+                label={t('signIn.email.label')}
+                helper={t('signIn.email.helper')}
+                value={signInFlow.emailInput}
+                onChangeText={signInFlow.setEmailInput}
+                keyboardType="email-address"
+                autoComplete="email"
+                autoCapitalize="none"
+                contentDirection="ltr"
+                required
+                {...(emailProblemText ? { error: emailProblemText } : {})}
+                testID="join-email-input"
+              />
+              <TextField
+                label={t('signUp.phone.label')}
+                helper={t('signUp.phone.hint')}
                 value={signInFlow.phoneInput}
                 onChangeText={signInFlow.setPhoneInput}
                 keyboardType="phone-pad"
@@ -178,16 +195,16 @@ export function JoinHalqaSheet({
                 contentDirection="ltr"
                 required
                 error={problemText}
-                onSubmitEditing={() => void signInFlow.submitPhone()}
+                onSubmitEditing={() => void signInFlow.submitEmail()}
                 testID="join-phone-input"
               />
               <Button
-                label={t('signIn.phone.submit')}
+                label={t('signIn.email.submit')}
                 size="large"
                 fullWidth
                 trailingIcon="arrow-forward"
                 loading={signInFlow.working || followingAction}
-                onPress={() => void signInFlow.submitPhone()}
+                onPress={() => void signInFlow.submitEmail()}
                 testID="join-send-code"
               />
             </>
@@ -196,9 +213,7 @@ export function JoinHalqaSheet({
           {signInFlow.step === 'code' ? (
             <>
               <Text variant="body" color="textSecondary">
-                {signInFlow.channel === 'sms'
-                  ? t('signIn.code.introSms')
-                  : t('signIn.code.introWhatsapp')}
+                {t('signIn.code.intro', { email: signInFlow.email ?? '' })}
               </Text>
               <CodeField
                 accessibilityLabel={t('signIn.code.label')}
@@ -225,25 +240,15 @@ export function JoinHalqaSheet({
                       ? t('signIn.code.resendIn', { count: signInFlow.resendIn })
                       : t('signIn.code.resend')
                   }
-                  onPress={() => void signInFlow.resend('whatsapp')}
+                  onPress={() => void signInFlow.resend()}
                   testID="join-resend-code"
                 />
-                {signInFlow.resendIn === 0 ? (
-                  <Button
-                    variant="tertiary"
-                    fullWidth
-                    disabled={signInFlow.working}
-                    label={t('signIn.code.useSms')}
-                    onPress={() => void signInFlow.resend('sms')}
-                    testID="join-resend-sms"
-                  />
-                ) : null}
                 <Button
                   variant="tertiary"
                   fullWidth
-                  label={t('signIn.code.changeNumber')}
-                  onPress={signInFlow.changeNumber}
-                  testID="join-change-number"
+                  label={t('signIn.code.changeEmail')}
+                  onPress={signInFlow.changeEmail}
+                  testID="join-change-email"
                 />
               </View>
             </>

@@ -24,7 +24,7 @@ ARG PUBLIC_API_URL
 # Empty: the keyless map and no web push.
 ARG GOOGLE_MAPS_WEB_KEY=""
 ARG VAPID_PUBLIC_KEY=""
-# Shown on the public privacy, help and delete-account pages. Unset shows a marked placeholder.
+# Shown on the public privacy, help and delete-account pages. Unset uses the built-in default address.
 ARG CONTACT_EMAIL=""
 
 RUN npm install --global --no-fund --no-audit "pnpm@${PNPM_VERSION}"

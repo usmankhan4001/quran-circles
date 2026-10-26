@@ -387,10 +387,11 @@ describe('TabBar sizing', () => {
     { key: 'more', label: 'More' },
   ];
 
-  it('shares the width equally between tabs (D17)', () => {
+  it('floats as a pill: only the chosen tab shows its word, every tab keeps its name', () => {
     renderThemed(<TabBar items={items} activeKey="journey" onChange={() => {}} />);
-    for (const key of ['home', 'journey', 'more'])
-      expect(screen.getByTestId(`tab-${key}`).style.flexGrow).toBe('1');
+    expect(screen.getByTestId('tab-journey').textContent).toBe('My Journey');
+    expect(screen.getByTestId('tab-home').textContent).toBe('1');
+    expect(screen.getByTestId('tab-home').getAttribute('aria-label')).toContain('Home');
     expect(screen.getByTestId('tab-journey').getAttribute('aria-label')).toBe('My Journey');
   });
 

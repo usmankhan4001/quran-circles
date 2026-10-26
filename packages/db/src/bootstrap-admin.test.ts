@@ -98,6 +98,30 @@ describe('bootstrapNationalAdmin', () => {
     expect(JSON.stringify(audit)).not.toContain(phone);
   });
 
+  it('stores the email the admin will sign in with, lower-cased, and refuses a bad one', async () => {
+    const phone = nextPhone();
+    await bootstrapNationalAdmin(test.db, {
+      phone,
+      email: ' Admin@Example.org ',
+      env: DEV,
+      now: NOW,
+    });
+    expect((await invites())[0]?.email).toBe('admin@example.org');
+    expect(
+      await refusal(
+        bootstrapNationalAdmin(test.db, {
+          phone: nextPhone(),
+          email: 'admin@',
+          env: DEV,
+          now: NOW,
+        }),
+      ),
+    ).toBe('invalid_email');
+    expect(parseBootstrapArgs(['--phone', '+923001234567', '--email', 'a@b.org'])).toMatchObject({
+      email: 'a@b.org',
+    });
+  });
+
   it('is picked up by the sign-in query: pending, national, not yet expired', async () => {
     const phone = nextPhone();
     await bootstrapNationalAdmin(test.db, { phone, env: DEV, now: NOW });

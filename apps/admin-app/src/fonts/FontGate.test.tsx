@@ -1,7 +1,7 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Text } from 'react-native';
-import { fonts, sansWeights } from '@qc/ui';
+import { fonts, sansWeights, urduFallbackFont } from '@qc/ui';
 import { appFontFamilies } from './appFonts';
 import { FontGate } from './FontGate';
 
@@ -18,12 +18,17 @@ describe('admin app fonts', () => {
     vi.useRealTimers();
   });
 
-  it('loads all three families under the token names, Figtree in the type roles weights', () => {
-    expect(appFontFamilies.map((f) => f.fontFamily)).toEqual([fonts.sans, fonts.urdu, fonts.quran]);
+  it('loads the families under the token names, Figtree in the type roles weights', () => {
+    expect(appFontFamilies.map((f) => f.fontFamily)).toEqual([
+      fonts.sans,
+      fonts.urdu,
+      urduFallbackFont,
+      fonts.quran,
+    ]);
     expect(appFontFamilies[0]?.fontDefinitions.map((d) => String(d.weight))).toEqual([
       ...sansWeights,
     ]);
-    expect(String(appFontFamilies[2]?.fontDefinitions[0]?.path)).toContain(
+    expect(String(appFontFamilies[3]?.fontDefinitions[0]?.path)).toContain(
       'KFGQPCUthmanicScriptHAFS-Regular.otf',
     );
   });

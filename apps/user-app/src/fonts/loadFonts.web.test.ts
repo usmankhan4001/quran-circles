@@ -19,7 +19,8 @@ describe('web fonts at start-up', () => {
       const preloads = [...doc.querySelectorAll('link[rel="preload"][as="font"]')].map(
         (l) => l.getAttribute('href') ?? '',
       );
-      expect(preloads).toHaveLength(firstScreenWeights[locale].length);
+      // Urdu pages also ask ahead for the large Jameel Noori Nastaleeq face.
+      expect(preloads).toHaveLength(firstScreenWeights[locale].length + (locale === 'ur' ? 1 : 0));
       firstScreenWeights[locale].forEach((weight, i) =>
         expect(preloads[i]).toMatch(new RegExp(`PlusJakartaSans-${weight}\\b`)),
       );

@@ -6,6 +6,8 @@ import {
   bootstrapNationalAdmin,
   inviteVenueCoordinator,
   syntheticPhone,
+  syntheticEmail,
+  signInByEmail,
 } from '../../support/people';
 import { SEED } from '../../support/seed';
 
@@ -38,8 +40,12 @@ test.describe.serial('PWA attendee: find, sign in with a code, join, read update
   });
 
   test('sign in with a code as a new attendee', async () => {
+    // The account is made by email (it needs the WhatsApp number); the person then signs in on
+    // the page with the address alone and is asked for a name, as a new attendee is.
+    const email = syntheticEmail(phone);
+    await signInByEmail(email, phone);
     await page.goto('/sign-in');
-    await page.getByTestId('phone-input').fill(phone);
+    await page.getByTestId('email-input').fill(email);
     await page.getByTestId('send-code').click();
     await page.getByTestId('code-input').fill(stack().fixedCode);
     await page.getByTestId('verify-code').click();

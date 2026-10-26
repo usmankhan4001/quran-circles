@@ -140,7 +140,8 @@ export function ThemeProvider({
   const [choice, setChoiceState] = useState<ThemeChoice>(() => {
     if (initialChoice) return initialChoice;
     const saved = kv.get(THEME_KEY);
-    return isChoice(saved) ? saved : 'system';
+    // Light is the default; the computer's dark setting is followed only when picked.
+    return isChoice(saved) ? saved : 'light';
   });
   const [textStep, setTextStepState] = useState<TextSizeStep>(() => {
     if (initialTextStep !== undefined) return initialTextStep;

@@ -63,6 +63,8 @@ export const WorkerEnv = MessagingEnv.extend({
     .min(1)
     .max(366)
     .default(DEFAULT_OCCURRENCE_HORIZON_DAYS),
+  /** Set when WhatsApp is configured; production then also needs the webhook secrets. */
+  WHATSAPP_PHONE_NUMBER_ID: optional,
   /** The public https origin of the web app, for links in messages. */
   PUBLIC_WEB_BASE: optional,
   /** The poster renderer on the internal network, e.g. `http://poster-renderer:8090`. */
@@ -126,7 +128,7 @@ export function parseWorkerEnv(env: Record<string, string | undefined>): WorkerE
   if (value.POSTER_STORAGE_DIR && !path.isAbsolute(value.POSTER_STORAGE_DIR)) {
     throw new WorkerConfigError('Invalid worker environment: POSTER_STORAGE_DIR must be absolute');
   }
-  if (value.APP_ENV === 'production') {
+  if (value.APP_ENV === 'production' && value.WHATSAPP_PHONE_NUMBER_ID) {
     if (!value.WHATSAPP_APP_SECRET || !value.WHATSAPP_VERIFY_TOKEN) {
       // Without these the webhook would answer 503 forever: delivery receipts and STOP replies lost.
       throw new WorkerConfigError(

@@ -33,7 +33,7 @@ Only on the Dokploy production stack. Both are public, restricted keys baked int
 | Name                     | Read by       | Required | Meaning                                                                                                   |
 | ------------------------ | ------------- | -------- | --------------------------------------------------------------------------------------------------------- |
 | `QC_GOOGLE_MAPS_WEB_KEY` | C (build arg) | no       | Google Maps JavaScript API key for the PWA, restricted to `https://<QC_DOMAIN>/*`. Unset: the keyless map |
-| `QC_CONTACT_EMAIL`       | C (build arg) | no       | Public contact address on the privacy, help and delete-account pages (`EXPO_PUBLIC_CONTACT_EMAIL`). Set it before the Play listing goes live; unset shows a marked placeholder |
+| `QC_CONTACT_EMAIL`       | C (build arg) | no       | Public contact address on the privacy, help and delete-account pages (`EXPO_PUBLIC_CONTACT_EMAIL`). Optional: unset uses the built-in default, markaz@tanzeem.org |
 | `VAPID_PUBLIC_KEY`       | C (build arg) | no       | Also passed to the `web` build as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`, so the PWA can subscribe to web push    |
 
 ## API and worker
@@ -117,8 +117,11 @@ These are constants, not environment variables; changing one is a code change in
 | Name                                                                | Read by | Required                   | Meaning                                                                                            |
 | ------------------------------------------------------------------- | ------- | -------------------------- | -------------------------------------------------------------------------------------------------- |
 | `MESSAGING_MODE`                                                    | A, W    | yes in production (`live`) | `fake` or `live`                                                                                   |
+| `RESEND_API_KEY`                                                    | A, W    | in production              | Resend key for the sign-in code emails; development prints the code instead                        |
+| `EMAIL_FROM`, `EMAIL_REPLY_TO`                                      | A, W    | no                         | Sender (default `Quran Circles <notifications@qurancircles.doraquran.pk>`) and reply address       |
+| `AUTH_PHONE_SIGN_IN`                                                | A       | no                         | `true` brings WhatsApp sign-in back next to email (default off)                                    |
 | `CODE_DELIVERY_MODE`                                                | A, W    | no                         | `test` or `live`; never `test` in production                                                       |
-| `CODE_SMS_FALLBACK`                                                 | A, W    | no                         | SMS when WhatsApp cannot deliver a code (default on)                                               |
+| `CODE_SMS_FALLBACK`                                                 | A, W    | no                         | SMS when WhatsApp cannot deliver a code (only with WhatsApp sign-in on; default on)                |
 | `CODE_VALIDITY_MINUTES`                                             | A, W    | no                         | Lifetime the code message states (default 5); leave unset: it must equal the API's fixed 5 minutes |
 | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`                 | A, W    | when live                  | WhatsApp Cloud API sender                                                                          |
 | `WHATSAPP_APP_SECRET`                                               | W       | in production              | Verifies webhook signatures                                                                        |

@@ -33,8 +33,8 @@ export function LanguageSwitch({ testID = 'language-switch' }: { testID?: string
         );
       }}
       options={[
-        { value: 'en', label: t('profile.language.en') },
-        { value: 'ur', label: t('profile.language.ur') },
+        { value: 'en', label: 'English' },
+        { value: 'ur', label: 'اردو' },
       ]}
       testID={testID}
     />

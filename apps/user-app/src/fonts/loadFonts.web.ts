@@ -3,6 +3,7 @@ import {
   firstPaintFace,
   fonts,
   installWebFonts,
+  urduDisplayFace,
   waitForWebFont,
   warmWebFonts,
   webFacesOf,
@@ -26,6 +27,8 @@ export const firstScreenWeights: Record<Locale, readonly number[]> = {
 export function startFonts(locale: Locale, doc: Document = document): void {
   installWebFonts(doc);
   warmWebFonts(doc, webFacesOf(fonts.sans, firstScreenWeights[locale]));
+  // The large Urdu face is asked for ahead only when the page is in Urdu.
+  if (locale === 'ur') warmWebFonts(doc, [urduDisplayFace()]);
 }
 
 /**

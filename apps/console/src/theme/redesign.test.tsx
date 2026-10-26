@@ -154,9 +154,11 @@ describe('redesign tokens as CSS variables', () => {
       expect(light[name], name).toBeTruthy();
       expect(dark[name], name).toBeTruthy();
     }
-    // Plus Jakarta Sans leads, as on the showcase; Urdu keeps the kit's Mehr Nastaliq.
+    // Plus Jakarta Sans leads, as on the showcase; Urdu is Jameel Noori Nastaleeq.
     expect(light['--font-sans']).toMatch(/^'Plus Jakarta Sans', /);
-    expect(light['--font-urdu']).toMatch(/^'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', serif$/);
+    expect(light['--font-urdu']).toMatch(
+      /^'Jameel Noori Nastaleeq', 'Mehr Nastaliq Web', 'Noto Nastaliq Urdu', serif$/,
+    );
   });
 
   it('has no resting shadows and draws a hairline instead, in both themes', () => {

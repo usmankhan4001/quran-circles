@@ -32,6 +32,37 @@ export interface Person {
   api: ApiClient;
 }
 
+/** A made-up address that can never be delivered to (`.invalid`), different for each phone. */
+export function syntheticEmail(phone: string): string {
+  return `e2e-${phone.replace(/\D/g, '')}@example.invalid`;
+}
+
+/**
+ * Makes (or signs in) an account by email, the way people sign in now: the code goes to the
+ * address, and a new account also sends its WhatsApp number (test-mode fixed code).
+ */
+export async function signInByEmail(email: string, phone: string | null = null): Promise<Person> {
+  const ip = syntheticIp();
+  const anon = client({ ip });
+  const challenge = await anon.auth.requestCode({
+    body: { email, ...(phone ? { phone } : {}), locale: 'en', channel: 'email' },
+  });
+  const signedIn = await anon.auth.verifyCode({
+    body: { challengeId: challenge.challengeId, code: stack().fixedCode, deviceLabel: 'e2e' },
+  });
+  const person: Person = {
+    phone: signedIn.me.phone,
+    ip,
+    me: signedIn.me,
+    accessToken: signedIn.accessToken,
+    refreshToken: signedIn.refreshToken,
+    isNewAccount: signedIn.isNewAccount,
+    api: undefined as unknown as ApiClient,
+  };
+  person.api = client({ ip, token: () => person.accessToken });
+  return person;
+}
+
 /** Signs in with a phone code through the real auth endpoints (test-mode fixed code). */
 export async function signIn(phone: string = syntheticPhone()): Promise<Person> {
   const ip = syntheticIp();
@@ -79,7 +110,14 @@ export async function nationalAdminInvite(): Promise<string> {
   const output = await run({
     name: 'bootstrap-admin',
     command: TSX_BIN,
-    args: ['src/cli/bootstrap-admin.ts', '--phone', phone, '--force-additional'],
+    args: [
+      'src/cli/bootstrap-admin.ts',
+      '--phone',
+      phone,
+      '--email',
+      syntheticEmail(phone),
+      '--force-additional',
+    ],
     cwd: join(REPO_DIR, 'packages', 'db'),
     env: { DATABASE_URL: stack().databaseUrl, APP_ENV: 'test' },
     timeoutMs: 60_000,

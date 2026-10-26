@@ -16,7 +16,6 @@ import { useAppearance, useT } from '../../appearance/AppearanceProvider';
 import { useAuth } from '../../auth/AuthProvider';
 import { Screen, ScreenFooter } from '../../components/Screen';
 import type { MessageKey, Translator } from '../../i18n/translate';
-import { formatPhoneDisplay } from '../../lib/phone';
 import { waitOf } from '../../lib/wait';
 import { useSignIn } from './useSignIn';
 
@@ -31,7 +30,7 @@ export function noticeText(t: Translator, notice: MessageKey, waitSeconds: numbe
     : t(notice);
 }
 
-/** Phone-code sign-in. Only numbers an admin has invited get any access after this step. */
+/** Email-code sign-in. Only emails an admin has invited get any access after this step. */
 export function SignInScreen() {
   const { t, n } = useT();
   const { locale, setLocale } = useAppearance();
@@ -40,7 +39,7 @@ export function SignInScreen() {
   const [started, setStarted] = useState(false);
 
   // First screen: what the app is for and that it is by invitation. Sign-in follows.
-  if (!started && s.step === 'phone') {
+  if (!started && s.step === 'email') {
     return <WelcomeScreen onStart={() => setStarted(true)} />;
   }
 
@@ -65,30 +64,42 @@ export function SignInScreen() {
       ) : null}
       <View style={{ gap: spacing.xs }}>
         <Text variant="title3" heading={2}>
-          {s.step === 'phone' ? t('admin.signIn.heading') : t('admin.signIn.codeLabel')}
+          {s.step === 'email' ? t('admin.signIn.heading') : t('admin.signIn.codeLabel')}
         </Text>
         <Text variant="caption" color="textSecondary">
-          {s.step === 'phone'
-            ? t('admin.signIn.phoneHelper')
-            : t('admin.signIn.codeHelper', {
-                phone: s.phone ? formatPhoneDisplay(s.phone) : '',
-              })}
+          {s.step === 'email'
+            ? t('admin.signIn.emailHelper')
+            : t('admin.signIn.codeHelper', { email: s.email ?? '' })}
         </Text>
       </View>
-      {s.step === 'phone' ? (
+      {s.step === 'email' ? (
         <View style={{ gap: spacing.lg }}>
           <TextField
+            testID="sign-in-email"
+            label={t('admin.signIn.emailLabel')}
+            value={s.emailInput}
+            onChangeText={s.setEmailInput}
+            error={s.emailError ? t(s.emailError) : undefined}
+            keyboardType="email-address"
+            autoComplete="email"
+            autoCapitalize="none"
+            contentDirection="ltr"
+            required
+            loading={s.busy}
+            onSubmitEditing={() => void s.submitEmail()}
+          />
+          <TextField
             testID="sign-in-phone"
-            label={t('admin.signIn.phoneLabel')}
+            label={t('admin.signIn.firstTimeLabel')}
+            helper={t('admin.signIn.firstTimeHelper')}
             value={s.phoneInput}
             onChangeText={s.setPhoneInput}
             error={s.phoneError ? t(s.phoneError) : undefined}
             keyboardType="phone-pad"
             autoComplete="tel"
             contentDirection="ltr"
-            required
             loading={s.busy}
-            onSubmitEditing={() => void s.submitPhone()}
+            onSubmitEditing={() => void s.submitEmail()}
           />
           <ScreenFooter>
             <Button
@@ -97,7 +108,7 @@ export function SignInScreen() {
               size="large"
               fullWidth
               loading={s.busy}
-              onPress={() => void s.submitPhone()}
+              onPress={() => void s.submitEmail()}
             />
           </ScreenFooter>
         </View>
@@ -133,12 +144,12 @@ export function SignInScreen() {
             onPress={() => void s.resend()}
           />
           <Button
-            testID="sign-in-change-number"
-            label={t('admin.signIn.changeNumber')}
+            testID="sign-in-change-email"
+            label={t('admin.signIn.changeEmail')}
             variant="tertiary"
             fullWidth
             disabled={s.busy}
-            onPress={s.changeNumber}
+            onPress={s.changeEmail}
           />
         </View>
       )}
@@ -206,7 +217,7 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
         <Button
           testID="features-sign-in"
           label={t('admin.signIn.welcome.start')}
-          icon="phone-call"
+          icon="paper-plane-tilt"
           size="large"
           fullWidth
           onPress={onStart}
@@ -254,7 +265,7 @@ function WelcomeScreen({ onStart }: { onStart: () => void }) {
         <Button
           testID="welcome-sign-in"
           label={t('admin.signIn.welcome.start')}
-          icon="phone-call"
+          icon="paper-plane-tilt"
           size="large"
           fullWidth
           onPress={onStart}

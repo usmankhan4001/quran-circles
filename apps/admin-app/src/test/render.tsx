@@ -132,8 +132,8 @@ export function typeInto(testId: string, value: string): void {
   fireEvent.change(input, { target: { value } });
 }
 
-/** Gets past the welcome screen to the phone field. */
+/** Gets past the welcome screen to the email field. */
 export async function passWelcome(): Promise<void> {
   fireEvent.click(await screen.findByTestId('welcome-sign-in'));
-  await screen.findByTestId('sign-in-phone');
+  await screen.findByTestId('sign-in-email');
 }

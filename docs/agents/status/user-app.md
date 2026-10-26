@@ -3,6 +3,10 @@
 Updated: 2026-10-25 (map screen)
 Branch: claude/peaceful-archimedes-ain95k (orchestrator commits; nothing committed by this lane)
 
+## Done (2026-10-25: email sign-in)
+
+- Sign-in is email then code; sign-up, the join sheet and the registration pledge also ask for the WhatsApp number (required); the profile shows the email and edits the WhatsApp number. 1189 tests.
+
 ## Map screen: a real map with no key (2026-10-25)
 
 - **Choice: OpenStreetMap tiles, keyless.** Nearby's Map view used to show only a list of places while there was no Google Maps key. `features/maps/TileMapView.tsx` now draws a real street map from OpenStreetMap tiles (plain images, no script, no key), with our own green pins on top. Google Maps stays the first choice: `GoogleMapView` (web) and `GoogleMapView.native` (phones) use it when `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` is set and fall back to `TileMapView` (before: the list) when it is not, or when Google's script fails. When no tile can be fetched at all (offline, blocked) `TileMapView` falls back to the list-only map, so the screen is never blank.

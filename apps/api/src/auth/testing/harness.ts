@@ -83,6 +83,16 @@ export interface Harness {
     phone: string,
     options?: { ip?: string; channel?: 'whatsapp' | 'sms' },
   ): Promise<Response>;
+  /** Asks for an email code. `phone` is the WhatsApp number a new account is made with. */
+  requestEmailCode(
+    email: string,
+    options?: { phone?: string; ip?: string; locale?: 'en' | 'ur' },
+  ): Promise<Response>;
+  /** Asks for an email code and verifies it. */
+  signInByEmail(
+    email: string,
+    options?: { phone?: string; ip?: string; deviceLabel?: string },
+  ): Promise<SignedIn>;
   /** Asks for a code and verifies it. Returns the parsed sign-in response. */
   signIn(phone: string, options?: { ip?: string; deviceLabel?: string }): Promise<SignedIn>;
   createUser(
@@ -105,6 +115,7 @@ export interface SignedIn {
     isNewAccount: boolean;
     me: {
       id: string;
+      email: string | null;
       phone: string;
       displayName: string | null;
       roles: { id: string; role: string }[];
@@ -137,7 +148,15 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
   const sender = new FakeCodeSender();
   const logger = new CapturingLogger();
   const limiter = new InMemoryRateLimiter();
-  const config = createAuthConfig({ appEnv: 'test', secret: TEST_SECRET, ...options.config });
+  // WhatsApp sign-in is off in production configuration (email is the sign-in), but most of the
+  // lane's tests exercise the number-based flow, which stays supported: it is on here unless a
+  // test turns it off.
+  const config = createAuthConfig({
+    appEnv: 'test',
+    secret: TEST_SECRET,
+    ...options.config,
+    otp: { phoneSignIn: true, ...options.config?.otp },
+  });
   const deps: AuthDeps = {
     db,
     config,
@@ -197,6 +216,29 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
       Promise.resolve(app.request(path, { method: 'GET', headers: headers(o) })),
     requestCode: (phone, o = {}) =>
       harness.post('/v1/auth/code', { phone, ...(o.channel ? { channel: o.channel } : {}) }, o),
+    requestEmailCode: (email, o = {}) =>
+      harness.post(
+        '/v1/auth/code',
+        {
+          email,
+          ...(o.phone ? { phone: o.phone } : {}),
+          ...(o.locale ? { locale: o.locale } : {}),
+        },
+        o,
+      ),
+    async signInByEmail(email, o = {}) {
+      const asked = await harness.requestEmailCode(email, o);
+      if (asked.status !== 202) throw new Error(`request code answered ${asked.status}`);
+      const { challengeId } = (await asked.json()) as { challengeId: string };
+      const code = harness.sender.last?.code;
+      if (!code) throw new Error('no code was sent');
+      const verified = await harness.post(
+        '/v1/auth/verify',
+        { challengeId, code, ...(o.deviceLabel ? { deviceLabel: o.deviceLabel } : {}) },
+        o,
+      );
+      return { status: verified.status, body: (await verified.json()) as SignedIn['body'] };
+    },
     async signIn(phone, o = {}) {
       const asked = await harness.requestCode(phone, o);
       if (asked.status !== 202) throw new Error(`request code answered ${asked.status}`);

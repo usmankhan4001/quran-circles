@@ -7,8 +7,8 @@ Decided by the owner on 2026-10-25 (the domain); the app id is the recommended o
 | What                      | Value                                                             |
 | ------------------------- | ----------------------------------------------------------------- |
 | Android app id (package)  | `pk.doraquran.circles` (`apps/user-app/app.config.ts`, `APP_ID`)  |
-| Public site (PWA and API) | `qurancircle.doraquran.pk` (`QC_DOMAIN`)                          |
-| Console                   | `qurancircle-admin.doraquran.pk` (`QC_CONSOLE_DOMAIN`)            |
+| Public site (PWA and API) | `qurancircles.doraquran.pk` (`QC_DOMAIN`)                         |
+| Console                   | `qurancircles-admin.doraquran.pk` (`QC_CONSOLE_DOMAIN`)           |
 | Server                    | The Dokploy host at `paas.usmankhan.xyz` (8 cores, 16 GB, shared) |
 | V1                        | `nearby.doraquran.pk` keeps running until the pilot passes        |
 
@@ -49,22 +49,23 @@ Pushes go from the owner's PC. In this order: the join pledge, the map (6087625)
 
 Environment (Dokploy, service `quran-circles`, Environment tab). Generate each secret on your own machine and paste it straight in:
 
-| Name                                                                                                   | Value                                                                  |
-| ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `COMPOSE_PROJECT_NAME`                                                                                 | `qc-prod`                                                              |
-| `QC_DOMAIN`, `QC_CONSOLE_DOMAIN`                                                                       | `qurancircle.doraquran.pk`, `qurancircle-admin.doraquran.pk`           |
-| `ACME_EMAIL`                                                                                           | any address (not used behind Traefik, required by the base file)       |
-| `APP_ENV`                                                                                              | `production`                                                           |
-| `PUBLIC_WEB_BASE`                                                                                      | `https://qurancircle.doraquran.pk`                                     |
-| `POSTGRES_PASSWORD`, `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD` | four different `openssl rand -hex 32`                                  |
-| `AUTH_SECRET`                                                                                          | `openssl rand -base64 48`                                              |
-| `RENDERER_TOKEN`                                                                                       | `openssl rand -hex 32`                                                 |
-| `MESSAGING_MODE`                                                                                       | `live` (required in production, `infra/ENV.md`)                        |
-| `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`                             | from Meta (see section 4)                                              |
-| `WHATSAPP_VERIFY_TOKEN`                                                                                | `openssl rand -hex 24`, also typed into Meta's webhook setup           |
-| `FCM_SERVICE_ACCOUNT_JSON`                                                                             | Firebase service account JSON on one line (section 3)                  |
-| `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`                                               | `npx web-push generate-vapid-keys`; subject `mailto:<support address>` |
-| `QC_GOOGLE_MAPS_WEB_KEY`                                                                               | the web Maps key (section 2)                                           |
+| Name                                                                                                   | Value                                                                                                              |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `COMPOSE_PROJECT_NAME`                                                                                 | `qc-prod`                                                                                                          |
+| `QC_DOMAIN`, `QC_CONSOLE_DOMAIN`                                                                       | `qurancircles.doraquran.pk`, `qurancircles-admin.doraquran.pk`                                                     |
+| `ACME_EMAIL`                                                                                           | any address (not used behind Traefik, required by the base file)                                                   |
+| `APP_ENV`                                                                                              | `production`                                                                                                       |
+| `PUBLIC_WEB_BASE`                                                                                      | `https://qurancircles.doraquran.pk`                                                                                |
+| `POSTGRES_PASSWORD`, `POSTGRES_MIGRATOR_PASSWORD`, `POSTGRES_API_PASSWORD`, `POSTGRES_WORKER_PASSWORD` | four different `openssl rand -hex 32`                                                                              |
+| `AUTH_SECRET`                                                                                          | `openssl rand -base64 48`                                                                                          |
+| `RENDERER_TOKEN`                                                                                       | `openssl rand -hex 32`                                                                                             |
+| `MESSAGING_MODE`                                                                                       | `live` (required in production, `infra/ENV.md`)                                                                    |
+| `RESEND_API_KEY`                                                                                       | the Resend API key (section 4); `EMAIL_FROM` defaults to `Quran Circles <notifications@qurancircles.doraquran.pk>` |
+| `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`                             | from Meta (see section 4)                                                                                          |
+| `WHATSAPP_VERIFY_TOKEN`                                                                                | `openssl rand -hex 24`, also typed into Meta's webhook setup                                                       |
+| `FCM_SERVICE_ACCOUNT_JSON`                                                                             | Firebase service account JSON on one line (section 3)                                                              |
+| `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`                                               | `npx web-push generate-vapid-keys`; subject `mailto:support@qurancircles.doraquran.pk`                             |
+| `QC_GOOGLE_MAPS_WEB_KEY`                                                                               | the web Maps key (section 2)                                                                                       |
 
 Leave out `AUTH_FIXED_CODE`, `CODE_DELIVERY_MODE` (defaults to live), `QC_API_CPUS`, `QC_API_MEMORY`, `API_PROCESSES` (launch defaults). Never copy staging's env: it has a fixed test code.
 
@@ -75,9 +76,9 @@ In Cloudflare, add both names as public hostnames of the tunnel that already ser
 ### First deploy and checks
 
 1. Deploy. `db-roles`, `migrate` and `pgboss-migrate` must exit 0; api, worker, poster-renderer, web and postgres healthy.
-2. `https://qurancircle.doraquran.pk/api/health` returns `{"ok":true,...}`; the console loads at `https://qurancircle-admin.doraquran.pk`.
-3. Create the first national admin (the import/console flow as on staging) and sign in with a real WhatsApp code.
-4. Meta webhook: callback `https://qurancircle.doraquran.pk/webhooks/whatsapp`, verify token as above.
+2. `https://qurancircles.doraquran.pk/api/health` returns `{"ok":true,...}`; the console loads at `https://qurancircles-admin.doraquran.pk`.
+3. Create the first national admin (the import/console flow as on staging) and sign in with a real email code (the national admin bootstrap takes `--email`).
+4. Meta webhook: callback `https://qurancircles.doraquran.pk/webhooks/whatsapp`, verify token as above.
 
 ### Backups
 
@@ -90,7 +91,7 @@ Dokploy's dumps are not age-encrypted as SEC-19 asks; keep the bucket private wi
 
 ### Monitoring
 
-Add an external uptime check (any free checker) on `https://qurancircle.doraquran.pk/api/health`, alerting your phone. Dokploy's notifications (Settings, Notifications) can report failed deploys to the same place.
+Add an external uptime check (any free checker) on `https://qurancircles.doraquran.pk/api/health`, alerting your phone. Dokploy's notifications (Settings, Notifications) can report failed deploys to the same place.
 
 ### Rotate the leaked Dokploy key
 
@@ -98,11 +99,11 @@ The Dokploy API key that was pasted into a chat earlier must be replaced: Dokplo
 
 ## 2. Google Maps keys
 
-Owner's decision: start with the Maps key the V1 app (`nearby.doraquran.pk`) already uses. In its Google Cloud project, add `https://qurancircle.doraquran.pk/*` to its website restrictions, or the map falls back to the keyless OpenStreetMap map. A website-restricted key does not work in the Android Maps SDK, so the Android app needs a second key; the target setup is two keys:
+Owner's decision: start with the Maps key the V1 app (`nearby.doraquran.pk`) already uses. In its Google Cloud project, add `https://qurancircles.doraquran.pk/*` to its website restrictions, or the map falls back to the keyless OpenStreetMap map. A website-restricted key does not work in the Android Maps SDK, so the Android app needs a second key; the target setup is two keys:
 
 | Key     | API restriction      | Application restriction                                                                                   | Where it goes                                                           |
 | ------- | -------------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Web     | Maps JavaScript API  | Websites: `https://qurancircle.doraquran.pk/*` (add `https://staging.doraquran.pk/*` for staging)         | Dokploy env `QC_GOOGLE_MAPS_WEB_KEY`                                    |
+| Web     | Maps JavaScript API  | Websites: `https://qurancircles.doraquran.pk/*` (add `https://staging.doraquran.pk/*` for staging)        | Dokploy env `QC_GOOGLE_MAPS_WEB_KEY`                                    |
 | Android | Maps SDK for Android | Android apps: `pk.doraquran.circles` with the SHA-1 of the Play app signing key and of the EAS upload key | EAS environment variable `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` (production) |
 
 The Android SHA-1s exist only after the first build: the upload key's is shown by `eas credentials`, the app signing key's in Play Console, Test and release, App integrity. Until the key is added the app shows the keyless OpenStreetMap map, so nothing breaks. Set a daily quota cap on both keys.
@@ -115,9 +116,11 @@ The Android SHA-1s exist only after the first build: the upload key's is shown b
 
 Web push uses the VAPID keys above. iOS is out of scope for this pilot.
 
-## 4. WhatsApp
+## 4. Email (sign-in codes) and WhatsApp
 
-Production sends sign-in codes and reminders through the WhatsApp Cloud API, so the pilot cannot start without it. Needed from Meta Business Manager: a verified business, a WhatsApp Business Account with the sending number registered, a system user with a permanent token (`whatsapp_business_messaging`), the app secret, and the message templates approved (the catalogue is migration 0013). SMS fallback has no provider chosen; with `CODE_SMS_FALLBACK` on and no gateway, a person whose number is not on WhatsApp cannot sign in.
+**Email.** Sign-in codes go by email through Resend; production refuses to start without `RESEND_API_KEY`. Domain `qurancircles.doraquran.pk` is verified in Resend; mail is sent from `notifications@qurancircles.doraquran.pk` (send only). Put the key straight into Dokploy's environment, never into the repository or chat. Addresses used in the store listing and public pages: `support@` (contact, support, account deletion) and `privacy@` (privacy policy). Nothing receives mail on those yet: set up inbound routing (for example Cloudflare Email Routing, forwarding to the owner's inbox) before the listing goes live. WhatsApp sign-in is switched off (`AUTH_PHONE_SIGN_IN` unset); the WhatsApp number is still asked for at sign-up and kept for reminders and coordinator contact, and is not verified by a code.
+
+**WhatsApp.** Production sends reminders and notices through the WhatsApp Cloud API; sign-in codes no longer need it. Needed from Meta Business Manager: a verified business, a WhatsApp Business Account with the sending number registered, a system user with a permanent token (`whatsapp_business_messaging`), the app secret, and the message templates approved (the catalogue is migration 0013). SMS fallback has no provider chosen; with `CODE_SMS_FALLBACK` on and no gateway, a person whose number is not on WhatsApp cannot sign in.
 
 ## 5. Android build and Play release
 
@@ -138,43 +141,44 @@ Personal developer accounts created after November 2023 must run a closed test w
 | Icon 512, feature graphic | `store-assets/icons/store/`, `store-assets/screenshots/play/<en,ur>/feature-graphic-1024x500.png`                                 |
 | Phone screenshots         | `store-assets/screenshots/play/<en,ur>/play-phone/` (retake after the join pledge and map land)                                   |
 | Category                  | Education                                                                                                                         |
-| Contact email, website    | Owner's support address; `https://qurancircle.doraquran.pk`                                                                       |
+| Contact email, website    | `support@qurancircles.doraquran.pk`; `https://qurancircles.doraquran.pk`                                                          |
 | Privacy policy URL        | Not written yet (below)                                                                                                           |
 | Ads                       | No ads                                                                                                                            |
 | Target audience           | 13 and over (under-13 brings the Families policy)                                                                                 |
 | Content rating            | Questionnaire: reference/education, no violence, users can't talk to each other, no purchases                                     |
-| App access                | Browsing needs no account; joining needs a phone sign-in code. See "Review sign-in" below                                         |
+| App access                | Browsing needs no account; joining needs an email sign-in code. See "Review sign-in" below                                        |
 | News app, health, finance | No                                                                                                                                |
 
 ### Data safety (draft answers, from the schema and the app)
 
-| Data type                                                             | Collected                                                                        | Shared | Why                                          | Optional         |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ | -------------------------------------------- | ---------------- |
-| Name                                                                  | Yes                                                                              | No     | Account management, app functionality        | Required to join |
-| Phone number                                                          | Yes                                                                              | No     | Account management (sign-in), communications | Required to join |
-| App interactions (circles joined, masjids followed, reading progress) | Yes                                                                              | No     | App functionality                            | Yes              |
-| Device or other IDs (push token)                                      | Yes                                                                              | No     | Communications (reminders)                   | Yes              |
-| Location                                                              | No on Android (the phone app never asks); the web app uses it only on the device |        |                                              |                  |
+| Data type                                                             | Collected                                                                        | Shared | Why                                               | Optional         |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ | ------------------------------------------------- | ---------------- |
+| Name                                                                  | Yes                                                                              | No     | Account management, app functionality             | Required to join |
+| Email address                                                         | Yes                                                                              | No     | Account management (sign-in code), communications | Required to join |
+| Phone number (WhatsApp)                                               | Yes                                                                              | No     | Communications (reminders), coordinator contact   | Required to join |
+| App interactions (circles joined, masjids followed, reading progress) | Yes                                                                              | No     | App functionality                                 | Yes              |
+| Device or other IDs (push token)                                      | Yes                                                                              | No     | Communications (reminders)                        | Yes              |
+| Location                                                              | No on Android (the phone app never asks); the web app uses it only on the device |        |                                                   |                  |
 
 Encrypted in transit: yes. People can ask for deletion: yes, in the app (Profile) and on the web. WhatsApp and Firebase deliver messages as service providers, which Play does not count as sharing. If the optional profile questions (age band, profession, education) ship later, add them under "Personal info, Other".
 
 ### Still to build or write before review (not for the internal test)
 
-- **Privacy policy page**, on `https://qurancircle.doraquran.pk/privacy`: what is collected (table above), why, where it is kept (the server's country, to confirm with the host), the backups keeping deleted data up to 8 weeks (security review SEC-19), how to delete, contact address. Needs the owner's contact address and the publisher name, then Claude writes it and the in-app link.
+- **Privacy policy page**, on `https://qurancircles.doraquran.pk/privacy`: what is collected (table above), why, where it is kept (the server's country, to confirm with the host), the backups keeping deleted data up to 8 weeks (security review SEC-19), how to delete, contact address. Contact address: `privacy@qurancircles.doraquran.pk` (needs inbound routing); the publisher name is still needed, then Claude writes it and the in-app link.
 - **Account deletion URL** for the Play form: the same page's "Delete your account" section.
-- **Review sign-in**: Google's reviewers cannot receive a WhatsApp code. The API refuses a fixed code in production, so a narrow reviewer allowance is needed (one configured number with a fixed code, rate-limited, logged). That is an auth change for its own pull request; until then, use the internal and closed tracks, which have no review.
+- **Review sign-in**: Google's reviewers have no mailbox of ours to read a code from. The API refuses a fixed code in production, so a narrow reviewer allowance is needed (one configured reviewer email with a fixed code, rate-limited, logged; or a real mailbox whose code the owner reads out). That is an auth change for its own pull request; until then, use the internal and closed tracks, which have no review.
 - **Store listing text** updated for the join pledge, Urdu proofread.
 
 ## Who does what
 
 Owner only (accounts, money, secrets, legal):
 
-1. ~~Pick the web address~~ (done: `qurancircle.doraquran.pk`).
+1. ~~Pick the web address~~ (done: `qurancircles.doraquran.pk`).
 2. Push the waiting branches from your PC, in the order above, then this one.
 3. Rotate the leaked Dokploy key.
 4. Cloudflare: add the two names to the tunnel; turn on Always Use HTTPS.
 5. Google Cloud: create the two Maps keys; Firebase: add the Android app, upload `google-services.json` to EAS, put the service account JSON in Dokploy.
-6. Meta: WhatsApp number, token, app secret, templates approved; put them in Dokploy.
+6. Resend API key into Dokploy; inbound routing for `support@` and `privacy@`. Meta: WhatsApp number, token, app secret, templates approved (reminders); put them in Dokploy.
 7. Create the backup bucket and add it as a Dokploy destination.
 8. Expo: `eas init`, first `eas build`, and the first upload to Play's internal track; send Claude the support email and publisher name for the privacy page.
 

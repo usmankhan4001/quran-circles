@@ -28,56 +28,49 @@ async function mountSignIn(backend: Backend, locale: 'en' | 'ur' = 'en') {
   return view;
 }
 
-function typePhone(value: string) {
-  const el = screen.getByTestId('sign-in-phone');
+function typeEmail(value: string) {
+  const el = screen.getByTestId('sign-in-email');
   const input = el.tagName === 'INPUT' ? el : (el.querySelector('input') ?? el);
   fireEvent.change(input, { target: { value } });
   fireEvent.click(screen.getByTestId('sign-in-send-code'));
 }
 
-describe('SignInScreen: only Pakistani mobile numbers', () => {
+function typePhone(value: string) {
+  const el = screen.getByTestId('sign-in-phone');
+  const input = el.tagName === 'INPUT' ? el : (el.querySelector('input') ?? el);
+  fireEvent.change(input, { target: { value } });
+}
+
+describe('SignInScreen: email and the first-time WhatsApp number', () => {
   it.each(['en', 'ur'] as const)(
-    'says so for a number from abroad, without asking the server (%s)',
+    'says so for an email that cannot be right, without asking the server (%s)',
     async (locale) => {
       const backend = createBackend({ me: meFor('venue') });
       const view = await mountSignIn(backend, locale);
-      typePhone('+44 7700 900123');
-      expect(
-        await screen.findByText(messages[locale]['issues.phone_not_pakistan_mobile']),
-      ).toBeTruthy();
+      typeEmail('coordinator@');
+      expect(await screen.findByText(messages[locale]['admin.signIn.emailInvalid'])).toBeTruthy();
       expect(backend.callsTo('auth.requestCode')).toHaveLength(0);
       expect(screen.queryByTestId('sign-in-code')).toBeNull();
       view.unmount();
     },
   );
 
-  it('says so for a Pakistani landline, which cannot get a WhatsApp code', async () => {
-    const backend = createBackend({ me: meFor('venue') });
-    await mountSignIn(backend);
-    typePhone('+92 51 1234567');
-    expect(await screen.findByText(messages.en['issues.phone_not_pakistan_mobile'])).toBeTruthy();
-    expect(backend.callsTo('auth.requestCode')).toHaveLength(0);
-  });
-
-  it('still calls a malformed number malformed', async () => {
+  it('still calls a malformed WhatsApp number malformed, without asking the server', async () => {
     const backend = createBackend({ me: meFor('venue') });
     await mountSignIn(backend);
     typePhone('12');
+    typeEmail('coordinator@example.com');
     expect(await screen.findByText(messages.en['admin.signIn.phoneInvalid'])).toBeTruthy();
-    expect(screen.queryByText(messages.en['issues.phone_not_pakistan_mobile'])).toBeNull();
+    expect(backend.callsTo('auth.requestCode')).toHaveLength(0);
   });
 
-  it('shows the message under the number when the server refuses it', async () => {
+  it('accepts a WhatsApp number from abroad', async () => {
     const backend = createBackend({ me: meFor('venue') });
-    backend.failWith('auth.requestCode', 'validation_failed', {
-      issues: [{ path: 'phone', code: 'phone_not_pakistan_mobile' }],
-    });
     await mountSignIn(backend);
-    typePhone('0300 1234567');
-    expect(await screen.findByText(messages.en['issues.phone_not_pakistan_mobile'])).toBeTruthy();
-    expect(backend.callsTo('auth.requestCode')).toHaveLength(1);
-    expect(screen.queryByTestId('sign-in-notice')).toBeNull();
-    expect(screen.getByTestId('sign-in-phone')).toBeTruthy();
+    typePhone('+44 7700 900123');
+    typeEmail('coordinator@example.com');
+    await screen.findByTestId('sign-in-code');
+    expect(backend.callsTo('auth.requestCode')[0]!.body).toMatchObject({ phone: '+447700900123' });
   });
 
   it.each([
@@ -92,7 +85,7 @@ describe('SignInScreen: only Pakistani mobile numbers', () => {
       const backend = createBackend({ me: meFor('venue') });
       backend.failWith('auth.requestCode', 'rate_limited', { retryAfterSeconds: seconds });
       const view = await mountSignIn(backend, locale);
-      typePhone('0300 1234567');
+      typeEmail('coordinator@example.com');
       const notice = (await screen.findByTestId('sign-in-notice')).textContent ?? '';
       expect(notice).toContain(messages[locale]['errors.rate_limited']);
       if (locale === 'en') expect(notice).toContain(expected);
@@ -107,7 +100,7 @@ describe('SignInScreen: only Pakistani mobile numbers', () => {
     const backend = createBackend({ me: meFor('venue') });
     backend.failWith('auth.requestCode', 'rate_limited', { retryAfterSeconds: null });
     await mountSignIn(backend);
-    typePhone('0300 1234567');
+    typeEmail('coordinator@example.com');
     const notice = await screen.findByTestId('sign-in-notice');
     expect(notice.textContent).toBe(messages.en['errors.rate_limited']);
   });
@@ -118,10 +111,9 @@ describe('SignInScreen: only Pakistani mobile numbers', () => {
       issues: [{ path: 'locale', code: 'invalid_value' }],
     });
     await mountSignIn(backend);
-    typePhone('0300 1234567');
+    typeEmail('coordinator@example.com');
     const notice = await screen.findByTestId('sign-in-notice');
     expect(notice.textContent).toContain(messages.en['errors.validation_failed']);
-    expect(screen.queryByText(messages.en['issues.phone_not_pakistan_mobile'])).toBeNull();
   });
 });
 
@@ -146,7 +138,7 @@ describe('SignInScreen: welcome first', () => {
 
   it.each(['en', 'ur'] as const)('opens on the invitation-only welcome (%s)', async (locale) => {
     await mountBare(locale);
-    expect(screen.queryByTestId('sign-in-phone')).toBeNull();
+    expect(screen.queryByTestId('sign-in-email')).toBeNull();
     expect(screen.getByText(messages[locale]['admin.signIn.welcome.tag'])).toBeTruthy();
     expect(screen.getByText(messages[locale]['admin.signIn.inviteOnly'])).toBeTruthy();
     await passWelcome();
@@ -158,6 +150,6 @@ describe('SignInScreen: welcome first', () => {
     expect(await screen.findByTestId('features')).toBeTruthy();
     expect(screen.getByText(messages.en['admin.signIn.features.2.title'])).toBeTruthy();
     fireEvent.click(screen.getByTestId('features-sign-in'));
-    expect(await screen.findByTestId('sign-in-phone')).toBeTruthy();
+    expect(await screen.findByTestId('sign-in-email')).toBeTruthy();
   });
 });

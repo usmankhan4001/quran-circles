@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { and, count, desc, eq, gt, isNull, lt, min, sql, type SQL } from 'drizzle-orm';
-import { PAKISTAN_MOBILE_PATTERN, PHONE_NOT_PAKISTAN_MOBILE, type PhoneE164 } from '@qc/contracts';
+import { PAKISTAN_MOBILE_PATTERN, PHONE_NOT_PAKISTAN_MOBILE, type OtpChannel } from '@qc/contracts';
 import { schema } from '@qc/db';
 import type { RateRule } from '../../auth/config';
 import type { AuthContext } from '../../auth/context';
@@ -13,6 +13,23 @@ const { otpChallenges } = schema;
 
 export type OtpChallengeRow = typeof otpChallenges.$inferSelect;
 
+/**
+ * What a code is asked for: an email address (the sign-in since 2026-10-25) or, with WhatsApp
+ * sign-in switched on, a phone number. Counted, limited and retired per target.
+ */
+export type CodeTarget = { kind: 'email'; value: string } | { kind: 'phone'; value: string };
+
+const targetColumn = (target: CodeTarget) =>
+  target.kind === 'email' ? otpChallenges.email : otpChallenges.phoneE164;
+
+/** The target a stored challenge was made for. */
+export function challengeTarget(row: OtpChallengeRow): CodeTarget {
+  if (row.email !== null) return { kind: 'email', value: row.email };
+  if (row.phoneE164 !== null) return { kind: 'phone', value: row.phoneE164 };
+  throw new Error('challenge has no target');
+}
+
+const EMAIL_REQUIRED = 'email_required';
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
@@ -23,13 +40,13 @@ export function cooldownSeconds(ctx: AuthContext, count: number): number {
 }
 
 /** Codes made for this number in the last hour, newest first. */
-async function recentChallenges(ctx: AuthContext, phone: string, now: Date) {
+async function recentChallenges(ctx: AuthContext, target: CodeTarget, now: Date) {
   return ctx.db
     .select({ createdAt: otpChallenges.createdAt })
     .from(otpChallenges)
     .where(
       and(
-        eq(otpChallenges.phoneE164, phone),
+        eq(targetColumn(target), target.value),
         gt(otpChallenges.createdAt, new Date(now.getTime() - HOUR_MS)),
       ),
     )
@@ -38,8 +55,8 @@ async function recentChallenges(ctx: AuthContext, phone: string, now: Date) {
 }
 
 /** Seconds until another code may be asked for, or 0. Kept in the database, so it survives restarts. */
-async function cooldownRemaining(ctx: AuthContext, phone: string, now: Date): Promise<number> {
-  const recent = await recentChallenges(ctx, phone, now);
+async function cooldownRemaining(ctx: AuthContext, target: CodeTarget, now: Date): Promise<number> {
+  const recent = await recentChallenges(ctx, target, now);
   const newest = recent[0];
   if (!newest) return 0;
   const elapsed = (now.getTime() - newest.createdAt.getTime()) / 1000;
@@ -77,9 +94,9 @@ interface IssueCounts {
  * because `requestCode` runs it while it holds the issue lock, and every other code request waits
  * for that lock.
  */
-async function issueCounts(db: AuthDb, phone: string, now: Date): Promise<IssueCounts> {
+async function issueCounts(db: AuthDb, target: CodeTarget, now: Date): Promise<IssueCounts> {
   const createdAt = otpChallenges.createdAt;
-  const mine = eq(otpChallenges.phoneE164, phone);
+  const mine = eq(targetColumn(target), target.value);
   const inHour = gt(createdAt, new Date(now.getTime() - HOUR_MS));
   const mineInHour = sql`${mine} and ${inHour}`;
   const n = (where: SQL) => sql<number>`count(*) filter (where ${where})`.mapWith(Number);
@@ -186,17 +203,52 @@ export function assertSignInCountry(phone: string): void {
   }
 }
 
-/** The rate-limit key for wrong-code attempts against one number. */
+/** The rate-limit key for wrong-code attempts against one email address or number. */
+export const verifyTargetKey = (ctx: AuthContext, target: CodeTarget): string =>
+  `otp-verify:${target.kind}:${hashIdentifier(ctx.keys, target.kind, target.value)}`;
+
+/** The same key for a phone number, as WhatsApp sign-in kept it. */
 export const verifyPhoneKey = (ctx: AuthContext, phone: string): string =>
-  `otp-verify:phone:${hashIdentifier(ctx.keys, 'phone', phone)}`;
+  verifyTargetKey(ctx, { kind: 'phone', value: phone });
+
+/**
+ * What a code request is for. An `email` asks for an email code (the WhatsApp number, if given,
+ * is only remembered for the new account). Without one, a `phone` asks for the older WhatsApp
+ * code, only while WhatsApp sign-in is switched on. Anything else is refused before it is counted.
+ */
+function codeTargetOf(
+  ctx: AuthContext,
+  body: RequestCodeInput,
+): CodeTarget & { channel: OtpChannel } {
+  if (body.email !== undefined) {
+    if (body.channel !== 'email') {
+      throw new AuthHttpError('validation_failed', undefined, [
+        { path: 'channel', code: 'invalid_value' },
+      ]);
+    }
+    return { kind: 'email', value: body.email, channel: 'email' };
+  }
+  if (ctx.config.otp.phoneSignIn && body.phone !== undefined) {
+    assertSignInCountry(body.phone);
+    // The contract's default channel is email; a phone sign-in starts with WhatsApp.
+    return {
+      kind: 'phone',
+      value: body.phone,
+      channel: body.channel === 'email' ? 'whatsapp' : body.channel,
+    };
+  }
+  throw new AuthHttpError('validation_failed', undefined, [
+    { path: 'email', code: EMAIL_REQUIRED },
+  ]);
+}
 
 const ipKeyOf = (ctx: AuthContext, ip: string | null): string =>
   hashIdentifier(ctx.keys, 'ip', ip ?? 'unknown');
 
 /**
  * Starts a sign-in: makes a code, stores its hash and hands the code to the sender. The same rule
- * holds for everyone, staff included: WhatsApp first (the contract's default channel), and the
- * sender falls back to SMS and reports it, so the response says where the code went.
+ * holds for everyone, staff included: the code goes to the email address. (With WhatsApp sign-in
+ * switched on, a phone number alone still gets the older WhatsApp code, with SMS as the fallback.)
  */
 export async function requestCode(
   ctx: AuthContext,
@@ -205,18 +257,17 @@ export async function requestCode(
 ): Promise<RequestCodeResult> {
   const now = ctx.now();
   const { rateLimits, otp } = ctx.config;
-  const phone: PhoneE164 = body.phone;
-  assertSignInCountry(phone);
+  const target = codeTargetOf(ctx, body);
   const ipHash = ipKeyOf(ctx, ip);
-  const phoneHash = hashIdentifier(ctx.keys, 'phone', phone);
+  const targetHash = hashIdentifier(ctx.keys, target.kind, target.value);
 
   await enforce(ctx, `otp-request:ip:${ipHash}`, rateLimits.requestPerIp, now);
-  await enforce(ctx, `otp-request:phone:${phoneHash}`, rateLimits.requestPerPhone, now);
+  await enforce(ctx, `otp-request:${target.kind}:${targetHash}`, rateLimits.requestPerPhone, now);
 
   // A first look without the lock. Once a ceiling is reached, which is when a flood arrives, the
   // request is refused here, in parallel with the others, without waiting for the lock or holding
   // a pooled connection while it waits. Whatever passes is counted again under the lock below.
-  assertMayIssue(ctx, await issueCounts(ctx.db, phone, now), now);
+  assertMayIssue(ctx, await issueCounts(ctx.db, target, now), now);
 
   const challengeId = randomUUID();
   const code = otp.fixedCode ?? generateCode();
@@ -225,17 +276,20 @@ export async function requestCode(
   const issuedThisHour = await oneAtATime(ctx.db, () =>
     ctx.db.transaction(async (tx) => {
       await tx.execute(ISSUE_LOCK);
-      const counts = await issueCounts(tx, phone, now);
+      const counts = await issueCounts(tx, target, now);
       assertMayIssue(ctx, counts, now);
-      // Only the newest code for a number works: retire the others, then add this one.
+      // Only the newest code for an address or number works: retire the others, then add this one.
       await tx
         .update(otpChallenges)
         .set({ consumedAt: now })
-        .where(and(eq(otpChallenges.phoneE164, phone), isNull(otpChallenges.consumedAt)));
+        .where(and(eq(targetColumn(target), target.value), isNull(otpChallenges.consumedAt)));
       await tx.insert(otpChallenges).values({
         id: challengeId,
-        phoneE164: phone,
-        channel: body.channel,
+        phoneE164: target.kind === 'phone' ? target.value : null,
+        email: target.kind === 'email' ? target.value : null,
+        // The WhatsApp number typed at sign-up, kept for the account this sign-in may create.
+        claimedPhoneE164: target.kind === 'email' ? (body.phone ?? null) : null,
+        channel: target.channel,
         // Copied to the account if this sign-in creates one, so it starts in this language.
         locale: body.locale,
         codeHash: hashCode(ctx.keys, challengeId, code),
@@ -249,9 +303,14 @@ export async function requestCode(
 
   // The lock is released at commit, before the slow part: handing the code to the provider. The
   // row is already counted, so a parallel request cannot take its slot while this one sends.
-  let channel = body.channel;
+  let channel = target.channel;
   try {
-    const sent = await ctx.codeSender.send({ phone, code, locale: body.locale, channel });
+    const sent = await ctx.codeSender.send({
+      ...(target.kind === 'email' ? { email: target.value } : { phone: target.value }),
+      code,
+      locale: body.locale,
+      channel,
+    });
     if (sent?.channel) channel = sent.channel;
   } catch (error) {
     ctx.logger.error('auth.code_send_failed', { challengeId, ...describeError(error) });
@@ -297,14 +356,14 @@ export async function checkCode(
       'otp_too_many_attempts',
       Math.max(
         1,
-        Math.ceil(await cooldownRemaining(ctx, challenge.phoneE164, now)) ||
+        Math.ceil(await cooldownRemaining(ctx, challengeTarget(challenge), now)) ||
           otp.cooldownBaseSeconds,
       ),
     );
 
   await enforce(
     ctx,
-    verifyPhoneKey(ctx, challenge.phoneE164),
+    verifyTargetKey(ctx, challengeTarget(challenge)),
     rateLimits.verifyPerPhone,
     now,
     (retryAfter) => new AuthHttpError('otp_too_many_attempts', Math.max(1, Math.ceil(retryAfter))),

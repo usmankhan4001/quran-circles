@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fonts, sansWeights } from './index';
+import { fonts, sansWeights, urduFallbackFont } from './index';
 import {
   WEB_FONT_STYLE_ID,
   firstPaintFace,
@@ -27,6 +27,8 @@ const recorded: Record<string, string> = {
   'PlusJakartaSans-600.woff2': '1f5332f0cfb1eb025feca2d03e0d61fc31f6dc4fddbd5025a9cb0e5312d0af6d',
   'PlusJakartaSans-700.woff2': '44c2af85d93393c5a2d20f653ca503dfcf770b874901506ec91fdd9895b7f39d',
   'PlusJakartaSans-800.woff2': 'e518a764e20deb7a27a086413fbea6f7c121197cf3e55d88560ca8165376fb6b',
+  'JameelNooriNastaleeq-Subset.woff2':
+    '25e276be322f09717b8aa2ddc77868330b68ba83d5d6bab7907e21c860793f28',
   'MehrNastaliqWeb-Regular.woff2':
     '94bc07b5c7408accf76def79d6d4736bbd4b8d0c5034c6239e25c8b7f15aef62',
 };
@@ -74,7 +76,8 @@ describe('web font faces', () => {
 
   it('holds the first frame for the face of the language only', () => {
     expect(firstPaintFace('en')).toMatchObject({ family: fonts.sans, weight: 400 });
-    expect(firstPaintFace('ur')).toMatchObject({ family: fonts.urdu, weight: 400 });
+    // Urdu waits only for the small fallback face; Jameel Noori swaps in when it arrives.
+    expect(firstPaintFace('ur')).toMatchObject({ family: urduFallbackFont, weight: 400 });
   });
 
   it('writes one swap rule per face, with the family quoted', () => {

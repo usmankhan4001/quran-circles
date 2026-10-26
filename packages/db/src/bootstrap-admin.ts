@@ -1,6 +1,6 @@
 import { and, eq, gt, isNull, lte } from 'drizzle-orm';
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
-import { E164_PATTERN } from '@qc/contracts';
+import { E164_PATTERN, EMAIL_PATTERN } from '@qc/contracts';
 import * as schema from './schema/index';
 
 /**
@@ -31,7 +31,7 @@ export const BOOTSTRAP_INVITE_TTL_DAYS = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export type BootstrapRefusal =
-  'invalid_phone' | 'production' | 'admin_exists' | 'already_admin' | 'conflict';
+  'invalid_phone' | 'invalid_email' | 'production' | 'admin_exists' | 'already_admin' | 'conflict';
 
 /** Thrown for every refusal; nothing is written when it is thrown. */
 export class BootstrapRefusedError extends Error {
@@ -47,6 +47,11 @@ export class BootstrapRefusedError extends Error {
 export interface BootstrapOptions {
   /** E.164 number of the person to invite. */
   phone: string;
+  /**
+   * The address the person signs in with. The invite is accepted by this verified address; leave
+   * it out only when WhatsApp sign-in is on, where the verified number accepts it.
+   */
+  email?: string;
   /** Add another national admin even though an active one exists. */
   forceAdditional?: boolean;
   /** Required when the environment is production. */
@@ -103,6 +108,10 @@ export async function bootstrapNationalAdmin(
       'invalid_phone',
       'The phone number must be in E.164 form, for example +923000000001.',
     );
+  }
+  const email = options.email?.trim().toLowerCase();
+  if (email !== undefined && !EMAIL_PATTERN.test(email)) {
+    throw new BootstrapRefusedError('invalid_email', 'The email address is not valid.');
   }
   assertBootstrapAllowed(options.env ?? process.env, options.confirmProduction === true);
   const now = options.now ?? new Date();
@@ -164,6 +173,7 @@ export async function bootstrapNationalAdmin(
         .insert(coordinatorInvites)
         .values({
           phoneE164: phone,
+          email: email ?? null,
           displayName: null,
           role: 'national_admin',
           scopeType: 'national',
@@ -221,15 +231,18 @@ function isUniqueViolation(error: unknown): boolean {
 
 export interface BootstrapArgs {
   phone: string;
+  email?: string;
   forceAdditional: boolean;
   yes: boolean;
 }
 
-const USAGE = 'Usage: bootstrap-admin --phone <E.164> [--force-additional] [--yes]';
+const USAGE =
+  'Usage: bootstrap-admin --phone <E.164> [--email <address>] [--force-additional] [--yes]';
 
-/** Parses `--phone N` / `--phone=N`, `--force-additional` and `--yes`. Throws with a usage line. */
+/** Parses `--phone N` / `--phone=N`, `--email A`, `--force-additional` and `--yes`. Throws with a usage line. */
 export function parseBootstrapArgs(argv: readonly string[]): BootstrapArgs {
   let phone: string | undefined;
+  let email: string | undefined;
   let forceAdditional = false;
   let yes = false;
   for (let i = 0; i < argv.length; i++) {
@@ -240,11 +253,14 @@ export function parseBootstrapArgs(argv: readonly string[]): BootstrapArgs {
     else if (arg === '--phone' || arg.startsWith('--phone=')) {
       phone = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : argv[++i];
       if (!phone) throw new Error(`--phone needs a number. ${USAGE}`);
+    } else if (arg === '--email' || arg.startsWith('--email=')) {
+      email = arg.includes('=') ? arg.slice(arg.indexOf('=') + 1) : argv[++i];
+      if (!email) throw new Error(`--email needs an address. ${USAGE}`);
     } else {
       // Never echo the argument: it may be a phone number typed in the wrong place.
       throw new Error(`Unknown argument. ${USAGE}`);
     }
   }
   if (!phone) throw new Error(`--phone is required. ${USAGE}`);
-  return { phone, forceAdditional, yes };
+  return { phone, ...(email ? { email } : {}), forceAdditional, yes };
 }

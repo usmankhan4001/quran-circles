@@ -13,6 +13,7 @@ try {
   const result = await withDrizzle((db) =>
     bootstrapNationalAdmin(db, {
       phone: args.phone,
+      ...(args.email ? { email: args.email } : {}),
       forceAdditional: args.forceAdditional,
       confirmProduction: args.yes,
     }),

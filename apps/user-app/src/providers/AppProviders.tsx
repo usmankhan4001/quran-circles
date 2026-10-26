@@ -14,6 +14,7 @@ const styles = StyleSheet.create({ root: { flex: 1 } });
 
 function modeFor(color: string, system: 'light' | 'dark' | null | undefined): ColorMode {
   if (color === 'dark' || color === 'light' || color === 'highContrast') return color;
+  // "Same as phone": only when the person picked it. The default is light.
   return system === 'dark' ? 'dark' : 'light';
 }
 

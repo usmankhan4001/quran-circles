@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { ApiClientError, RequestCodeBody, createApiClient, type ApiClient } from '@qc/contracts';
+import {
+  ApiClientError,
+  PakistaniMobilePhone,
+  RequestCodeBody,
+  createApiClient,
+  type ApiClient,
+} from '@qc/contracts';
+import { z } from 'zod';
 import { schema } from '@qc/db';
 import { createApp } from '../app';
 import { FakeCodeSender, authRoutes, createAuthConfig, silentLogger } from '../auth';
@@ -27,13 +34,20 @@ beforeAll(async () => {
 afterAll(() => h.close());
 beforeEach(async () => {
   await h.reset();
+  // Most of these tests are about the lane's wiring, not the channel: they use the number-based
+  // sign-in, which stays supported when switched on. The email tests below turn it off, as in
+  // production.
+  buildApp({ fixedCode: '123456', phoneSignIn: true });
+});
+
+function buildApp(otp: { fixedCode: string; phoneSignIn: boolean }) {
   sender = new FakeCodeSender();
   const authDeps = {
     db: h.db,
     config: createAuthConfig({
       secret: 'test-secret-test-secret-test-secret-0000',
       appEnv: 'test',
-      otp: { fixedCode: '123456' },
+      otp,
     }),
     codeSender: sender,
     logger: silentLogger,
@@ -58,7 +72,7 @@ beforeEach(async () => {
       return app.request(`${url.pathname}${url.search}`, init);
     },
   });
-});
+}
 
 const PHONE = '+923000000001';
 
@@ -215,7 +229,7 @@ describe('contract issue codes (SEC-04)', () => {
   it('reports refinement codes from the contract in the shared route binder too, never `custom`', async () => {
     let thrown: unknown;
     try {
-      parseWith(RequestCodeBody, { phone: '+447700900123' });
+      parseWith(z.object({ phone: PakistaniMobilePhone }), { phone: '+447700900123' });
     } catch (error) {
       thrown = error;
     }
@@ -224,6 +238,69 @@ describe('contract issue codes (SEC-04)', () => {
       { path: 'phone', code: 'phone_not_pakistan_mobile' },
     ]);
     // Zod's own codes are unchanged.
-    expect(() => parseWith(RequestCodeBody, { phone: 12 })).toThrow(ApiException);
+    expect(() => parseWith(RequestCodeBody, { email: 12 })).toThrow(ApiException);
+  });
+});
+
+describe('signing in by email, as in production (WhatsApp sign-in off)', () => {
+  const EMAIL = 'reader@example.org';
+
+  beforeEach(() => buildApp({ fixedCode: '123456', phoneSignIn: false }));
+
+  it('signs a new person in with an email code and the WhatsApp number given with it', async () => {
+    const challenge = await api.auth.requestCode({
+      body: { email: EMAIL, phone: PHONE, locale: 'en' },
+    });
+    expect(challenge.channel).toBe('email');
+    expect(sender.last).toMatchObject({ email: EMAIL, channel: 'email', code: '123456' });
+    expect(sender.last?.phone).toBeUndefined();
+    const session = await api.auth.verifyCode({
+      body: { challengeId: challenge.challengeId, code: '123456' },
+    });
+    expect(session.isNewAccount).toBe(true);
+    const me = await authed(session.accessToken).me.get();
+    expect(me).toMatchObject({ email: EMAIL, phone: PHONE, roles: [] });
+  });
+
+  it('refuses a phone-only request while WhatsApp sign-in is off, sending nothing', async () => {
+    const res = await app.request('/v1/auth/code', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phone: PHONE }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { issues: { path: string; code: string }[] } };
+    expect(body.error.issues).toEqual([{ path: 'email', code: 'email_required' }]);
+    expect(sender.sent).toHaveLength(0);
+  });
+
+  it('turns an invite that names the email into a role at sign-in', async () => {
+    const admin = await h.nationalAdmin();
+    await h.db
+      .update(schema.users)
+      .set({ email: 'admin@example.org', emailVerifiedAt: h.clock.now() })
+      .where(eq(schema.users.id, admin.userId));
+    const adminSignIn = await api.auth.requestCode({ body: { email: 'admin@example.org' } });
+    const adminSession = await api.auth.verifyCode({
+      body: { challengeId: adminSignIn.challengeId, code: '123456' },
+    });
+    await authed(adminSession.accessToken).adminRoles.invite({
+      body: {
+        role: 'venue_coordinator',
+        venueId: h.world.venueA1,
+        phone: PHONE,
+        email: EMAIL,
+      },
+    });
+    const challenge = await api.auth.requestCode({
+      body: { email: EMAIL, phone: '+923000000077', locale: 'en' },
+    });
+    const session = await api.auth.verifyCode({
+      body: { challengeId: challenge.challengeId, code: '123456' },
+    });
+    const me = await authed(session.accessToken).me.get();
+    expect(me.roles.map((r) => [r.role, r.venueId])).toEqual([
+      ['venue_coordinator', h.world.venueA1],
+    ]);
   });
 });

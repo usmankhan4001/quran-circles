@@ -8,13 +8,7 @@ import {
   useState,
 } from 'react';
 import type { ReactNode } from 'react';
-import {
-  createApiClient,
-  type ApiClient,
-  type Me,
-  type OtpChannel,
-  type Principal,
-} from '@qc/contracts';
+import { createApiClient, type ApiClient, type Me, type Principal } from '@qc/contracts';
 import { errorKind } from '../lib/errors';
 import { principalFromMe } from '../lib/permissions';
 import { webStore, type KeyValueStore } from '../lib/storage';
@@ -36,7 +30,11 @@ export interface AuthContextValue {
   me: Me | null;
   principal: Principal | null;
   api: ApiClient;
-  requestCode(phone: string, channel?: OtpChannel): ReturnType<ApiClient['auth']['requestCode']>;
+  /** `whatsapp` is the person's WhatsApp number, needed only for a first sign-in. */
+  requestCode(
+    email: string,
+    whatsapp?: string | null,
+  ): ReturnType<ApiClient['auth']['requestCode']>;
   verifyCode(challengeId: string, code: string): Promise<VerifyResult>;
   signOut(): Promise<void>;
 }
@@ -146,8 +144,15 @@ export function AuthProvider({ baseUrl, fetchImpl, tokenStore, children }: AuthP
   }, [api, refreshAccess]);
 
   const requestCode = useCallback<AuthContextValue['requestCode']>(
-    (phone, channel = 'whatsapp') =>
-      publicApi.auth.requestCode({ body: { phone, locale: localeRef.current, channel } }),
+    (email, whatsapp = null) =>
+      publicApi.auth.requestCode({
+        body: {
+          email,
+          ...(whatsapp ? { phone: whatsapp } : {}),
+          locale: localeRef.current,
+          channel: 'email',
+        },
+      }),
     [publicApi],
   );
 

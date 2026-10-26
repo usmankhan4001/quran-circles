@@ -199,14 +199,14 @@ export const writes = (calls: Call[]) =>
 export { screen, waitFor };
 
 /**
- * The phone field of the sign-in page. A signed-out person lands on the welcome page first, so
+ * The email field of the sign-in page. A signed-out person lands on the welcome page first, so
  * this takes the Welcome page's Sign in link when it is on screen.
  */
-export async function phoneField(
+export async function emailField(
   user: ReturnType<typeof renderConsole>['user'],
   locale: Locale = 'en',
 ): Promise<HTMLElement> {
-  const label = new RegExp(text('console.signIn.phone.label', locale));
+  const label = new RegExp(text('console.signIn.email.label', locale));
   const link = await screen
     .findByRole('link', { name: text('console.welcome.signIn', locale) })
     .catch(() => null);

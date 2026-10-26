@@ -192,6 +192,10 @@ describe('inviting a coordinator', () => {
       'national_admin',
     );
     await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
+    );
+    await user.type(
       within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '051 2345678',
     );
@@ -220,6 +224,10 @@ describe('inviting a coordinator', () => {
       rawalpindi!.id,
     );
     await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
+    );
+    await user.type(
       within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '0300 0000071',
     );
@@ -240,7 +248,33 @@ describe('inviting a coordinator', () => {
       role: 'city_coordinator',
       cityId: rawalpindi!.id,
       phone: '+923000000071',
+      email: 'invitee@example.com',
     });
+  });
+
+  it('asks for the email the person will sign in with, and does not send without one', async () => {
+    const { user, calls } = renderConsole({
+      role: 'national',
+      path: '/coordinators',
+      handlers: data,
+    });
+    await user.click(await screen.findByRole('button', { name: text('console.invites.new') }));
+    const form = await screen.findByRole('form', { name: text('console.invites.new') });
+    await user.selectOptions(
+      within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
+      'national_admin',
+    );
+    await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
+      '0300 0000079',
+    );
+    await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'not-an-email',
+    );
+    await user.click(within(form).getByRole('button', { name: text('console.invites.send') }));
+    expect(within(form).getByText(text('console.invites.form.email.invalid'))).toBeTruthy();
+    expect(writes(calls)).toEqual([]);
   });
 
   it('points a field the server rejected at that field', async () => {
@@ -260,6 +294,10 @@ describe('inviting a coordinator', () => {
     );
     const city = within(form).getByLabelText(new RegExp(text('console.invites.scope.city')));
     await user.selectOptions(city, rawalpindi!.id);
+    await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
+    );
     await user.type(
       within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '0300 0000073',
@@ -281,6 +319,10 @@ describe('inviting a coordinator', () => {
     await user.selectOptions(
       within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
       'national_admin',
+    );
+    await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
     );
     await user.type(
       within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),
@@ -410,6 +452,10 @@ describe('handover and removal', () => {
     expect(writes(calls)).toEqual([]);
 
     await user.type(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
+    );
+    await user.type(
       within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label'))),
       '0300 0000074',
     );
@@ -421,6 +467,7 @@ describe('handover and removal', () => {
       role: 'venue_coordinator',
       venueId: venueA!.id,
       phone: '+923000000074',
+      email: 'invitee@example.com',
       replacesAssignmentId: personA.id,
     });
     expect(find(calls, 'POST', '/v1/admin/role-assignments')).toEqual([]);
@@ -441,6 +488,10 @@ describe('handover and removal', () => {
     await user.selectOptions(
       within(dialog).getByLabelText(text('console.invites.handover.mode.label')),
       'phone',
+    );
+    await user.type(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
     );
     const phone = within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label')));
     await user.type(phone, '0300 0000075');
@@ -830,6 +881,10 @@ describe('the 24-hour invite limit', () => {
         within(form).getByLabelText(new RegExp(text('console.invites.role.label', locale))),
         'national_admin',
       );
+      await user.type(
+        within(form).getByLabelText(new RegExp(text('console.invites.form.email.label', locale))),
+        'invitee@example.com',
+      );
       const phone = within(form).getByLabelText(
         new RegExp(text('console.invites.phone.label', locale)),
       );
@@ -873,6 +928,10 @@ describe('the 24-hour invite limit', () => {
       within(dialog).getByLabelText(text('console.invites.handover.mode.label')),
       'phone',
     );
+    await user.type(
+      within(dialog).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
+    );
     const phone = within(dialog).getByLabelText(new RegExp(text('console.invites.phone.label')));
     await user.type(phone, '0300 0000077');
     await user.click(
@@ -897,6 +956,10 @@ describe('the 24-hour invite limit', () => {
     await user.selectOptions(
       within(form).getByLabelText(new RegExp(text('console.invites.role.label'))),
       'national_admin',
+    );
+    await user.type(
+      within(form).getByLabelText(new RegExp(text('console.invites.form.email.label'))),
+      'invitee@example.com',
     );
     await user.type(
       within(form).getByLabelText(new RegExp(text('console.invites.phone.label'))),

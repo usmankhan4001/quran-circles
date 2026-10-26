@@ -1,12 +1,17 @@
 import { renderTemplate, type Locale, type OtpChannel } from '@qc/contracts';
 import { silentLogger, type Logger } from './logger';
+import { renderPlainEmail, type EmailRenderer } from './email-render';
+import type { EmailProvider } from './providers/email';
 import type { SmsProvider } from './providers/sms';
 import { buildWhatsAppRequest, type WhatsAppProvider } from './providers/whatsapp';
 
 /**
  * Sign-in code delivery for the auth-scopes lane.
  *
- * `CodeSender.send({ phone, code, locale, channel })` is the shape the auth lane calls. It resolves
+ * Since 2026-10-25 (owner decision) codes go by email (`channel: 'email'`, through Resend). The
+ * WhatsApp and SMS paths below are kept and used only when the API has WhatsApp sign-in switched on.
+ *
+ * `CodeSender.send({ email | phone, code, locale, channel })` is the shape the auth lane calls. It resolves
  * with the channel that carried the code once a provider accepted it (`sms` after a WhatsApp
  * failure, so the app can tell the person where to look) and throws `CodeDeliveryError` when no
  * channel worked. Everyone, staff included, gets WhatsApp first with SMS as the fallback (owner
@@ -21,8 +26,10 @@ import { buildWhatsAppRequest, type WhatsAppProvider } from './providers/whatsap
 export const DEFAULT_CODE_VALIDITY_MINUTES = 5;
 
 export interface CodeSendRequest {
-  /** E.164, for example +923000000001. */
-  phone: string;
+  /** E.164, for example +923000000001. Set for the WhatsApp and SMS channels. */
+  phone?: string;
+  /** The address for the email channel. */
+  email?: string;
   /** Six digits. */
   code: string;
   locale: Locale;
@@ -46,7 +53,7 @@ export interface CodeSender {
 export class CodeDeliveryError extends Error {
   override name = 'CodeDeliveryError';
   constructor(
-    /** A fixed code such as `whatsapp_failed` or `all_channels_failed`. Never contains the phone or code. */
+    /** A fixed code such as `email_failed`, `whatsapp_failed` or `all_channels_failed`. Never contains the address, phone or code. */
     readonly code: string,
   ) {
     super(code);
@@ -63,6 +70,9 @@ export interface CodeDeliveryReport {
 }
 
 export interface ProviderCodeSenderOptions {
+  email?: EmailProvider;
+  /** Renders the code email. Defaults to the plain placeholder; the designed templates plug in here. */
+  renderEmail?: EmailRenderer;
   whatsapp?: WhatsAppProvider;
   sms?: SmsProvider;
   /** Send by SMS when WhatsApp fails or cannot reach the number. Defaults to true. */
@@ -75,7 +85,9 @@ export interface ProviderCodeSenderOptions {
 }
 
 /**
- * Live delivery: a WhatsApp authentication template, with an SMS fallback.
+ * Live delivery: email, or a WhatsApp authentication template with an SMS fallback.
+ * - `channel: 'email'`: the email provider only (Resend); no fallback to a phone channel, because the
+ *   person gave an address.
  * - `channel: 'whatsapp'`: WhatsApp first; on any failure, SMS when configured and allowed.
  * - `channel: 'sms'`: SMS only.
  */
@@ -89,6 +101,30 @@ export class ProviderCodeSender implements CodeSender {
     const report = (channel: OtpChannel, outcome: 'sent' | 'failed', fellBack: boolean): void =>
       this.options.onDelivery?.({ channel, outcome, fellBack, costCategory: 'authentication' });
 
+    if (request.channel === 'email') {
+      if (!request.email) throw new CodeDeliveryError('no_recipient');
+      if (!this.options.email) {
+        report('email', 'failed', false);
+        throw new CodeDeliveryError('no_channel_configured');
+      }
+      const result = await this.options.email.send({
+        to: request.email,
+        ...(this.options.renderEmail ?? renderPlainEmail)('auth_code', request.locale, {
+          code: request.code,
+          minutes,
+        }),
+      });
+      if (result.status === 'ok') {
+        log.info('code.sent', { channel: 'email' });
+        report('email', 'sent', false);
+        return { channel: 'email' };
+      }
+      log.warn('code.email_failed', { errorCode: result.code });
+      report('email', 'failed', false);
+      throw new CodeDeliveryError('email_failed');
+    }
+
+    if (!request.phone) throw new CodeDeliveryError('no_recipient');
     let triedWhatsApp = false;
     if (request.channel === 'whatsapp' && this.options.whatsapp) {
       triedWhatsApp = true;
@@ -136,7 +172,7 @@ export class ProviderCodeSender implements CodeSender {
 }
 
 export interface TestCodeSenderOptions {
-  /** Codes kept per phone number, newest last. Defaults to 5. */
+  /** Codes kept per address or number, newest last. Defaults to 5. */
   keep?: number;
 }
 
@@ -153,13 +189,16 @@ export class TestCodeSender implements CodeSender {
 
   send(request: CodeSendRequest): Promise<CodeSendResult> {
     this.requests.push(request);
-    const list = this.codes.get(request.phone) ?? [];
+    const key = request.email ?? request.phone;
+    if (!key) throw new CodeDeliveryError('no_recipient');
+    const list = this.codes.get(key) ?? [];
     list.push(request.code);
-    this.codes.set(request.phone, list.slice(-(this.options.keep ?? 5)));
+    this.codes.set(key, list.slice(-(this.options.keep ?? 5)));
     return Promise.resolve({ channel: request.channel });
   }
 
-  lastCode(phone: string): string | undefined {
-    return this.codes.get(phone)?.at(-1);
+  /** The newest code kept for an email address or a phone number. */
+  lastCode(addressOrPhone: string): string | undefined {
+    return this.codes.get(addressOrPhone)?.at(-1);
   }
 }

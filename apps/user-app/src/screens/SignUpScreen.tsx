@@ -15,7 +15,6 @@ import {
 import { AreaPickerSheet } from '../components/AreaPickerSheet';
 import { Page } from '../components/Page';
 import { errorMessageKey } from '../core/errors';
-import { formatPhoneForDisplay, normalizePhone } from '../core/phone';
 import { retryAfterText } from '../core/wait';
 import { checkName } from '../features/auth/validation';
 import { useSignIn } from '../features/auth/useSignIn';
@@ -66,7 +65,10 @@ export function SignUpScreen({ returnTo }: { returnTo?: string }) {
   const areas = useAreas(prefs.cityId);
   const area = areas.data?.find((a) => a.id === prefs.areaId);
 
-  const flow = useSignIn(() => nav.replace(routeAfterSignUp(returnTo)), { presetName: name });
+  const flow = useSignIn(() => nav.replace(routeAfterSignUp(returnTo)), {
+    presetName: name,
+    askPhone: true,
+  });
 
   const submitDetails = async () => {
     setMissing(null);
@@ -74,36 +76,38 @@ export function SignUpScreen({ returnTo }: { returnTo?: string }) {
     if (!prefs.areaId) return setMissing('area');
     if (!section) return setMissing('section');
     await prefs.update({ section });
-    await flow.submitPhone();
+    await flow.submitEmail();
   };
 
   const problemText =
     flow.problem === 'invalid_phone'
-      ? t('signIn.problem.phone')
-      : flow.problem === 'phone_not_pakistan_mobile'
-        ? t(issueMessageKey('phone_not_pakistan_mobile'))
-        : flow.problem === 'invalid_code'
-          ? t('signIn.problem.code')
-          : flow.error
-            ? flow.error.code === 'rate_limited' || flow.error.code === 'otp_too_many_attempts'
-              ? [
-                  t(errorMessageKey(flow.error.code)),
-                  retryAfterText(t, flow.error.retryAfterSeconds),
-                ]
-                  .filter(Boolean)
-                  .join(' ')
-              : t(errorMessageKey(flow.error.code))
-            : undefined;
+      ? t('signUp.problem.phone')
+      : flow.problem === 'phone_in_use'
+        ? t(issueMessageKey('phone_in_use'))
+        : flow.problem === 'no_account'
+          ? t(issueMessageKey('phone_required'))
+          : flow.problem === 'invalid_code'
+            ? t('signIn.problem.code')
+            : flow.error
+              ? flow.error.code === 'rate_limited' || flow.error.code === 'otp_too_many_attempts'
+                ? [
+                    t(errorMessageKey(flow.error.code)),
+                    retryAfterText(t, flow.error.retryAfterSeconds),
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                : t(errorMessageKey(flow.error.code))
+              : undefined;
 
-  const onCode = flow.step !== 'phone';
-  const shownPhone = formatPhoneForDisplay(normalizePhone(flow.phoneInput) ?? flow.phoneInput);
+  const emailProblem = flow.problem === 'invalid_email' ? t('signIn.problem.email') : undefined;
+  const onCode = flow.step !== 'email';
 
   if (onCode) {
     return (
       <Page
         testID="sign-up-code-screen"
         barTitle={t('signUp.step', { step: 2 })}
-        onBack={flow.changeNumber}
+        onBack={flow.changeEmail}
         footer={
           <Button
             label={t('signUp.code.submit')}
@@ -122,9 +126,7 @@ export function SignUpScreen({ returnTo }: { returnTo?: string }) {
               {t('signUp.code.title')}
             </Text>
             <Text variant="body" color="textMuted">
-              {t(flow.channel === 'sms' ? 'signUp.code.introSms' : 'signUp.code.intro', {
-                phone: shownPhone,
-              })}
+              {t('signUp.code.intro', { email: flow.email ?? '' })}
             </Text>
           </View>
           <CodeField
@@ -144,24 +146,15 @@ export function SignUpScreen({ returnTo }: { returnTo?: string }) {
                 variant="tertiary"
                 label={t('signIn.code.resend')}
                 disabled={flow.working}
-                onPress={() => void flow.resend('whatsapp')}
+                onPress={() => void flow.resend()}
                 testID="resend-code"
               />
             )}
-            {flow.resendIn === 0 ? (
-              <Button
-                variant="tertiary"
-                label={t('signIn.code.useSms')}
-                disabled={flow.working}
-                onPress={() => void flow.resend('sms')}
-                testID="resend-sms"
-              />
-            ) : null}
             <Button
               variant="tertiary"
-              label={t('signIn.code.changeNumber')}
-              onPress={flow.changeNumber}
-              testID="change-number"
+              label={t('signIn.code.changeEmail')}
+              onPress={flow.changeEmail}
+              testID="change-email"
             />
           </View>
         </View>
@@ -208,6 +201,19 @@ export function SignUpScreen({ returnTo }: { returnTo?: string }) {
           required
           error={missing === 'name' ? t('signIn.problem.name') : undefined}
           testID="name-input"
+        />
+        <TextField
+          label={t('signUp.email.label')}
+          helper={t('signUp.email.hint')}
+          value={flow.emailInput}
+          onChangeText={flow.setEmailInput}
+          keyboardType="email-address"
+          autoComplete="email"
+          autoCapitalize="none"
+          contentDirection="ltr"
+          required
+          error={emailProblem}
+          testID="email-input"
         />
         <TextField
           label={t('signUp.phone.label')}

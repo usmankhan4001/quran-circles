@@ -8,7 +8,15 @@ import {
   loadFontsWithFallback,
   type BundledFontFamily,
 } from './font-sources';
-import { fontFallbacks, fontStack, fontTokenFor, fonts, sansWeights, typeRoles } from './index';
+import {
+  fontFallbacks,
+  fontStack,
+  fontTokenFor,
+  fonts,
+  sansWeights,
+  typeRoles,
+  urduFallbackFont,
+} from './index';
 
 const fontsDir = resolve(import.meta.dirname, '../assets/fonts');
 const inFonts = (file: string) => resolve(fontsDir, file);
@@ -24,6 +32,11 @@ const recorded = {
     bytes: 246428,
     sha256: '59e20b2403687a67854fd199861abed3528068c035d2689898465d5faf39bb31',
   },
+  jameel: {
+    file: 'JameelNooriNastaleeq-Regular.ttf',
+    bytes: 13857080,
+    sha256: '30caf30da47c3132af67caa823df8aa446dd4c0195e74cbc1be4ae9c493f52b0',
+  },
   mehr: {
     file: 'MehrNastaliqWeb-Regular.ttf',
     bytes: 132816,
@@ -35,14 +48,14 @@ describe('font tokens (D4)', () => {
   it('names the bundled families', () => {
     expect(fonts).toEqual({
       sans: 'Plus Jakarta Sans',
-      urdu: 'Mehr Nastaliq Web',
+      urdu: 'Jameel Noori Nastaleeq',
       quran: 'KFGQPC Uthmanic Script HAFS',
     });
   });
 
-  it('never names Jameel Noori Nastaleeq, which has no redistribution licence', () => {
-    const everything = JSON.stringify({ fonts, fontFallbacks });
-    expect(everything).not.toMatch(/Jameel|Noori/i);
+  it('sets Urdu in Jameel Noori Nastaleeq, with Mehr Nastaliq Web showing while it downloads', () => {
+    expect(fontFallbacks.urdu.slice(0, 2)).toEqual([fonts.urdu, urduFallbackFont]);
+    expect(urduFallbackFont).toBe('Mehr Nastaliq Web');
   });
 
   it('starts each fallback chain with the bundled family and ends with a generic family', () => {
@@ -56,7 +69,9 @@ describe('font tokens (D4)', () => {
 
   it('writes a CSS stack with family names quoted and generic names bare', () => {
     expect(fontStack('sans')).toBe('"Plus Jakarta Sans", system-ui, sans-serif');
-    expect(fontStack('urdu')).toBe('"Mehr Nastaliq Web", "Noto Nastaliq Urdu", serif');
+    expect(fontStack('urdu')).toBe(
+      '"Jameel Noori Nastaleeq", "Mehr Nastaliq Web", "Noto Nastaliq Urdu", serif',
+    );
     expect(fontStack('quran')).toBe('"KFGQPC Uthmanic Script HAFS", serif');
   });
 
@@ -80,9 +95,9 @@ describe('bundled font map', () => {
     return found;
   };
 
-  it('includes all three families under the token names', () => {
+  it('includes the families under the token names, and Mehr as the Urdu fallback', () => {
     expect(bundledFonts.map((f) => f.fontFamily).sort()).toEqual(
-      [fonts.sans, fonts.urdu, fonts.quran].sort(),
+      [fonts.sans, fonts.urdu, urduFallbackFont, fonts.quran].sort(),
     );
   });
 
@@ -99,7 +114,8 @@ describe('bundled font map', () => {
     const quran = family(fonts.quran).fontDefinitions;
     expect(urdu).toHaveLength(1);
     expect(quran).toHaveLength(1);
-    expect(String(urdu[0]?.path)).toContain(recorded.mehr.file);
+    expect(String(urdu[0]?.path)).toContain(recorded.jameel.file);
+    expect(String(family(urduFallbackFont).fontDefinitions[0]?.path)).toContain(recorded.mehr.file);
     expect(String(quran[0]?.path)).toContain(recorded.kfgqpc.file);
   });
 });
@@ -108,6 +124,11 @@ describe('bundled font files', () => {
   it('keeps the KFGQPC Quran font byte-for-byte unmodified (its licence forbids changes)', () => {
     expect(statSync(inFonts(recorded.kfgqpc.file)).size).toBe(recorded.kfgqpc.bytes);
     expect(sha256(recorded.kfgqpc.file)).toBe(recorded.kfgqpc.sha256);
+  });
+
+  it('keeps the full Jameel Noori Nastaleeq TTF as supplied', () => {
+    expect(statSync(inFonts(recorded.jameel.file)).size).toBe(recorded.jameel.bytes);
+    expect(sha256(recorded.jameel.file)).toBe(recorded.jameel.sha256);
   });
 
   it('keeps Mehr Nastaliq Web unmodified', () => {
@@ -119,6 +140,7 @@ describe('bundled font files', () => {
     const notes = readFileSync(inFonts('LICENSES.md'), 'utf8');
     expect(notes).toContain(recorded.kfgqpc.sha256);
     expect(notes).toContain(recorded.mehr.sha256);
+    expect(notes).toContain(recorded.jameel.sha256);
     expect(notes).toContain('SIL Open Font License');
     expect(notes).toContain('https://creativecommons.org/licenses/by-sa/4.0/');
     expect(notes).toMatch(/Not ISC/);

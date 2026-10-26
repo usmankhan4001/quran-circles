@@ -460,8 +460,14 @@ const overrides: Record<string, (c: Ctx, requestId: string) => Response | unknow
     return o && s ? { ...fx.toPublicOccurrence(o), session: s } : notFound(id);
   },
   'auth.requestCode': (c) => {
-    const body = c.body as { phone: string; channel: 'whatsapp' | 'sms' };
-    const account = staffList.find((a) => a.phone === body.phone);
+    const body = c.body as {
+      email?: string;
+      phone?: string;
+      channel: 'whatsapp' | 'sms' | 'email';
+    };
+    const account = staffList.find(
+      (a) => (body.email !== undefined && a.me.email === body.email) || a.phone === body.phone,
+    );
     if (!account) return generated('auth.requestCode');
     return {
       challengeId: account.challengeId,

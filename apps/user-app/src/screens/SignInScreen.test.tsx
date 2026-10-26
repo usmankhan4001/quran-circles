@@ -31,15 +31,15 @@ describe('routeAfterSignIn', () => {
 });
 
 describe('SignInScreen', () => {
-  it('walks through phone, code and returns to where the person came from', async () => {
+  it('walks through email, code and returns to where the person came from', async () => {
     const world = await openWorld();
     const view = await renderScreen(<SignInScreen returnTo="/register/abc?occurrenceId=o1" />, {
       world,
     });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const code = await view.findByTestId('code-input');
-    expect(view.getByText(/6-digit code on WhatsApp/)).toBeTruthy();
+    expect(view.getByText(/6-digit code to aisha@example.com/)).toBeTruthy();
     fireEvent.change(code, { target: { value: '123456' } });
     fireEvent.click(view.getByTestId('verify-code'));
     await waitFor(() => expect(world.nav.last()).toBeDefined());
@@ -50,54 +50,48 @@ describe('SignInScreen', () => {
     expect(world.services.auth.getState().status).toBe('signedIn');
   });
 
-  it('shows a plain message for a number that cannot be right', async () => {
+  it('shows a plain message for an email that cannot be right', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await openWorld() });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '12' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@' } });
     fireEvent.click(view.getByTestId('send-code'));
-    expect(await view.findByText(en['signIn.problem.phone'])).toBeTruthy();
+    expect(await view.findByText(en['signIn.problem.email'])).toBeTruthy();
   });
 
-  it('says sign-in needs a Pakistani mobile number for a number from abroad, in both languages', async () => {
+  it('points a person with no account to sign up, in both languages', async () => {
     for (const locale of ['en', 'ur'] as const) {
-      const world = await openWorld({}, locale);
+      const world = await createWorld({
+        locale,
+        mock: {
+          handlers: {
+            ...signInHandlers(),
+            'auth.verifyCode': (_c: unknown, id: string) =>
+              new Response(
+                JSON.stringify(
+                  makeApiError('validation_failed', id, {
+                    issues: [{ path: 'phone', code: 'phone_required' }],
+                  }),
+                ),
+                { status: 400, headers: { 'content-type': 'application/json' } },
+              ),
+          },
+        },
+      });
       const view = await renderScreen(<SignInScreen />, { world });
-      fireEvent.change(view.getByTestId('phone-input'), { target: { value: '+447700900123' } });
+      fireEvent.change(view.getByTestId('email-input'), { target: { value: 'new@example.com' } });
       fireEvent.click(view.getByTestId('send-code'));
-      const words = (locale === 'ur' ? ur : en)['issues.phone_not_pakistan_mobile'];
+      fireEvent.change(await view.findByTestId('code-input'), { target: { value: '123456' } });
+      fireEvent.click(view.getByTestId('verify-code'));
+      const words = (locale === 'ur' ? ur : en)['signIn.problem.noAccount'];
       expect(await view.findByText(words)).toBeTruthy();
-      expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(0);
+      expect(view.getByTestId('sign-in-new-here')).toBeTruthy();
       view.unmount();
     }
-  });
-
-  it('shows the same message when the server refuses the number', async () => {
-    const world = await createWorld({
-      mock: {
-        handlers: {
-          ...signInHandlers(),
-          'auth.requestCode': (_c: unknown, id: string) =>
-            new Response(
-              JSON.stringify(
-                makeApiError('validation_failed', id, {
-                  issues: [{ path: 'phone', code: 'phone_not_pakistan_mobile' }],
-                }),
-              ),
-              { status: 400, headers: { 'content-type': 'application/json' } },
-            ),
-        },
-      },
-    });
-    const view = await renderScreen(<SignInScreen />, { world });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '0300 1234567' } });
-    fireEvent.click(view.getByTestId('send-code'));
-    expect(await view.findByText(en['issues.phone_not_pakistan_mobile'])).toBeTruthy();
-    expect(view.getByTestId('phone-input')).toBeTruthy();
   });
 
   it('shows the message for a wrong code and stays on the code step', async () => {
     const world = await openWorld();
     const view = await renderScreen(<SignInScreen />, { world });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     fireEvent.change(await view.findByTestId('code-input'), { target: { value: '654321' } });
     fireEvent.click(view.getByTestId('verify-code'));
@@ -109,7 +103,7 @@ describe('SignInScreen', () => {
     const world = await openWorld();
     world.http.failNext('POST /v1/auth/code', 'rate_limited');
     const view = await renderScreen(<SignInScreen />, { world });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const text = await view.findByText(new RegExp(en['errors.rate_limited']));
     expect(text.textContent).toContain('30 seconds');
@@ -144,7 +138,7 @@ describe('SignInScreen', () => {
     [7200, 'Try again in 2 hours.'],
   ])('says a %j second wait in words, not raw seconds', async (seconds, words) => {
     const view = await renderScreen(<SignInScreen />, { world: await refusedWorld(seconds) });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const text = await view.findByText(new RegExp(en['errors.rate_limited']));
     expect(text.textContent).toBe(`${en['errors.rate_limited']} ${words}`);
@@ -153,7 +147,7 @@ describe('SignInScreen', () => {
 
   it('says the wait in Urdu on an Urdu screen', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await refusedWorld(847, 'ur') });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const text = await view.findByText(new RegExp(ur['errors.rate_limited']));
     const [before, after] = ur['signIn.wait.aboutMinutes.other'].split('{count}');
@@ -164,7 +158,7 @@ describe('SignInScreen', () => {
 
   it('shows the refusal alone when the server gives no wait', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await refusedWorld(null) });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const text = await view.findByText(new RegExp(en['errors.rate_limited']));
     expect(text.textContent).toBe(en['errors.rate_limited']);
@@ -172,7 +166,7 @@ describe('SignInScreen', () => {
 
   it('makes the person wait before asking for another code', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await openWorld() });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     await view.findByTestId('code-input');
     expect(view.getByText(/Send again in 30 seconds/)).toBeTruthy();
@@ -180,24 +174,25 @@ describe('SignInScreen', () => {
     expect(view.queryByTestId('resend-sms')).toBeNull();
   });
 
-  it('offers SMS when the WhatsApp code does not arrive, and a different number', async () => {
+  it('offers another code and a different email, and no SMS', async () => {
     const world = await openWorld();
     const view = await renderScreen(<SignInScreen />, { world });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     const code = await view.findByTestId('code-input');
     world.clock.advance(31_000);
     fireEvent.change(code, { target: { value: '1' } });
-    fireEvent.click(await view.findByTestId('resend-sms'));
-    await waitFor(() => expect(view.getByText(/6-digit code by SMS/)).toBeTruthy());
-    fireEvent.click(view.getByTestId('change-number'));
-    expect(await view.findByTestId('phone-input')).toBeTruthy();
+    fireEvent.click(await view.findByTestId('resend-code'));
+    await waitFor(() => expect(world.http.callsTo('POST /v1/auth/code')).toHaveLength(2));
+    expect(view.queryByTestId('resend-sms')).toBeNull();
+    fireEvent.click(view.getByTestId('change-email'));
+    expect(await view.findByTestId('email-input')).toBeTruthy();
   });
 
   it('asks a new person for a name and lets them skip it', async () => {
     const world = await openWorld({ isNewAccount: true, displayName: null });
     const view = await renderScreen(<SignInScreen />, { world });
-    fireEvent.change(view.getByTestId('phone-input'), { target: { value: '03001234567' } });
+    fireEvent.change(view.getByTestId('email-input'), { target: { value: 'aisha@example.com' } });
     fireEvent.click(view.getByTestId('send-code'));
     fireEvent.change(await view.findByTestId('code-input'), { target: { value: '123456' } });
     fireEvent.click(view.getByTestId('verify-code'));
@@ -207,16 +202,15 @@ describe('SignInScreen', () => {
     expect(world.nav.last()).toEqual({ type: 'replace', route: { name: 'home' } });
   });
 
-  it('says the code goes on WhatsApp, with SMS as the fallback', () => {
-    expect(en['signIn.intro']).toMatch(/WhatsApp/);
-    expect(en['signIn.intro']).toMatch(/SMS/);
-    expect(ur['signIn.intro']).toMatch(/واٹس ایپ/);
-    expect(ur['signIn.intro']).toMatch(/ایس ایم ایس/);
+  it('says the code goes by email, in both languages', () => {
+    expect(en['signIn.intro']).toMatch(/email/i);
+    expect(ur['signIn.intro']).toMatch(/ای میل/);
+    expect(en['signIn.intro']).not.toMatch(/WhatsApp|SMS/);
   });
 
-  it('keeps the phone number left to right inside an Urdu screen', async () => {
+  it('keeps the email address left to right inside an Urdu screen', async () => {
     const view = await renderScreen(<SignInScreen />, { world: await openWorld({}, 'ur') });
-    expect(view.getByTestId('phone-input').getAttribute('dir')).toBe('ltr');
+    expect(view.getByTestId('email-input').getAttribute('dir')).toBe('ltr');
     expect(view.getByText(ur['signIn.intro'])).toBeTruthy();
   });
 

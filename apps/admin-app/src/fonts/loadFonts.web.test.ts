@@ -26,7 +26,8 @@ describe('admin web fonts', () => {
     startFonts(doc);
     expect(doc.querySelectorAll(`#${WEB_FONT_STYLE_ID}`)).toHaveLength(1);
     const links = preloads(doc);
-    expect(links).toHaveLength(firstScreenWeights[locale].length);
+    // Urdu pages also ask ahead for the large Jameel Noori Nastaleeq face.
+    expect(links).toHaveLength(firstScreenWeights[locale].length + (locale === 'ur' ? 1 : 0));
     firstScreenWeights[locale].forEach((weight, i) =>
       expect(links[i]).toMatch(new RegExp(`PlusJakartaSans-${weight}\\b`)),
     );
