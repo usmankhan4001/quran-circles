@@ -8,7 +8,7 @@ This repository holds the whole V2 platform: one Postgres database, one API, bac
 
 **Parked on 2026-10-18.** Start with [HANDOFF.md](HANDOFF.md): what runs where, the state of each wave and the open items.
 
-The build runs in waves (0 to 7) with a quality gate between each. Waves 0 to 4 are built: contracts, every app and service, end-to-end tests and the Wave 4 features (posters, ayah of the day, session companion). Wave 5, hardening, is done apart from a full restore drill on a production server; the low-end phone check passed on 2026-10-18. The apps follow the owner's redesign (D17 in [`docs/design/redesign-decisions.md`](docs/design/redesign-decisions.md)). Staging runs at `staging.doraquran.pk` (user app) and `staging-console.doraquran.pk` (console). Production has not been created. The final state is tagged `v2-parked-2026-10-18`.
+The build runs in waves (0 to 7) with a quality gate between each. Waves 0 to 4 are built: contracts, every app and service, end-to-end tests and the Wave 4 features (posters, ayah of the day, session companion). Wave 5, hardening, is done apart from a full restore drill on a production server; the low-end phone check passed on 2026-10-18. The apps follow the owner's redesign (D17 in [`docs/design/redesign-decisions.md`](docs/design/redesign-decisions.md)). Staging runs at `staging.doraquran.pk` (user app) and `staging-console.doraquran.pk` (console). Production runs on Dokploy and deploys from `main` (see [Deployment](#deployment)). The final state is tagged `v2-parked-2026-10-18`.
 
 The lane-by-lane picture is in [`docs/agents/status/`](docs/agents/status/), one file per lane, with gate sign-offs in [`orchestrator.md`](docs/agents/status/orchestrator.md).
 
@@ -83,17 +83,42 @@ EXPO_PUBLIC_API_URL=http://localhost:4010 pnpm --filter @qc/user-app web
 pnpm --filter @qc/console dev                            # proxies to the mock by default
 ```
 
-To run the real API on a local Postgres, see [Getting started](docs/getting-started.md).
+To run the real API on a local Postgres:
+
+```sh
+docker compose -f infra/docker-compose.dev.yml up -d    # Postgres 16 on 127.0.0.1:5432
+cp .env.example .env                                    # development-only values, never commit .env
+pnpm --filter @qc/db migrate                            # apply the SQL migrations
+pnpm --filter @qc/db seed                               # synthetic places, venues and sessions
+```
+
+Then start the API and worker as described in [Getting started](docs/getting-started.md).
+
+**Windows:** the repository is stored with LF line endings and `.gitattributes` keeps them that way on checkout. If an older clone shows hundreds of files changed by `pnpm format:check`, run `git add --renormalize . && git status`, or re-clone.
 
 ## Common commands
 
-| Command                            | What it does                                                       |
-| ---------------------------------- | ------------------------------------------------------------------ |
-| `pnpm check`                       | Typecheck, lint, unit tests and format check                       |
-| `pnpm test`                        | Unit tests in every package (not end-to-end)                       |
-| `pnpm e2e`                         | End-to-end suite (starts its own stack)                            |
-| `pnpm format`                      | Fix formatting with Prettier                                       |
-| `pnpm --filter <package> <script>` | Run one package's script, for example `pnpm --filter @qc/api test` |
+| Command                            | What it does                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| `pnpm check`                       | Typecheck, lint, unit tests and format check                                  |
+| `pnpm test`                        | Unit tests in every package (not end-to-end)                                  |
+| `pnpm e2e`                         | End-to-end suite (starts its own stack)                                       |
+| `pnpm format`                      | Fix formatting with Prettier                                                  |
+| `pnpm env:check`                   | Check every variable in the `.env.example` files is in `infra/ENV.md`         |
+| `pnpm branches`                    | List branches merged into `main` (list only; see `scripts/branch-cleanup.sh`) |
+| `pnpm --filter <package> <script>` | Run one package's script, for example `pnpm --filter @qc/api test`            |
+
+## Deployment
+
+Production runs on [Dokploy](https://dokploy.com), which pulls this repository's `main` branch from GitHub with auto-deploy on. **A push to `main` deploys to production**, so work happens on `lane/<lane>/<topic>` branches and reaches `main` only when it is meant to go live. Checks run locally: run `pnpm check` before you push. CI (`.github/workflows/ci.yml`) is manual only (Actions > ci > Run workflow); pushes do not start it. It never deploys and does not hold a deploy back.
+
+The stack is the Compose file in `infra/` ([deployment overview](docs/deployment.md), runbook in [`infra/README.md`](infra/README.md)). Environment values are set in Dokploy and never committed.
+
+Environment variables:
+
+- `.env.example`: development-only values for running the API and worker locally.
+- `infra/.env.example`: the template for staging and production, with fake placeholders.
+- [`infra/ENV.md`](infra/ENV.md): every variable, who reads it and whether it is required. `pnpm env:check` fails if an `.env.example` file names a variable that `ENV.md` does not document, and `pnpm check` should be followed by it when you change variables.
 
 ## Documentation
 
@@ -104,6 +129,8 @@ Start with the [documentation index](docs/README.md). The most useful pages for 
 - [Architecture](docs/architecture.md): how the parts fit together and why.
 - [Deployment](docs/deployment.md): staging, production and backups.
 - [Contributing](CONTRIBUTING.md): lanes, ownership, branches and the checks a change must pass.
+- [GitHub settings](docs/engineering/github-settings.md) and [branch inventory](docs/engineering/branch-inventory.md): repository settings to apply on github.com, and which branches can go.
+- [Security policy](SECURITY.md): how to report a vulnerability.
 - [Design](docs/design/README.md): the redesign decisions, the component kit and the screen specs.
 - [Product decisions](docs/product/decisions.md): what is being built. Do not re-decide these.
 - [Credits and licences](docs/credits-and-licences.md): fonts, the Quran text and the translations.

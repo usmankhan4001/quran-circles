@@ -29,16 +29,18 @@ The agent-facing copy of the product plan. Read-only for lanes; changes come fro
 
 ## Engineering: how it is built
 
-| Page                                                         | What it covers                                             |
-| ------------------------------------------------------------ | ---------------------------------------------------------- |
-| [conventions.md](engineering/conventions.md)                 | Language, tooling, naming, testing and logging conventions |
-| [ownership.md](engineering/ownership.md)                     | Which lane owns which directory                            |
-| [gates.md](engineering/gates.md)                             | The quality gate between each wave                         |
-| [branches-and-review.md](engineering/branches-and-review.md) | Branches, pull requests, approvals and commit messages     |
-| [contracts-process.md](engineering/contracts-process.md)     | How shared contracts change, and the change request format |
-| [i18n-keys.md](engineering/i18n-keys.md)                     | How translation keys are named and where they go           |
-| [decisions/](engineering/decisions/README.md)                | Numbered architecture decision records (0001 to 0012)      |
-| [change-requests/](engineering/change-requests/)             | Contract change requests from the lanes, open and decided  |
+| Page                                                         | What it covers                                              |
+| ------------------------------------------------------------ | ----------------------------------------------------------- |
+| [conventions.md](engineering/conventions.md)                 | Language, tooling, naming, testing and logging conventions  |
+| [ownership.md](engineering/ownership.md)                     | Which lane owns which directory                             |
+| [gates.md](engineering/gates.md)                             | The quality gate between each wave                          |
+| [branches-and-review.md](engineering/branches-and-review.md) | Branches, pull requests, approvals and commit messages      |
+| [contracts-process.md](engineering/contracts-process.md)     | How shared contracts change, and the change request format  |
+| [i18n-keys.md](engineering/i18n-keys.md)                     | How translation keys are named and where they go            |
+| [github-settings.md](engineering/github-settings.md)         | Branch protection and other settings to apply on github.com |
+| [branch-inventory.md](engineering/branch-inventory.md)       | Which branches are merged, active or need a decision        |
+| [decisions/](engineering/decisions/README.md)                | Numbered architecture decision records (0001 to 0012)       |
+| [change-requests/](engineering/change-requests/)             | Contract change requests from the lanes, open and decided   |
 
 ## Design
 
