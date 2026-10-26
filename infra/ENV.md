@@ -33,7 +33,7 @@ Only on the Dokploy production stack. Both are public, restricted keys baked int
 | Name                     | Read by       | Required | Meaning                                                                                                   |
 | ------------------------ | ------------- | -------- | --------------------------------------------------------------------------------------------------------- |
 | `QC_GOOGLE_MAPS_WEB_KEY` | C (build arg) | no       | Google Maps JavaScript API key for the PWA, restricted to `https://<QC_DOMAIN>/*`. Unset: the keyless map |
-| `QC_CONTACT_EMAIL`       | C (build arg) | no       | Public contact address on the privacy, help and delete-account pages (`EXPO_PUBLIC_CONTACT_EMAIL`). Set it before the Play listing goes live; unset shows a marked placeholder |
+| `QC_CONTACT_EMAIL`       | C (build arg) | no       | Public contact address on the privacy, help and delete-account pages (`EXPO_PUBLIC_CONTACT_EMAIL`). Optional: unset uses the built-in default, markaz@tanzeem.org |
 | `VAPID_PUBLIC_KEY`       | C (build arg) | no       | Also passed to the `web` build as `EXPO_PUBLIC_VAPID_PUBLIC_KEY`, so the PWA can subscribe to web push    |
 
 ## API and worker
