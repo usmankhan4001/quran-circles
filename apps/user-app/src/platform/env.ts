@@ -8,7 +8,18 @@ export interface AppEnv {
   googleMapsKey: string;
   /** The public half of the web push key pair. Empty disables web push. */
   vapidPublicKey: string;
+  /** The address people write to, shown on the public pages (`EXPO_PUBLIC_CONTACT_EMAIL` overrides). */
+  contactEmail: string;
+  /** Where the Android app is listed on Google Play. */
+  playStoreUrl: string;
 }
+
+/** The owner's choice (2026-10-26); used when no `EXPO_PUBLIC_CONTACT_EMAIL` is set. */
+export const DEFAULT_CONTACT_EMAIL = 'markaz@tanzeem.org';
+
+/** The Play listing of the app id in `app.config.ts`; it works once the app is published. */
+export const DEFAULT_PLAY_STORE_URL =
+  'https://play.google.com/store/apps/details?id=pk.doraquran.circles';
 
 /** OpenStreetMap's own tiles: free and keyless, credited on the map as their licence asks. */
 export const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -31,5 +42,7 @@ export function readEnv(): AppEnv {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4010',
     googleMapsKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
     vapidPublicKey: process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY ?? '',
+    contactEmail: (process.env.EXPO_PUBLIC_CONTACT_EMAIL ?? '').trim() || DEFAULT_CONTACT_EMAIL,
+    playStoreUrl: process.env.EXPO_PUBLIC_PLAY_STORE_URL || DEFAULT_PLAY_STORE_URL,
   };
 }
