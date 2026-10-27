@@ -4,6 +4,7 @@ import { ErrorState, IconButton, Skeleton, Text, screenGutter, spacing, useTheme
 import { getSurah } from '../meta/surahs';
 import { splitBismillah } from '../quran/bismillah';
 import { MUSHAF_PAGE_COUNT, type MushafAyah } from '../quran/pages';
+import { forQuranFont } from '../quran/quranFontMarks';
 import { QuranSourceError } from '../quran/types';
 import { arabicIndic, surahName } from './format';
 import { useMushafPage } from './hooks';
@@ -39,7 +40,10 @@ function blocksOf(ayahs: readonly MushafAyah[]): Block[] {
     if (ayah.ayah === 1) {
       blocks.push({
         key: `s${ayah.surah}`,
-        starts: { surah: ayah.surah, bismillah: split.bismillah },
+        starts: {
+          surah: ayah.surah,
+          bismillah: split.bismillah ? forQuranFont(split.bismillah) : null,
+        },
         ayahs: [],
       });
     }
@@ -48,7 +52,7 @@ function blocksOf(ayahs: readonly MushafAyah[]): Block[] {
       block = { key: `p${ayah.surah}:${ayah.ayah}`, starts: null, ayahs: [] };
       blocks.push(block);
     }
-    block.ayahs.push({ ayah, text: split.text });
+    block.ayahs.push({ ayah, text: forQuranFont(split.text) });
   }
   return blocks;
 }

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { isValidAyah } from '../meta/ayah';
 import { isJuzNumber } from '../meta/juz';
 import { isSurahNumber } from '../meta/surahs';
+import { forQuranFont } from './quranFontMarks';
 import {
   isAbortError,
   QuranSourceError,
@@ -108,7 +109,7 @@ function join(
   return arabic.ayahs.map((a) => ({
     surah: surahOf(a),
     ayah: a.numberInSurah,
-    arabic: a.text,
+    arabic: forQuranFont(a.text),
     urdu: urduOf.get(a.number)?.trim() || null,
     english: englishOf.get(a.number)?.trim() || null,
   }));
@@ -224,7 +225,7 @@ export function createAlQuranCloudSource(options: AlQuranCloudOptions): QuranSou
         verse: {
           surah,
           ayah,
-          arabic: arabic.text,
+          arabic: forQuranFont(arabic.text),
           urdu: translation(urduParsed.data),
           english: translation(englishParsed?.success ? englishParsed.data : undefined),
         },

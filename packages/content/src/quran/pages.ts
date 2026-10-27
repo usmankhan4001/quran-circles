@@ -3,6 +3,7 @@ import { isValidAyah } from '../meta/ayah';
 import { readJson, writeJson } from '../storage/json';
 import type { KeyValueStorage } from '../storage/types';
 import { ALQURAN_CLOUD_BASE_URL, DEFAULT_EDITIONS } from './alquranCloud';
+import { forQuranFont } from './quranFontMarks';
 import { isAbortError, QuranSourceError, type FetchOptions } from './types';
 
 /** The Madani mushaf has 604 pages. */
@@ -126,7 +127,7 @@ export function createMushafPageSource(options: MushafPageSourceOptions): Mushaf
       const ayahs = parsed.data.ayahs.map((a) => ({
         surah: a.surah.number,
         ayah: a.numberInSurah,
-        arabic: a.text,
+        arabic: forQuranFont(a.text),
       }));
       const juz = parsed.data.ayahs[0]?.juz ?? null;
       const fetchedAt = now().toISOString();

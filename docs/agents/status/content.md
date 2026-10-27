@@ -61,6 +61,7 @@ WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or tra
 ## In progress
 
 - 2026-10-27: Mushaf page fixed at the root (`MushafView.tsx`): the ayah and end-mark runs were nested `Text`s with the body role, so on the web they rendered at 16px in the UI font with `dir="ltr"` (tiny text, wrong order, glued words, huge line gaps). Each run is now a `quran` / `ar` / `rtl` Text with the reader's size and line height; text 31px on a 2.2 line, left-ragged, end marks at 0.62 size. Checked against the live page's DOM; please run `pnpm --filter @qc/content test` and look at it on a phone.
+- 2026-10-27: Black dots inside Quran words: the bundled KFGQPC HAFS v0.09 draws U+06DF, U+06ED, U+06EA and U+06EB (about 8,800 uses in the Tanzil text) as a filled dotted circle on the baseline. `quran/quranFontMarks.ts` (`forQuranFont`) now turns U+06DF into U+06E0 (drawn as a small zero above the letter) and drops the other three, at fetch time and again at display (cached text). The real fix is a Quran font that draws every Tanzil sign: Amiri Quran (SIL OFL) renders them all correctly (checked); that is a UI-kit change (tokens, font sources, licences, font tests) for the ui lane, and then `forQuranFont` can go.
 
 ## Blocked
 

@@ -23,6 +23,7 @@ import { formatVerseKey } from '../meta/ayah';
 import { searchSurahs } from '../meta/search';
 import { ayahCountOf, getSurah, JUZ_COUNT, SURAH_COUNT } from '../meta/surahs';
 import { arabicZoom, type ReaderPrefs } from '../quran/prefs';
+import { forQuranFont } from '../quran/quranFontMarks';
 import type { QuranPassage } from '../quran/types';
 import { QuranSourceError } from '../quran/types';
 import { surahName } from './format';
@@ -849,7 +850,7 @@ const VerseRow = memo(function VerseRow({
           selectable
           testID={`arabic-${surah}-${ayah}`}
         >
-          {row.text}
+          {forQuranFont(row.text)}
         </Text>
         {showTranslation ? (
           translation.text ? (
