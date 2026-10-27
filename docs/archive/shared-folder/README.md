@@ -23,7 +23,7 @@ Each bundle was fetched into a scratch ref and compared with `git merge-base --i
 | `status-check-2026-10-25/fixes.bundle`, `patches/0001`..`0006` | detached head `cbea1f4`           | In main                                                                                      |
 | `console-poster-maker-2026-10-25/console-poster-maker.bundle`  | `feat/console-poster-maker`       | In main                                                                                      |
 
-The bundles themselves are not committed: they only duplicate history that `main` already holds. They stay in the shared folder.
+The bundles are kept as files in [`bundles/`](bundles/) (about 600 KB, force-added because `*.bundle` is gitignored). The larger original email-otp, email-templates and go-live patches are not copied, because `main` holds them. Restore one with `git fetch <file>.bundle <branch>:<local-name>`.
 
 ## Imported into the repository
 
@@ -59,7 +59,7 @@ The bundles themselves are not committed: they only duplicate history that `main
 
 | Shared folder                                                                                                                 | Why, and how to get it                                                                                                                       |
 | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tanzeem-circles-2026-10-25/quranic_circles_clean.{csv,json}`                                                                 | Real coordinator phone numbers. The repository rules forbid real personal data. Keep them outside git                                        |
+| `tanzeem-circles-2026-10-25/quranic_circles_clean.{csv,json}`                                                                 | Real coordinator phone numbers. The repository rules forbid real personal data. Copied to the private folder `qc-private-data` next to the repository on the owner's PC, outside git                                        |
 | `store-assets/screenshots*/`, `store-assets/screenshots-input/`, `store-assets/contact-sheet.png`, `play-assets/screenshots/` | About 130 MB of generated screenshots. Regenerate with `tools/store-assets/capture` (see W6 in [`project-state.md`](../../project-state.md)) |
 | `ui-redesign/`, `status-check-2026-10-25/screens/`, `status-check-2026-10-25/key/`                                            | Review screenshots from the redesign and the 25 October test pass. Findings are in the status files                                          |
 | `console-poster-maker-2026-10-25/*.png`, `flyer-studio*.html`, `v2-waves/poster-samples/`                                     | Render outputs and a prototype page; the code is in `apps/console` and `apps/poster-renderer`                                                |

@@ -1,0 +1,100 @@
+From e5d81dcc5658af87c68db7cb7804b5af31d580ca Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 27 Oct 2026 18:04:23 +0000
+Subject: [PATCH] feat(messaging): sign-in code email uses the branded template
+ by default
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Au8qGpVVerSDJx7vEj79JQ
+---
+ packages/messaging/src/code-sender.ts  |  6 +++---
+ packages/messaging/src/email-render.ts | 11 +++++++++++
+ packages/messaging/src/email.test.ts   | 21 +++++++++++++++++++++
+ 3 files changed, 35 insertions(+), 3 deletions(-)
+
+diff --git a/packages/messaging/src/code-sender.ts b/packages/messaging/src/code-sender.ts
+index 3de36b6..2a2c25d 100644
+--- a/packages/messaging/src/code-sender.ts
++++ b/packages/messaging/src/code-sender.ts
+@@ -1,6 +1,6 @@
+ import { renderTemplate, type Locale, type OtpChannel } from '@qc/contracts';
+ import { silentLogger, type Logger } from './logger';
+-import { renderPlainEmail, type EmailRenderer } from './email-render';
++import { renderBrandedEmail, type EmailRenderer } from './email-render';
+ import type { EmailProvider } from './providers/email';
+ import type { SmsProvider } from './providers/sms';
+ import { buildWhatsAppRequest, type WhatsAppProvider } from './providers/whatsapp';
+@@ -71,7 +71,7 @@ export interface CodeDeliveryReport {
+ 
+ export interface ProviderCodeSenderOptions {
+   email?: EmailProvider;
+-  /** Renders the code email. Defaults to the plain placeholder; the designed templates plug in here. */
++  /** Renders the code email. Defaults to the branded sign-in code template. */
+   renderEmail?: EmailRenderer;
+   whatsapp?: WhatsAppProvider;
+   sms?: SmsProvider;
+@@ -109,7 +109,7 @@ export class ProviderCodeSender implements CodeSender {
+       }
+       const result = await this.options.email.send({
+         to: request.email,
+-        ...(this.options.renderEmail ?? renderPlainEmail)('auth_code', request.locale, {
++        ...(this.options.renderEmail ?? renderBrandedEmail)('auth_code', request.locale, {
+           code: request.code,
+           minutes,
+         }),
+diff --git a/packages/messaging/src/email-render.ts b/packages/messaging/src/email-render.ts
+index 3328db1..6b81dee 100644
+--- a/packages/messaging/src/email-render.ts
++++ b/packages/messaging/src/email-render.ts
+@@ -1,4 +1,5 @@
+ import type { Locale } from '@qc/contracts';
++import { render as renderBranded } from './email';
+ import type { EmailMessage } from './providers/email';
+ 
+ /**
+@@ -62,3 +63,13 @@ export const renderPlainEmail: EmailRenderer = (name, locale, data) => {
+     html: `<!doctype html><html lang="${locale}" dir="${words.dir}"><head><meta charset="utf-8"></head><body><p>${text}</p></body></html>`,
+   };
+ };
++
++/**
++ * The designed, branded template (light mode, English and Urdu, logo, hosted PNG). The default for
++ * the sign-in code email; `renderPlainEmail` stays as the minimal fallback and for tests.
++ */
++export const renderBrandedEmail: EmailRenderer = (name, locale, data) => {
++  if (name !== 'auth_code') throw new Error(`no email template named ${String(name)}`);
++  const { code, minutes } = data as EmailTemplateData['auth_code'];
++  return renderBranded('sign_in_code', locale, { code, minutes });
++};
+diff --git a/packages/messaging/src/email.test.ts b/packages/messaging/src/email.test.ts
+index cfb3fff..32e84bd 100644
+--- a/packages/messaging/src/email.test.ts
++++ b/packages/messaging/src/email.test.ts
+@@ -219,3 +219,24 @@ describe('email wiring from the environment', () => {
+     expect(m.fakes!.email.sent).toHaveLength(0);
+   });
+ });
++
++describe('default code email', () => {
++  it('uses the branded template: logo, html, plain text, both languages', async () => {
++    const { FakeEmailProvider } = await import('./fakes');
++    const { ProviderCodeSender } = await import('./code-sender');
++    const { FakeWhatsAppProvider } = await import('./fakes');
++    for (const locale of ['en', 'ur'] as const) {
++      const email = new FakeEmailProvider();
++      const sender = new ProviderCodeSender({
++        email,
++        whatsapp: new FakeWhatsAppProvider(),
++        smsFallback: false,
++      });
++      await sender.send({ email: 'a@example.org', code: '123456', locale, channel: 'email' });
++      const sent = email.sent[0]!;
++      expect(sent.html).toContain('brand/email-logo.png');
++      expect(sent.html).toContain('123456');
++      expect(sent.text).toContain('123456');
++    }
++  });
++});
+-- 
+2.43.0
+
