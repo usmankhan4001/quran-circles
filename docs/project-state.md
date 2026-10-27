@@ -17,6 +17,7 @@ Quran Circles V2 (for Tanzeem-e-Islami) is built and live. Waves 0 to 5 are done
 | Local run               | [`getting-started.md`](getting-started.md)                                                                                                                                    |
 | Lanes and who owns what | [`agents/README.md`](agents/README.md), [`engineering/ownership.md`](engineering/ownership.md), one status file per lane in [`agents/status/`](agents/status/)                |
 | Product decisions       | [`product/decisions.md`](product/decisions.md). Do not re-decide them                                                                                                         |
+| Handover                | [`../HANDOVER.md`](../HANDOVER.md) and [`handover/`](handover/README.md): history, decisions, incidents, email setup, previews, screenshots                                   |
 | Older working material  | [`archive/shared-folder/`](archive/shared-folder/README.md): everything that lived in the project's shared folder before this handover, with where each item went             |
 
 ## Architecture in five lines

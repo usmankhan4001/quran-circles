@@ -113,6 +113,7 @@ For whoever runs the servers and ships the apps.
 
 | Page                                                               | What it covers                                                                                                                     |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [Handover folder](handover/README.md)                              | History by thread, decisions and incidents, email setup, screenshots and email previews                                            |
 | [Project state](project-state.md)                                  | Where the project stands now (2026-10-28): what is live, open decisions and issues, branches and worktrees, how to start a session |
 | [Shared-folder archive](archive/shared-folder/README.md)           | Everything that used to live in the project's shared folder, checked against `main`, and where each item went                      |
 | [Handoff](handoff.md)                                              | Written when the project was parked on 2026-10-18: what runs where, open items. Read the go-live plan for what came after          |
