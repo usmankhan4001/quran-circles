@@ -1,6 +1,6 @@
 import { renderTemplate, type Locale, type OtpChannel } from '@qc/contracts';
 import { silentLogger, type Logger } from './logger';
-import { renderPlainEmail, type EmailRenderer } from './email-render';
+import { renderBrandedEmail, type EmailRenderer } from './email-render';
 import type { EmailProvider } from './providers/email';
 import type { SmsProvider } from './providers/sms';
 import { buildWhatsAppRequest, type WhatsAppProvider } from './providers/whatsapp';
@@ -71,7 +71,7 @@ export interface CodeDeliveryReport {
 
 export interface ProviderCodeSenderOptions {
   email?: EmailProvider;
-  /** Renders the code email. Defaults to the plain placeholder; the designed templates plug in here. */
+  /** Renders the code email. Defaults to the branded sign-in code template. */
   renderEmail?: EmailRenderer;
   whatsapp?: WhatsAppProvider;
   sms?: SmsProvider;
@@ -109,7 +109,7 @@ export class ProviderCodeSender implements CodeSender {
       }
       const result = await this.options.email.send({
         to: request.email,
-        ...(this.options.renderEmail ?? renderPlainEmail)('auth_code', request.locale, {
+        ...(this.options.renderEmail ?? renderBrandedEmail)('auth_code', request.locale, {
           code: request.code,
           minutes,
         }),

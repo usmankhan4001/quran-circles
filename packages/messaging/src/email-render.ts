@@ -1,4 +1,5 @@
 import type { Locale } from '@qc/contracts';
+import { render as renderBranded } from './email';
 import type { EmailMessage } from './providers/email';
 
 /**
@@ -61,4 +62,14 @@ export const renderPlainEmail: EmailRenderer = (name, locale, data) => {
     text,
     html: `<!doctype html><html lang="${locale}" dir="${words.dir}"><head><meta charset="utf-8"></head><body><p>${text}</p></body></html>`,
   };
+};
+
+/**
+ * The designed, branded template (light mode, English and Urdu, logo, hosted PNG). The default for
+ * the sign-in code email; `renderPlainEmail` stays as the minimal fallback and for tests.
+ */
+export const renderBrandedEmail: EmailRenderer = (name, locale, data) => {
+  if (name !== 'auth_code') throw new Error(`no email template named ${String(name)}`);
+  const { code, minutes } = data as EmailTemplateData['auth_code'];
+  return renderBranded('sign_in_code', locale, { code, minutes });
 };

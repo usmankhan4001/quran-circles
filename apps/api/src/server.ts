@@ -47,7 +47,7 @@ export async function startServer(
   limits: ServerLimits = {},
 ): Promise<RunningServer> {
   const { db, close } = createPgDb(databaseUrl);
-  const messaging = createMessaging(env);
+  const messaging = createMessaging(env, { logger });
   const authConfig = loadAuthConfigFromEnv(env);
   const authDeps: AuthDeps = {
     db,

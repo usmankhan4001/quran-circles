@@ -219,3 +219,24 @@ describe('email wiring from the environment', () => {
     expect(m.fakes!.email.sent).toHaveLength(0);
   });
 });
+
+describe('default code email', () => {
+  it('uses the branded template: logo, html, plain text, both languages', async () => {
+    const { FakeEmailProvider } = await import('./fakes');
+    const { ProviderCodeSender } = await import('./code-sender');
+    const { FakeWhatsAppProvider } = await import('./fakes');
+    for (const locale of ['en', 'ur'] as const) {
+      const email = new FakeEmailProvider();
+      const sender = new ProviderCodeSender({
+        email,
+        whatsapp: new FakeWhatsAppProvider(),
+        smsFallback: false,
+      });
+      await sender.send({ email: 'a@example.org', code: '123456', locale, channel: 'email' });
+      const sent = email.sent[0]!;
+      expect(sent.html).toContain('brand/email-logo.png');
+      expect(sent.html).toContain('123456');
+      expect(sent.text).toContain('123456');
+    }
+  });
+});
