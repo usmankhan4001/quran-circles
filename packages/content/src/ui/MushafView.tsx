@@ -74,9 +74,10 @@ export function MushafView({
   const shown = state.status === 'ready' ? state.page : state.previous;
   const blocks = useMemo(() => (shown ? blocksOf(shown.ayahs) : []), [shown]);
   const arabic = {
-    // The board: Quran text 27px on a 2.35 line.
-    fontSize: Math.round(27 * theme.scale * zoom),
-    lineHeight: Math.round(27 * theme.scale * zoom * 2.35),
+    // Larger than the board's 27px: the face is small on a phone, and line height is the room the
+    // stacked marks need.
+    fontSize: Math.round(31 * theme.scale * zoom),
+    lineHeight: Math.round(31 * theme.scale * zoom * 2.2),
   };
 
   const first = shown?.ayahs[0];
@@ -118,9 +119,10 @@ export function MushafView({
         <View
           aria-label={firstInfo ? surahName(i18n, firstInfo) : undefined}
           style={{
-            marginHorizontal: spacing.lg,
+            marginHorizontal: spacing.md,
             marginTop: spacing.xs,
-            padding: spacing.lg + 2,
+            paddingVertical: spacing.lg,
+            paddingHorizontal: spacing.md + 2,
             borderWidth: 1,
             borderColor: c.hairline,
             borderRadius: 16,
@@ -149,7 +151,7 @@ export function MushafView({
                 variant="quran"
                 lang="ar"
                 align="start"
-                style={{ ...arabic, textAlign: 'justify' }}
+                style={arabic}
                 testID={`mushaf-text-${block.key}`}
               >
                 {block.ayahs.map(({ ayah, text }) => {
@@ -162,10 +164,10 @@ export function MushafView({
                       style={marked ? { backgroundColor: c.accentSubtle } : undefined}
                     >
                       {text}{' '}
-                      <Text style={{ color: c.textAccent, fontSize: arabic.fontSize * 0.9 }}>
-                        {'﴿'}
+                      <Text style={{ color: c.textAccent, fontSize: arabic.fontSize * 0.62 }}>
+                        {'\u200F﴿'}
                         {arabicIndic(ayah.ayah)}
-                        {'﴾'}
+                        {'﴾\u200F'}
                       </Text>{' '}
                     </Text>
                   );

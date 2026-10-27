@@ -60,7 +60,7 @@ WP8, Wave 2 items 1 to 6. WP18 (offline copy) is not built; no Quran text or tra
 
 ## In progress
 
-- Nothing.
+- 2026-10-27: Mushaf page readability pass (`MushafView.tsx`): text 31px on a 2.2 line (was 27 / 2.35), left-ragged instead of justified (justify squeezed words together and left wide gaps on phones), smaller ayah-end marks kept with their last word, a little more width inside the frame. Not yet checked on a device or with the package tests (the checkout's node_modules are Windows-only); please run `pnpm --filter @qc/content test` and look at it on a phone.
 
 ## Blocked
 
