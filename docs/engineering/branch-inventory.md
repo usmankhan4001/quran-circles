@@ -1,35 +1,33 @@
 # Branch inventory
 
-A snapshot on 2026-10-26, taken after the local clean-up. `scripts/branch-cleanup.sh` (run as `pnpm branches`) prints the live list; it only lists unless you pass `--delete`. Refresh with `git fetch origin --prune` before trusting any number here.
+A snapshot on 2026-10-28, taken during the repository handover after `git fetch --all --prune`. `scripts/branch-cleanup.sh` (run as `pnpm branches`) prints the live list; it only lists unless you pass `--delete`. Refresh with `git fetch origin --prune` before trusting any number here.
 
-## Already removed (local)
+## origin
 
-These were fully contained in `integration/ui-redesign` and had clean worktrees, so the local branches and their worktrees were deleted on 2026-10-26: `lane/platform/go-live`, `lane/ui/member-redesign`, `lane/ui/session-screens`, `lane/admin-app/redesign`, `lane/console/redesign`, `lane/ui/member-journey`, `lane/ui/member-quran`, `lane/auth/email-otp`, `lane/messaging/email-templates`.
+One branch: `main`. Every lane and integration branch that earlier versions of this page listed (`integration/ui-redesign`, `release-now`, `lane/*`, `release/*`) no longer exists on origin. There are no tags on origin yet (the `v2-parked-2026-10-18` tag mentioned in older docs does not exist there). Nothing is waiting for a remote clean-up.
 
-## Still on origin, merged, waiting for a decision
+## Local branches
 
-Delete these on GitHub once `integration/ui-redesign` is pushed, so their commits are safe on origin first.
+| Branch                        | Where                              | State                                                                                                                                                                                |
+| ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `main`                        | the main clone                     | Equal to `origin/main`                                                                                                                                                               |
+| `lane/auth/admin-bootstrap`   | worktree `../qc-admin-bootstrap`   | Fully merged into `main` (merge `15d70d0`). Its origin branch is gone. Clean worktree, locked                                                                                        |
+| `lane/data/tanzeem-seed`      | worktree `../qc-tanzeem-local`     | All commits are in `main`: the earlier ones by merge `6797cf9`, the last three (`1ccfb29`, `9e11ea9`, `f905abb`) as equivalent commits applied on 2026-10-28. Clean worktree, locked |
+| `claude/suspicious-faraday-*` | a Claude worktree under `.claude/` | Session branches for the handover; contain nothing that is not in `main` once pushed                                                                                                 |
 
-| Branch                                    |
-| ----------------------------------------- |
-| `lane/admin-app/redesign`                 |
-| `lane/admin-app/session-screen`           |
-| `lane/console/redesign`                   |
-| `lane/platform/go-live`                   |
-| `lane/renderer/quranic-circles-template`  |
-| `lane/user-app/session-hide-placeholders` |
-| `lane/ui/member-journey`                  |
-| `lane/ui/member-quran`                    |
-| `lane/ui/member-redesign`                 |
-| `lane/ui/session-screens`                 |
+The two lane worktrees are locked on purpose: worktree registrations on this PC have gone missing before ([worktrees](../agents/worktrees.md)). They are safe to remove with `git worktree remove` when the owner is done with them, but `../qc-tanzeem-local` also holds the owner's gitignored `.env` and the local seed database setup used by the runbooks in [`../archive/shared-folder/seeding/`](../archive/shared-folder/seeding/), so nothing was removed. Nothing was deleted in this reconciliation.
 
-## Keep: commits not in `integration/ui-redesign`
+## Archive tags
 
-`lane/data/tanzeem-seed`, `lane/docs/public-docs`, `lane/messaging/email-templates-bundle`, `lane/repo/tidy`, `lane/ui/design-fidelity`, `lane/web/store-pages`, `release/member-redesign`, `release/store-pages-and-tools`.
+Two tags kept old work that was never merged: `archive/lane-repo-merge-all` (everything in it is in `main`) and `archive/release-member-redesign` (one commit, `0993704`: a CSP, e2e and formatting chore whose Caddyfile change is already in `main`). They existed only on the owner's PC; they were pushed to origin on 2026-10-28 so the commits are not lost. Read them with `git show <tag>`; do not build on them.
 
-Long-lived: `main`, `integration/ui-redesign`, `release-now`.
+## Stashes
 
-If a branch was squash-merged, the script still calls it unmerged. Check with `git log origin/main..<branch>` and `git diff origin/main...<branch> --stat` before deleting it.
+None, in any worktree (`git stash list` is empty).
+
+## Checking a branch before you delete it
+
+If a branch was squash-merged or rebased, the script still calls it unmerged. Compare content, not hashes: `git cherry origin/main <branch>` prints `-` for a commit whose change is already in `main` and `+` for one that is not. Also check `git log origin/main..<branch>` and `git diff origin/main...<branch> --stat`.
 
 ## Worktrees
 

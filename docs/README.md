@@ -111,25 +111,27 @@ Written and kept by the UI lane (WP21). Start with [design/README.md](design/REA
 
 For whoever runs the servers and ships the apps.
 
-| Page                                                               | What it covers                                                                                                            |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
-| [Handoff](handoff.md)                                              | Written when the project was parked on 2026-10-18: what runs where, open items. Read the go-live plan for what came after |
-| [Deployment](deployment.md)                                        | Staging, production (not created yet), the Dokploy setup for `main`, backups and monitoring                               |
-| [`infra/README.md`](../infra/README.md)                            | The server runbook                                                                                                        |
-| [`infra/ENV.md`](../infra/ENV.md)                                  | Every environment variable, who reads it, whether it is required                                                          |
-| [release/go-live.md](release/go-live.md)                           | The plan for production on Dokploy and the Android app on Google Play                                                     |
-| [release/play-console.md](release/play-console.md)                 | Google Play Console entries: URLs, data safety answers, descriptions, open decisions                                      |
-| [release/store-listing.md](release/store-listing.md)               | App Store and Google Play listing text (draft)                                                                            |
-| [`tools/store-assets`](../tools/store-assets/README.md)            | How the app icons and store screenshots are generated                                                                     |
-| [engineering/github-settings.md](engineering/github-settings.md)   | Branch protection and other settings to apply on github.com                                                               |
-| [engineering/branch-inventory.md](engineering/branch-inventory.md) | Which branches are merged, active or need a decision                                                                      |
-| [security/review.md](security/review.md)                           | The Wave 5 security review and its findings                                                                               |
-| [quality/accessibility-rtl.md](quality/accessibility-rtl.md)       | Accessibility and right-to-left pass, with screenshots                                                                    |
-| [quality/low-end-budgets.md](quality/low-end-budgets.md)           | Performance budgets on low-end Android phones                                                                             |
-| [quality/low-end-phone-check.md](quality/low-end-phone-check.md)   | The hands-on check on a real Android phone                                                                                |
-| [quality/restore-drill.md](quality/restore-drill.md)               | Backup restore rehearsal and timings                                                                                      |
-| [quality/screens/](quality/screens/)                               | Screenshots from the accessibility and right-to-left pass                                                                 |
-| [`tests/load/README.md`](../tests/load/README.md)                  | Scope verification and the Ramadan-evening load test                                                                      |
+| Page                                                               | What it covers                                                                                                                     |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| [Project state](project-state.md)                                  | Where the project stands now (2026-10-28): what is live, open decisions and issues, branches and worktrees, how to start a session |
+| [Shared-folder archive](archive/shared-folder/README.md)           | Everything that used to live in the project's shared folder, checked against `main`, and where each item went                      |
+| [Handoff](handoff.md)                                              | Written when the project was parked on 2026-10-18: what runs where, open items. Read the go-live plan for what came after          |
+| [Deployment](deployment.md)                                        | Staging, production (live), the Dokploy setup for `main`, backups and monitoring                                                   |
+| [`infra/README.md`](../infra/README.md)                            | The server runbook                                                                                                                 |
+| [`infra/ENV.md`](../infra/ENV.md)                                  | Every environment variable, who reads it, whether it is required                                                                   |
+| [release/go-live.md](release/go-live.md)                           | The plan for production on Dokploy and the Android app on Google Play                                                              |
+| [release/play-console.md](release/play-console.md)                 | Google Play Console entries: URLs, data safety answers, descriptions, open decisions                                               |
+| [release/store-listing.md](release/store-listing.md)               | App Store and Google Play listing text (draft)                                                                                     |
+| [`tools/store-assets`](../tools/store-assets/README.md)            | How the app icons and store screenshots are generated                                                                              |
+| [engineering/github-settings.md](engineering/github-settings.md)   | Branch protection and other settings to apply on github.com                                                                        |
+| [engineering/branch-inventory.md](engineering/branch-inventory.md) | Which branches are merged, active or need a decision                                                                               |
+| [security/review.md](security/review.md)                           | The Wave 5 security review and its findings                                                                                        |
+| [quality/accessibility-rtl.md](quality/accessibility-rtl.md)       | Accessibility and right-to-left pass, with screenshots                                                                             |
+| [quality/low-end-budgets.md](quality/low-end-budgets.md)           | Performance budgets on low-end Android phones                                                                                      |
+| [quality/low-end-phone-check.md](quality/low-end-phone-check.md)   | The hands-on check on a real Android phone                                                                                         |
+| [quality/restore-drill.md](quality/restore-drill.md)               | Backup restore rehearsal and timings                                                                                               |
+| [quality/screens/](quality/screens/)                               | Screenshots from the accessibility and right-to-left pass                                                                          |
+| [`tests/load/README.md`](../tests/load/README.md)                  | Scope verification and the Ramadan-evening load test                                                                               |
 
 ## 4. Work as an AI agent
 

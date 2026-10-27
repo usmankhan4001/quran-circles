@@ -174,3 +174,7 @@ From the WP11 end-to-end run with the real worker and fake providers (details in
 
 - F-03 (low, **fixed 2026-10-17**): the queue handler in `runtime.ts` no longer logs; `reconcileReminders` logs `reminders.reconciled` once, when a run changed something. Test: `runtime.test.ts` "logs a reconcile that reached the queue once, not twice". The worker test database now also refuses overlapping queries inside a transaction (F-02 guard); no worker code needed a change. `@qc/worker`: 103 tests. Original note: `reminders.reconciled` is logged twice per run (`reminders/reconcile.ts:348` and `runtime.ts:154`), so the log reads as if every reconcile ran twice. Reminders themselves were inserted, re-timed after a schedule change and sent once.
 - F-05 (medium, pending outside dependency): web push from the PWA cannot be exercised until the VAPID key pair exists; the flows use a fake `webpush` device.
+
+## 2026-10-28 (handover)
+
+- The sign-in code email now uses the branded template by default (`renderBrandedEmail` in `email-render.ts`, test added in `email.test.ts`), and `createMessaging` receives the API logger so `code.sent` and `code.email_failed` (with the Resend status) are logged. Both came from loose patches in the old shared folder. Applied by the repo handover, not by this lane; the lane owner should review.

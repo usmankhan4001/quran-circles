@@ -13,7 +13,8 @@ The Postgres version is 17 in the dev compose file and in the production image (
 1. This file, then the `CLAUDE.md` in the directory you will edit.
 2. Your lane's brief: `docs/agents/briefs/<lane>.md`. No brief? Work from `docs/agents/status/<lane>.md` and ask the orchestrator before you write one.
 3. Your lane's status file: `docs/agents/status/<lane>.md`. Read "In progress" and the newest dated section, and "Next step" if the file has one. Older files predate the template and often have no "Next step"; if you cannot tell what to do, ask the orchestrator ([status README](docs/agents/status/README.md)).
-4. `docs/product/decisions.md`, only if a product decision is in question. Do not re-decide one.
+4. [`docs/project-state.md`](docs/project-state.md): where the project stands, open decisions and issues, branch and worktree state.
+5. `docs/product/decisions.md`, only if a product decision is in question. Do not re-decide one.
 
 The lane map is in [`docs/agents/README.md`](docs/agents/README.md) and [`docs/engineering/ownership.md`](docs/engineering/ownership.md).
 

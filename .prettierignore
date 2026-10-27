@@ -6,3 +6,7 @@ coverage
 .expo
 packages/contracts/openapi.json
 packages/contracts/SCOPES.md
+# Imported verbatim from the old shared project folder (2026-10-28)
+docs/archive/shared-folder/
+docs/design/archive/quran-circles-foundation.html
+docs/design/archive/quran-circles-ui-prompts.md

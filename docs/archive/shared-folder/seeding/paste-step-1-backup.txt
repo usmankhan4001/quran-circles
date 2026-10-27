@@ -1,0 +1,11 @@
+STEP 1 - database backup (do this before anything else)
+
+Where: Dokploy -> project with the quran-circles compose -> Terminal of the "postgres" service.
+Paste this single line and press Enter:
+
+mkdir -p /var/lib/postgresql/data/qc-backups && F=/var/lib/postgresql/data/qc-backups/pre-seed-$(date +%Y%m%d-%H%M%S).dump && pg_dump -U qc -d qc -Fc -f "$F" && ls -l "$F" && echo "toc entries: $(pg_restore -l "$F" | wc -l)" && psql -U qc -d qc -Atc "select 'cities',count(*) from cities union all select 'areas',count(*) from areas union all select 'provinces',count(*) from provinces union all select 'venues',count(*) from venues union all select 'sessions',count(*) from sessions union all select 'users',count(*) from users"
+
+What you should see: one "ls -l" line with a file size (a few hundred KB or more), a "toc entries" number
+above zero, then the six table counts (cities 0 is expected today).
+Reply in the thread with that output. Nothing is changed by this step: it only reads the database
+and writes one dump file.
