@@ -1,6 +1,6 @@
 # Screenshots
 
-Review screenshots from the project, about 32 MB, grouped by where they came from. All use synthetic data. File names say app, language and screen (for example `admin-en-attendance.png`, `console-ur-phone-sessions.png`).
+Review screenshots from the project, about 145 MB, grouped by where they came from. All use synthetic data. File names say app, language and screen (for example `admin-en-attendance.png`, `console-ur-phone-sessions.png`).
 
 | Folder                    | Files | What it shows                                                                                      |
 | ------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
@@ -10,6 +10,10 @@ Review screenshots from the project, about 32 MB, grouped by where they came fro
 | `store-input-2026-10-18/` | 36    | Raw app captures used as input for the store mockups; older, they still show seat booking          |
 | (top level)               | 8     | A curated pick from 2026-10-25: user app home, journey, session, console on phone, poster samples  |
 
-Not in git: the two generated store-screenshot sets (about 110 MB, old seat-booking flow). Regenerate store graphics with [`tools/store-assets`](../../../tools/store-assets/README.md).
+| `store-final-2026-10-18/` | 58 | Generated App Store and Play store screenshots, English and Urdu (old seat-booking flow) |
+| `store-provisional-design-2026-10-18/` | 58 | The same set drawn in the provisional design |
+| `contact-sheet.png` | 1 | One-page overview of the store screenshots |
+
+Regenerate store graphics with [`tools/store-assets`](../../../tools/store-assets/README.md); the store sets here predate the join pledge.
 
 Caveat: five pairs of same-size files in `test-pass-2026-10-25/` and `play-2026-10-26/` were matched to their names by order, not by content. If two same-named screens look swapped, compare them with the app.
