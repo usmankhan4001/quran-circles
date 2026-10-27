@@ -158,13 +158,27 @@ export function MushafView({
                   const marked =
                     highlight && highlight.surah === ayah.surah && highlight.ayah === ayah.ayah;
                   return (
+                    // Each run is a Quran Text of its own: a nested Text otherwise falls back to the
+                    // body font at 16px and, on the web, to dir="ltr", which scrambles the order.
                     <Text
                       key={`${ayah.surah}:${ayah.ayah}`}
+                      variant="quran"
+                      lang="ar"
+                      direction="rtl"
                       testID={`mushaf-ayah-${ayah.surah}-${ayah.ayah}`}
-                      style={marked ? { backgroundColor: c.accentSubtle } : undefined}
+                      style={{ ...arabic, ...(marked ? { backgroundColor: c.accentSubtle } : null) }}
                     >
                       {text}{' '}
-                      <Text style={{ color: c.textAccent, fontSize: arabic.fontSize * 0.62 }}>
+                      <Text
+                        variant="quran"
+                        lang="ar"
+                        direction="rtl"
+                        style={{
+                          color: c.textAccent,
+                          fontSize: arabic.fontSize * 0.62,
+                          lineHeight: arabic.lineHeight,
+                        }}
+                      >
                         {'\u200F﴿'}
                         {arabicIndic(ayah.ayah)}
                         {'﴾\u200F'}
