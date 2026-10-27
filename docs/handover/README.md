@@ -8,7 +8,7 @@ Everything a new agent or developer needs beyond the code and the lane files. St
 | [`decisions-and-incidents.md`](decisions-and-incidents.md) | Owner decisions, and the problems hit (email, DNS wildcard versus MX, Mushaf font, branch scare) with causes and fixes |
 | [`resend-email-setup.md`](resend-email-setup.md)           | Email sign-in setup variables and how to diagnose a missing email                                                      |
 | [`email-previews/`](email-previews/index.html)             | Rendered previews of every email template, English and Urdu                                                            |
-| [`screenshots/`](screenshots/)                             | A curated set of app, console and poster screenshots from 2026-10-25                                                   |
+| [`screenshots/`](screenshots/README.md)                    | About 230 screenshots (32 MB): redesign, 25 Oct test pass, Play, store inputs, plus a curated top-level pick           |
 
 ## Assets
 
@@ -25,7 +25,7 @@ Everything a new agent or developer needs beyond the code and the lane files. St
 
 ## Still only in the old shared folder (not in git)
 
-About 120 MB: the full screenshot sets (`store-assets/screenshots*`, `ui-redesign/`, `status-check-2026-10-25/screens/`, `play-assets/screenshots/`), the git bundles (all already in `main`), the flyer studio prototype page, two more poster samples, and the real circles CSV and JSON (phone numbers; keep them out of git). That folder belongs to the Claude project "Quran Circles" and can be downloaded from the project's Library. If it is ever lost, regenerate screenshots with `tools/store-assets/capture` and posters with the console poster maker.
+About 110 MB of generated store screenshots (`store-assets/screenshots*`, old seat-booking flow), the original large patches (all already in `main`), the flyer studio prototype page, two more poster samples, and the real circles CSV and JSON (phone numbers; keep them out of git). That folder belongs to the Claude project "Quran Circles" and can be downloaded from the project's Library. If it is ever lost, regenerate screenshots with `tools/store-assets/capture` and posters with the console poster maker.
 
 ## Discussion logs
 
