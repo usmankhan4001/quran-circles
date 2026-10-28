@@ -91,3 +91,14 @@ http://{$QC_CONSOLE_DOMAIN} {
 	import api
 	import spa console
 }
+
+# The coordinator web app (apps/admin-app, the same app coordinators use on their phones). The name
+# defaults to coordinator.doraquran.pk so the stack still starts where QC_COORDINATOR_DOMAIN is not set.
+http://{$QC_COORDINATOR_DOMAIN:coordinator.doraquran.pk} {
+	import common
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), browsing-topics=()"
+	@coordinator not path /api/*
+	header @coordinator Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://a.tile.openstreetmap.org https://b.tile.openstreetmap.org https://c.tile.openstreetmap.org; font-src 'self' data:; connect-src 'self' data: blob:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+	import api
+	import spa coordinator
+}

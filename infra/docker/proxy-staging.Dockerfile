@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 #
-# Proxy image for the Dokploy stacks: Caddy with the PWA and console static builds baked in.
+# Proxy image for the Dokploy stacks: Caddy with the PWA, console and coordinator static builds baked in.
 # Staging (infra/docker-compose.staging.yml) uses the defaults; production on Dokploy
 # (infra/docker-compose.dokploy-prod.yml) passes CADDYFILE=infra/caddy/Caddyfile.dokploy-prod and
 # the public web keys. The plain-VPS production setup keeps host-mounted builds.
@@ -20,6 +20,9 @@ ARG PNPM_VERSION=10.28.0
 # The PWA calls the api at this absolute URL (EXPO_PUBLIC_API_URL); the console uses /api on its
 # own origin.
 ARG PUBLIC_API_URL
+# The coordinator web app (admin-app) calls the api at this absolute URL on its own host. Unset
+# falls back to PUBLIC_API_URL (staging has no separate coordinator host).
+ARG COORDINATOR_API_URL=""
 # Public, restricted keys baked into the PWA (never secrets; see apps/user-app/src/platform/env.ts).
 # Empty: the keyless map and no web push.
 ARG GOOGLE_MAPS_WEB_KEY=""
@@ -55,3 +58,4 @@ ARG CADDYFILE=infra/caddy/Caddyfile.staging
 COPY ${CADDYFILE} /etc/caddy/Caddyfile
 COPY --from=build /repo/apps/user-app/dist /srv/www/app
 COPY --from=build /repo/apps/console/dist /srv/www/console
+COPY --from=build /repo/apps/admin-app/dist /srv/www/coordinator

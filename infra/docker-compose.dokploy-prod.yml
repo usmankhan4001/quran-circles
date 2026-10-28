@@ -8,7 +8,7 @@
 # - The production `proxy` (host ports 80/443, automatic TLS) is parked behind the `prod-proxy`
 #   profile, so it never starts here: Dokploy's Traefik already owns ports 80 and 443. `web` takes
 #   its place: Caddy on plain HTTP :80, no host ports, routed by the Traefik labels below for
-#   QC_DOMAIN and QC_CONSOLE_DOMAIN. Cloudflare (or Traefik) terminates TLS.
+#   QC_DOMAIN, QC_CONSOLE_DOMAIN and QC_COORDINATOR_DOMAIN. Cloudflare (or Traefik) terminates TLS.
 # - The PWA and console builds are baked into the `web` image, with the public web keys
 #   (QC_GOOGLE_MAPS_WEB_KEY and the worker's VAPID_PUBLIC_KEY) passed as build arguments.
 # - `web` also joins Dokploy's shared network, so it reaches the api and the worker by unique
@@ -39,6 +39,7 @@ services:
       args:
         CADDYFILE: infra/caddy/Caddyfile.dokploy-prod
         PUBLIC_API_URL: https://${QC_DOMAIN:?set QC_DOMAIN in the env file}/api
+        COORDINATOR_API_URL: https://${QC_COORDINATOR_DOMAIN:-coordinator.doraquran.pk}/api
         GOOGLE_MAPS_WEB_KEY: ${QC_GOOGLE_MAPS_WEB_KEY:-}
         VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
         CONTACT_EMAIL: ${QC_CONTACT_EMAIL:-}
@@ -51,6 +52,7 @@ services:
     environment:
       QC_DOMAIN: ${QC_DOMAIN:?set QC_DOMAIN in the env file}
       QC_CONSOLE_DOMAIN: ${QC_CONSOLE_DOMAIN:?set QC_CONSOLE_DOMAIN in the env file}
+      QC_COORDINATOR_DOMAIN: ${QC_COORDINATOR_DOMAIN:-coordinator.doraquran.pk}
     volumes:
       - caddy-data:/data
       - caddy-config:/config
@@ -62,7 +64,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.rule=Host(`${QC_DOMAIN}`) || Host(`${QC_CONSOLE_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.rule=Host(`${QC_DOMAIN}`) || Host(`${QC_CONSOLE_DOMAIN}`) || Host(`${QC_COORDINATOR_DOMAIN:-coordinator.doraquran.pk}`)
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.entrypoints=web
       - traefik.http.routers.${COMPOSE_PROJECT_NAME:-qc-prod}-web.service=${COMPOSE_PROJECT_NAME:-qc-prod}-web
       - traefik.http.services.${COMPOSE_PROJECT_NAME:-qc-prod}-web.loadbalancer.server.port=80

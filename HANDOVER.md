@@ -8,7 +8,7 @@ Quran Circles V2, for Tanzeem-e-Islami: people find a Quran circle near them, pl
 
 ## 2. Current state (2026-10-28)
 
-- **Live in production** at https://qurancircles.doraquran.pk, console at https://qurancircles-admin.doraquran.pk. Dokploy pulls `main` from GitHub and auto-deploys, so **every push to `main` is a release**.
+- **Live in production** at https://qurancircles.doraquran.pk, console at https://qurancircles-admin.doraquran.pk, coordinator web app (the admin-app, same app as on coordinators' phones) at https://coordinator.doraquran.pk. All three share one Caddy container (`web`); the coordinator name comes from `QC_COORDINATOR_DOMAIN` and defaults to `coordinator.doraquran.pk`. Its DNS is covered by the Cloudflare wildcard to the tunnel. Dokploy pulls `main` from GitHub and auto-deploys, so **every push to `main` is a release**.
 - Sign-in is an emailed 6-digit code (Resend). Seat booking was replaced by a join pledge. The Mushaf reader has readability fixes and a stopgap font fix (`4e7f28a`, on `main`).
 - Production was seeded on 2026-10-26 with the Tanzeem circles: 42 cities, 167 venues, 139 published sessions.
 - The Google Play release is prepared, not published. Urdu strings are drafts awaiting a native reader.
